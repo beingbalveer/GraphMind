@@ -1,0 +1,21 @@
+[project]
+name = "graphmind-api"
+version = "0.1.0"
+description = "FastAPI Backend API for GraphMind"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.110.0",
+    "uvicorn[standard]>=0.28.0",
+    "pydantic>=2.6.0",
+    "pydantic-settings>=2.2.0",
+    "structlog>=24.1.0",
+    "sqlalchemy[asyncio]>=2.0.28",
+    "asyncpg>=0.29.0",
+    "alembic>=1.13.0",
+    "redis>=5.0.0",
+    "ai-core",
+]
+
+[tool.uv.sources]
+ai-core = { workspace = true }

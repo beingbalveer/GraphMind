@@ -1,0 +1,69 @@
+import os
+from datetime import datetime, timezone
+import structlog
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+
+# Initialize structlog
+structlog.configure(
+    processors=[
+        structlog.processors.TimeStamper(fmt="iso"),
+        structlog.stdlib.add_log_level,
+        structlog.processors.JSONRenderer(),
+    ]
+)
+logger = structlog.get_logger()
+
+app = FastAPI(
+    title="GraphMind API",
+    description="AI-native Knowledge Workspace REST API",
+    version="0.1.0",
+    docs_url="/docs",
+    redoc_url="/redoc",
+)
+
+# Enable CORS for frontend web client
+origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    os.getenv("FRONTEND_URL", "*"),
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+class HealthCheckResponse(BaseModel):
+    status: str
+    service: str
+    version: str
+    timestamp: str
+    environment: str
+
+
+@app.on_event("startup")
+async def startup_event():
+    logger.info("GraphMind API starting up", environment=os.getenv("ENVIRONMENT", "development"))
+
+
+@app.get("/healthz", response_model=HealthCheckResponse, tags=["Health"])
+async def health_check():
+    """Health check endpoint for container monitoring and sanity checks."""
+    return HealthCheckResponse(
+        status="healthy",
+        service="graphmind-api",
+        version="0.1.0",
+        timestamp=datetime.now(timezone.utc).isoformat(),
+        environment=os.getenv("ENVIRONMENT", "development"),
+    )
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

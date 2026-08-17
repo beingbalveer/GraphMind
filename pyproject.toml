@@ -1,0 +1,27 @@
+[project]
+name = "graphmind-workspace"
+version = "0.1.0"
+description = "GraphMind - AI-native Knowledge Workspace"
+authors = [{ name = "GraphMind Team" }]
+requires-python = ">=3.12"
+dependencies = []
+
+[tool.uv.workspace]
+members = ["apps/api", "packages/ai-core"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "ASYNC"]
+ignore = []
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+ignore_missing_imports = true
+
+[tool.black]
+line-length = 100
+target-version = ['py312']
