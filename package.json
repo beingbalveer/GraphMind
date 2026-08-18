@@ -1,0 +1,18 @@
+{
+  "name": "graphmind",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI-native Knowledge Workspace",
+  "scripts": {
+    "dev": "concurrently -n \"api,web\" -c \"cyan,magenta\" \"pnpm dev:api\" \"pnpm dev:web\"",
+    "dev:web": "pnpm --filter @graphmind/web dev",
+    "dev:api": "uv run --package graphmind-api uvicorn --app-dir apps/api/src main:app --port 8008 --reload",
+    "build": "pnpm --filter @graphmind/web build",
+    "lint:web": "pnpm --filter @graphmind/web lint",
+    "lint:api": "uv run ruff check",
+    "lint": "pnpm lint:web && pnpm lint:api"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
