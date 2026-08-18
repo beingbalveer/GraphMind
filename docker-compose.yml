@@ -40,10 +40,11 @@ services:
     container_name: graphmind_api
     restart: always
     ports:
-      - "8000:8000"
+      - "8008:8008"
     environment:
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-graphmind}:${POSTGRES_PASSWORD:-graphmind_secret}@postgres:5432/${POSTGRES_DB:-graphmind_db}
       - REDIS_URL=redis://redis:6379/0
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
     depends_on:
       postgres:
@@ -60,7 +61,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_API_URL=http://localhost:8008
     depends_on:
       - api
 

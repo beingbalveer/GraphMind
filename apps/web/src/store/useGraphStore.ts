@@ -66,7 +66,7 @@ const initialEdges: Edge[] = [
   },
 ];
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8008";
 
 export const useGraphStore = create<GraphState>((set, get) => ({
   nodes: initialNodes,
@@ -132,7 +132,7 @@ export const useGraphStore = create<GraphState>((set, get) => ({
       data: {
         label: "AI Stream",
         title: "AI Response",
-        content: "Thinking...",
+        content: "Connecting to AI Backend...",
         model: model,
         createdAt: new Date().toISOString(),
       },
@@ -211,6 +211,11 @@ export const useGraphStore = create<GraphState>((set, get) => ({
       }
     } catch (err: any) {
       console.error("Streaming error:", err);
+      const isConnectionFailed = err.name === "TypeError" || err.message?.includes("fetch");
+      const errorMessage = isConnectionFailed
+        ? `⚠️ Could not connect to FastAPI backend at ${API_BASE_URL}.\n\nPlease start the backend API server on port 8008:\n\nuv run --package graphmind-api uvicorn --app-dir apps/api/src main:app --port 8008 --reload`
+        : `⚠️ Error streaming response: ${err.message || "Unknown error"}`;
+
       set((state) => ({
         nodes: state.nodes.map((node) =>
           node.id === responseNodeId
@@ -218,7 +223,7 @@ export const useGraphStore = create<GraphState>((set, get) => ({
                 ...node,
                 data: {
                   ...node.data,
-                  content: `⚠️ Error streaming response: ${err.message || "Failed to connect to backend API."}\n\nMake sure the FastAPI backend is running at ${API_BASE_URL}.`,
+                  content: errorMessage,
                 },
               }
             : node

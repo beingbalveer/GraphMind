@@ -53,6 +53,15 @@ export function HeaderToolbar({ sidebarOpen, toggleSidebar }: HeaderToolbarProps
 
       {/* Right Section: Actions */}
       <div className="flex items-center space-x-2">
+        <a
+          href="http://localhost:8008/docs"
+          target="_blank"
+          rel="noreferrer"
+          className="px-2.5 py-1.5 rounded-lg bg-slate-100 text-slate-700 text-xs font-medium hover:bg-slate-200 transition-colors hidden sm:inline-block"
+        >
+          API Specs ↗
+        </a>
+
         <button
           onClick={resetLayout}
           className="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-700 text-xs font-medium hover:bg-slate-50 transition-colors flex items-center space-x-1.5"
@@ -67,13 +76,6 @@ export function HeaderToolbar({ sidebarOpen, toggleSidebar }: HeaderToolbarProps
         >
           <Plus className="w-3.5 h-3.5" />
           <span>New Branch</span>
-        </button>
-
-        <button
-          className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
-          title="Share workspace"
-        >
-          <Share2 className="w-4 h-4" />
         </button>
       </div>
     </header>
