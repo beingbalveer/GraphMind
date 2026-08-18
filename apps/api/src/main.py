@@ -1,17 +1,28 @@
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
+from typing import AsyncIterator
 
 import structlog
 from config import get_settings
+from errors import (
+    http_exception_handler,
+    unhandled_exception_handler,
+    validation_exception_handler,
+)
 from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from middleware import RequestTracingMiddleware
 from pydantic import BaseModel
 from routers import chat
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 settings = get_settings()
 
 # Initialize structlog
 structlog.configure(
     processors=[
+        structlog.contextvars.merge_contextvars,
         structlog.processors.TimeStamper(fmt="iso"),
         structlog.stdlib.add_log_level,
         structlog.processors.JSONRenderer(),
@@ -19,13 +30,33 @@ structlog.configure(
 )
 logger = structlog.get_logger()
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    """
+    Application startup and graceful shutdown lifecycle manager.
+    """
+    logger.info(
+        "GraphMind API starting up",
+        environment=settings.ENVIRONMENT,
+        port=settings.PORT,
+        default_provider=settings.DEFAULT_PROVIDER,
+    )
+    yield
+    logger.info("GraphMind API shutting down")
+
+
 app = FastAPI(
     title="GraphMind API",
     description="AI-native Knowledge Workspace REST API",
     version="0.1.0",
     docs_url="/docs",
     redoc_url="/redoc",
+    lifespan=lifespan,
 )
+
+# Request Tracing & Correlation Middleware
+app.add_middleware(RequestTracingMiddleware)
 
 # Enable CORS for frontend web client
 app.add_middleware(
@@ -35,6 +66,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Standardized Exception Handlers
+app.add_exception_handler(StarletteHTTPException, http_exception_handler)
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
+app.add_exception_handler(Exception, unhandled_exception_handler)
 
 # Register API Routers
 app.include_router(chat.router)
@@ -46,16 +82,6 @@ class HealthCheckResponse(BaseModel):
     version: str
     timestamp: str
     environment: str
-
-
-@app.on_event("startup")
-async def startup_event() -> None:
-    logger.info(
-        "GraphMind API starting up",
-        environment=settings.ENVIRONMENT,
-        port=settings.PORT,
-        default_provider=settings.DEFAULT_PROVIDER,
-    )
 
 
 @app.get("/healthz", response_model=HealthCheckResponse, tags=["Health"])

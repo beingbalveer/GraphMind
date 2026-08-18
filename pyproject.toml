@@ -36,3 +36,4 @@ warn_unused_ignores = true
 asyncio_mode = "auto"
 testpaths = ["apps/api/tests", "packages/ai-core/tests"]
 python_files = ["test_*.py"]
+pythonpath = ["apps/api/src", "packages/ai-core/src"]
