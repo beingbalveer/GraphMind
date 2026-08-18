@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import { BookOpen, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 interface NavbarProps {
   onClearChat?: () => void;
@@ -36,9 +38,7 @@ export function Navbar({ onClearChat, messageCount }: NavbarProps) {
         <div>
           <div className="flex items-center space-x-2">
             <h1 className="font-bold text-slate-900 text-sm tracking-tight">GraphMind</h1>
-            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
-              Phase 1 Core
-            </span>
+            <Badge variant="secondary">Phase 1 Core</Badge>
           </div>
         </div>
       </div>
@@ -74,21 +74,23 @@ export function Navbar({ onClearChat, messageCount }: NavbarProps) {
       {/* Right controls */}
       <div className="flex items-center space-x-2">
         {messageCount > 0 && onClearChat && (
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={onClearChat}
-            className="px-2.5 py-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors text-xs font-medium flex items-center space-x-1"
+            className="flex items-center space-x-1"
             title="Clear current chat"
           >
             <Trash2 className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Clear</span>
-          </button>
+          </Button>
         )}
 
         <a
           href="http://localhost:8008/docs"
           target="_blank"
           rel="noreferrer"
-          className="px-2.5 py-1.5 rounded-lg bg-slate-100 text-slate-700 text-xs font-medium hover:bg-slate-200 transition-colors flex items-center space-x-1.5"
+          className="inline-flex items-center justify-center rounded-lg bg-slate-100 px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200 transition-colors space-x-1.5"
         >
           <BookOpen className="w-3.5 h-3.5 text-slate-500" />
           <span className="hidden sm:inline">API Docs ↗</span>

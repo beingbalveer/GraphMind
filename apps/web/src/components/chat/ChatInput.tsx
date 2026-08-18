@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { Send, Square, Cpu } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface ChatInputProps {
   onSendMessage: (prompt: string, provider: string, model: string) => void;
@@ -96,27 +97,25 @@ export function ChatInput({
           {/* Action Buttons */}
           <div className="flex items-center space-x-2">
             {isStreaming ? (
-              <button
+              <Button
                 type="button"
+                variant="destructive"
+                size="sm"
                 onClick={onStopStreaming}
-                className="px-3 py-1.5 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 transition-colors text-xs font-semibold flex items-center space-x-1.5 shadow-xs"
+                className="flex items-center space-x-1.5 shadow-xs"
               >
-                <Square className="w-3.5 h-3.5 fill-rose-600" />
+                <Square className="w-3 h-3 fill-current" />
                 <span>Stop</span>
-              </button>
+              </Button>
             ) : (
-              <button
+              <Button
                 type="submit"
+                size="icon"
                 disabled={!prompt.trim()}
-                className={`p-2 rounded-lg transition-all font-semibold flex items-center justify-center ${
-                  !prompt.trim()
-                    ? "bg-slate-100 text-slate-300 cursor-not-allowed"
-                    : "bg-sky-600 hover:bg-sky-700 text-white shadow-xs"
-                }`}
                 title="Send Message"
               >
                 <Send className="w-4 h-4" />
-              </button>
+              </Button>
             )}
           </div>
         </div>

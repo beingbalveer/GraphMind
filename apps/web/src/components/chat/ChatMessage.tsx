@@ -5,6 +5,8 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { User, Sparkles, Copy, Check } from "lucide-react";
 import { Message } from "@/hooks/useChatStream";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 interface ChatMessageProps {
   message: Message;
@@ -48,24 +50,23 @@ export function ChatMessage({ message }: ChatMessageProps) {
               {isUser ? "You" : "GraphMind Assistant"}
             </span>
             {message.model && !isUser && (
-              <span className="text-[10px] font-mono px-1.5 py-0.2 bg-slate-200/70 text-slate-600 rounded">
-                {message.model}
-              </span>
+              <Badge variant="mono">{message.model}</Badge>
             )}
           </div>
 
           {!isUser && message.content && (
-            <button
+            <Button
+              variant="ghost"
+              size="iconSm"
               onClick={handleCopy}
-              className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-colors"
               title="Copy message"
             >
               {copied ? (
                 <Check className="w-3.5 h-3.5 text-emerald-600" />
               ) : (
-                <Copy className="w-3.5 h-3.5" />
+                <Copy className="w-3.5 h-3.5 text-slate-400" />
               )}
-            </button>
+            </Button>
           )}
         </div>
 
