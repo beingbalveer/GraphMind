@@ -1,6 +1,6 @@
 import React from "react";
-import { WorkspaceLayout } from "@/components/layout/WorkspaceLayout";
+import { ChatContainer } from "@/components/chat/ChatContainer";
 
 export default function Home() {
-  return <WorkspaceLayout />;
+  return <ChatContainer />;
 }
