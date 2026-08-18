@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import AsyncIterator, Dict, Any, Optional
+from typing import Any, AsyncIterator, Dict, Optional
+
 from pydantic import BaseModel, Field
 
 
@@ -37,6 +38,6 @@ class BaseProvider(ABC):
         pass
 
     @abstractmethod
-    async def stream(self, prompt: str, config: LLMConfig) -> AsyncIterator[StreamChunk]:
+    def stream(self, prompt: str, config: LLMConfig) -> AsyncIterator[StreamChunk]:
         """Stream completion tokens in real-time."""
         pass

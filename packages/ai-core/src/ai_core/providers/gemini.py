@@ -1,8 +1,10 @@
-import os
 import asyncio
-from typing import AsyncIterator
+import os
+from typing import Any, AsyncIterator, Iterator
+
 from google import genai
-from ai_core.base import BaseProvider, LLMConfig, StreamChunk, GenerationResult
+
+from ai_core.base import BaseProvider, GenerationResult, LLMConfig, StreamChunk
 
 
 class GeminiProvider(BaseProvider):
@@ -19,7 +21,7 @@ class GeminiProvider(BaseProvider):
     async def generate(self, prompt: str, config: LLMConfig) -> GenerationResult:
         model = config.model_name or "gemini-2.5-flash"
         loop = asyncio.get_running_loop()
-        
+
         # Execute blocking SDK call in executor
         response = await loop.run_in_executor(
             None,
@@ -28,7 +30,7 @@ class GeminiProvider(BaseProvider):
                 contents=prompt,
             ),
         )
-        
+
         return GenerationResult(
             content=response.text or "",
             model_name=model,
@@ -38,7 +40,7 @@ class GeminiProvider(BaseProvider):
         model = config.model_name or "gemini-2.5-flash"
         loop = asyncio.get_running_loop()
 
-        def _get_stream():
+        def _get_stream() -> Iterator[Any]:
             return self.client.models.generate_content_stream(
                 model=model,
                 contents=prompt,

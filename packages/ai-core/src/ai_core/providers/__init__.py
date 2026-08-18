@@ -1,15 +1,18 @@
 import os
+from typing import Optional
+
 from ai_core.base import BaseProvider
 from ai_core.providers.gemini import GeminiProvider
-from ai_core.providers.openai import OpenAIProvider
 from ai_core.providers.mock import MockProvider
+from ai_core.providers.openai import OpenAIProvider
 
 
-def get_provider(provider_name: str | None = None) -> BaseProvider:
+def get_provider(provider_name: Optional[str] = None) -> BaseProvider:
     """
     Provider factory resolving requested provider name or defaulting to available API key.
     """
-    name = (provider_name or os.getenv("DEFAULT_PROVIDER", "gemini")).lower()
+    default_name = os.getenv("DEFAULT_PROVIDER") or "gemini"
+    name = (provider_name or default_name).lower()
 
     if name == "gemini":
         try:

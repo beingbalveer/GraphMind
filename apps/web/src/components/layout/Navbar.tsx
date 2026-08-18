@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Sparkles, Activity, BookOpen, Trash2 } from "lucide-react";
+import { BookOpen, Trash2 } from "lucide-react";
 
 interface NavbarProps {
   onClearChat?: () => void;

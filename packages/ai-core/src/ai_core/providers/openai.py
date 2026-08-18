@@ -1,7 +1,9 @@
 import os
 from typing import AsyncIterator
+
 from openai import AsyncOpenAI
-from ai_core.base import BaseProvider, LLMConfig, StreamChunk, GenerationResult
+
+from ai_core.base import BaseProvider, GenerationResult, LLMConfig, StreamChunk
 
 
 class OpenAIProvider(BaseProvider):

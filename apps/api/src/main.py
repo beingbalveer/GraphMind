@@ -1,10 +1,10 @@
 import os
 from datetime import datetime, timezone
+
 import structlog
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-
 from routers import chat
 
 # Initialize structlog
@@ -53,12 +53,12 @@ class HealthCheckResponse(BaseModel):
 
 
 @app.on_event("startup")
-async def startup_event():
+async def startup_event() -> None:
     logger.info("GraphMind API starting up", environment=os.getenv("ENVIRONMENT", "development"))
 
 
 @app.get("/healthz", response_model=HealthCheckResponse, tags=["Health"])
-async def health_check():
+async def health_check() -> HealthCheckResponse:
     """Health check endpoint for container monitoring and sanity checks."""
     return HealthCheckResponse(
         status="healthy",
@@ -71,4 +71,5 @@ async def health_check():
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run("main:app", host="0.0.0.0", port=8008, reload=True)

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useEffect } from "react";
-import { Sparkles, Terminal, Cpu, GitBranch } from "lucide-react";
+import { Terminal, Cpu, GitBranch } from "lucide-react";
 import { ChatMessage } from "./ChatMessage";
 import { ChatInput } from "./ChatInput";
 import { useChatStream } from "@/hooks/useChatStream";

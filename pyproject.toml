@@ -6,6 +6,15 @@ authors = [{ name = "GraphMind Team" }]
 requires-python = ">=3.12"
 dependencies = []
 
+[dependency-groups]
+dev = [
+    "ruff>=0.9.0",
+    "mypy>=1.14.0",
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.25.0",
+    "httpx>=0.28.0",
+]
+
 [tool.uv.workspace]
 members = ["apps/api", "packages/ai-core"]
 
@@ -15,13 +24,15 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "ASYNC"]
-ignore = []
+ignore = ["E501"]
 
 [tool.mypy]
 python_version = "3.12"
 strict = true
 ignore_missing_imports = true
+warn_unused_ignores = true
 
-[tool.black]
-line-length = 100
-target-version = ['py312']
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["apps/api/tests", "packages/ai-core/tests"]
+python_files = ["test_*.py"]

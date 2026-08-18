@@ -1,6 +1,7 @@
 import asyncio
 from typing import AsyncIterator
-from ai_core.base import BaseProvider, LLMConfig, StreamChunk, GenerationResult
+
+from ai_core.base import BaseProvider, GenerationResult, LLMConfig, StreamChunk
 
 
 class MockProvider(BaseProvider):
