@@ -1,133 +1,78 @@
-# GraphMind Project Roadmap & Milestones
+# GraphMind — Master Evolutionary Roadmap & Phase Specifications
+
+> **Philosophy:** *Progressive, organic growth without dead UI or prototype hacks.* Every phase delivers a fully functional, production-grade release that naturally extends the previous phase.
 
 ---
 
-## Roadmap Overview
+## 1. Master Timeline Summary
 
-Development follows an **incremental, milestone-driven execution model**. Every milestone represents a self-contained, releasable slice of functionality. Ideas beyond the active milestone are explicitly scheduled into future milestones to prevent scope creep.
+Assuming a focused pace of **~2 hours/day** (approx. **10 – 14 engineering hours/week**), here is the realistic timeline to build the entire production-grade platform:
+
+| Phase | Phase Name | Focus & Core Deliverable | Estimated Time | Spec Document |
+| :--- | :--- | :--- | :--- | :--- |
+| **Phase 1** | **Production Core & Streamed Chat** | Provider-agnostic AI Core, FastAPI SSE streaming, Next.js UI shell, Markdown + KaTeX, unit & E2E tests. | **2 – 3 Weeks** (~35 hrs) | [`phase-01-core-chat-engine.md`](./phases/phase-01-core-chat-engine.md) |
+| **Phase 2** | **Tree-Structured Branching** | Hierarchical conversation tree, text-highlight branching trigger, context lineage traversal engine. | **2 – 3 Weeks** (~30 hrs) | [`phase-02-tree-branching.md`](./phases/phase-02-tree-branching.md) |
+| **Phase 3** | **Spatial Graph Canvas** | 2D React Flow canvas, node cards, Dagre auto-layout, canvas + Focus Drawer dual UX, keyboard shortcuts. | **3 – 4 Weeks** (~45 hrs) | [`phase-03-spatial-graph-canvas.md`](./phases/phase-03-spatial-graph-canvas.md) |
+| **Phase 4** | **Workspace Persistence** | PostgreSQL + async SQLAlchemy, Alembic migrations, auth/JWT, auto-save debouncing, Obsidian markdown export. | **2 – 3 Weeks** (~35 hrs) | [`phase-04-persistence-workspaces.md`](./phases/phase-04-persistence-workspaces.md) |
+| **Phase 5** | **Semantic Graph & Discovery** | `pgvector` embeddings, background concept extraction, hybrid BM25+vector search, suggested cross-branch links. | **3 – 4 Weeks** (~45 hrs) | [`phase-05-semantic-graph-discovery.md`](./phases/phase-05-semantic-graph-discovery.md) |
+| **Phase 6** | **Knowledge Evolution & Agents** | Multi-agent runtime (Research, Quiz, Summarizer), user mastery modeling, Knowledge Curator, v1.0 release. | **4 – 5 Weeks** (~55 hrs) | [`phase-06-multi-agent-knowledge-evolution.md`](./phases/phase-06-multi-agent-knowledge-evolution.md) |
+
+**Total Estimated Duration:** **16 – 22 Weeks** (~4 to 5.5 Months) of structured, production-grade engineering.
+
+---
+
+## 2. Master Gantt Progression
 
 ```mermaid
 gantt
-    title GraphMind Development Milestones
+    title GraphMind Progressive Evolution Roadmap
     dateFormat  YYYY-MM-DD
-    section MVP Phase
-    M0 Foundation           :active, m0, 2026-08-17, 3d
-    M1 UI Shell             :m1, after m0, 5d
-    M2 AI Chat Integration  :m2, after m1, 5d
-    M3 Graph Nodes          :m3, after m2, 5d
-    M4 Highlight Branching  :m4, after m3, 5d
-    M5 Persistence          :m5, after m4, 5d
-    section Post-MVP
-    M6 Knowledge Evolution  :m6, after m5, 15d
+    axisFormat  Week %W
+    
+    section Phase 1: Core Streamed Chat
+    Monorepo & Scaffolding            :p1_1, 2026-08-18, 4d
+    AI Core & Provider Abstraction     :p1_2, after p1_1, 4d
+    FastAPI SSE Chat Engine           :p1_3, after p1_2, 5d
+    Next.js UI Shell & Markdown       :p1_4, after p1_3, 5d
+    Testing & Phase 1 Signoff         :p1_5, after p1_4, 3d
+
+    section Phase 2: Tree Branching
+    Tree Data Structures & Schemas    :p2_1, after p1_5, 4d
+    Lineage Context Traversal Engine   :p2_2, after p2_1, 5d
+    Highlight & Branching Action      :p2_3, after p2_2, 5d
+    Navigation & Branch State         :p2_4, after p2_3, 4d
+
+    section Phase 3: Spatial Canvas
+    React Flow Canvas Foundation      :p3_1, after p2_4, 5d
+    Custom Node & Edge Cards          :p3_2, after p3_1, 6d
+    Dagre / ELK Auto-Layout Engine    :p3_3, after p3_2, 5d
+    Focus Drawer & Dual-Mode UX       :p3_4, after p3_3, 6d
+
+    section Phase 4: Persistence
+    PostgreSQL Async & ORM Models     :p4_1, after p3_4, 5d
+    Workspace CRUD & Delta Auto-Save  :p4_2, after p4_1, 5d
+    Auth & Obsidian Markdown Export   :p4_3, after p4_2, 5d
+
+    section Phase 5: Semantic Graph
+    pgvector & Embedding Pipeline     :p5_1, after p4_3, 5d
+    Concept & Entity Auto-Extractor   :p5_2, after p5_1, 6d
+    Hybrid Search & Cross-Link Engine :p5_3, after p5_2, 6d
+
+    section Phase 6: Knowledge Evolution
+    Agent Runtime & Specialized Agents:p6_1, after p5_3, 8d
+    Mastery Heatmap & Gap Analysis    :p6_2, after p6_1, 8d
+    Knowledge Curator & v1.0 Launch   :p6_3, after p6_2, 6d
 ```
 
 ---
 
-## Milestone 0: Repository Foundation (M0)
+## 3. Phase Specifications Index
 
-**Goal**: Establish monorepo structure, development tooling, CI/CD linting, and basic server containers.
+Read each dedicated specification file for in-depth technical tasks, data flows, and acceptance criteria:
 
-### Scope & Tasks
-- [ ] Monorepo structure setup (`apps/web`, `apps/api`, `packages/ai-core`, `packages/shared`).
-- [ ] Package manager configurations (`pnpm-workspace.yaml`, `pyproject.toml` with `uv`).
-- [ ] Backend foundation: FastAPI application skeleton, health check route, CORS, structlog logging.
-- [ ] Frontend foundation: Next.js 15 App Router setup, Tailwind CSS, shadcn/ui initialization.
-- [ ] Database containers: `docker-compose.yml` with PostgreSQL 16 (+ `pgvector`) and Redis.
-- [ ] Linting & formatting setup (Ruff, MyPy, Black for Python; ESLint, Prettier for TypeScript).
-
-### Exit Criteria
-- `docker-compose up` cleanly starts Web, API, Postgres, and Redis containers.
-- `/healthz` API endpoint returns `200 OK`.
-- Both frontend and backend linting checks pass cleanly.
-
----
-
-## Milestone 1: UI Shell & Canvas Scaffold (M1)
-
-**Goal**: Build a responsive visual canvas shell with React Flow and sidebar navigation.
-
-### Scope & Tasks
-- [ ] React Flow canvas layout integration in `apps/web`.
-- [ ] Workspace layout shell (sidebar, canvas viewport, top bar).
-- [ ] Custom initial canvas controls (zoom, pan, minimap, reset layout button).
-- [ ] Zustand store for graph state (nodes, edges, active selection).
-- [ ] Static dummy nodes to verify dragging, positioning, and rendering performance.
-
-### Exit Criteria
-- Canvas renders at 60 FPS with custom styled React Flow nodes.
-- User can pan, zoom, drag nodes, and inspect dummy node details.
-
----
-
-## Milestone 2: AI Chat Integration & Provider Abstraction (M2)
-
-**Goal**: Implement `packages/ai-core` provider interface and streaming responses in the backend.
-
-### Scope & Tasks
-- [ ] Build `packages/ai-core` interface (`BaseProvider`, `LLMConfig`, `StreamChunk`).
-- [ ] Implement OpenAI provider module inside `packages/ai-core`.
-- [ ] Add FastAPI SSE (Server-Sent Events) endpoint `/api/v1/chat/stream`.
-- [ ] Connect prompt input bar to the backend streaming endpoint.
-- [ ] Display streaming markdown tokens in real time in the UI.
-
-### Exit Criteria
-- User can enter a prompt and view streaming Markdown responses.
-- Application code relies strictly on `ai-core` abstractions without direct OpenAI SDK dependencies in `apps/api`.
-
----
-
-## Milestone 3: Graph Node Transformation (M3)
-
-**Goal**: Convert prompt/response interactions directly into dynamic React Flow graph nodes.
-
-### Scope & Tasks
-- [ ] Define backend Node and Edge Pydantic schemas and database ORM models.
-- [ ] Implement automatic graph node generation: Prompt -> Root Node; AI Answer -> Response Node.
-- [ ] Connect parent-child directed edges (`Root -> Response`).
-- [ ] Implement auto-layout helper (Dagre / ELK algorithm) to arrange newly generated nodes cleanly.
-
-### Exit Criteria
-- Asking a question dynamically appends an interactive, formatted node to the canvas graph with a connected directed edge.
-
----
-
-## Milestone 4: Highlight-to-Branch Interaction (M4)
-
-**Goal**: Enable contextual branching by selecting text inside any response node.
-
-### Scope & Tasks
-- [ ] Custom Markdown node renderer with text selection listener.
-- [ ] Contextual popover pill ("Branch from selection") upon text highlight.
-- [ ] Sub-prompt modal passing highlighted snippet as context.
-- [ ] Backend prompt builder merging parent node context + highlight snippet + sub-prompt.
-- [ ] Render child branch node linked to the highlighted parent node.
-
-### Exit Criteria
-- User can highlight any sentence in a node, click "Branch", type a sub-question, and spawn a child branch linked to that specific concept.
-
----
-
-## Milestone 5: Workspace Persistence & Auth (M5)
-
-**Goal**: Persist workspace graphs, node layouts, and history to PostgreSQL, with secure authentication.
-
-### Scope & Tasks
-- [ ] User Auth API: Email/Password signup/login + OAuth2 integration (Google/GitHub).
-- [ ] JWT authentication middleware in FastAPI.
-- [ ] Database persistence for workspaces, nodes, edges, and viewport layouts.
-- [ ] Workspace sidebar: list workspaces, create workspace, load workspace state.
-- [ ] Auto-save graph mutations to PostgreSQL.
-
-### Exit Criteria
-- User can log in, create a workspace, build a graph, reload the browser, and resume from the exact state.
-
----
-
-## Milestone 6: Knowledge Evolution (Post-MVP / Future)
-
-**Goal**: AI-driven concept extraction, user knowledge mapping, and graph-to-graph synthesis.
-
-### Scope & Tasks
-- [ ] Automated concept entity extraction using `pgvector` embeddings.
-- [ ] Semantic link recommendations between distant graph nodes.
-- [ ] User knowledge state tracking (mastered topics vs exploration targets).
+1. [**Phase 1: Production Core & Streamed Chat Engine**](./phases/phase-01-core-chat-engine.md)
+2. [**Phase 2: Tree-Structured Branching & Lineage Engine**](./phases/phase-02-tree-branching.md)
+3. [**Phase 3: The Spatial Graph Canvas (2D Visual Workspace)**](./phases/phase-03-spatial-graph-canvas.md)
+4. [**Phase 4: Workspace Persistence & Relational Storage**](./phases/phase-04-persistence-workspaces.md)
+5. [**Phase 5: Semantic Graph & Automated Knowledge Discovery**](./phases/phase-05-semantic-graph-discovery.md)
+6. [**Phase 6: Multi-Agent Workflows & Knowledge Evolution**](./phases/phase-06-multi-agent-knowledge-evolution.md)
