@@ -1,11 +1,13 @@
-import os
 from datetime import datetime, timezone
 
 import structlog
+from config import get_settings
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from routers import chat
+
+settings = get_settings()
 
 # Initialize structlog
 structlog.configure(
@@ -26,15 +28,9 @@ app = FastAPI(
 )
 
 # Enable CORS for frontend web client
-origins = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    os.getenv("FRONTEND_URL", "*"),
-]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -54,7 +50,12 @@ class HealthCheckResponse(BaseModel):
 
 @app.on_event("startup")
 async def startup_event() -> None:
-    logger.info("GraphMind API starting up", environment=os.getenv("ENVIRONMENT", "development"))
+    logger.info(
+        "GraphMind API starting up",
+        environment=settings.ENVIRONMENT,
+        port=settings.PORT,
+        default_provider=settings.DEFAULT_PROVIDER,
+    )
 
 
 @app.get("/healthz", response_model=HealthCheckResponse, tags=["Health"])
@@ -65,11 +66,11 @@ async def health_check() -> HealthCheckResponse:
         service="graphmind-api",
         version="0.1.0",
         timestamp=datetime.now(timezone.utc).isoformat(),
-        environment=os.getenv("ENVIRONMENT", "development"),
+        environment=settings.ENVIRONMENT,
     )
 
 
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("main:app", host="0.0.0.0", port=8008, reload=True)
+    uvicorn.run("main:app", host=settings.HOST, port=settings.PORT, reload=True)
