@@ -1,10 +1,10 @@
 import json
-from typing import AsyncIterator, List, Optional
+from typing import Any, AsyncIterator, Dict, List, Optional
 
 import structlog
 from ai_core import ChatMessage, ChatRole, ModelConfig, get_provider
 from config import get_settings
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, model_validator
 
@@ -23,6 +23,9 @@ class ChatStreamRequest(BaseModel):
     )
     model: Optional[str] = Field(default=None, description="Foundation model name")
     system_prompt: Optional[str] = Field(default=None, description="Optional system prompt context")
+    metadata: Optional[Dict[str, Any]] = Field(
+        default_factory=dict, description="Optional runtime metadata"
+    )
 
     @model_validator(mode="after")
     def validate_input(self) -> "ChatStreamRequest":
@@ -32,12 +35,16 @@ class ChatStreamRequest(BaseModel):
 
 
 @router.post("/stream")
-async def stream_chat(request: ChatStreamRequest) -> StreamingResponse:
+async def stream_chat(
+    body: ChatStreamRequest,
+    request: Request,
+) -> StreamingResponse:
     """
-    Stream AI completion tokens in real-time as Server-Sent Events (SSE).
+    Stream AI completion tokens in real-time as Server-Sent Events (SSE)
+    with client disconnect monitoring and error propagation.
     """
-    resolved_provider = request.provider or settings.DEFAULT_PROVIDER
-    resolved_model = request.model or settings.DEFAULT_MODEL
+    resolved_provider = body.provider or settings.DEFAULT_PROVIDER
+    resolved_model = body.model or settings.DEFAULT_MODEL
 
     logger.info(
         "Received chat stream request",
@@ -53,26 +60,33 @@ async def stream_chat(request: ChatStreamRequest) -> StreamingResponse:
 
     config = ModelConfig(
         model_name=resolved_model,
-        system_prompt=request.system_prompt,
+        system_prompt=body.system_prompt,
+        metadata=body.metadata or {},
     )
 
     # Normalize into List[ChatMessage]
     conversation_input: List[ChatMessage]
-    if request.messages:
-        conversation_input = request.messages
+    if body.messages:
+        conversation_input = body.messages
     else:
-        conversation_input = [ChatMessage(role=ChatRole.USER, content=request.prompt or "")]
+        conversation_input = [ChatMessage(role=ChatRole.USER, content=body.prompt or "")]
 
     async def event_generator() -> AsyncIterator[str]:
         try:
             async for chunk in provider.stream(conversation_input, config):
+                # Check for client disconnect
+                if await request.is_disconnected():
+                    logger.info("Client disconnected, terminating stream generator")
+                    break
+
                 payload = json.dumps({"content": chunk.content})
-                yield f"data: {payload}\n\n"
-            yield "data: [DONE]\n\n"
+                yield f"event: token\ndata: {payload}\n\n"
+
+            yield "event: done\ndata: [DONE]\n\n"
         except Exception as e:
             logger.error("Error during AI token streaming", error=str(e))
             err_payload = json.dumps({"error": str(e)})
-            yield f"data: {err_payload}\n\n"
+            yield f"event: error\ndata: {err_payload}\n\n"
 
     return StreamingResponse(
         event_generator(),
