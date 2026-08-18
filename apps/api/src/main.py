@@ -5,6 +5,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
+from routers import chat
+
 # Initialize structlog
 structlog.configure(
     processors=[
@@ -37,6 +39,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Register API Routers
+app.include_router(chat.router)
 
 
 class HealthCheckResponse(BaseModel):

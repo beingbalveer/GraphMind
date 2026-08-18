@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { HeaderToolbar } from "./HeaderToolbar";
 import { Sidebar } from "./Sidebar";
 import { GraphCanvas } from "../canvas/GraphCanvas";
+import { PromptBar } from "../canvas/PromptBar";
 
 export function WorkspaceLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -19,6 +20,7 @@ export function WorkspaceLayout() {
         <Sidebar isOpen={sidebarOpen} />
         <main className="flex-1 h-full relative">
           <GraphCanvas />
+          <PromptBar />
         </main>
       </div>
     </div>
