@@ -2,7 +2,7 @@ import json
 from typing import Any, AsyncIterator, Dict, List, Optional
 
 import structlog
-from ai_core import ChatMessage, ChatRole, ModelConfig, get_provider
+from ai_core import ChatMessage, ChatRole, GenerationResult, ModelConfig, get_provider
 from config import get_settings
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
@@ -32,6 +32,55 @@ class ChatStreamRequest(BaseModel):
         if not self.prompt and not self.messages:
             raise ValueError("Either 'prompt' or 'messages' must be provided.")
         return self
+
+
+# Request alias for completion
+ChatCompletionRequest = ChatStreamRequest
+
+
+@router.post("/completions", response_model=GenerationResult)
+async def create_chat_completion(body: ChatCompletionRequest) -> GenerationResult:
+    """
+    Generate a complete, non-streaming AI response with usage metrics.
+    """
+    resolved_provider = body.provider or settings.DEFAULT_PROVIDER
+    resolved_model = body.model or settings.DEFAULT_MODEL
+
+    logger.info(
+        "Received non-streaming chat completion request",
+        provider=resolved_provider,
+        model=resolved_model,
+    )
+
+    try:
+        provider = get_provider(resolved_provider)
+    except Exception as e:
+        logger.error("Failed to initialize AI provider", error=str(e))
+        raise HTTPException(status_code=500, detail=f"Provider initialization failed: {str(e)}")
+
+    config = ModelConfig(
+        model_name=resolved_model,
+        system_prompt=body.system_prompt,
+        metadata=body.metadata or {},
+    )
+
+    conversation_input: List[ChatMessage]
+    if body.messages:
+        conversation_input = body.messages
+    else:
+        conversation_input = [ChatMessage(role=ChatRole.USER, content=body.prompt or "")]
+
+    try:
+        result = await provider.generate(conversation_input, config)
+        logger.info(
+            "Chat completion generated successfully",
+            model=result.model_name,
+            total_tokens=result.usage.total_tokens,
+        )
+        return result
+    except Exception as e:
+        logger.error("Error during chat completion generation", error=str(e))
+        raise HTTPException(status_code=500, detail=f"Generation failed: {str(e)}")
 
 
 @router.post("/stream")
