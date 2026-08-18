@@ -1,13 +1,30 @@
-from ai_core.base import BaseProvider, GenerationResult, LLMConfig, StreamChunk
+from ai_core.base import (
+    BaseLLMProvider,
+    BaseProvider,
+    ChatMessage,
+    ChatRole,
+    GenerationResult,
+    LLMConfig,
+    MessageInput,
+    ModelConfig,
+    StreamChunk,
+    TokenUsage,
+)
 from ai_core.providers import GeminiProvider, MockProvider, OpenAIProvider, get_provider
 
 __all__ = [
+    "BaseLLMProvider",
     "BaseProvider",
-    "LLMConfig",
-    "StreamChunk",
+    "ChatMessage",
+    "ChatRole",
     "GenerationResult",
+    "LLMConfig",
+    "MessageInput",
+    "ModelConfig",
+    "StreamChunk",
+    "TokenUsage",
     "GeminiProvider",
-    "OpenAIProvider",
     "MockProvider",
+    "OpenAIProvider",
     "get_provider",
 ]
