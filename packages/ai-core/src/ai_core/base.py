@@ -60,11 +60,13 @@ class ModelConfig(BaseModel):
     temperature: float = Field(
         default=0.7, ge=0.0, le=2.0, description="Sampling randomness temperature"
     )
-    max_tokens: Optional[int] = Field(
-        default=2048, ge=1, description="Maximum tokens to generate"
+    max_tokens: Optional[int] = Field(default=2048, ge=1, description="Maximum tokens to generate")
+    top_p: Optional[float] = Field(
+        default=None, ge=0.0, le=1.0, description="Nucleus sampling probability"
     )
-    top_p: Optional[float] = Field(default=None, ge=0.0, le=1.0, description="Nucleus sampling probability")
-    system_prompt: Optional[str] = Field(default=None, description="Optional overriding system instruction")
+    system_prompt: Optional[str] = Field(
+        default=None, description="Optional overriding system instruction"
+    )
     metadata: Dict[str, Any] = Field(default_factory=dict, description="Custom vendor parameters")
 
 
@@ -79,7 +81,9 @@ class StreamChunk(BaseModel):
 
     content: str = Field(..., description="Incremental token text")
     finish_reason: Optional[str] = Field(default=None, description="Reason stream ended (if done)")
-    usage: Optional[TokenUsage] = Field(default=None, description="Usage metrics if reported in chunk")
+    usage: Optional[TokenUsage] = Field(
+        default=None, description="Usage metrics if reported in chunk"
+    )
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
@@ -105,6 +109,9 @@ class BaseLLMProvider(ABC):
     Abstract interface for AI foundation model providers.
     All application logic in GraphMind interacts strictly with this interface.
     """
+
+    def __init__(self, api_key: Optional[str] = None) -> None:
+        self.api_key = api_key
 
     @abstractmethod
     async def generate(

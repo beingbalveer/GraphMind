@@ -10,7 +10,14 @@ from ai_core.base import (
     StreamChunk,
     TokenUsage,
 )
-from ai_core.providers import GeminiProvider, MockProvider, OpenAIProvider, get_provider
+from ai_core.providers import (
+    GeminiProvider,
+    MockProvider,
+    OpenAIProvider,
+    get_llm_provider,
+    get_provider,
+    register_provider,
+)
 
 __all__ = [
     "BaseLLMProvider",
@@ -26,5 +33,7 @@ __all__ = [
     "GeminiProvider",
     "MockProvider",
     "OpenAIProvider",
+    "get_llm_provider",
     "get_provider",
+    "register_provider",
 ]
