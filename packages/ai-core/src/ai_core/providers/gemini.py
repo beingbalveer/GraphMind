@@ -1,7 +1,7 @@
-import asyncio
 import os
-from typing import Any, AsyncIterator, Iterator, Optional
+from typing import AsyncIterator, Optional
 
+import structlog
 from google import genai
 
 from ai_core.base import (
@@ -13,10 +13,13 @@ from ai_core.base import (
     StreamChunk,
 )
 
+logger = structlog.get_logger()
+
 
 class GeminiProvider(BaseLLMProvider):
     """
-    Google Gemini foundation model provider implementation using official google-genai SDK.
+    Google Gemini foundation model provider implementation using the official google-genai SDK
+    with native async streaming and execution.
     """
 
     def __init__(self, api_key: Optional[str] = None):
@@ -34,22 +37,19 @@ class GeminiProvider(BaseLLMProvider):
         normalized = self._normalize_messages(messages)
         prompt_text = "\n".join([f"{msg.role.value}: {msg.content}" for msg in normalized])
 
-        loop = asyncio.get_running_loop()
-
-        # Execute blocking SDK call in executor
-        response = await loop.run_in_executor(
-            None,
-            lambda: self.client.models.generate_content(
+        try:
+            response = await self.client.aio.models.generate_content(
                 model=cfg.model_name,
                 contents=prompt_text,
-            ),
-        )
-
-        return GenerationResult(
-            content=response.text or "",
-            role=ChatRole.ASSISTANT,
-            model_name=cfg.model_name,
-        )
+            )
+            return GenerationResult(
+                content=response.text or "",
+                role=ChatRole.ASSISTANT,
+                model_name=cfg.model_name,
+            )
+        except Exception as e:
+            logger.error("Gemini generation failed", error=str(e), model=cfg.model_name)
+            raise
 
     async def stream(
         self,
@@ -60,17 +60,14 @@ class GeminiProvider(BaseLLMProvider):
         normalized = self._normalize_messages(messages)
         prompt_text = "\n".join([f"{msg.role.value}: {msg.content}" for msg in normalized])
 
-        loop = asyncio.get_running_loop()
-
-        def _get_stream() -> Iterator[Any]:
-            return self.client.models.generate_content_stream(
+        try:
+            response_stream = await self.client.aio.models.generate_content_stream(
                 model=cfg.model_name,
                 contents=prompt_text,
             )
-
-        stream = await loop.run_in_executor(None, _get_stream)
-
-        for chunk in stream:
-            if chunk.text:
-                yield StreamChunk(content=chunk.text)
-                await asyncio.sleep(0.01)
+            async for chunk in response_stream:
+                if chunk.text:
+                    yield StreamChunk(content=chunk.text)
+        except Exception as e:
+            logger.error("Gemini streaming failed", error=str(e), model=cfg.model_name)
+            raise

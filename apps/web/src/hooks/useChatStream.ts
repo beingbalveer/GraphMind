@@ -70,17 +70,21 @@ export function useChatStream() {
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let accumulatedContent = "";
+        let lineBuffer = "";
 
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
 
-          const chunkText = decoder.decode(value, { stream: true });
-          const lines = chunkText.split("\n");
+          lineBuffer += decoder.decode(value, { stream: true });
+          const lines = lineBuffer.split("\n");
+          // Keep the last incomplete fragment in lineBuffer
+          lineBuffer = lines.pop() || "";
 
           for (const line of lines) {
-            if (line.startsWith("data: ")) {
-              const rawData = line.slice(6).trim();
+            const trimmedLine = line.trim();
+            if (trimmedLine.startsWith("data: ")) {
+              const rawData = trimmedLine.slice(6).trim();
               if (rawData === "[DONE]") break;
 
               try {
