@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import "katex/dist/katex.min.css";
+import "highlight.js/styles/github-dark-dimmed.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -13,7 +15,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body className="antialiased">{children}</body>
     </html>
   );
 }
