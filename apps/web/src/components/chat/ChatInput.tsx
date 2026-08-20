@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { ArrowUp, Square, ChevronDown } from "lucide-react";
+import { ArrowUp, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ModelSelector } from "./ModelSelector";
 
 interface ChatInputProps {
   onSendMessage: (prompt: string, provider: string, model: string) => void;
@@ -58,7 +59,7 @@ export function ChatInput({
     <div className="w-full max-w-3xl mx-auto px-4 pb-4 sm:pb-6">
       <form
         onSubmit={handleSubmit}
-        className="bg-white rounded-2xl border border-slate-200/90 shadow-sm hover:border-slate-300 p-2.5 flex flex-col space-y-2 transition-all focus-within:border-slate-400 focus-within:shadow-md"
+        className="bg-white rounded-2xl border border-zinc-200/90 shadow-sm hover:border-zinc-300 p-2.5 flex flex-col space-y-2 transition-all focus-within:border-zinc-400 focus-within:shadow-md"
       >
         {/* Textarea Input */}
         <textarea
@@ -69,26 +70,17 @@ export function ChatInput({
           placeholder="Message GraphMind..."
           rows={1}
           disabled={isStreaming}
-          className="w-full px-2 py-1.5 text-[15px] text-slate-900 placeholder-slate-400 bg-transparent resize-none outline-none font-normal max-h-48 leading-relaxed"
+          className="w-full px-2 py-1.5 text-[15.5px] text-zinc-900 placeholder-zinc-400 bg-transparent resize-none outline-none font-normal max-h-48 leading-relaxed"
         />
 
         {/* Action Bar */}
         <div className="flex items-center justify-between pt-1 px-1">
-          {/* Model Selector Pill */}
-          <div className="relative inline-flex items-center">
-            <select
-              value={selectedModel}
-              onChange={(e) => setSelectedModel(e.target.value)}
-              disabled={isStreaming}
-              className="appearance-none bg-slate-100 hover:bg-slate-200/80 text-slate-700 font-medium text-xs rounded-lg pl-2.5 pr-6 py-1 cursor-pointer outline-none transition-colors disabled:opacity-50"
-            >
-              <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
-              <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
-              <option value="gpt-4o-mini">GPT-4o Mini</option>
-              <option value="mock">Offline Mock Stream</option>
-            </select>
-            <ChevronDown className="w-3 h-3 text-slate-400 pointer-events-none absolute right-2" />
-          </div>
+          {/* Custom Accessible Model Selector */}
+          <ModelSelector
+            selectedModel={selectedModel}
+            onSelectModel={setSelectedModel}
+            disabled={isStreaming}
+          />
 
           {/* Send / Stop Button */}
           <div className="flex items-center">
@@ -107,7 +99,7 @@ export function ChatInput({
               <button
                 type="submit"
                 disabled={!prompt.trim()}
-                className="h-7 w-7 rounded-full bg-slate-900 text-white hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-400 flex items-center justify-center transition-colors shadow-xs"
+                className="h-7 w-7 rounded-full bg-zinc-900 text-white hover:bg-zinc-800 disabled:bg-zinc-200 disabled:text-zinc-400 flex items-center justify-center transition-colors shadow-xs cursor-pointer disabled:cursor-not-allowed"
                 title="Send message"
               >
                 <ArrowUp className="w-4 h-4 stroke-[2.5]" />
