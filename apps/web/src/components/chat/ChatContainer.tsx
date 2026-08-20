@@ -48,11 +48,11 @@ export function ChatContainer() {
     <div className="w-screen h-screen flex flex-col bg-white overflow-hidden font-sans selection:bg-zinc-200 selection:text-zinc-900">
       <Navbar onClearChat={clearMessages} messageCount={messages.length} />
 
-      {/* Main Scrollable Viewport */}
-      <main className="flex-1 overflow-y-auto flex flex-col">
+      {/* Dedicated Scrollable Feed */}
+      <main className="flex-1 overflow-y-auto min-h-0 flex flex-col bg-white">
         {messages.length === 0 ? (
           /* Clean Empty State */
-          <div className="flex-1 flex flex-col items-center justify-center max-w-2xl mx-auto px-4 py-8 text-center space-y-8">
+          <div className="flex-1 flex flex-col items-center justify-center max-w-2xl mx-auto px-4 py-8 text-center space-y-8 my-auto">
             <div className="space-y-2">
               <div className="w-10 h-10 rounded-xl bg-zinc-900 text-white flex items-center justify-center font-bold text-lg mx-auto shadow-xs">
                 🧠
@@ -91,23 +91,23 @@ export function ChatContainer() {
           </div>
         ) : (
           /* Messages Stream List */
-          <div className="flex-1 w-full divide-y divide-zinc-100 pb-8">
+          <div className="w-full pb-4">
             {messages.map((msg) => (
               <ChatMessage key={msg.id} message={msg} />
             ))}
             <div ref={messagesEndRef} />
           </div>
         )}
-
-        {/* Floating Bottom Input Section */}
-        <div className="shrink-0 bg-gradient-to-t from-white via-white to-transparent pt-3">
-          <ChatInput
-            onSendMessage={sendMessage}
-            onStopStreaming={stopStreaming}
-            isStreaming={isStreaming}
-          />
-        </div>
       </main>
+
+      {/* Permanently Static Bottom Input Bar */}
+      <div className="shrink-0 bg-gradient-to-t from-white via-white to-transparent pt-2 z-20">
+        <ChatInput
+          onSendMessage={sendMessage}
+          onStopStreaming={stopStreaming}
+          isStreaming={isStreaming}
+        />
+      </div>
     </div>
   );
 }

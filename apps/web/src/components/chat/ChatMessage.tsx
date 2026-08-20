@@ -23,12 +23,8 @@ export function ChatMessage({ message }: ChatMessageProps) {
   };
 
   return (
-    <div
-      className={`py-5 px-4 sm:px-6 transition-colors group ${
-        isUser ? "bg-transparent" : "bg-zinc-50/50"
-      }`}
-    >
-      <div className="max-w-3xl mx-auto flex gap-3 sm:gap-4">
+    <div className="py-4 px-4 sm:px-6 bg-white group transition-colors">
+      <div className="max-w-3xl mx-auto flex gap-3 sm:gap-4 animate-in fade-in duration-200">
         {/* Role Avatar */}
         <div className="shrink-0 pt-0.5">
           {isUser ? (
@@ -77,14 +73,20 @@ export function ChatMessage({ message }: ChatMessageProps) {
                 {message.content}
               </ReactMarkdown>
             ) : message.isStreaming ? (
-              <div className="flex items-center space-x-1.5 text-zinc-400 text-xs pt-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-zinc-800 animate-pulse" />
-                <span>Thinking...</span>
+              /* Smooth Staggered Wave Thinking State */
+              <div className="flex items-center space-x-2 py-1 select-none">
+                <div className="flex space-x-1 items-center">
+                  <span className="w-1.5 h-1.5 rounded-full bg-zinc-500 animate-bounce [animation-delay:-0.3s]" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-zinc-500 animate-bounce [animation-delay:-0.15s]" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-zinc-500 animate-bounce" />
+                </div>
+                <span className="text-xs font-medium text-zinc-400">Thinking...</span>
               </div>
             ) : null}
 
+            {/* Smooth Breathing Streaming Caret */}
             {message.isStreaming && message.content && (
-              <span className="inline-block w-1.5 h-4 ml-0.5 bg-zinc-900 animate-pulse align-middle" />
+              <span className="inline-block w-[2.5px] h-[15px] ml-1 bg-zinc-900 animate-pulse align-middle rounded-full" />
             )}
           </div>
 

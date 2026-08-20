@@ -38,6 +38,20 @@ class ChatStreamRequest(BaseModel):
 ChatCompletionRequest = ChatStreamRequest
 
 
+def _resolve_api_key(provider_name: str) -> Optional[str]:
+    """
+    Extract the relevant API key from application settings.
+    """
+    name = provider_name.lower().strip()
+    if name in ("gemini", "google"):
+        key = settings.GEMINI_API_KEY or settings.GOOGLE_API_KEY
+        return str(key) if key else None
+    if name == "openai":
+        key = settings.OPENAI_API_KEY
+        return str(key) if key else None
+    return None
+
+
 @router.post("/completions", response_model=GenerationResult)
 async def create_chat_completion(body: ChatCompletionRequest) -> GenerationResult:
     """
@@ -45,15 +59,17 @@ async def create_chat_completion(body: ChatCompletionRequest) -> GenerationResul
     """
     resolved_provider = body.provider or settings.DEFAULT_PROVIDER
     resolved_model = body.model or settings.DEFAULT_MODEL
+    api_key = _resolve_api_key(resolved_provider)
 
     logger.info(
         "Received non-streaming chat completion request",
         provider=resolved_provider,
         model=resolved_model,
+        has_api_key=bool(api_key),
     )
 
     try:
-        provider = get_provider(resolved_provider)
+        provider = get_provider(resolved_provider, api_key=api_key)
     except Exception as e:
         logger.error("Failed to initialize AI provider", error=str(e))
         raise HTTPException(status_code=500, detail=f"Provider initialization failed: {str(e)}")
@@ -94,15 +110,17 @@ async def stream_chat(
     """
     resolved_provider = body.provider or settings.DEFAULT_PROVIDER
     resolved_model = body.model or settings.DEFAULT_MODEL
+    api_key = _resolve_api_key(resolved_provider)
 
     logger.info(
         "Received chat stream request",
         provider=resolved_provider,
         model=resolved_model,
+        has_api_key=bool(api_key),
     )
 
     try:
-        provider = get_provider(resolved_provider)
+        provider = get_provider(resolved_provider, api_key=api_key)
     except Exception as e:
         logger.error("Failed to initialize AI provider", error=str(e))
         raise HTTPException(status_code=500, detail=f"Provider initialization failed: {str(e)}")
