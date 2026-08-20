@@ -45,7 +45,7 @@ export function ChatContainer() {
   ];
 
   return (
-    <div className="w-screen h-screen flex flex-col bg-white overflow-hidden font-sans selection:bg-sky-100 selection:text-sky-900">
+    <div className="w-screen h-screen flex flex-col bg-white overflow-hidden font-sans selection:bg-zinc-200 selection:text-zinc-900">
       <Navbar onClearChat={clearMessages} messageCount={messages.length} />
 
       {/* Main Scrollable Viewport */}
@@ -54,13 +54,13 @@ export function ChatContainer() {
           /* Clean Empty State */
           <div className="flex-1 flex flex-col items-center justify-center max-w-2xl mx-auto px-4 py-8 text-center space-y-8">
             <div className="space-y-2">
-              <div className="w-10 h-10 rounded-xl bg-sky-600 text-white flex items-center justify-center font-bold text-lg mx-auto shadow-xs">
+              <div className="w-10 h-10 rounded-xl bg-zinc-900 text-white flex items-center justify-center font-bold text-lg mx-auto shadow-xs">
                 🧠
               </div>
-              <h2 className="text-xl font-semibold text-slate-900 tracking-tight">
+              <h2 className="text-xl font-semibold text-zinc-900 tracking-tight">
                 Where knowledge connects
               </h2>
-              <p className="text-xs sm:text-sm text-slate-500 max-w-sm mx-auto leading-relaxed">
+              <p className="text-xs sm:text-sm text-zinc-500 max-w-sm mx-auto leading-relaxed">
                 Ask a technical question, explore system architecture, or test streaming.
               </p>
             </div>
@@ -73,14 +73,14 @@ export function ChatContainer() {
                   <button
                     key={index}
                     onClick={() => sendMessage(item.prompt)}
-                    className="p-3.5 rounded-xl border border-slate-200 hover:border-slate-300 hover:bg-slate-50/70 transition-all text-left group flex flex-col justify-between space-y-2 cursor-pointer"
+                    className="p-3.5 rounded-xl border border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50/70 transition-all text-left group flex flex-col justify-between space-y-2 cursor-pointer"
                   >
-                    <Icon className="w-4 h-4 text-slate-400 group-hover:text-slate-700 transition-colors" />
+                    <Icon className="w-4 h-4 text-zinc-400 group-hover:text-zinc-700 transition-colors" />
                     <div>
-                      <div className="text-xs font-semibold text-slate-800">
+                      <div className="text-xs font-semibold text-zinc-800">
                         {item.title}
                       </div>
-                      <div className="text-[11px] text-slate-400 mt-0.5 line-clamp-2">
+                      <div className="text-[11px] text-zinc-400 mt-0.5 line-clamp-2">
                         {item.subtitle}
                       </div>
                     </div>
@@ -91,7 +91,7 @@ export function ChatContainer() {
           </div>
         ) : (
           /* Messages Stream List */
-          <div className="flex-1 w-full divide-y divide-slate-100 pb-8">
+          <div className="flex-1 w-full divide-y divide-zinc-100 pb-8">
             {messages.map((msg) => (
               <ChatMessage key={msg.id} message={msg} />
             ))}
