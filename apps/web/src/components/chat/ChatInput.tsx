@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { Send, Square, Cpu } from "lucide-react";
+import { ArrowUp, Square, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface ChatInputProps {
@@ -58,7 +58,7 @@ export function ChatInput({
     <div className="w-full max-w-3xl mx-auto px-4 pb-4 sm:pb-6">
       <form
         onSubmit={handleSubmit}
-        className="bg-white rounded-2xl border border-slate-200 shadow-lg p-2 flex flex-col space-y-2 transition-all focus-within:border-sky-500 focus-within:ring-2 focus-within:ring-sky-100"
+        className="bg-white rounded-2xl border border-slate-200/90 shadow-sm hover:border-slate-300 p-2.5 flex flex-col space-y-2 transition-all focus-within:border-slate-400 focus-within:shadow-md"
       >
         {/* Textarea Input */}
         <textarea
@@ -66,63 +66,56 @@ export function ChatInput({
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={
-            isStreaming
-              ? "GraphMind is generating response..."
-              : "Ask anything about AI engineering, system design, code architecture... (Enter to send, Shift+Enter for newline)"
-          }
+          placeholder="Message GraphMind..."
           rows={1}
           disabled={isStreaming}
-          className="w-full px-3 py-2 text-sm text-slate-900 placeholder-slate-400 bg-transparent resize-none outline-none font-medium max-h-48"
+          className="w-full px-2 py-1.5 text-[15px] text-slate-900 placeholder-slate-400 bg-transparent resize-none outline-none font-normal max-h-48 leading-relaxed"
         />
 
-        {/* Action Controls & Model Selector Bar */}
-        <div className="flex items-center justify-between pt-1 border-t border-slate-100 px-1">
-          {/* Model Selector */}
-          <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-slate-50 border border-slate-200 text-xs font-medium text-slate-700">
-            <Cpu className="w-3.5 h-3.5 text-sky-600 shrink-0" />
+        {/* Action Bar */}
+        <div className="flex items-center justify-between pt-1 px-1">
+          {/* Model Selector Pill */}
+          <div className="relative inline-flex items-center">
             <select
               value={selectedModel}
               onChange={(e) => setSelectedModel(e.target.value)}
               disabled={isStreaming}
-              className="bg-transparent border-none outline-none font-semibold text-slate-800 cursor-pointer pr-1 text-xs"
+              className="appearance-none bg-slate-100 hover:bg-slate-200/80 text-slate-700 font-medium text-xs rounded-lg pl-2.5 pr-6 py-1 cursor-pointer outline-none transition-colors disabled:opacity-50"
             >
               <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
               <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
               <option value="gpt-4o-mini">GPT-4o Mini</option>
               <option value="mock">Offline Mock Stream</option>
             </select>
+            <ChevronDown className="w-3 h-3 text-slate-400 pointer-events-none absolute right-2" />
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex items-center space-x-2">
+          {/* Send / Stop Button */}
+          <div className="flex items-center">
             {isStreaming ? (
               <Button
                 type="button"
                 variant="destructive"
-                size="sm"
+                size="iconSm"
                 onClick={onStopStreaming}
-                className="flex items-center space-x-1.5 shadow-xs"
+                className="rounded-full h-7 w-7"
+                title="Stop generating"
               >
-                <Square className="w-3 h-3 fill-current" />
-                <span>Stop</span>
+                <Square className="w-2.5 h-2.5 fill-current" />
               </Button>
             ) : (
-              <Button
+              <button
                 type="submit"
-                size="icon"
                 disabled={!prompt.trim()}
-                title="Send Message"
+                className="h-7 w-7 rounded-full bg-slate-900 text-white hover:bg-slate-800 disabled:bg-slate-200 disabled:text-slate-400 flex items-center justify-center transition-colors shadow-xs"
+                title="Send message"
               >
-                <Send className="w-4 h-4" />
-              </Button>
+                <ArrowUp className="w-4 h-4 stroke-[2.5]" />
+              </button>
             )}
           </div>
         </div>
       </form>
-      <p className="text-[11px] text-center text-slate-400 mt-2">
-        GraphMind Phase 1 Stream Engine • AI-Provider Agnostic • Markdown & Math typesetting supported
-      </p>
     </div>
   );
 }

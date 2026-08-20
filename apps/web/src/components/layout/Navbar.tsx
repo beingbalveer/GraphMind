@@ -1,9 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { BookOpen, Trash2 } from "lucide-react";
+import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 
 interface NavbarProps {
   onClearChat?: () => void;
@@ -29,72 +28,47 @@ export function Navbar({ onClearChat, messageCount }: NavbarProps) {
   }, []);
 
   return (
-    <header className="h-14 border-b border-slate-200 bg-white/90 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between z-30 shrink-0 select-none">
-      {/* Brand & Identity */}
-      <div className="flex items-center space-x-3">
-        <div className="w-8 h-8 rounded-lg bg-sky-600 text-white flex items-center justify-center font-bold text-sm shadow-xs">
+    <header className="h-14 border-b border-slate-200/80 bg-white/80 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between z-30 shrink-0 select-none">
+      {/* Brand */}
+      <div className="flex items-center space-x-2.5">
+        <div className="w-7 h-7 rounded-lg bg-sky-600 text-white flex items-center justify-center font-bold text-xs shadow-xs">
           🧠
         </div>
-        <div>
-          <div className="flex items-center space-x-2">
-            <h1 className="font-bold text-slate-900 text-sm tracking-tight">GraphMind</h1>
-            <Badge variant="secondary">Phase 1 Core</Badge>
-          </div>
-        </div>
-      </div>
-
-      {/* Center status indicators */}
-      <div className="hidden sm:flex items-center space-x-3 text-xs text-slate-500 font-medium">
-        <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded-md bg-slate-50 border border-slate-200/80">
-          <span
-            className={`w-2 h-2 rounded-full ${
-              apiOnline === true
-                ? "bg-emerald-500 animate-pulse"
-                : apiOnline === false
-                ? "bg-rose-500"
-                : "bg-amber-400"
-            }`}
-          />
-          <span className="text-[11px] text-slate-600">
-            {apiOnline === true
-              ? "API Connected"
+        <span className="font-semibold text-slate-900 text-sm tracking-tight">
+          GraphMind
+        </span>
+        <div
+          className={`w-2 h-2 rounded-full ml-1.5 transition-colors ${
+            apiOnline === true
+              ? "bg-emerald-500"
               : apiOnline === false
-              ? "API Offline (Port 8008)"
-              : "Checking API..."}
-          </span>
-        </div>
-
-        {messageCount > 0 && (
-          <span className="text-[11px] text-slate-400 font-mono">
-            {messageCount} {messageCount === 1 ? "message" : "messages"}
-          </span>
-        )}
+              ? "bg-rose-500"
+              : "bg-amber-400 animate-pulse"
+          }`}
+          title={
+            apiOnline === true
+              ? "Backend API Connected (Port 8008)"
+              : apiOnline === false
+              ? "Backend API Offline"
+              : "Checking backend connection..."
+          }
+        />
       </div>
 
-      {/* Right controls */}
+      {/* Right Controls */}
       <div className="flex items-center space-x-2">
         {messageCount > 0 && onClearChat && (
           <Button
             variant="ghost"
             size="sm"
             onClick={onClearChat}
-            className="flex items-center space-x-1"
-            title="Clear current chat"
+            className="text-slate-500 hover:text-slate-800 text-xs font-medium flex items-center space-x-1.5"
+            title="Start New Chat"
           >
-            <Trash2 className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Clear</span>
+            <Plus className="w-3.5 h-3.5" />
+            <span>New Chat</span>
           </Button>
         )}
-
-        <a
-          href="http://localhost:8008/docs"
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center justify-center rounded-lg bg-slate-100 px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200 transition-colors space-x-1.5"
-        >
-          <BookOpen className="w-3.5 h-3.5 text-slate-500" />
-          <span className="hidden sm:inline">API Docs ↗</span>
-        </a>
       </div>
     </header>
   );
