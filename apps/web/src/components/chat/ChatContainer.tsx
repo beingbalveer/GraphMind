@@ -10,11 +10,18 @@ import { TreeSidebar } from "../tree/TreeSidebar";
 import { GraphCanvas } from "../canvas/GraphCanvas";
 import { FocusDrawer } from "../canvas/FocusDrawer";
 import { CommandPalette } from "../canvas/CommandPalette";
+import { WorkspaceModal } from "../workspace/WorkspaceModal";
 import { Toast } from "@/components/ui/toast";
 import { useChatStream } from "@/hooks/useChatStream";
 import { useScrollAnchor } from "@/hooks/useScrollAnchor";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { Navbar, ViewMode } from "../layout/Navbar";
+import {
+  WorkspaceItem,
+  fetchWorkspaces,
+  createWorkspace,
+  saveGraphDelta,
+} from "@/lib/workspaceApi";
 
 export function ChatContainer() {
   const {
@@ -36,6 +43,9 @@ export function ChatContainer() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
+  const [isWorkspaceModalOpen, setIsWorkspaceModalOpen] = useState(false);
+  const [currentWorkspace, setCurrentWorkspace] = useState<WorkspaceItem | null>(null);
+  const [syncStatus, setSyncStatus] = useState<"saved" | "syncing" | "offline">("saved");
   const [drawerNodeId, setDrawerNodeId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("chat");
 
@@ -51,12 +61,47 @@ export function ChatContainer() {
     scrollToBottom,
   } = useScrollAnchor({ threshold: 80 });
 
+  // Initialize or fetch default workspace from backend
+  useEffect(() => {
+    async function initWorkspace() {
+      try {
+        const list = await fetchWorkspaces();
+        if (list && list.length > 0) {
+          setCurrentWorkspace(list[0]);
+        } else {
+          const created = await createWorkspace("Main Workspace", "Default knowledge tree");
+          setCurrentWorkspace(created);
+        }
+      } catch {
+        setSyncStatus("offline");
+      }
+    }
+    initWorkspace();
+  }, []);
+
   // Auto-scroll when user is at the bottom in chat mode
   useEffect(() => {
     if (isAtBottom && viewMode === "chat") {
       scrollToBottom(false);
     }
   }, [activeMessages, isStreaming, isAtBottom, scrollToBottom, viewMode]);
+
+  // Debounced auto-save to PostgreSQL backend whenever tree changes
+  useEffect(() => {
+    if (!currentWorkspace || !tree || !tree.rootNodeId) return;
+
+    setSyncStatus("syncing");
+    const timeout = setTimeout(async () => {
+      const success = await saveGraphDelta(currentWorkspace.id, {
+        workspaceUpdate: {
+          name: currentWorkspace.name,
+        },
+      });
+      setSyncStatus(success ? "saved" : "offline");
+    }, 600);
+
+    return () => clearTimeout(timeout);
+  }, [tree, currentWorkspace]);
 
   const handleJumpToMessage = useCallback((messageId: string) => {
     const el = document.getElementById(messageId);
@@ -139,7 +184,9 @@ export function ChatContainer() {
   }, [tree, switchBranch, handleJumpToMessage, viewMode]);
 
   const handleEscape = useCallback(() => {
-    if (isPaletteOpen) {
+    if (isWorkspaceModalOpen) {
+      setIsWorkspaceModalOpen(false);
+    } else if (isPaletteOpen) {
       setIsPaletteOpen(false);
     } else if (isDrawerOpen) {
       setIsDrawerOpen(false);
@@ -148,7 +195,7 @@ export function ChatContainer() {
     } else if (activeBranch) {
       clearBranchContext();
     }
-  }, [isPaletteOpen, isDrawerOpen, isSidebarOpen, activeBranch, clearBranchContext]);
+  }, [isWorkspaceModalOpen, isPaletteOpen, isDrawerOpen, isSidebarOpen, activeBranch, clearBranchContext]);
 
   useKeyboardShortcuts({
     onToggleSidebar: () => setIsSidebarOpen((prev) => !prev),
@@ -200,6 +247,9 @@ export function ChatContainer() {
         onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
         viewMode={viewMode}
         onViewModeChange={setViewMode}
+        workspaceName={currentWorkspace?.name || "Main Workspace"}
+        onOpenWorkspaceModal={() => setIsWorkspaceModalOpen(true)}
+        syncStatus={syncStatus}
         breadcrumbs={
           <BranchBreadcrumbs
             messages={activeMessages}
@@ -388,6 +438,17 @@ export function ChatContainer() {
           clearMessages();
           setIsDrawerOpen(false);
         }}
+      />
+
+      {/* Workspace Switcher & Export Modal */}
+      <WorkspaceModal
+        isOpen={isWorkspaceModalOpen}
+        onClose={() => setIsWorkspaceModalOpen(false)}
+        currentWorkspace={currentWorkspace}
+        onSelectWorkspace={(ws) => {
+          setCurrentWorkspace(ws);
+        }}
+        activeTree={tree}
       />
 
       {/* Non-intrusive Floating Toast Notification */}

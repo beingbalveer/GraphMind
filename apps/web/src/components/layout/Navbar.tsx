@@ -1,7 +1,15 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Plus, PanelLeft, MessageSquare, LayoutGrid } from "lucide-react";
+import {
+  Plus,
+  PanelLeft,
+  MessageSquare,
+  LayoutGrid,
+  FolderGit2,
+  Check,
+  RotateCw,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export type ViewMode = "chat" | "canvas";
@@ -14,6 +22,9 @@ interface NavbarProps {
   onToggleSidebar?: () => void;
   viewMode?: ViewMode;
   onViewModeChange?: (mode: ViewMode) => void;
+  workspaceName?: string;
+  onOpenWorkspaceModal?: () => void;
+  syncStatus?: "saved" | "syncing" | "offline";
 }
 
 export function Navbar({
@@ -24,6 +35,9 @@ export function Navbar({
   onToggleSidebar,
   viewMode = "chat",
   onViewModeChange,
+  workspaceName = "Main Workspace",
+  onOpenWorkspaceModal,
+  syncStatus = "saved",
 }: NavbarProps) {
   const [apiOnline, setApiOnline] = useState<boolean | null>(null);
 
@@ -44,7 +58,7 @@ export function Navbar({
 
   return (
     <header className="h-13 border-b border-zinc-200/80 bg-white/80 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between z-30 shrink-0 select-none">
-      {/* Left: Sidebar Toggle + Brand + Connection Status */}
+      {/* Left: Sidebar Toggle + Brand + Workspace Selector */}
       <div className="flex items-center space-x-2.5 shrink-0">
         {onToggleSidebar && (
           <Button
@@ -63,25 +77,56 @@ export function Navbar({
         <div className="w-6 h-6 rounded-md bg-zinc-900 text-white flex items-center justify-center font-bold text-xs shadow-xs">
           🧠
         </div>
-        <span className="font-semibold text-zinc-900 text-sm tracking-tight">
-          GraphMind
-        </span>
+        <div className="flex items-center space-x-1">
+          <span className="font-semibold text-zinc-900 text-sm tracking-tight hidden sm:inline">
+            GraphMind
+          </span>
+          <div
+            className={`w-1.5 h-1.5 rounded-full ${
+              apiOnline === true
+                ? "bg-emerald-500"
+                : apiOnline === false
+                ? "bg-rose-500"
+                : "bg-zinc-400 animate-pulse"
+            }`}
+            title={apiOnline ? "PostgreSQL & FastAPI Connected" : "Connecting to backend..."}
+          />
+        </div>
+
+        {/* Workspace Selector Pill */}
+        {onOpenWorkspaceModal && (
+          <button
+            type="button"
+            onClick={onOpenWorkspaceModal}
+            className="flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-zinc-100/90 border border-zinc-200/80 text-xs font-medium text-zinc-800 hover:bg-zinc-200/80 hover:text-zinc-950 transition-colors cursor-pointer ml-1"
+            title="Switch or manage workspaces"
+          >
+            <FolderGit2 className="w-3.5 h-3.5 text-zinc-500" />
+            <span className="max-w-[130px] truncate">{workspaceName}</span>
+          </button>
+        )}
+
+        {/* Sync Status Badge */}
         <div
-          className={`w-1.5 h-1.5 rounded-full ml-1 transition-colors ${
-            apiOnline === true
-              ? "bg-emerald-500"
-              : apiOnline === false
-              ? "bg-rose-500"
-              : "bg-zinc-400 animate-pulse"
-          }`}
+          className="hidden sm:flex items-center space-x-1 text-[11px] text-zinc-400 pl-1"
           title={
-            apiOnline === true
-              ? "Backend API Connected (Port 8008)"
-              : apiOnline === false
-              ? "Backend API Offline"
-              : "Checking backend connection..."
+            syncStatus === "syncing"
+              ? "Syncing graph changes to PostgreSQL database..."
+              : "All graph nodes persisted to PostgreSQL"
           }
-        />
+        >
+          {syncStatus === "syncing" ? (
+            <>
+              <RotateCw className="w-3 h-3 animate-spin text-zinc-500" />
+              <span className="text-zinc-500">Syncing...</span>
+            </>
+          ) : (
+            <>
+              <Check className="w-3 h-3 text-emerald-600" />
+              <span className="text-zinc-400">Saved</span>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Center: Branch Breadcrumbs */}
