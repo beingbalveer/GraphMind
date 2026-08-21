@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Terminal, Cpu, GitBranch, ArrowDown } from "lucide-react";
 import { getNodeChildren } from "@graphmind/shared";
 import { ChatMessage } from "./ChatMessage";
@@ -33,6 +33,9 @@ export function ChatContainer() {
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("chat");
+
+  const fitViewRef = useRef<(() => void) | null>(null);
+  const centerActiveRef = useRef<(() => void) | null>(null);
 
   const {
     scrollRef,
@@ -126,6 +129,8 @@ export function ChatContainer() {
     onNextBranch: handleNextBranch,
     onJumpToRoot: handleJumpToRoot,
     onEscape: handleEscape,
+    onFitView: () => fitViewRef.current?.(),
+    onCenterActive: () => centerActiveRef.current?.(),
   });
 
   const starterPrompts = [
@@ -180,7 +185,12 @@ export function ChatContainer() {
           {viewMode === "canvas" ? (
             /* Infinite 2D Spatial Graph Canvas View */
             <div className="flex-1 min-h-0 relative">
-              <GraphCanvas tree={tree} onSelectNode={handleSelectTreeNode} />
+              <GraphCanvas
+                tree={tree}
+                onSelectNode={handleSelectTreeNode}
+                onFitViewRef={fitViewRef}
+                onCenterActiveRef={centerActiveRef}
+              />
             </div>
           ) : (
             /* Dedicated Scrollable Feed for Active Lineage Branch */

@@ -8,6 +8,8 @@ interface KeyboardShortcutsHandlers {
   onNextBranch?: () => void;
   onJumpToRoot?: () => void;
   onEscape?: () => void;
+  onFitView?: () => void;
+  onCenterActive?: () => void;
 }
 
 export function useKeyboardShortcuts({
@@ -16,6 +18,8 @@ export function useKeyboardShortcuts({
   onNextBranch,
   onJumpToRoot,
   onEscape,
+  onFitView,
+  onCenterActive,
 }: KeyboardShortcutsHandlers) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -49,7 +53,21 @@ export function useKeyboardShortcuts({
         return;
       }
 
-      // 5. Escape: Close sidebar / dismiss popups
+      // 5. Fit View on Canvas: Cmd+0 / Ctrl+0
+      if (isModifier && e.key === "0") {
+        e.preventDefault();
+        onFitView?.();
+        return;
+      }
+
+      // 6. Center on Active Node: Cmd+. / Ctrl+.
+      if (isModifier && e.key === ".") {
+        e.preventDefault();
+        onCenterActive?.();
+        return;
+      }
+
+      // 7. Escape: Close sidebar / dismiss popups
       if (e.key === "Escape") {
         onEscape?.();
         return;
@@ -58,5 +76,13 @@ export function useKeyboardShortcuts({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onToggleSidebar, onPrevBranch, onNextBranch, onJumpToRoot, onEscape]);
+  }, [
+    onToggleSidebar,
+    onPrevBranch,
+    onNextBranch,
+    onJumpToRoot,
+    onEscape,
+    onFitView,
+    onCenterActive,
+  ]);
 }
