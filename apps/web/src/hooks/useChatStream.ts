@@ -4,12 +4,19 @@ import { useState, useRef, useCallback } from "react";
 
 export interface Message {
   id: string;
+  parentId?: string | null;
   role: "user" | "assistant";
   content: string;
+  highlightedContext?: string | null;
   model?: string;
   createdAt: string;
   isStreaming?: boolean;
   isError?: boolean;
+}
+
+export interface BranchContext {
+  parentNodeId: string;
+  highlightedText: string;
 }
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8008";
@@ -18,6 +25,7 @@ export function useChatStream() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [activeBranch, setActiveBranch] = useState<BranchContext | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const stopStreaming = useCallback(() => {
@@ -40,22 +48,31 @@ export function useChatStream() {
   }, []);
 
   const sendMessage = useCallback(
-    async (prompt: string, provider = "gemini", model = "gemini-2.5-flash") => {
+    async (
+      prompt: string,
+      provider = "gemini",
+      model = "gemini-2.5-flash",
+      branchOverride?: BranchContext | null
+    ) => {
       if (!prompt.trim() || isStreaming) return;
 
       setError(null);
+      const branch = branchOverride !== undefined ? branchOverride : activeBranch;
       const userMessageId = `user-${Date.now()}`;
       const assistantMessageId = `assistant-${Date.now()}`;
 
       const userMessage: Message = {
         id: userMessageId,
+        parentId: branch?.parentNodeId || null,
         role: "user",
         content: prompt.trim(),
+        highlightedContext: branch?.highlightedText || null,
         createdAt: new Date().toISOString(),
       };
 
       const assistantMessage: Message = {
         id: assistantMessageId,
+        parentId: userMessageId,
         role: "assistant",
         content: "",
         model: model,
@@ -66,21 +83,50 @@ export function useChatStream() {
 
       setMessages((prev) => [...prev, userMessage, assistantMessage]);
       setIsStreaming(true);
+      setActiveBranch(null); // Clear branch badge once sent
 
       const abortController = new AbortController();
       abortControllerRef.current = abortController;
 
       try {
+        // Collect existing non-error, non-streaming messages for conversational context
+        const history = messages
+          .filter((m) => m.content && !m.isStreaming && !m.isError)
+          .map((m) => ({
+            role: m.role,
+            content: m.content,
+          }));
+
+        // Format user message with highlighted excerpt if branching
+        const formattedPrompt = branch?.highlightedText
+          ? `[Focusing on excerpt: "${branch.highlightedText.trim()}"]\n\n${prompt.trim()}`
+          : prompt.trim();
+
+        const messagesPayload = [
+          ...history,
+          { role: "user", content: formattedPrompt },
+        ];
+
+        const payload: Record<string, any> = {
+          prompt: formattedPrompt,
+          messages: messagesPayload,
+          provider,
+          model,
+        };
+
+        if (branch?.parentNodeId) {
+          payload.parent_node_id = branch.parentNodeId;
+        }
+        if (branch?.highlightedText) {
+          payload.highlighted_context = branch.highlightedText;
+        }
+
         const response = await fetch(`${API_BASE_URL}/api/v1/chat/stream`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            prompt: prompt.trim(),
-            provider,
-            model,
-          }),
+          body: JSON.stringify(payload),
           signal: abortController.signal,
         });
 
@@ -178,7 +224,7 @@ export function useChatStream() {
         );
       }
     },
-    [isStreaming]
+    [isStreaming, activeBranch, messages]
   );
 
   const retryLastMessage = useCallback(() => {
@@ -194,9 +240,21 @@ export function useChatStream() {
     }
   }, [messages, sendMessage]);
 
+  const setBranchContext = useCallback(
+    (parentNodeId: string, highlightedText: string) => {
+      setActiveBranch({ parentNodeId, highlightedText });
+    },
+    []
+  );
+
+  const clearBranchContext = useCallback(() => {
+    setActiveBranch(null);
+  }, []);
+
   const clearMessages = useCallback(() => {
     setMessages([]);
     setError(null);
+    setActiveBranch(null);
   }, []);
 
   const clearError = useCallback(() => {
@@ -207,6 +265,9 @@ export function useChatStream() {
     messages,
     isStreaming,
     error,
+    activeBranch,
+    setBranchContext,
+    clearBranchContext,
     clearError,
     sendMessage,
     retryLastMessage,

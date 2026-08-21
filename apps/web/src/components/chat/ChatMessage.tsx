@@ -6,7 +6,7 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import rehypeHighlight from "rehype-highlight";
-import { User, Sparkles, Copy, Check, RotateCcw } from "lucide-react";
+import { User, Sparkles, Copy, Check, RotateCcw, GitBranch } from "lucide-react";
 import { Message } from "@/hooks/useChatStream";
 import { Button } from "@/components/ui/button";
 import { useTextSelection } from "@/hooks/useTextSelection";
@@ -117,8 +117,8 @@ export function ChatMessage({
       )}
 
       <div className="max-w-3xl mx-auto flex gap-3.5 sm:gap-4.5 animate-in fade-in duration-200">
-        {/* Role Avatar */}
-        <div className="shrink-0 pt-1">
+        {/* Role Avatar aligned with first text baseline */}
+        <div className="shrink-0 pt-0.5">
           {isUser ? (
             <div className="w-6 h-6 rounded-full bg-zinc-100 text-zinc-600 border border-zinc-200/80 flex items-center justify-center font-bold text-xs">
               <User className="w-3.5 h-3.5" />
@@ -135,7 +135,18 @@ export function ChatMessage({
         </div>
 
         {/* Message Content Container */}
-        <div className="flex-1 min-w-0 space-y-2">
+        <div className="flex-1 min-w-0 space-y-1.5">
+          {/* Highlighted Sub-topic Context Badge */}
+          {message.highlightedContext && (
+            <div className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-zinc-100/90 border border-zinc-200/80 text-xs text-zinc-700 select-none mb-1.5">
+              <GitBranch className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+              <span className="font-semibold text-zinc-900 shrink-0">Sub-topic:</span>
+              <span className="italic text-zinc-600 truncate max-w-md">
+                &ldquo;{message.highlightedContext}&rdquo;
+              </span>
+            </div>
+          )}
+
           {/* Markdown Rendered Body with Explicit Element Styling */}
           <div
             ref={contentRef}
@@ -151,35 +162,35 @@ export function ChatMessage({
                   code: CodeBlock,
                   p({ children, ...props }: any) {
                     return (
-                      <p className="my-3.5 leading-[1.8] text-[15.5px]" {...props}>
+                      <p className="first:mt-0 mt-3.5 mb-3.5 leading-[1.8] text-[15.5px]" {...props}>
                         {children}
                       </p>
                     );
                   },
                   h1({ children, ...props }: any) {
                     return (
-                      <h1 className="text-xl font-bold text-zinc-900 mt-7 mb-3 tracking-tight" {...props}>
+                      <h1 className="text-xl font-bold text-zinc-900 first:mt-0 mt-7 mb-3 tracking-tight" {...props}>
                         {children}
                       </h1>
                     );
                   },
                   h2({ children, ...props }: any) {
                     return (
-                      <h2 className="text-[17px] font-semibold text-zinc-900 mt-6 mb-2.5 tracking-tight" {...props}>
+                      <h2 className="text-[17px] font-semibold text-zinc-900 first:mt-0 mt-6 mb-2.5 tracking-tight" {...props}>
                         {children}
                       </h2>
                     );
                   },
                   h3({ children, ...props }: any) {
                     return (
-                      <h3 className="text-[15.5px] font-semibold text-zinc-900 mt-5 mb-2" {...props}>
+                      <h3 className="text-[15.5px] font-semibold text-zinc-900 first:mt-0 mt-5 mb-2" {...props}>
                         {children}
                       </h3>
                     );
                   },
                   h4({ children, ...props }: any) {
                     return (
-                      <h4 className="text-sm font-semibold text-zinc-900 mt-4 mb-1.5" {...props}>
+                      <h4 className="text-sm font-semibold text-zinc-900 first:mt-0 mt-4 mb-1.5" {...props}>
                         {children}
                       </h4>
                     );
@@ -189,14 +200,14 @@ export function ChatMessage({
                   },
                   ul({ children, ...props }: any) {
                     return (
-                      <ul className="my-3.5 pl-5 list-disc space-y-2 text-[15px] leading-[1.75]" {...props}>
+                      <ul className="first:mt-0 my-3.5 pl-5 list-disc space-y-2 text-[15px] leading-[1.75]" {...props}>
                         {children}
                       </ul>
                     );
                   },
                   ol({ children, ...props }: any) {
                     return (
-                      <ol className="my-3.5 pl-5 list-decimal space-y-2 text-[15px] leading-[1.75]" {...props}>
+                      <ol className="first:mt-0 my-3.5 pl-5 list-decimal space-y-2 text-[15px] leading-[1.75]" {...props}>
                         {children}
                       </ol>
                     );

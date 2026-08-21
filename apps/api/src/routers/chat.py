@@ -71,7 +71,8 @@ def _resolve_api_key(provider_name: str) -> Optional[str]:
 
 def _build_conversation_input(body: ChatStreamRequest) -> List[ChatMessage]:
     """
-    Construct input messages from tree lineage, explicit message list, or raw prompt.
+    Construct input messages from tree lineage, explicit message list, or raw prompt,
+    ensuring highlighted_context is always preserved and injected.
     """
     if body.tree:
         return resolve_conversation_lineage(
@@ -80,9 +81,25 @@ def _build_conversation_input(body: ChatStreamRequest) -> List[ChatMessage]:
             new_prompt=body.prompt or "",
             highlighted_context=body.highlighted_context,
         )
+
     if body.messages:
-        return body.messages
-    return [ChatMessage(role=ChatRole.USER, content=body.prompt or "")]
+        messages = list(body.messages)
+        if body.highlighted_context and body.highlighted_context.strip() and messages:
+            last_msg = messages[-1]
+            if last_msg.role == ChatRole.USER and not last_msg.content.startswith("[Focusing on excerpt:"):
+                messages[-1] = ChatMessage(
+                    role=ChatRole.USER,
+                    content=f"[Focusing on excerpt: \"{body.highlighted_context.strip()}\"]\n\n{last_msg.content.strip()}",
+                    metadata=last_msg.metadata,
+                )
+        return messages
+
+    raw_prompt = (body.prompt or "").strip()
+    if body.highlighted_context and body.highlighted_context.strip():
+        content = f"[Focusing on excerpt: \"{body.highlighted_context.strip()}\"]\n\n{raw_prompt}"
+    else:
+        content = raw_prompt
+    return [ChatMessage(role=ChatRole.USER, content=content)]
 
 
 @router.post("/completions", response_model=GenerationResult)

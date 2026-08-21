@@ -14,6 +14,9 @@ export function ChatContainer() {
     messages,
     isStreaming,
     error,
+    activeBranch,
+    setBranchContext,
+    clearBranchContext,
     clearError,
     sendMessage,
     retryLastMessage,
@@ -116,6 +119,10 @@ export function ChatContainer() {
                 key={msg.id}
                 message={msg}
                 onRetry={retryLastMessage}
+                onExploreBranch={(id, text) => {
+                  setBranchContext(id, text);
+                  scrollToBottom(true);
+                }}
               />
             ))}
             <div ref={bottomRef} />
@@ -144,6 +151,8 @@ export function ChatContainer() {
           }}
           onStopStreaming={stopStreaming}
           isStreaming={isStreaming}
+          activeBranch={activeBranch}
+          onClearBranch={clearBranchContext}
         />
       </div>
 
