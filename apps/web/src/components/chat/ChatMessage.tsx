@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, memo, useCallback } from "react";
+import React, { useState, useRef, memo, useCallback, useMemo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
@@ -13,6 +13,11 @@ import { useTextSelection } from "@/hooks/useTextSelection";
 import { SelectionTooltip } from "./SelectionTooltip";
 import { BranchSwitcher } from "./BranchSwitcher";
 
+export interface BranchLinkInfo {
+  excerpt: string;
+  leafId: string;
+}
+
 interface ChatMessageProps {
   message: TreeNode & { isStreaming?: boolean; isError?: boolean };
   tree?: ConversationTree | null;
@@ -21,6 +26,39 @@ interface ChatMessageProps {
   onExploreBranch?: (messageId: string, highlightedText: string) => void;
   onSelectBranch?: (nodeId: string) => void;
   onOpenSideBranch?: (childNodeId: string, excerpt: string) => void;
+}
+
+function escapeRegExp(string: string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+export function injectBranchLinks(content: string, branches: BranchLinkInfo[]): string {
+  if (!branches || branches.length === 0 || !content) return content;
+
+  // Split by code blocks so we never alter code inside fences or inline backticks
+  const codeBlockRegex = /(```[\s\S]*?```|`[^`]+`)/g;
+  const parts = content.split(codeBlockRegex);
+
+  return parts
+    .map((part) => {
+      // If this part is a code block, preserve untouched
+      if (part.startsWith("`")) return part;
+
+      let modifiedPart = part;
+      for (const branch of branches) {
+        if (!branch.excerpt || !branch.excerpt.trim()) continue;
+        const rawExcerpt = branch.excerpt.trim();
+        const escaped = escapeRegExp(rawExcerpt);
+        // Replace occurrences not already inside a markdown branch link
+        const regex = new RegExp(`(?<!\\[)${escaped}(?!\\]\\(#branch:)`, "gi");
+        modifiedPart = modifiedPart.replace(
+          regex,
+          (match) => `[${match}](#branch:${branch.leafId})`
+        );
+      }
+      return modifiedPart;
+    })
+    .join("");
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -90,9 +128,19 @@ function CodeBlock({ children, className, ...props }: any) {
 
 export const MarkdownRenderer = memo(function MarkdownRenderer({
   content,
+  branchLinks,
+  onOpenSideBranch,
 }: {
   content: string;
+  branchLinks?: BranchLinkInfo[];
+  onOpenSideBranch?: (childNodeId: string, excerpt: string) => void;
 }) {
+  const processedContent = useMemo(() => {
+    return branchLinks && branchLinks.length > 0
+      ? injectBranchLinks(content, branchLinks)
+      : content;
+  }, [content, branchLinks]);
+
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm, remarkMath]}
@@ -148,6 +196,34 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
           );
         },
         a({ href, children }) {
+          // Obsidian-style clickable inline branch link
+          if (href?.startsWith("#branch:")) {
+            const leafId = href.replace("#branch:", "");
+            const excerptText =
+              typeof children === "string"
+                ? children
+                : Array.isArray(children)
+                ? children.map((c) => (typeof c === "string" ? c : "")).join("")
+                : "";
+
+            return (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onOpenSideBranch?.(leafId, excerptText);
+                }}
+                className="inline-flex items-center gap-1 mx-1 px-2 py-0.5 rounded-md bg-zinc-100 hover:bg-zinc-200 text-zinc-900 border border-zinc-300 font-semibold text-[13.5px] cursor-pointer transition-all duration-150 hover:scale-[1.03] active:scale-95 shadow-2xs group select-none no-underline align-baseline"
+                title={`Open branch for "${excerptText}" in parallel split pane`}
+              >
+                <GitBranch className="w-3.5 h-3.5 text-zinc-600 group-hover:text-zinc-950 shrink-0" />
+                <span>{children}</span>
+                <span className="text-[10px] text-zinc-400 group-hover:text-zinc-800 font-normal">↗</span>
+              </button>
+            );
+          }
+
           return (
             <a
               href={href}
@@ -192,7 +268,7 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
         },
       }}
     >
-      {content}
+      {processedContent}
     </ReactMarkdown>
   );
 });
@@ -216,7 +292,7 @@ export function ChatMessage({
   );
 
   // Find all child branches created from this message that have highlighted context
-  const branchedChildren = React.useMemo(() => {
+  const branchedChildren = useMemo(() => {
     if (!tree) return [];
     return getNodeChildren(tree, message.id).filter(
       (child) => Boolean(child.highlightedContext)
@@ -244,6 +320,14 @@ export function ChatMessage({
     },
     [tree]
   );
+
+  // Build inline branch link mappings for the markdown renderer
+  const branchLinks: BranchLinkInfo[] = useMemo(() => {
+    return branchedChildren.map((child) => ({
+      excerpt: child.highlightedContext || "",
+      leafId: getBranchLeafId(child),
+    }));
+  }, [branchedChildren, getBranchLeafId]);
 
   const handleCopy = async () => {
     if (!message.content) return;
@@ -300,7 +384,7 @@ export function ChatMessage({
             </div>
           )}
 
-          {/* Markdown Rendered Body with Explicit Element Styling */}
+          {/* Markdown Rendered Body with Obsidian-Style Inline Clickable Links */}
           <div
             ref={contentRef}
             className={`text-[15.5px] ${
@@ -308,7 +392,11 @@ export function ChatMessage({
             } leading-[1.8] break-words`}
           >
             {message.content ? (
-              <MarkdownRenderer content={message.content} />
+              <MarkdownRenderer
+                content={message.content}
+                branchLinks={branchLinks}
+                onOpenSideBranch={onOpenSideBranch}
+              />
             ) : message.isStreaming ? (
               /* Smooth Staggered Wave Thinking State */
               <div className="flex items-center space-x-2 py-1 select-none">
@@ -326,28 +414,6 @@ export function ChatMessage({
               <span className="inline-block w-[2.5px] h-[15px] ml-1 bg-zinc-900 animate-pulse align-middle rounded-full" />
             )}
           </div>
-
-          {/* Interactive Clickable Branch Pills Spawned from this Message */}
-          {branchedChildren.length > 0 && (
-            <div className="pt-2 flex flex-wrap items-center gap-1.5 select-none">
-              <span className="text-[11px] text-zinc-400 font-medium mr-1">Branches:</span>
-              {branchedChildren.map((child) => (
-                <button
-                  key={child.id}
-                  type="button"
-                  onClick={() => onOpenSideBranch?.(getBranchLeafId(child), child.highlightedContext || "")}
-                  className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-zinc-100/90 hover:bg-zinc-200/90 border border-zinc-200/80 text-xs text-zinc-800 font-medium cursor-pointer transition-all hover:scale-[1.02] active:scale-98 shadow-2xs group"
-                  title="Open parallel branch in right split pane"
-                >
-                  <GitBranch className="w-3.5 h-3.5 text-zinc-500 group-hover:text-zinc-900" />
-                  <span className="italic truncate max-w-[220px]">
-                    &ldquo;{child.highlightedContext}&rdquo;
-                  </span>
-                  <span className="text-[10px] text-zinc-400 font-normal">↗</span>
-                </button>
-              ))}
-            </div>
-          )}
 
           {/* Action Row & Branch Switcher */}
           <div className="pt-2 flex flex-wrap items-center justify-between gap-2">
