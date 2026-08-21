@@ -18,10 +18,12 @@ import { Maximize2, Crosshair, Map, RotateCcw } from "lucide-react";
 import { ConversationTree } from "@graphmind/shared";
 import { treeToGraph, CustomNodeData } from "@/lib/treeToGraph";
 import { CustomMessageNode } from "./CustomMessageNode";
+import { CustomBranchEdge } from "./CustomBranchEdge";
 import { Button } from "@/components/ui/button";
 
 interface GraphCanvasProps {
   tree: ConversationTree | null;
+  isStreaming?: boolean;
   onSelectNode: (nodeId: string) => void;
   onExploreBranch?: (nodeId: string, contextText?: string) => void;
   onSwitchToChat?: (nodeId: string) => void;
@@ -33,8 +35,13 @@ const nodeTypes = {
   customMessageNode: CustomMessageNode,
 };
 
+const edgeTypes = {
+  customBranchEdge: CustomBranchEdge,
+};
+
 function FlowCanvas({
   tree,
+  isStreaming = false,
   onSelectNode,
   onExploreBranch,
   onSwitchToChat,
@@ -48,10 +55,11 @@ function FlowCanvas({
   const { nodes: initialNodes, edges: initialEdges } = useMemo(() => {
     return treeToGraph(tree, {
       activeNodeId: tree?.activeNodeId,
+      isStreaming,
       onExploreBranch,
       onSwitchToChat,
     });
-  }, [tree, onExploreBranch, onSwitchToChat]);
+  }, [tree, isStreaming, onExploreBranch, onSwitchToChat]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<CustomNodeData>>(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
@@ -60,12 +68,13 @@ function FlowCanvas({
   useEffect(() => {
     const { nodes: newNodes, edges: newEdges } = treeToGraph(tree, {
       activeNodeId: tree?.activeNodeId,
+      isStreaming,
       onExploreBranch,
       onSwitchToChat,
     });
     setNodes(newNodes);
     setEdges(newEdges);
-  }, [tree, onExploreBranch, onSwitchToChat, setNodes, setEdges]);
+  }, [tree, isStreaming, onExploreBranch, onSwitchToChat, setNodes, setEdges]);
 
   // Center camera smoothly on a specific node card
   const centerOnNode = useCallback(
@@ -123,6 +132,7 @@ function FlowCanvas({
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onNodeClick={handleNodeClick}

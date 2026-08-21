@@ -1,4 +1,9 @@
-import { ConversationTree, TreeNode, getNodeChildren } from "@graphmind/shared";
+import {
+  ConversationTree,
+  TreeNode,
+  getNodeChildren,
+  getAncestorPath,
+} from "@graphmind/shared";
 import { Node, Edge, MarkerType } from "@xyflow/react";
 
 export interface CustomNodeData {
@@ -14,12 +19,13 @@ export interface CustomNodeData {
 
 export interface TreeToGraphOptions {
   activeNodeId?: string;
+  isStreaming?: boolean;
   onExploreBranch?: (nodeId: string, contextText?: string) => void;
   onSwitchToChat?: (nodeId: string) => void;
 }
 
 /**
- * Transform a ConversationTree into positioned React Flow nodes and directed edges.
+ * Transform a ConversationTree into positioned React Flow nodes and custom directed edges.
  */
 export function treeToGraph(
   tree: ConversationTree | null,
@@ -29,10 +35,20 @@ export function treeToGraph(
     return { nodes: [], edges: [] };
   }
 
-  const { activeNodeId, onExploreBranch, onSwitchToChat } = options || {};
+  const {
+    activeNodeId = tree.activeNodeId,
+    isStreaming = false,
+    onExploreBranch,
+    onSwitchToChat,
+  } = options || {};
+
   const nodes: Node<CustomNodeData>[] = [];
   const edges: Edge[] = [];
   const rootNode = tree.nodes[tree.rootNodeId];
+
+  // Active lineage path nodes set
+  const activePath = getAncestorPath(tree, activeNodeId);
+  const activePathIds = new Set(activePath.map((n) => n.id));
 
   // Map to track the horizontal offset allocated for subtrees at each level
   let leafCounter = 0;
@@ -95,22 +111,26 @@ export function treeToGraph(
     });
 
     if (node.parentId && tree.nodes[node.parentId]) {
-      const isParentActive = node.parentId === activeNodeId || isActive;
+      const isEdgeInActiveLineage =
+        activePathIds.has(node.parentId) && activePathIds.has(node.id);
+      const isTargetStreaming = isStreaming && node.id === activeNodeId;
+
       edges.push({
         id: `${node.parentId}->${node.id}`,
         source: node.parentId,
         target: node.id,
-        type: "smoothstep",
-        animated: isActive,
-        style: {
-          stroke: isParentActive ? "#18181b" : "#d4d4d8",
-          strokeWidth: isParentActive ? 2 : 1.5,
+        type: "customBranchEdge",
+        animated: isTargetStreaming,
+        data: {
+          isActive: isEdgeInActiveLineage,
+          isStreaming: isTargetStreaming,
+          highlightedContext: node.highlightedContext,
         },
         markerEnd: {
           type: MarkerType.ArrowClosed,
           width: 14,
           height: 14,
-          color: isParentActive ? "#18181b" : "#a1a1aa",
+          color: isEdgeInActiveLineage ? "#18181b" : "#a1a1aa",
         },
       });
     }

@@ -198,6 +198,7 @@ export function ChatContainer() {
             <div className="flex-1 min-h-0 relative">
               <GraphCanvas
                 tree={tree}
+                isStreaming={isStreaming}
                 onSelectNode={handleSelectTreeNode}
                 onExploreBranch={(nodeId, text) => {
                   setBranchContext(nodeId, text || "");
