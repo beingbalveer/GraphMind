@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback, useMemo } from "react";
+import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import {
   ConversationTree,
   createConversationTree,
@@ -15,13 +15,46 @@ export interface BranchContext {
 }
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8008";
+const STORAGE_KEY = "graphmind_active_tree_v1";
 
 export function useChatStream() {
   const [tree, setTree] = useState<ConversationTree | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeBranch, setActiveBranch] = useState<BranchContext | null>(null);
+  const [isHydrated, setIsHydrated] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // 1. Initial LocalStorage Rehydration
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved) as ConversationTree;
+        if (parsed && parsed.rootNodeId && parsed.nodes) {
+          setTree(parsed);
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to rehydrate conversation tree from localStorage:", e);
+    } finally {
+      setIsHydrated(true);
+    }
+  }, []);
+
+  // 2. Auto-persist tree state changes to LocalStorage
+  useEffect(() => {
+    if (!isHydrated) return;
+    try {
+      if (tree) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(tree));
+      } else {
+        localStorage.removeItem(STORAGE_KEY);
+      }
+    } catch (e) {
+      console.warn("Failed to persist conversation tree to localStorage:", e);
+    }
+  }, [tree, isHydrated]);
 
   // Active path messages to display in the main chat feed
   const activeMessages = useMemo(() => {
@@ -271,6 +304,11 @@ export function useChatStream() {
     setTree(null);
     setError(null);
     setActiveBranch(null);
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      // Ignore
+    }
   }, []);
 
   const clearError = useCallback(() => {
