@@ -108,7 +108,7 @@ def resolve_conversation_lineage(
     # Format the new prompt with highlighted context if present
     if highlighted_context and highlighted_context.strip():
         formatted_content = (
-            f"[Focusing on excerpt: \"{highlighted_context.strip()}\"]\n\n{new_prompt.strip()}"
+            f'[Focusing on excerpt: "{highlighted_context.strip()}"]\n\n{new_prompt.strip()}'
         )
     else:
         formatted_content = new_prompt.strip()

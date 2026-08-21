@@ -39,9 +39,7 @@ def test_resolve_conversation_lineage_isolates_sibling_branches():
     )
 
     # Branch A
-    branch_a = TreeNode.create_child(
-        parent=resp, content="How do lists work?", role=ChatRole.USER
-    )
+    branch_a = TreeNode.create_child(parent=resp, content="How do lists work?", role=ChatRole.USER)
     branch_a_resp = TreeNode.create_child(
         parent=branch_a, content="Lists are dynamic arrays.", role=ChatRole.ASSISTANT
     )

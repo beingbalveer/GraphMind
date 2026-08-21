@@ -4,6 +4,7 @@ from typing import AsyncIterator
 
 import structlog
 from config import get_settings
+from database import Base, get_engine
 from errors import (
     http_exception_handler,
     unhandled_exception_handler,
@@ -14,7 +15,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from middleware import RequestTracingMiddleware
 from pydantic import BaseModel
-from routers import chat
+from routers import chat, workspaces
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 settings = get_settings()
@@ -42,6 +43,15 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         port=settings.PORT,
         default_provider=settings.DEFAULT_PROVIDER,
     )
+    # Ensure database schema tables exist
+    try:
+        engine = get_engine()
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        logger.info("Database schema verified and tables synchronized successfully")
+    except Exception as e:
+        logger.warning("Database synchronization deferred or failed", error=str(e))
+
     yield
     logger.info("GraphMind API shutting down")
 
@@ -74,6 +84,7 @@ app.add_exception_handler(Exception, unhandled_exception_handler)
 
 # Register API Routers
 app.include_router(chat.router)
+app.include_router(workspaces.router, prefix="/api/v1")
 
 
 class HealthCheckResponse(BaseModel):

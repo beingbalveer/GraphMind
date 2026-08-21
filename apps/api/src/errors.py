@@ -27,9 +27,7 @@ def get_request_id(request: Request) -> str:
     return getattr(request.state, "request_id", str(uuid.uuid4()))
 
 
-async def http_exception_handler(
-    request: Request, exc: StarletteHTTPException
-) -> JSONResponse:
+async def http_exception_handler(request: Request, exc: StarletteHTTPException) -> JSONResponse:
     req_id = get_request_id(request)
     logger.warning(
         "HTTPException encountered",

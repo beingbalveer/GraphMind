@@ -6,8 +6,8 @@ from typing import List, Optional
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Resolve root repository directory and .env location
-ROOT_DIR = Path(__file__).resolve().parents[3]
+# Resolve root repository directory (/Users/balveerd/Documents/AI/GraphMind)
+ROOT_DIR = Path(__file__).resolve().parents[2]
 ROOT_ENV = ROOT_DIR / ".env"
 
 
@@ -45,8 +45,11 @@ class Settings(BaseSettings):
     GOOGLE_API_KEY: Optional[str] = Field(default=None, description="Google Cloud API Key alias")
     OPENAI_API_KEY: Optional[str] = Field(default=None, description="OpenAI API Key")
 
-    # Database configuration (for future persistence phases)
-    DATABASE_URL: Optional[str] = Field(default=None, description="PostgreSQL connection string")
+    # Database configuration
+    DATABASE_URL: str = Field(
+        default="postgresql+asyncpg://balveerd:1234@localhost:5432/graphmind",
+        description="PostgreSQL connection string",
+    )
     REDIS_URL: Optional[str] = Field(default=None, description="Redis connection string")
 
 

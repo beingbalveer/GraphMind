@@ -47,9 +47,7 @@ class GeminiProvider(BaseLLMProvider):
             raise ValueError("GEMINI_API_KEY environment variable is not set.")
         self.client = genai.Client(api_key=self.api_key)
 
-    def _to_genai_contents(
-        self, messages: List[ChatMessage]
-    ) -> List[types.Content]:
+    def _to_genai_contents(self, messages: List[ChatMessage]) -> List[types.Content]:
         """Convert normalized ChatMessage objects into structured Gemini types.Content."""
         contents: List[types.Content] = []
         for msg in messages:
@@ -106,7 +104,11 @@ class GeminiProvider(BaseLLMProvider):
                 else:
                     break
 
-        logger.error("Gemini generation failed after retries", error=str(last_exception), model=cfg.model_name)
+        logger.error(
+            "Gemini generation failed after retries",
+            error=str(last_exception),
+            model=cfg.model_name,
+        )
         if last_exception and _is_transient_error(last_exception):
             raise RuntimeError(
                 "Google Gemini service is temporarily unavailable (503). Please click Retry in a few seconds."
@@ -150,7 +152,9 @@ class GeminiProvider(BaseLLMProvider):
                 else:
                     break
 
-        logger.error("Gemini streaming failed after retries", error=str(last_exception), model=cfg.model_name)
+        logger.error(
+            "Gemini streaming failed after retries", error=str(last_exception), model=cfg.model_name
+        )
         if last_exception and _is_transient_error(last_exception):
             raise RuntimeError(
                 "Google Gemini service is temporarily unavailable (503). Please click Retry in a few seconds."

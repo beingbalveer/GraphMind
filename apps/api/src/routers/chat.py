@@ -89,17 +89,19 @@ def _build_conversation_input(body: ChatStreamRequest) -> List[ChatMessage]:
         messages = list(body.messages)
         if body.highlighted_context and body.highlighted_context.strip() and messages:
             last_msg = messages[-1]
-            if last_msg.role == ChatRole.USER and not last_msg.content.startswith("[Focusing on excerpt:"):
+            if last_msg.role == ChatRole.USER and not last_msg.content.startswith(
+                "[Focusing on excerpt:"
+            ):
                 messages[-1] = ChatMessage(
                     role=ChatRole.USER,
-                    content=f"[Focusing on excerpt: \"{body.highlighted_context.strip()}\"]\n\n{last_msg.content.strip()}",
+                    content=f'[Focusing on excerpt: "{body.highlighted_context.strip()}"]\n\n{last_msg.content.strip()}',
                     metadata=last_msg.metadata,
                 )
         return messages
 
     raw_prompt = (body.prompt or "").strip()
     if body.highlighted_context and body.highlighted_context.strip():
-        content = f"[Focusing on excerpt: \"{body.highlighted_context.strip()}\"]\n\n{raw_prompt}"
+        content = f'[Focusing on excerpt: "{body.highlighted_context.strip()}"]\n\n{raw_prompt}'
     else:
         content = raw_prompt
     return [ChatMessage(role=ChatRole.USER, content=content)]
