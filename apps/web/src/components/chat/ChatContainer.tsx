@@ -7,11 +7,12 @@ import { ChatMessage } from "./ChatMessage";
 import { ChatInput } from "./ChatInput";
 import { BranchBreadcrumbs } from "./BranchBreadcrumbs";
 import { TreeSidebar } from "../tree/TreeSidebar";
+import { GraphCanvas } from "../canvas/GraphCanvas";
 import { Toast } from "@/components/ui/toast";
 import { useChatStream } from "@/hooks/useChatStream";
 import { useScrollAnchor } from "@/hooks/useScrollAnchor";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
-import { Navbar } from "../layout/Navbar";
+import { Navbar, ViewMode } from "../layout/Navbar";
 
 export function ChatContainer() {
   const {
@@ -31,6 +32,7 @@ export function ChatContainer() {
   } = useChatStream();
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>("chat");
 
   const {
     scrollRef,
@@ -40,12 +42,12 @@ export function ChatContainer() {
     scrollToBottom,
   } = useScrollAnchor({ threshold: 80 });
 
-  // Auto-scroll when user is at the bottom
+  // Auto-scroll when user is at the bottom in chat mode
   useEffect(() => {
-    if (isAtBottom) {
+    if (isAtBottom && viewMode === "chat") {
       scrollToBottom(false);
     }
-  }, [activeMessages, isStreaming, isAtBottom, scrollToBottom]);
+  }, [activeMessages, isStreaming, isAtBottom, scrollToBottom, viewMode]);
 
   const handleJumpToMessage = useCallback((messageId: string) => {
     const el = document.getElementById(messageId);
@@ -57,11 +59,13 @@ export function ChatContainer() {
   const handleSelectTreeNode = useCallback(
     (nodeId: string) => {
       switchBranch(nodeId);
-      setTimeout(() => {
-        handleJumpToMessage(nodeId);
-      }, 50);
+      if (viewMode === "chat") {
+        setTimeout(() => {
+          handleJumpToMessage(nodeId);
+        }, 50);
+      }
     },
-    [switchBranch, handleJumpToMessage]
+    [switchBranch, handleJumpToMessage, viewMode]
   );
 
   // Power-user Keyboard navigation
@@ -101,10 +105,12 @@ export function ChatContainer() {
   const handleJumpToRoot = useCallback(() => {
     if (!tree) return;
     switchBranch(tree.rootNodeId);
-    setTimeout(() => {
-      handleJumpToMessage(tree.rootNodeId);
-    }, 50);
-  }, [tree, switchBranch, handleJumpToMessage]);
+    if (viewMode === "chat") {
+      setTimeout(() => {
+        handleJumpToMessage(tree.rootNodeId);
+      }, 50);
+    }
+  }, [tree, switchBranch, handleJumpToMessage, viewMode]);
 
   const handleEscape = useCallback(() => {
     if (isSidebarOpen) {
@@ -150,6 +156,8 @@ export function ChatContainer() {
         messageCount={activeMessages.length}
         isSidebarOpen={isSidebarOpen}
         onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
         breadcrumbs={
           <BranchBreadcrumbs
             messages={activeMessages}
@@ -167,93 +175,100 @@ export function ChatContainer() {
           onSelectNode={handleSelectTreeNode}
         />
 
-        {/* Dedicated Scrollable Feed for Active Lineage Branch */}
-        <div className="flex-1 flex flex-col min-w-0 bg-white">
-          <main
-            ref={scrollRef}
-            className="flex-1 overflow-y-auto min-h-0 flex flex-col bg-white"
-          >
-            {activeMessages.length === 0 ? (
-              /* Clean Empty State */
-              <div className="flex-1 flex flex-col items-center justify-center max-w-2xl mx-auto px-4 py-8 text-center space-y-8 my-auto">
-                <div className="space-y-2">
-                  <div className="w-10 h-10 rounded-xl bg-zinc-900 text-white flex items-center justify-center font-bold text-lg mx-auto shadow-xs">
-                    🧠
+        {/* Main Content Area (Chat View or 2D Spatial Canvas) */}
+        <div className="flex-1 flex flex-col min-w-0 bg-white relative">
+          {viewMode === "canvas" ? (
+            /* Infinite 2D Spatial Graph Canvas View */
+            <div className="flex-1 min-h-0 relative">
+              <GraphCanvas tree={tree} onSelectNode={handleSelectTreeNode} />
+            </div>
+          ) : (
+            /* Dedicated Scrollable Feed for Active Lineage Branch */
+            <main
+              ref={scrollRef}
+              className="flex-1 overflow-y-auto min-h-0 flex flex-col bg-white"
+            >
+              {activeMessages.length === 0 ? (
+                /* Clean Empty State */
+                <div className="flex-1 flex flex-col items-center justify-center max-w-2xl mx-auto px-4 py-8 text-center space-y-8 my-auto">
+                  <div className="space-y-2">
+                    <div className="w-10 h-10 rounded-xl bg-zinc-900 text-white flex items-center justify-center font-bold text-lg mx-auto shadow-xs">
+                      🧠
+                    </div>
+                    <h2 className="text-xl font-semibold text-zinc-900 tracking-tight">
+                      Where knowledge connects
+                    </h2>
+                    <p className="text-xs sm:text-sm text-zinc-500 max-w-sm mx-auto leading-relaxed">
+                      Ask a technical question, explore system architecture, or test streaming.
+                    </p>
                   </div>
-                  <h2 className="text-xl font-semibold text-zinc-900 tracking-tight">
-                    Where knowledge connects
-                  </h2>
-                  <p className="text-xs sm:text-sm text-zinc-500 max-w-sm mx-auto leading-relaxed">
-                    Ask a technical question, explore system architecture, or test streaming.
-                  </p>
-                </div>
 
-                {/* Quick Starter Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 w-full text-left">
-                  {starterPrompts.map((item, index) => {
-                    const Icon = item.icon;
+                  {/* Quick Starter Cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 w-full text-left">
+                    {starterPrompts.map((item, index) => {
+                      const Icon = item.icon;
+                      return (
+                        <button
+                          key={index}
+                          onClick={() => {
+                            sendMessage(item.prompt);
+                            scrollToBottom(true);
+                          }}
+                          className="p-3.5 rounded-xl border border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50/70 transition-all text-left group flex flex-col justify-between space-y-2 cursor-pointer"
+                        >
+                          <Icon className="w-4 h-4 text-zinc-400 group-hover:text-zinc-700 transition-colors" />
+                          <div>
+                            <div className="text-xs font-semibold text-zinc-800">
+                              {item.title}
+                            </div>
+                            <div className="text-[11px] text-zinc-400 mt-0.5 line-clamp-2">
+                              {item.subtitle}
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                /* Active Lineage Branch Message Stream */
+                <div className="w-full pb-4">
+                  {activeMessages.map((node, index) => {
+                    const nextActiveNode = activeMessages[index + 1];
+                    const isLastAssistant =
+                      index === activeMessages.length - 1 &&
+                      node.role === "assistant" &&
+                      isStreaming;
+
                     return (
-                      <button
-                        key={index}
-                        onClick={() => {
-                          sendMessage(item.prompt);
+                      <ChatMessage
+                        key={node.id}
+                        message={{
+                          ...node,
+                          isStreaming: isLastAssistant,
+                        }}
+                        tree={tree}
+                        activeChildId={nextActiveNode?.id}
+                        onRetry={retryLastMessage}
+                        onExploreBranch={(id, text) => {
+                          setBranchContext(id, text);
                           scrollToBottom(true);
                         }}
-                        className="p-3.5 rounded-xl border border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50/70 transition-all text-left group flex flex-col justify-between space-y-2 cursor-pointer"
-                      >
-                        <Icon className="w-4 h-4 text-zinc-400 group-hover:text-zinc-700 transition-colors" />
-                        <div>
-                          <div className="text-xs font-semibold text-zinc-800">
-                            {item.title}
-                          </div>
-                          <div className="text-[11px] text-zinc-400 mt-0.5 line-clamp-2">
-                            {item.subtitle}
-                          </div>
-                        </div>
-                      </button>
+                        onSelectBranch={(childId) => {
+                          switchBranch(childId);
+                        }}
+                      />
                     );
                   })}
+                  <div ref={bottomRef} />
                 </div>
-              </div>
-            ) : (
-              /* Active Lineage Branch Message Stream */
-              <div className="w-full pb-4">
-                {activeMessages.map((node, index) => {
-                  const nextActiveNode = activeMessages[index + 1];
-                  const isLastAssistant =
-                    index === activeMessages.length - 1 &&
-                    node.role === "assistant" &&
-                    isStreaming;
-
-                  return (
-                    <ChatMessage
-                      key={node.id}
-                      message={{
-                        ...node,
-                        isStreaming: isLastAssistant,
-                      }}
-                      tree={tree}
-                      activeChildId={nextActiveNode?.id}
-                      onRetry={retryLastMessage}
-                      onExploreBranch={(id, text) => {
-                        setBranchContext(id, text);
-                        scrollToBottom(true);
-                      }}
-                      onSelectBranch={(childId) => {
-                        // Switch active branch to chosen sibling pathway
-                        switchBranch(childId);
-                      }}
-                    />
-                  );
-                })}
-                <div ref={bottomRef} />
-              </div>
-            )}
-          </main>
+              )}
+            </main>
+          )}
 
           {/* Permanently Static Bottom Input Bar with Floating Jump Button */}
           <div className="relative shrink-0 bg-gradient-to-t from-white via-white to-transparent pt-2 z-20">
-            {showScrollButton && activeMessages.length > 0 && (
+            {viewMode === "chat" && showScrollButton && activeMessages.length > 0 && (
               <button
                 type="button"
                 onClick={() => scrollToBottom(true)}
@@ -268,7 +283,9 @@ export function ChatContainer() {
             <ChatInput
               onSendMessage={(prompt, provider, model) => {
                 sendMessage(prompt, provider, model);
-                scrollToBottom(true);
+                if (viewMode === "chat") {
+                  scrollToBottom(true);
+                }
               }}
               onStopStreaming={stopStreaming}
               isStreaming={isStreaming}

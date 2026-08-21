@@ -1,8 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Plus, PanelLeft } from "lucide-react";
+import { Plus, PanelLeft, MessageSquare, LayoutGrid } from "lucide-react";
 import { Button } from "@/components/ui/button";
+
+export type ViewMode = "chat" | "canvas";
 
 interface NavbarProps {
   onClearChat?: () => void;
@@ -10,6 +12,8 @@ interface NavbarProps {
   breadcrumbs?: React.ReactNode;
   isSidebarOpen?: boolean;
   onToggleSidebar?: () => void;
+  viewMode?: ViewMode;
+  onViewModeChange?: (mode: ViewMode) => void;
 }
 
 export function Navbar({
@@ -18,6 +22,8 @@ export function Navbar({
   breadcrumbs,
   isSidebarOpen,
   onToggleSidebar,
+  viewMode = "chat",
+  onViewModeChange,
 }: NavbarProps) {
   const [apiOnline, setApiOnline] = useState<boolean | null>(null);
 
@@ -83,8 +89,40 @@ export function Navbar({
         {breadcrumbs}
       </div>
 
-      {/* Right Controls */}
-      <div className="flex items-center space-x-2 shrink-0">
+      {/* Right Controls: View Switcher + New Chat */}
+      <div className="flex items-center space-x-2.5 shrink-0">
+        {/* Chat vs Canvas View Switcher */}
+        {messageCount > 0 && onViewModeChange && (
+          <div className="flex items-center p-0.5 rounded-lg bg-zinc-100/90 border border-zinc-200/80 text-xs">
+            <button
+              type="button"
+              onClick={() => onViewModeChange("chat")}
+              className={`px-2.5 py-1 rounded-md font-medium transition-all flex items-center space-x-1.5 cursor-pointer ${
+                viewMode === "chat"
+                  ? "bg-white text-zinc-900 shadow-2xs font-semibold"
+                  : "text-zinc-500 hover:text-zinc-900"
+              }`}
+              title="Chat Feed View"
+            >
+              <MessageSquare className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Chat</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onViewModeChange("canvas")}
+              className={`px-2.5 py-1 rounded-md font-medium transition-all flex items-center space-x-1.5 cursor-pointer ${
+                viewMode === "canvas"
+                  ? "bg-white text-zinc-900 shadow-2xs font-semibold"
+                  : "text-zinc-500 hover:text-zinc-900"
+              }`}
+              title="2D Spatial Graph Canvas"
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Canvas</span>
+            </button>
+          </div>
+        )}
+
         {messageCount > 0 && onClearChat && (
           <Button
             variant="ghost"
