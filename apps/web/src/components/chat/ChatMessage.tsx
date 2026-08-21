@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
@@ -9,10 +9,13 @@ import rehypeHighlight from "rehype-highlight";
 import { User, Sparkles, Copy, Check, RotateCcw } from "lucide-react";
 import { Message } from "@/hooks/useChatStream";
 import { Button } from "@/components/ui/button";
+import { useTextSelection } from "@/hooks/useTextSelection";
+import { SelectionTooltip } from "./SelectionTooltip";
 
 interface ChatMessageProps {
   message: Message;
   onRetry?: () => void;
+  onExploreBranch?: (messageId: string, highlightedText: string) => void;
 }
 
 function CodeBlock({ children, className, ...props }: any) {
@@ -78,9 +81,19 @@ function CodeBlock({ children, className, ...props }: any) {
   );
 }
 
-export function ChatMessage({ message, onRetry }: ChatMessageProps) {
+export function ChatMessage({
+  message,
+  onRetry,
+  onExploreBranch,
+}: ChatMessageProps) {
   const isUser = message.role === "user";
   const [copied, setCopied] = useState(false);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // Enable text selection tooltip for assistant responses only
+  const { selection, clearSelection } = useTextSelection(
+    isUser ? { current: null } : contentRef
+  );
 
   const handleCopy = async () => {
     if (!message.content) return;
@@ -89,8 +102,20 @@ export function ChatMessage({ message, onRetry }: ChatMessageProps) {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleExplore = (text: string) => {
+    if (onExploreBranch) {
+      onExploreBranch(message.id, text);
+    }
+    clearSelection();
+  };
+
   return (
-    <div className="py-5 px-4 sm:px-6 bg-white group transition-colors">
+    <div className="py-5 px-4 sm:px-6 bg-white group transition-colors relative">
+      {/* Floating Selection Tooltip */}
+      {!isUser && selection && (
+        <SelectionTooltip selection={selection} onExplore={handleExplore} />
+      )}
+
       <div className="max-w-3xl mx-auto flex gap-3.5 sm:gap-4.5 animate-in fade-in duration-200">
         {/* Role Avatar */}
         <div className="shrink-0 pt-1">
@@ -99,7 +124,11 @@ export function ChatMessage({ message, onRetry }: ChatMessageProps) {
               <User className="w-3.5 h-3.5" />
             </div>
           ) : (
-            <div className={`w-6 h-6 rounded-full ${message.isError ? "bg-rose-600" : "bg-zinc-900"} text-white flex items-center justify-center font-bold text-xs shadow-xs`}>
+            <div
+              className={`w-6 h-6 rounded-full ${
+                message.isError ? "bg-rose-600" : "bg-zinc-900"
+              } text-white flex items-center justify-center font-bold text-xs shadow-xs`}
+            >
               <Sparkles className="w-3.5 h-3.5" />
             </div>
           )}
@@ -108,7 +137,12 @@ export function ChatMessage({ message, onRetry }: ChatMessageProps) {
         {/* Message Content Container */}
         <div className="flex-1 min-w-0 space-y-2">
           {/* Markdown Rendered Body with Explicit Element Styling */}
-          <div className={`text-[15.5px] ${message.isError ? "text-rose-700" : "text-zinc-900"} leading-[1.8] break-words`}>
+          <div
+            ref={contentRef}
+            className={`text-[15.5px] ${
+              message.isError ? "text-rose-700" : "text-zinc-900"
+            } leading-[1.8] break-words`}
+          >
             {message.content ? (
               <ReactMarkdown
                 remarkPlugins={[remarkGfm, remarkMath]}
