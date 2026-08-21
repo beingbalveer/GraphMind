@@ -14,9 +14,18 @@ import {
   Node,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { Maximize2, Crosshair, Map, RotateCcw } from "lucide-react";
+import {
+  Maximize2,
+  Crosshair,
+  Map,
+  RotateCcw,
+  Rows3,
+  Columns3,
+  Sparkles,
+} from "lucide-react";
 import { ConversationTree } from "@graphmind/shared";
 import { treeToGraph, CustomNodeData } from "@/lib/treeToGraph";
+import { getLayoutedElements, LayoutDirection } from "@/lib/layoutEngine";
 import { CustomMessageNode } from "./CustomMessageNode";
 import { CustomBranchEdge } from "./CustomBranchEdge";
 import { Button } from "@/components/ui/button";
@@ -52,33 +61,38 @@ function FlowCanvas({
 }: GraphCanvasProps) {
   const { fitView, setCenter, zoomTo } = useReactFlow();
   const [showMinimap, setShowMinimap] = useState(true);
+  const [direction, setDirection] = useState<LayoutDirection>("TB");
   const isFirstRender = useRef(true);
 
-  const { nodes: initialNodes, edges: initialEdges } = useMemo(() => {
-    return treeToGraph(tree, {
+  // Compute raw nodes & edges then layout with Dagre
+  const { initialNodes, initialEdges } = useMemo(() => {
+    const raw = treeToGraph(tree, {
       activeNodeId: tree?.activeNodeId,
       isStreaming,
       onExploreBranch,
       onSwitchToChat,
       onRetry,
     });
-  }, [tree, isStreaming, onExploreBranch, onSwitchToChat, onRetry]);
+    const layouted = getLayoutedElements(raw.nodes, raw.edges, direction);
+    return { initialNodes: layouted.nodes, initialEdges: layouted.edges };
+  }, [tree, isStreaming, onExploreBranch, onSwitchToChat, onRetry, direction]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<CustomNodeData>>(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
-  // Synchronize graph nodes and edges whenever the tree state updates
+  // Synchronize graph nodes and edges whenever the tree state or layout direction updates
   useEffect(() => {
-    const { nodes: newNodes, edges: newEdges } = treeToGraph(tree, {
+    const raw = treeToGraph(tree, {
       activeNodeId: tree?.activeNodeId,
       isStreaming,
       onExploreBranch,
       onSwitchToChat,
       onRetry,
     });
-    setNodes(newNodes);
-    setEdges(newEdges);
-  }, [tree, isStreaming, onExploreBranch, onSwitchToChat, onRetry, setNodes, setEdges]);
+    const layouted = getLayoutedElements(raw.nodes, raw.edges, direction);
+    setNodes(layouted.nodes);
+    setEdges(layouted.edges);
+  }, [tree, isStreaming, onExploreBranch, onSwitchToChat, onRetry, direction, setNodes, setEdges]);
 
   // Center camera smoothly on a specific node card
   const centerOnNode = useCallback(
@@ -88,9 +102,8 @@ function FlowCanvas({
 
       const targetNode = nodes.find((n) => n.id === targetId);
       if (targetNode) {
-        // Node dimensions are approx 320px width by 140px height
         const centerX = targetNode.position.x + 160;
-        const centerY = targetNode.position.y + 70;
+        const centerY = targetNode.position.y + 80;
         setCenter(centerX, centerY, { zoom: 0.95, duration: 450 });
       }
     },
@@ -104,6 +117,14 @@ function FlowCanvas({
   const handleResetZoom = useCallback(() => {
     zoomTo(1.0, { duration: 350 });
   }, [zoomTo]);
+
+  const handleToggleDirection = useCallback(() => {
+    const newDir = direction === "TB" ? "LR" : "TB";
+    setDirection(newDir);
+    setTimeout(() => {
+      handleFitView();
+    }, 50);
+  }, [direction, handleFitView]);
 
   // Expose callbacks to parent for keyboard shortcuts
   useEffect(() => {
@@ -170,8 +191,43 @@ function FlowCanvas({
         )}
       </ReactFlow>
 
-      {/* Floating Canvas Camera Toolbar */}
+      {/* Floating Canvas Camera & Layout Toolbar */}
       <div className="absolute top-4 right-4 z-20 flex items-center space-x-1.5 p-1 bg-white/90 backdrop-blur-md border border-zinc-200/90 rounded-xl shadow-md select-none">
+        <Button
+          variant="ghost"
+          size="iconSm"
+          onClick={handleToggleDirection}
+          className="h-7 w-7 text-zinc-600 hover:text-zinc-950"
+          title={`Switch Layout: ${direction === "TB" ? "Vertical (Top-to-Bottom)" : "Horizontal (Left-to-Right)"}`}
+        >
+          {direction === "TB" ? (
+            <Columns3 className="w-3.5 h-3.5" />
+          ) : (
+            <Rows3 className="w-3.5 h-3.5" />
+          )}
+        </Button>
+        <Button
+          variant="ghost"
+          size="iconSm"
+          onClick={() => {
+            const raw = treeToGraph(tree, {
+              activeNodeId: tree?.activeNodeId,
+              isStreaming,
+              onExploreBranch,
+              onSwitchToChat,
+              onRetry,
+            });
+            const layouted = getLayoutedElements(raw.nodes, raw.edges, direction);
+            setNodes(layouted.nodes);
+            setEdges(layouted.edges);
+            handleFitView();
+          }}
+          className="h-7 w-7 text-zinc-600 hover:text-zinc-950"
+          title="Recompute Clean Auto-Layout (⌘L)"
+        >
+          <Sparkles className="w-3.5 h-3.5" />
+        </Button>
+        <div className="w-px h-4 bg-zinc-200 mx-0.5" />
         <Button
           variant="ghost"
           size="iconSm"

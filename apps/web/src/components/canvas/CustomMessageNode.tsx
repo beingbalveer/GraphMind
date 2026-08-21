@@ -1,7 +1,7 @@
 "use client";
 
 import React, { memo } from "react";
-import { Handle, Position } from "@xyflow/react";
+import { Handle, Position, NodeProps, Node } from "@xyflow/react";
 import {
   User,
   Sparkles,
@@ -16,9 +16,9 @@ import { CustomNodeData } from "@/lib/treeToGraph";
 
 export const CustomMessageNode = memo(function CustomMessageNode({
   data,
-}: {
-  data: CustomNodeData;
-}) {
+  targetPosition = Position.Top,
+  sourcePosition = Position.Bottom,
+}: NodeProps<Node<CustomNodeData>>) {
   const {
     node,
     isRoot,
@@ -65,11 +65,11 @@ export const CustomMessageNode = memo(function CustomMessageNode({
           : "border-zinc-200/90 hover:border-zinc-300 hover:shadow-md"
       }`}
     >
-      {/* Top Connection Handle (Incoming) */}
+      {/* Target Connection Handle (Incoming) */}
       {!isRoot && (
         <Handle
           type="target"
-          position={Position.Top}
+          position={targetPosition}
           className="!w-2.5 !h-2.5 !bg-zinc-400 !border-2 !border-white"
         />
       )}
@@ -166,7 +166,7 @@ export const CustomMessageNode = memo(function CustomMessageNode({
           <button
             type="button"
             onClick={handleBranchClick}
-            className="inline-flex items-center space-x-1 px-2 py-1 rounded-md text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100 transition-colors cursor-pointer text-[11px] font-medium"
+            className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-md text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100 transition-colors cursor-pointer text-[11px] font-medium"
             title="Branch from this node"
           >
             <Plus className="w-3 h-3" />
@@ -177,7 +177,7 @@ export const CustomMessageNode = memo(function CustomMessageNode({
         <button
           type="button"
           onClick={handleChatClick}
-          className="inline-flex items-center space-x-1 px-2 py-1 rounded-md text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100 transition-colors cursor-pointer text-[11px] font-medium"
+          className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-md text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100 transition-colors cursor-pointer text-[11px] font-medium"
           title="Open in Chat Feed"
         >
           <MessageSquare className="w-3 h-3" />
@@ -185,10 +185,10 @@ export const CustomMessageNode = memo(function CustomMessageNode({
         </button>
       </div>
 
-      {/* Bottom Connection Handle (Outgoing) */}
+      {/* Source Connection Handle (Outgoing) */}
       <Handle
         type="source"
-        position={Position.Bottom}
+        position={sourcePosition}
         className="!w-2.5 !h-2.5 !bg-zinc-400 !border-2 !border-white"
       />
     </div>

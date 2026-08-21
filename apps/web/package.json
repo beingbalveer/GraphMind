@@ -9,7 +9,9 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@dagrejs/dagre": "^3.1.1",
     "@graphmind/shared": "workspace:*",
+    "@types/dagre": "^0.7.54",
     "@xyflow/react": "^12.4.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
