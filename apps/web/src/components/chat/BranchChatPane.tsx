@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useEffect } from "react";
-import { X, GitBranch, Sparkles, User, CornerDownLeft, Loader2 } from "lucide-react";
+import { X, GitBranch, Sparkles, User, CornerDownLeft, Loader2, Quote } from "lucide-react";
 import { ConversationTree, TreeNode, getAncestorPath } from "@graphmind/shared";
 import { Button } from "@/components/ui/button";
 import { MarkdownRenderer } from "./ChatMessage";
@@ -27,16 +27,25 @@ export function BranchChatPane({
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  // Compute all messages on this specific branch path
-  const branchMessages: TreeNode[] = React.useMemo(() => {
+  // Compute full lineage for this branch
+  const fullLineage: TreeNode[] = React.useMemo(() => {
     if (!tree || !branchLeafNodeId || !tree.nodes[branchLeafNodeId]) return [];
     return getAncestorPath(tree, branchLeafNodeId);
   }, [tree, branchLeafNodeId]);
 
-  // Find the point where this branch diverged (the node that has highlightedContext or is the branch root)
-  const branchStartNode = branchMessages.find(
-    (n) => n.highlightedContext || n.id === branchLeafNodeId
-  );
+  // Find the exact node where this branch was created (the first node with highlightedContext)
+  const branchStartIndex = React.useMemo(() => {
+    const idx = fullLineage.findIndex((n) => Boolean(n.highlightedContext));
+    return idx !== -1 ? idx : Math.max(0, fullLineage.length - 2);
+  }, [fullLineage]);
+
+  // Only display messages belonging to this branch (isolated from parent main chat)
+  const branchMessages: TreeNode[] = React.useMemo(() => {
+    if (branchStartIndex === -1 || fullLineage.length === 0) return fullLineage;
+    return fullLineage.slice(branchStartIndex);
+  }, [fullLineage, branchStartIndex]);
+
+  const branchStartNode = fullLineage[branchStartIndex];
 
   const displayContext =
     highlightedContext ||
@@ -93,6 +102,20 @@ export function BranchChatPane({
         ref={scrollRef}
         className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 text-sm"
       >
+        {/* Selected Excerpt Context Box */}
+        {displayContext && (
+          <div className="p-3.5 rounded-xl bg-white border border-zinc-200/90 shadow-2xs space-y-1">
+            <div className="flex items-center space-x-1.5 text-zinc-400 text-xs">
+              <Quote className="w-3.5 h-3.5" />
+              <span className="font-semibold text-zinc-600 text-[11px]">Branch Context</span>
+            </div>
+            <p className="text-xs text-zinc-800 italic font-medium leading-relaxed">
+              &ldquo;{displayContext}&rdquo;
+            </p>
+          </div>
+        )}
+
+        {/* Branch Messages (Only messages belonging to this branch) */}
         {branchMessages.map((msg, index) => {
           const isUser = msg.role === "user";
           const isAssistant = msg.role === "assistant";

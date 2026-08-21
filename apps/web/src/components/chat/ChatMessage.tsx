@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, memo } from "react";
+import React, { useState, useRef, memo, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
@@ -223,6 +223,28 @@ export function ChatMessage({
     );
   }, [tree, message.id]);
 
+  // Helper to get the deepest leaf of a specific branch
+  const getBranchLeafId = useCallback(
+    (userChild: TreeNode): string => {
+      if (!tree) return userChild.id;
+      const assistantChildren = getNodeChildren(tree, userChild.id);
+      if (assistantChildren.length > 0) {
+        let curr = assistantChildren[0];
+        while (true) {
+          const nextChildren = getNodeChildren(tree, curr.id);
+          if (nextChildren.length > 0) {
+            curr = nextChildren[0];
+          } else {
+            break;
+          }
+        }
+        return curr.id;
+      }
+      return userChild.id;
+    },
+    [tree]
+  );
+
   const handleCopy = async () => {
     if (!message.content) return;
     await navigator.clipboard.writeText(message.content);
@@ -313,7 +335,7 @@ export function ChatMessage({
                 <button
                   key={child.id}
                   type="button"
-                  onClick={() => onOpenSideBranch?.(child.id, child.highlightedContext || "")}
+                  onClick={() => onOpenSideBranch?.(getBranchLeafId(child), child.highlightedContext || "")}
                   className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-zinc-100/90 hover:bg-zinc-200/90 border border-zinc-200/80 text-xs text-zinc-800 font-medium cursor-pointer transition-all hover:scale-[1.02] active:scale-98 shadow-2xs group"
                   title="Open parallel branch in right split pane"
                 >
