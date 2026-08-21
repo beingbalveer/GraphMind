@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from "react";
 import {
   Plus,
-  PanelLeft,
   MessageSquare,
   LayoutGrid,
   FolderGit2,
@@ -18,8 +17,6 @@ interface NavbarProps {
   onClearChat?: () => void;
   messageCount: number;
   breadcrumbs?: React.ReactNode;
-  isSidebarOpen?: boolean;
-  onToggleSidebar?: () => void;
   viewMode?: ViewMode;
   onViewModeChange?: (mode: ViewMode) => void;
   workspaceName?: string;
@@ -31,8 +28,6 @@ export function Navbar({
   onClearChat,
   messageCount,
   breadcrumbs,
-  isSidebarOpen,
-  onToggleSidebar,
   viewMode = "chat",
   onViewModeChange,
   workspaceName = "Main Workspace",
@@ -58,22 +53,8 @@ export function Navbar({
 
   return (
     <header className="h-13 border-b border-zinc-200/80 bg-white/80 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between z-30 shrink-0 select-none">
-      {/* Left: Sidebar Toggle + Brand + Workspace Selector */}
+      {/* Left: Brand + Workspace Selector */}
       <div className="flex items-center space-x-2.5 shrink-0">
-        {onToggleSidebar && (
-          <Button
-            variant="ghost"
-            size="iconSm"
-            onClick={onToggleSidebar}
-            className={`h-7 w-7 text-zinc-600 hover:text-zinc-950 transition-colors ${
-              isSidebarOpen ? "bg-zinc-100 text-zinc-900" : ""
-            }`}
-            title="Toggle Conversation Tree (⌘B / Ctrl+B)"
-          >
-            <PanelLeft className="w-4 h-4" />
-          </Button>
-        )}
-
         <div className="w-6 h-6 rounded-md bg-zinc-900 text-white flex items-center justify-center font-bold text-xs shadow-xs">
           🧠
         </div>
@@ -102,7 +83,7 @@ export function Navbar({
             title="Switch or manage workspaces"
           >
             <FolderGit2 className="w-3.5 h-3.5 text-zinc-500" />
-            <span className="max-w-[130px] truncate">{workspaceName}</span>
+            <span className="max-w-[140px] truncate">{workspaceName}</span>
           </button>
         )}
 

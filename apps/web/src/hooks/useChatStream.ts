@@ -14,6 +14,11 @@ export interface BranchContext {
   highlightedText: string;
 }
 
+export interface SendMessageOptions {
+  branchOverride?: BranchContext | null;
+  preserveActiveNodeId?: boolean;
+}
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8008";
 const STORAGE_KEY = "graphmind_active_tree_v1";
 
@@ -81,20 +86,59 @@ export function useChatStream() {
     });
   }, []);
 
+  const setBranchContext = useCallback((parentNodeId: string, highlightedText: string) => {
+    setActiveBranch({ parentNodeId, highlightedText });
+  }, []);
+
+  const clearBranchContext = useCallback(() => {
+    setActiveBranch(null);
+  }, []);
+
+  const clearError = useCallback(() => {
+    setError(null);
+  }, []);
+
+  const clearMessages = useCallback(() => {
+    stopStreaming();
+    setTree(null);
+    setActiveBranch(null);
+    setError(null);
+    if (typeof window !== "undefined") {
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  }, [stopStreaming]);
+
   const sendMessage = useCallback(
     async (
       prompt: string,
       provider = "gemini",
       model = "gemini-2.5-flash",
-      branchOverride?: BranchContext | null
+      optionsOrBranch?: BranchContext | SendMessageOptions | null
     ) => {
-      if (!prompt.trim() || isStreaming) return;
+      if (!prompt.trim() || isStreaming) return null;
 
       setError(null);
-      const branch = branchOverride !== undefined ? branchOverride : activeBranch;
+
+      // Normalize options
+      let branch: BranchContext | null = null;
+      let preserveActiveNodeId = false;
+
+      if (optionsOrBranch) {
+        if ("parentNodeId" in optionsOrBranch) {
+          branch = optionsOrBranch;
+          preserveActiveNodeId = Boolean(branch.highlightedText);
+        } else {
+          branch = optionsOrBranch.branchOverride || null;
+          preserveActiveNodeId = Boolean(optionsOrBranch.preserveActiveNodeId);
+        }
+      } else {
+        branch = activeBranch;
+      }
+
       setActiveBranch(null); // Clear branch input badge
 
       let currentTree = tree;
+      const previousActiveNodeId = currentTree?.activeNodeId;
       let targetParentId: string | null = null;
       let userNodeId: string;
       let assistantNodeId: string;
@@ -153,6 +197,14 @@ export function useChatStream() {
         );
         currentTree = treeWithAssistant;
         assistantNodeId = assistantNode.id;
+
+        // If preserving main conversation active node, revert activeNodeId on tree
+        if (preserveActiveNodeId && previousActiveNodeId) {
+          currentTree = {
+            ...currentTree,
+            activeNodeId: previousActiveNodeId,
+          };
+        }
       }
 
       setTree(currentTree);
@@ -179,6 +231,7 @@ export function useChatStream() {
           ? `[Focusing on excerpt: "${branch.highlightedText.trim()}"]\n\n${prompt.trim()}`
           : prompt.trim();
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const payload: Record<string, any> = {
           prompt: formattedPrompt,
           messages: messagesPayload,
@@ -235,6 +288,7 @@ export function useChatStream() {
                     return updateNodeContent(prev, assistantNodeId, accumulatedContent);
                   });
                 }
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
               } catch (parseError: any) {
                 if (parseError.message && !parseError.message.includes("JSON")) {
                   throw parseError;
@@ -243,32 +297,26 @@ export function useChatStream() {
             }
           }
         }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (err: any) {
         if (err.name === "AbortError") {
           setTree((prev) => {
             if (!prev) return prev;
             const node = prev.nodes[assistantNodeId];
-            return updateNodeContent(
-              prev,
-              assistantNodeId,
-              node?.content || "*(Generation stopped)*"
-            );
+            if (!node || !node.content) {
+              return updateNodeContent(prev, assistantNodeId, "*(Generation stopped by user)*");
+            }
+            return prev;
           });
         } else {
-          console.error("Chat streaming error:", err);
-          const isConnectionError =
-            err.name === "TypeError" || err.message?.includes("fetch");
-          const errorText = isConnectionError
-            ? `Cannot connect to backend at ${API_BASE_URL}. Please verify the FastAPI server is running.`
-            : err.message || "An unexpected error occurred during streaming.";
-
-          setError(errorText);
+          const errorMsg = err.message || "Failed to generate AI response";
+          setError(errorMsg);
           setTree((prev) => {
             if (!prev) return prev;
             return updateNodeContent(
               prev,
               assistantNodeId,
-              `⚠️ ${errorText}`
+              `⚠️ **Error:** ${errorMsg}\n\nPlease verify that the backend API is running.`
             );
           });
         }
@@ -276,44 +324,32 @@ export function useChatStream() {
         setIsStreaming(false);
         abortControllerRef.current = null;
       }
+
+      return { userNodeId, assistantNodeId };
     },
-    [isStreaming, activeBranch, tree]
+    [tree, isStreaming, activeBranch]
   );
 
   const retryLastMessage = useCallback(() => {
-    if (!tree) return;
-    const activeNodes = getAncestorPath(tree, tree.activeNodeId);
-    const lastUserNode = [...activeNodes].reverse().find((n) => n.role === "user");
-    if (lastUserNode) {
-      sendMessage(lastUserNode.content);
+    if (!tree || !tree.activeNodeId) return;
+    const activeNode = tree.nodes[tree.activeNodeId];
+    if (!activeNode) return;
+
+    if (activeNode.role === "assistant" && activeNode.parentId) {
+      const userNode = tree.nodes[activeNode.parentId];
+      if (userNode) {
+        sendMessage(
+          userNode.content,
+          userNode.provider || "gemini",
+          userNode.model || "gemini-2.5-flash",
+          {
+            parentNodeId: userNode.parentId || undefined,
+            highlightedText: userNode.highlightedContext || undefined,
+          } as unknown as BranchContext
+        );
+      }
     }
   }, [tree, sendMessage]);
-
-  const setBranchContext = useCallback(
-    (parentNodeId: string, highlightedText: string) => {
-      setActiveBranch({ parentNodeId, highlightedText });
-    },
-    []
-  );
-
-  const clearBranchContext = useCallback(() => {
-    setActiveBranch(null);
-  }, []);
-
-  const clearMessages = useCallback(() => {
-    setTree(null);
-    setError(null);
-    setActiveBranch(null);
-    try {
-      localStorage.removeItem(STORAGE_KEY);
-    } catch {
-      // Ignore
-    }
-  }, []);
-
-  const clearError = useCallback(() => {
-    setError(null);
-  }, []);
 
   return {
     tree,

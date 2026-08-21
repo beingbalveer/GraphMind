@@ -7,7 +7,7 @@ import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import rehypeHighlight from "rehype-highlight";
 import { User, Sparkles, Copy, Check, RotateCcw, GitBranch } from "lucide-react";
-import { TreeNode, ConversationTree } from "@graphmind/shared";
+import { TreeNode, ConversationTree, getNodeChildren } from "@graphmind/shared";
 import { Button } from "@/components/ui/button";
 import { useTextSelection } from "@/hooks/useTextSelection";
 import { SelectionTooltip } from "./SelectionTooltip";
@@ -20,14 +20,17 @@ interface ChatMessageProps {
   onRetry?: () => void;
   onExploreBranch?: (messageId: string, highlightedText: string) => void;
   onSelectBranch?: (nodeId: string) => void;
+  onOpenSideBranch?: (childNodeId: string, excerpt: string) => void;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function CodeBlock({ children, className, ...props }: any) {
   const [copied, setCopied] = useState(false);
   const match = /language-(\w+)/.exec(className || "");
   const language = match ? match[1] : "";
 
   // Extract raw text content from React children for clipboard copy
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const getRawCode = (node: any): string => {
     if (typeof node === "string") return node;
     if (Array.isArray(node)) return node.map(getRawCode).join("");
@@ -85,8 +88,7 @@ function CodeBlock({ children, className, ...props }: any) {
   );
 }
 
-// Memoized markdown renderer to prevent DOM re-creation that destroys active browser text selections
-const MarkdownRenderer = memo(function MarkdownRenderer({
+export const MarkdownRenderer = memo(function MarkdownRenderer({
   content,
 }: {
   content: string;
@@ -97,105 +99,93 @@ const MarkdownRenderer = memo(function MarkdownRenderer({
       rehypePlugins={[rehypeKatex, rehypeHighlight]}
       components={{
         code: CodeBlock,
-        p({ children, ...props }: any) {
-          return (
-            <p className="first:mt-0 mt-3.5 mb-3.5 leading-[1.8] text-[15.5px]" {...props}>
-              {children}
-            </p>
-          );
+        p({ children }) {
+          return <p className="mb-4 last:mb-0 leading-[1.8]">{children}</p>;
         },
-        h1({ children, ...props }: any) {
+        h1({ children }) {
           return (
-            <h1 className="text-xl font-bold text-zinc-900 first:mt-0 mt-7 mb-3 tracking-tight" {...props}>
+            <h1 className="text-xl font-bold text-zinc-950 mt-6 mb-3 tracking-tight">
               {children}
             </h1>
           );
         },
-        h2({ children, ...props }: any) {
+        h2({ children }) {
           return (
-            <h2 className="text-[17px] font-semibold text-zinc-900 first:mt-0 mt-6 mb-2.5 tracking-tight" {...props}>
+            <h2 className="text-lg font-semibold text-zinc-900 mt-5 mb-2.5 tracking-tight">
               {children}
             </h2>
           );
         },
-        h3({ children, ...props }: any) {
+        h3({ children }) {
           return (
-            <h3 className="text-[15.5px] font-semibold text-zinc-900 first:mt-0 mt-5 mb-2" {...props}>
+            <h3 className="text-base font-semibold text-zinc-800 mt-4 mb-2">
               {children}
             </h3>
           );
         },
-        h4({ children, ...props }: any) {
+        ul({ children }) {
           return (
-            <h4 className="text-sm font-semibold text-zinc-900 first:mt-0 mt-4 mb-1.5" {...props}>
-              {children}
-            </h4>
-          );
-        },
-        hr({ ...props }: any) {
-          return <hr className="my-7 border-t border-zinc-200/80" {...props} />;
-        },
-        ul({ children, ...props }: any) {
-          return (
-            <ul className="first:mt-0 my-3.5 pl-5 list-disc space-y-2 text-[15px] leading-[1.75]" {...props}>
+            <ul className="list-disc list-inside space-y-1.5 mb-4 pl-1 text-zinc-800">
               {children}
             </ul>
           );
         },
-        ol({ children, ...props }: any) {
+        ol({ children }) {
           return (
-            <ol className="first:mt-0 my-3.5 pl-5 list-decimal space-y-2 text-[15px] leading-[1.75]" {...props}>
+            <ol className="list-decimal list-inside space-y-1.5 mb-4 pl-1 text-zinc-800">
               {children}
             </ol>
           );
         },
-        li({ children, ...props }: any) {
-          return (
-            <li className="pl-1" {...props}>
-              {children}
-            </li>
-          );
+        li({ children }) {
+          return <li className="leading-relaxed">{children}</li>;
         },
-        strong({ children, ...props }: any) {
+        blockquote({ children }) {
           return (
-            <strong className="font-semibold text-zinc-950" {...props}>
-              {children}
-            </strong>
-          );
-        },
-        blockquote({ children, ...props }: any) {
-          return (
-            <blockquote className="my-4 border-l-2 border-zinc-300 pl-4 italic text-zinc-600" {...props}>
+            <blockquote className="border-l-2 border-zinc-900 pl-4 italic text-zinc-700 my-4 bg-zinc-50/50 py-1.5 rounded-r-lg">
               {children}
             </blockquote>
           );
         },
-        table({ children, ...props }: any) {
+        a({ href, children }) {
           return (
-            <div className="my-5 overflow-x-auto rounded-xl border border-zinc-200/90 bg-white shadow-xs">
-              <table className="w-full text-left border-collapse" {...props}>
+            <a
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-zinc-900 underline underline-offset-4 font-medium hover:text-black transition-colors"
+            >
+              {children}
+            </a>
+          );
+        },
+        hr() {
+          return <hr className="my-6 border-zinc-200/80" />;
+        },
+        table({ children }) {
+          return (
+            <div className="my-4 overflow-x-auto rounded-xl border border-zinc-200 shadow-xs">
+              <table className="w-full text-left text-xs border-collapse divide-y divide-zinc-200">
                 {children}
               </table>
             </div>
           );
         },
-        thead({ children, ...props }: any) {
-          return (
-            <thead className="bg-zinc-50/90 border-b border-zinc-200/90 text-zinc-700" {...props}>
-              {children}
-            </thead>
-          );
+        thead({ children }) {
+          return <thead className="bg-zinc-50 text-zinc-800 font-semibold">{children}</thead>;
         },
-        th({ children, ...props }: any) {
-          return (
-            <th className="px-4 py-3 text-[12px] font-semibold uppercase tracking-wider text-zinc-700 align-middle" {...props}>
-              {children}
-            </th>
-          );
+        tbody({ children }) {
+          return <tbody className="divide-y divide-zinc-100 bg-white">{children}</tbody>;
         },
-        td({ children, ...props }: any) {
+        tr({ children }) {
+          return <tr className="hover:bg-zinc-50/50 transition-colors">{children}</tr>;
+        },
+        th({ children }) {
+          return <th className="px-3.5 py-2.5 font-medium">{children}</th>;
+        },
+        td({ children }) {
           return (
-            <td className="px-4 py-3.5 text-[13.5px] leading-relaxed text-zinc-700 border-t border-zinc-100 align-top" {...props}>
+            <td className="px-3.5 py-2 text-zinc-700 whitespace-pre-wrap leading-relaxed">
               {children}
             </td>
           );
@@ -214,6 +204,7 @@ export function ChatMessage({
   onRetry,
   onExploreBranch,
   onSelectBranch,
+  onOpenSideBranch,
 }: ChatMessageProps) {
   const isUser = message.role === "user";
   const [copied, setCopied] = useState(false);
@@ -223,6 +214,14 @@ export function ChatMessage({
   const { selection, clearSelection } = useTextSelection(
     isUser ? { current: null } : contentRef
   );
+
+  // Find all child branches created from this message that have highlighted context
+  const branchedChildren = React.useMemo(() => {
+    if (!tree) return [];
+    return getNodeChildren(tree, message.id).filter(
+      (child) => Boolean(child.highlightedContext)
+    );
+  }, [tree, message.id]);
 
   const handleCopy = async () => {
     if (!message.content) return;
@@ -305,6 +304,28 @@ export function ChatMessage({
               <span className="inline-block w-[2.5px] h-[15px] ml-1 bg-zinc-900 animate-pulse align-middle rounded-full" />
             )}
           </div>
+
+          {/* Interactive Clickable Branch Pills Spawned from this Message */}
+          {branchedChildren.length > 0 && (
+            <div className="pt-2 flex flex-wrap items-center gap-1.5 select-none">
+              <span className="text-[11px] text-zinc-400 font-medium mr-1">Branches:</span>
+              {branchedChildren.map((child) => (
+                <button
+                  key={child.id}
+                  type="button"
+                  onClick={() => onOpenSideBranch?.(child.id, child.highlightedContext || "")}
+                  className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-zinc-100/90 hover:bg-zinc-200/90 border border-zinc-200/80 text-xs text-zinc-800 font-medium cursor-pointer transition-all hover:scale-[1.02] active:scale-98 shadow-2xs group"
+                  title="Open parallel branch in right split pane"
+                >
+                  <GitBranch className="w-3.5 h-3.5 text-zinc-500 group-hover:text-zinc-900" />
+                  <span className="italic truncate max-w-[220px]">
+                    &ldquo;{child.highlightedContext}&rdquo;
+                  </span>
+                  <span className="text-[10px] text-zinc-400 font-normal">↗</span>
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* Action Row & Branch Switcher */}
           <div className="pt-2 flex flex-wrap items-center justify-between gap-2">

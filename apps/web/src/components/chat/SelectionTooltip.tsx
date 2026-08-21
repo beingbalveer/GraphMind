@@ -37,15 +37,15 @@ export function SelectionTooltip({
             e.preventDefault();
           }}
           onClick={() => onExplore(selection.text)}
-          className="px-3 py-1.5 rounded-full bg-white/95 backdrop-blur-md text-zinc-800 hover:text-zinc-950 hover:bg-zinc-50 border border-zinc-200/90 shadow-md shadow-zinc-900/10 flex items-center space-x-1.5 text-xs font-medium cursor-pointer transition-all duration-150 hover:scale-[1.03] active:scale-95"
-          title="Spawn a sub-topic branch from this excerpt"
+          className="px-3.5 py-1.5 rounded-full bg-zinc-900 text-white hover:bg-zinc-800 border border-zinc-900 shadow-lg flex items-center space-x-1.5 text-xs font-semibold cursor-pointer transition-all duration-150 hover:scale-[1.03] active:scale-95"
+          title="Explain this concept in a parallel side branch"
         >
-          <GitBranch className="w-3.5 h-3.5 text-zinc-600" />
-          <span>Explore Sub-topic</span>
+          <GitBranch className="w-3.5 h-3.5 text-zinc-300" />
+          <span>Explain this</span>
         </button>
 
         {/* Subtle Bottom Caret */}
-        <div className="w-2 h-2 bg-white rotate-45 border-r border-b border-zinc-200/90 -mt-1 shadow-2xs" />
+        <div className="w-2 h-2 bg-zinc-900 rotate-45 -mt-1 shadow-2xs" />
       </div>
     </div>
   );
