@@ -27,6 +27,7 @@ interface GraphCanvasProps {
   onSelectNode: (nodeId: string) => void;
   onExploreBranch?: (nodeId: string, contextText?: string) => void;
   onSwitchToChat?: (nodeId: string) => void;
+  onRetry?: () => void;
   onFitViewRef?: React.MutableRefObject<(() => void) | null>;
   onCenterActiveRef?: React.MutableRefObject<(() => void) | null>;
 }
@@ -45,6 +46,7 @@ function FlowCanvas({
   onSelectNode,
   onExploreBranch,
   onSwitchToChat,
+  onRetry,
   onFitViewRef,
   onCenterActiveRef,
 }: GraphCanvasProps) {
@@ -58,8 +60,9 @@ function FlowCanvas({
       isStreaming,
       onExploreBranch,
       onSwitchToChat,
+      onRetry,
     });
-  }, [tree, isStreaming, onExploreBranch, onSwitchToChat]);
+  }, [tree, isStreaming, onExploreBranch, onSwitchToChat, onRetry]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<CustomNodeData>>(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
@@ -71,10 +74,11 @@ function FlowCanvas({
       isStreaming,
       onExploreBranch,
       onSwitchToChat,
+      onRetry,
     });
     setNodes(newNodes);
     setEdges(newEdges);
-  }, [tree, isStreaming, onExploreBranch, onSwitchToChat, setNodes, setEdges]);
+  }, [tree, isStreaming, onExploreBranch, onSwitchToChat, onRetry, setNodes, setEdges]);
 
   // Center camera smoothly on a specific node card
   const centerOnNode = useCallback(

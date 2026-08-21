@@ -204,6 +204,7 @@ export function ChatContainer() {
                   setBranchContext(nodeId, text || "");
                 }}
                 onSwitchToChat={handleSwitchToChat}
+                onRetry={retryLastMessage}
                 onFitViewRef={fitViewRef}
                 onCenterActiveRef={centerActiveRef}
               />

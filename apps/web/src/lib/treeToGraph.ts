@@ -10,10 +10,13 @@ export interface CustomNodeData {
   node: TreeNode;
   isRoot: boolean;
   isActive: boolean;
+  isStreaming?: boolean;
   totalSiblings?: number;
   siblingIndex?: number;
+  childCount?: number;
   onExploreBranch?: (nodeId: string, contextText?: string) => void;
   onSwitchToChat?: (nodeId: string) => void;
+  onRetry?: () => void;
   [key: string]: unknown;
 }
 
@@ -22,6 +25,7 @@ export interface TreeToGraphOptions {
   isStreaming?: boolean;
   onExploreBranch?: (nodeId: string, contextText?: string) => void;
   onSwitchToChat?: (nodeId: string) => void;
+  onRetry?: () => void;
 }
 
 /**
@@ -40,6 +44,7 @@ export function treeToGraph(
     isStreaming = false,
     onExploreBranch,
     onSwitchToChat,
+    onRetry,
   } = options || {};
 
   const nodes: Node<CustomNodeData>[] = [];
@@ -86,6 +91,7 @@ export function treeToGraph(
     const pos = positions.get(node.id) || { x: 0, y: 0 };
     const isActive = node.id === activeNodeId;
     const isRoot = node.id === tree.rootNodeId;
+    const isNodeStreaming = isActive && node.role === "assistant" && isStreaming;
 
     let totalSiblings = 1;
     let siblingIndex = 0;
@@ -95,6 +101,8 @@ export function treeToGraph(
       siblingIndex = siblings.findIndex((s) => s.id === node.id);
     }
 
+    const children = getNodeChildren(tree, node.id);
+
     nodes.push({
       id: node.id,
       type: "customMessageNode",
@@ -103,10 +111,13 @@ export function treeToGraph(
         node,
         isRoot,
         isActive,
+        isStreaming: isNodeStreaming,
         totalSiblings,
         siblingIndex,
+        childCount: children.length,
         onExploreBranch,
         onSwitchToChat,
+        onRetry,
       },
     });
 
