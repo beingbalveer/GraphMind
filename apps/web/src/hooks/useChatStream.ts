@@ -17,6 +17,7 @@ export interface BranchContext {
 export interface SendMessageOptions {
   branchOverride?: BranchContext | null;
   preserveActiveNodeId?: boolean;
+  onNodeCreated?: (nodes: { userNodeId: string; assistantNodeId: string }) => void;
 }
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8008";
@@ -122,6 +123,7 @@ export function useChatStream() {
       // Normalize options
       let branch: BranchContext | null = null;
       let preserveActiveNodeId = false;
+      let onNodeCreated: ((nodes: { userNodeId: string; assistantNodeId: string }) => void) | undefined = undefined;
 
       if (optionsOrBranch) {
         if ("parentNodeId" in optionsOrBranch) {
@@ -130,6 +132,7 @@ export function useChatStream() {
         } else {
           branch = optionsOrBranch.branchOverride || null;
           preserveActiveNodeId = Boolean(optionsOrBranch.preserveActiveNodeId);
+          onNodeCreated = optionsOrBranch.onNodeCreated;
         }
       } else {
         branch = activeBranch;
@@ -206,6 +209,9 @@ export function useChatStream() {
           };
         }
       }
+
+      // Synchronously notify caller immediately of created node IDs (e.g. to open side pane in 0ms)
+      onNodeCreated?.({ userNodeId, assistantNodeId });
 
       setTree(currentTree);
       setIsStreaming(true);

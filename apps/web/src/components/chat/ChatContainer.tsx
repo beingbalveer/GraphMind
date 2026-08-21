@@ -141,22 +141,22 @@ export function ChatContainer() {
     [switchBranch, handleJumpToMessage]
   );
 
-  // Triggered when user selects text and clicks "🌿 Explain this"
+  // Triggered when user selects text and clicks "🌿 Explain this" -> Opens right pane INSTANTLY
   const handleExplainBranch = useCallback(
-    async (messageId: string, highlightedText: string) => {
+    (messageId: string, highlightedText: string) => {
       setSideBranchExcerpt(highlightedText);
-      const result = await sendMessage(
+      sendMessage(
         `Explain in detail: "${highlightedText}"`,
         "gemini",
         "gemini-2.5-flash",
         {
           branchOverride: { parentNodeId: messageId, highlightedText },
           preserveActiveNodeId: true,
+          onNodeCreated: ({ assistantNodeId }) => {
+            setSideBranchNodeId(assistantNodeId);
+          },
         }
       );
-      if (result) {
-        setSideBranchNodeId(result.assistantNodeId);
-      }
     },
     [sendMessage]
   );
@@ -455,6 +455,9 @@ export function ChatContainer() {
                       sendMessage(prompt, "gemini", "gemini-2.5-flash", {
                         branchOverride: { parentNodeId, highlightedText: "" },
                         preserveActiveNodeId: true,
+                        onNodeCreated: ({ assistantNodeId }) => {
+                          setSideBranchNodeId(assistantNodeId);
+                        },
                       });
                     }}
                   />
