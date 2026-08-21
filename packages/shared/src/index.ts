@@ -1,4 +1,5 @@
 export type NodeType = 'root_prompt' | 'response' | 'branch_prompt' | 'concept';
+export type MessageRole = 'user' | 'assistant' | 'system';
 
 export interface Position {
   x: number;
@@ -40,4 +41,41 @@ export interface HealthCheckResponse {
   version: string;
   timestamp: string;
   environment: string;
+}
+
+/**
+ * Phase 2 Tree-Structured Branching Domain Models
+ */
+
+export interface TreeNode {
+  id: string;
+  parentId: string | null;
+  childrenIds: string[];
+  role: MessageRole;
+  content: string;
+  highlightedContext?: string | null;
+  provider?: string | null;
+  model?: string | null;
+  createdAt: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface CreateNodeParams {
+  id?: string;
+  parentId?: string | null;
+  role: MessageRole;
+  content: string;
+  highlightedContext?: string | null;
+  provider?: string | null;
+  model?: string | null;
+  metadata?: Record<string, unknown>;
+}
+
+export interface ConversationTree {
+  id: string;
+  rootNodeId: string;
+  activeNodeId: string;
+  nodes: Record<string, TreeNode>;
+  createdAt: string;
+  updatedAt: string;
 }

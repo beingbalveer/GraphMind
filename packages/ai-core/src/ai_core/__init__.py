@@ -18,6 +18,7 @@ from ai_core.providers import (
     get_provider,
     register_provider,
 )
+from ai_core.tree import ConversationTree, TreeNode
 
 __all__ = [
     "BaseLLMProvider",
@@ -36,4 +37,6 @@ __all__ = [
     "get_llm_provider",
     "get_provider",
     "register_provider",
+    "TreeNode",
+    "ConversationTree",
 ]
