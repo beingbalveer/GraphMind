@@ -79,3 +79,5 @@ export interface ConversationTree {
   createdAt: string;
   updatedAt: string;
 }
+
+export * from './tree-utils';
