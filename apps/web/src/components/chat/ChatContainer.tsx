@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useCallback } from "react";
 import { Terminal, Cpu, GitBranch, ArrowDown } from "lucide-react";
 import { ChatMessage } from "./ChatMessage";
 import { ChatInput } from "./ChatInput";
+import { BranchBreadcrumbs } from "./BranchBreadcrumbs";
 import { Toast } from "@/components/ui/toast";
 import { useChatStream } from "@/hooks/useChatStream";
 import { useScrollAnchor } from "@/hooks/useScrollAnchor";
@@ -39,6 +40,13 @@ export function ChatContainer() {
     }
   }, [messages, isStreaming, isAtBottom, scrollToBottom]);
 
+  const handleJumpToMessage = useCallback((messageId: string) => {
+    const el = document.getElementById(messageId);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, []);
+
   const starterPrompts = [
     {
       title: "Explain LangGraph & State Machines",
@@ -62,7 +70,16 @@ export function ChatContainer() {
 
   return (
     <div className="w-screen h-screen flex flex-col bg-white overflow-hidden font-sans selection:bg-zinc-200 selection:text-zinc-900">
-      <Navbar onClearChat={clearMessages} messageCount={messages.length} />
+      <Navbar
+        onClearChat={clearMessages}
+        messageCount={messages.length}
+        breadcrumbs={
+          <BranchBreadcrumbs
+            messages={messages}
+            onJumpToMessage={handleJumpToMessage}
+          />
+        }
+      />
 
       {/* Dedicated Scrollable Feed */}
       <main

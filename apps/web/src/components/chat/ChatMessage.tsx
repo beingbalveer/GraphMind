@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, memo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
@@ -81,6 +81,128 @@ function CodeBlock({ children, className, ...props }: any) {
   );
 }
 
+// Memoized markdown renderer to prevent DOM re-creation that destroys active browser text selections
+const MarkdownRenderer = memo(function MarkdownRenderer({
+  content,
+}: {
+  content: string;
+}) {
+  return (
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm, remarkMath]}
+      rehypePlugins={[rehypeKatex, rehypeHighlight]}
+      components={{
+        code: CodeBlock,
+        p({ children, ...props }: any) {
+          return (
+            <p className="first:mt-0 mt-3.5 mb-3.5 leading-[1.8] text-[15.5px]" {...props}>
+              {children}
+            </p>
+          );
+        },
+        h1({ children, ...props }: any) {
+          return (
+            <h1 className="text-xl font-bold text-zinc-900 first:mt-0 mt-7 mb-3 tracking-tight" {...props}>
+              {children}
+            </h1>
+          );
+        },
+        h2({ children, ...props }: any) {
+          return (
+            <h2 className="text-[17px] font-semibold text-zinc-900 first:mt-0 mt-6 mb-2.5 tracking-tight" {...props}>
+              {children}
+            </h2>
+          );
+        },
+        h3({ children, ...props }: any) {
+          return (
+            <h3 className="text-[15.5px] font-semibold text-zinc-900 first:mt-0 mt-5 mb-2" {...props}>
+              {children}
+            </h3>
+          );
+        },
+        h4({ children, ...props }: any) {
+          return (
+            <h4 className="text-sm font-semibold text-zinc-900 first:mt-0 mt-4 mb-1.5" {...props}>
+              {children}
+            </h4>
+          );
+        },
+        hr({ ...props }: any) {
+          return <hr className="my-7 border-t border-zinc-200/80" {...props} />;
+        },
+        ul({ children, ...props }: any) {
+          return (
+            <ul className="first:mt-0 my-3.5 pl-5 list-disc space-y-2 text-[15px] leading-[1.75]" {...props}>
+              {children}
+            </ul>
+          );
+        },
+        ol({ children, ...props }: any) {
+          return (
+            <ol className="first:mt-0 my-3.5 pl-5 list-decimal space-y-2 text-[15px] leading-[1.75]" {...props}>
+              {children}
+            </ol>
+          );
+        },
+        li({ children, ...props }: any) {
+          return (
+            <li className="pl-1" {...props}>
+              {children}
+            </li>
+          );
+        },
+        strong({ children, ...props }: any) {
+          return (
+            <strong className="font-semibold text-zinc-950" {...props}>
+              {children}
+            </strong>
+          );
+        },
+        blockquote({ children, ...props }: any) {
+          return (
+            <blockquote className="my-4 border-l-2 border-zinc-300 pl-4 italic text-zinc-600" {...props}>
+              {children}
+            </blockquote>
+          );
+        },
+        table({ children, ...props }: any) {
+          return (
+            <div className="my-5 overflow-x-auto rounded-xl border border-zinc-200/90 bg-white shadow-xs">
+              <table className="w-full text-left border-collapse" {...props}>
+                {children}
+              </table>
+            </div>
+          );
+        },
+        thead({ children, ...props }: any) {
+          return (
+            <thead className="bg-zinc-50/90 border-b border-zinc-200/90 text-zinc-700" {...props}>
+              {children}
+            </thead>
+          );
+        },
+        th({ children, ...props }: any) {
+          return (
+            <th className="px-4 py-3 text-[12px] font-semibold uppercase tracking-wider text-zinc-700 align-middle" {...props}>
+              {children}
+            </th>
+          );
+        },
+        td({ children, ...props }: any) {
+          return (
+            <td className="px-4 py-3.5 text-[13.5px] leading-relaxed text-zinc-700 border-t border-zinc-100 align-top" {...props}>
+              {children}
+            </td>
+          );
+        },
+      }}
+    >
+      {content}
+    </ReactMarkdown>
+  );
+});
+
 export function ChatMessage({
   message,
   onRetry,
@@ -110,7 +232,10 @@ export function ChatMessage({
   };
 
   return (
-    <div className="py-5 px-4 sm:px-6 bg-white group transition-colors relative">
+    <div
+      id={message.id}
+      className="py-5 px-4 sm:px-6 bg-white group transition-colors relative"
+    >
       {/* Floating Selection Tooltip */}
       {!isUser && selection && (
         <SelectionTooltip selection={selection} onExplore={handleExplore} />
@@ -155,118 +280,7 @@ export function ChatMessage({
             } leading-[1.8] break-words`}
           >
             {message.content ? (
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm, remarkMath]}
-                rehypePlugins={[rehypeKatex, rehypeHighlight]}
-                components={{
-                  code: CodeBlock,
-                  p({ children, ...props }: any) {
-                    return (
-                      <p className="first:mt-0 mt-3.5 mb-3.5 leading-[1.8] text-[15.5px]" {...props}>
-                        {children}
-                      </p>
-                    );
-                  },
-                  h1({ children, ...props }: any) {
-                    return (
-                      <h1 className="text-xl font-bold text-zinc-900 first:mt-0 mt-7 mb-3 tracking-tight" {...props}>
-                        {children}
-                      </h1>
-                    );
-                  },
-                  h2({ children, ...props }: any) {
-                    return (
-                      <h2 className="text-[17px] font-semibold text-zinc-900 first:mt-0 mt-6 mb-2.5 tracking-tight" {...props}>
-                        {children}
-                      </h2>
-                    );
-                  },
-                  h3({ children, ...props }: any) {
-                    return (
-                      <h3 className="text-[15.5px] font-semibold text-zinc-900 first:mt-0 mt-5 mb-2" {...props}>
-                        {children}
-                      </h3>
-                    );
-                  },
-                  h4({ children, ...props }: any) {
-                    return (
-                      <h4 className="text-sm font-semibold text-zinc-900 first:mt-0 mt-4 mb-1.5" {...props}>
-                        {children}
-                      </h4>
-                    );
-                  },
-                  hr({ ...props }: any) {
-                    return <hr className="my-7 border-t border-zinc-200/80" {...props} />;
-                  },
-                  ul({ children, ...props }: any) {
-                    return (
-                      <ul className="first:mt-0 my-3.5 pl-5 list-disc space-y-2 text-[15px] leading-[1.75]" {...props}>
-                        {children}
-                      </ul>
-                    );
-                  },
-                  ol({ children, ...props }: any) {
-                    return (
-                      <ol className="first:mt-0 my-3.5 pl-5 list-decimal space-y-2 text-[15px] leading-[1.75]" {...props}>
-                        {children}
-                      </ol>
-                    );
-                  },
-                  li({ children, ...props }: any) {
-                    return (
-                      <li className="pl-1" {...props}>
-                        {children}
-                      </li>
-                    );
-                  },
-                  strong({ children, ...props }: any) {
-                    return (
-                      <strong className="font-semibold text-zinc-950" {...props}>
-                        {children}
-                      </strong>
-                    );
-                  },
-                  blockquote({ children, ...props }: any) {
-                    return (
-                      <blockquote className="my-4 border-l-2 border-zinc-300 pl-4 italic text-zinc-600" {...props}>
-                        {children}
-                      </blockquote>
-                    );
-                  },
-                  table({ children, ...props }: any) {
-                    return (
-                      <div className="my-5 overflow-x-auto rounded-xl border border-zinc-200/90 bg-white shadow-xs">
-                        <table className="w-full text-left border-collapse" {...props}>
-                          {children}
-                        </table>
-                      </div>
-                    );
-                  },
-                  thead({ children, ...props }: any) {
-                    return (
-                      <thead className="bg-zinc-50/90 border-b border-zinc-200/90 text-zinc-700" {...props}>
-                        {children}
-                      </thead>
-                    );
-                  },
-                  th({ children, ...props }: any) {
-                    return (
-                      <th className="px-4 py-3 text-[12px] font-semibold uppercase tracking-wider text-zinc-700 align-middle" {...props}>
-                        {children}
-                      </th>
-                    );
-                  },
-                  td({ children, ...props }: any) {
-                    return (
-                      <td className="px-4 py-3.5 text-[13.5px] leading-relaxed text-zinc-700 border-t border-zinc-100 align-top" {...props}>
-                        {children}
-                      </td>
-                    );
-                  },
-                }}
-              >
-                {message.content}
-              </ReactMarkdown>
+              <MarkdownRenderer content={message.content} />
             ) : message.isStreaming ? (
               /* Smooth Staggered Wave Thinking State */
               <div className="flex items-center space-x-2 py-1 select-none">

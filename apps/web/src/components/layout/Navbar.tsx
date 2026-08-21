@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button";
 interface NavbarProps {
   onClearChat?: () => void;
   messageCount: number;
+  breadcrumbs?: React.ReactNode;
 }
 
-export function Navbar({ onClearChat, messageCount }: NavbarProps) {
+export function Navbar({ onClearChat, messageCount, breadcrumbs }: NavbarProps) {
   const [apiOnline, setApiOnline] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -29,8 +30,8 @@ export function Navbar({ onClearChat, messageCount }: NavbarProps) {
 
   return (
     <header className="h-13 border-b border-zinc-200/80 bg-white/80 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between z-30 shrink-0 select-none">
-      {/* Brand */}
-      <div className="flex items-center space-x-2.5">
+      {/* Left: Brand + Connection Status */}
+      <div className="flex items-center space-x-2.5 shrink-0">
         <div className="w-6 h-6 rounded-md bg-zinc-900 text-white flex items-center justify-center font-bold text-xs shadow-xs">
           🧠
         </div>
@@ -55,8 +56,13 @@ export function Navbar({ onClearChat, messageCount }: NavbarProps) {
         />
       </div>
 
+      {/* Center: Branch Breadcrumbs */}
+      <div className="hidden md:flex items-center px-4 min-w-0">
+        {breadcrumbs}
+      </div>
+
       {/* Right Controls */}
-      <div className="flex items-center space-x-2">
+      <div className="flex items-center space-x-2 shrink-0">
         {messageCount > 0 && onClearChat && (
           <Button
             variant="ghost"
