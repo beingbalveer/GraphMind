@@ -5,8 +5,17 @@ export interface CustomNodeData {
   node: TreeNode;
   isRoot: boolean;
   isActive: boolean;
-  onSelectNode?: (nodeId: string) => void;
+  totalSiblings?: number;
+  siblingIndex?: number;
+  onExploreBranch?: (nodeId: string, contextText?: string) => void;
+  onSwitchToChat?: (nodeId: string) => void;
   [key: string]: unknown;
+}
+
+export interface TreeToGraphOptions {
+  activeNodeId?: string;
+  onExploreBranch?: (nodeId: string, contextText?: string) => void;
+  onSwitchToChat?: (nodeId: string) => void;
 }
 
 /**
@@ -14,12 +23,13 @@ export interface CustomNodeData {
  */
 export function treeToGraph(
   tree: ConversationTree | null,
-  activeNodeId?: string
+  options?: TreeToGraphOptions
 ): { nodes: Node<CustomNodeData>[]; edges: Edge[] } {
   if (!tree || !tree.rootNodeId || !tree.nodes[tree.rootNodeId]) {
     return { nodes: [], edges: [] };
   }
 
+  const { activeNodeId, onExploreBranch, onSwitchToChat } = options || {};
   const nodes: Node<CustomNodeData>[] = [];
   const edges: Edge[] = [];
   const rootNode = tree.nodes[tree.rootNodeId];
@@ -33,8 +43,8 @@ export function treeToGraph(
     const children = getNodeChildren(tree!, node.id);
 
     if (children.length === 0) {
-      const x = leafCounter * 360;
-      const y = depth * 180;
+      const x = leafCounter * 380;
+      const y = depth * 220;
       positions.set(node.id, { x, y });
       leafCounter += 1;
       return x;
@@ -48,7 +58,7 @@ export function treeToGraph(
 
     // Center parent above its children
     const midX = (childXCoords[0] + childXCoords[childXCoords.length - 1]) / 2;
-    const y = depth * 180;
+    const y = depth * 220;
     positions.set(node.id, { x: midX, y });
     return midX;
   }
@@ -61,6 +71,14 @@ export function treeToGraph(
     const isActive = node.id === activeNodeId;
     const isRoot = node.id === tree.rootNodeId;
 
+    let totalSiblings = 1;
+    let siblingIndex = 0;
+    if (node.parentId && tree.nodes[node.parentId]) {
+      const siblings = getNodeChildren(tree, node.parentId);
+      totalSiblings = siblings.length;
+      siblingIndex = siblings.findIndex((s) => s.id === node.id);
+    }
+
     nodes.push({
       id: node.id,
       type: "customMessageNode",
@@ -69,6 +87,10 @@ export function treeToGraph(
         node,
         isRoot,
         isActive,
+        totalSiblings,
+        siblingIndex,
+        onExploreBranch,
+        onSwitchToChat,
       },
     });
 

@@ -2,7 +2,7 @@
 
 import React, { memo } from "react";
 import { Handle, Position } from "@xyflow/react";
-import { User, Sparkles, GitBranch } from "lucide-react";
+import { User, Sparkles, GitBranch, MessageSquare, Plus } from "lucide-react";
 import { CustomNodeData } from "@/lib/treeToGraph";
 
 export const CustomMessageNode = memo(function CustomMessageNode({
@@ -10,14 +10,32 @@ export const CustomMessageNode = memo(function CustomMessageNode({
 }: {
   data: CustomNodeData;
 }) {
-  const { node, isRoot, isActive } = data;
+  const {
+    node,
+    isRoot,
+    isActive,
+    totalSiblings = 1,
+    siblingIndex = 0,
+    onExploreBranch,
+    onSwitchToChat,
+  } = data;
   const isUser = node.role === "user";
+
+  const handleBranchClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onExploreBranch?.(node.id, node.content.slice(0, 100));
+  };
+
+  const handleChatClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onSwitchToChat?.(node.id);
+  };
 
   return (
     <div
-      className={`w-72 rounded-2xl bg-white p-3.5 shadow-sm transition-shadow duration-150 border select-none cursor-pointer transform-gpu will-change-transform ${
+      className={`w-80 rounded-2xl bg-white p-4 shadow-sm transition-all duration-150 border select-none cursor-pointer transform-gpu will-change-transform group ${
         isActive
-          ? "border-zinc-900 ring-2 ring-zinc-900/10 shadow-md z-10"
+          ? "border-zinc-900 ring-2 ring-zinc-900/10 shadow-lg z-10"
           : "border-zinc-200/90 hover:border-zinc-300 hover:shadow-md"
       }`}
     >
@@ -26,56 +44,87 @@ export const CustomMessageNode = memo(function CustomMessageNode({
         <Handle
           type="target"
           position={Position.Top}
-          className="!w-2 !h-2 !bg-zinc-400 !border-2 !border-white"
+          className="!w-2.5 !h-2.5 !bg-zinc-400 !border-2 !border-white"
         />
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between gap-2 mb-2">
-        <div className="flex items-center space-x-1.5 min-w-0">
+      <div className="flex items-center justify-between gap-2 mb-2.5">
+        <div className="flex items-center space-x-2 min-w-0">
           <div
-            className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-xs ${
+            className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-xs ${
               isUser
                 ? "bg-zinc-100 text-zinc-700 border border-zinc-200"
                 : "bg-zinc-900 text-white shadow-2xs"
             }`}
           >
             {isUser ? (
-              <User className="w-3 h-3" />
+              <User className="w-3.5 h-3.5" />
             ) : (
-              <Sparkles className="w-3 h-3" />
+              <Sparkles className="w-3.5 h-3.5" />
             )}
           </div>
-          <span className="text-[11px] font-semibold text-zinc-800 capitalize truncate">
-            {isRoot ? "Root Topic" : isUser ? "User Branch" : "Assistant"}
-          </span>
+          <div className="min-w-0">
+            <div className="text-xs font-semibold text-zinc-900 capitalize truncate leading-none">
+              {isRoot ? "Root Topic" : isUser ? "User Branch" : "Assistant"}
+            </div>
+            {node.model && (
+              <div className="text-[10px] text-zinc-400 font-mono mt-0.5 truncate">
+                {node.model.replace("gemini-", "").replace("gpt-", "")}
+              </div>
+            )}
+          </div>
         </div>
 
-        {node.model && (
-          <span className="text-[9.5px] px-1.5 py-0.2 rounded-full bg-zinc-100 text-zinc-500 font-mono shrink-0 truncate max-w-[90px]">
-            {node.model.replace("gemini-", "").replace("gpt-", "")}
+        {/* Sibling Branch Indicator Badge */}
+        {totalSiblings > 1 && (
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-zinc-100 border border-zinc-200/80 text-zinc-600 font-medium shrink-0">
+            Branch {siblingIndex + 1}/{totalSiblings}
           </span>
         )}
       </div>
 
       {/* Sub-topic Excerpt Badge if present */}
       {node.highlightedContext && (
-        <div className="mb-2 flex items-center space-x-1 px-2 py-0.5 rounded-md bg-zinc-100/90 border border-zinc-200/80 text-[10.5px] text-zinc-700 truncate">
-          <GitBranch className="w-3 h-3 text-zinc-500 shrink-0" />
+        <div className="mb-2.5 flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-zinc-50 border border-zinc-200/80 text-[11px] text-zinc-700">
+          <GitBranch className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
           <span className="italic truncate">&ldquo;{node.highlightedContext}&rdquo;</span>
         </div>
       )}
 
       {/* Message Content Snippet */}
-      <p className="text-xs text-zinc-600 line-clamp-3 leading-relaxed break-words">
+      <p className="text-xs text-zinc-600 line-clamp-4 leading-relaxed break-words">
         {node.content || (node.role === "assistant" ? "Thinking..." : "Empty message")}
       </p>
+
+      {/* Interactive Bottom Action Toolbar (Visible on Card Hover / Focus) */}
+      <div className="mt-3 pt-2.5 border-t border-zinc-100 flex items-center justify-between text-xs">
+        <button
+          type="button"
+          onClick={handleBranchClick}
+          className="inline-flex items-center space-x-1 px-2 py-1 rounded-md text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100 transition-colors cursor-pointer text-[11px] font-medium"
+          title="Branch from this node"
+        >
+          <Plus className="w-3 h-3" />
+          <span>Branch</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={handleChatClick}
+          className="inline-flex items-center space-x-1 px-2 py-1 rounded-md text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100 transition-colors cursor-pointer text-[11px] font-medium"
+          title="Open in Chat Feed"
+        >
+          <MessageSquare className="w-3 h-3" />
+          <span>Open in Chat</span>
+        </button>
+      </div>
 
       {/* Bottom Connection Handle (Outgoing) */}
       <Handle
         type="source"
         position={Position.Bottom}
-        className="!w-2 !h-2 !bg-zinc-400 !border-2 !border-white"
+        className="!w-2.5 !h-2.5 !bg-zinc-400 !border-2 !border-white"
       />
     </div>
   );

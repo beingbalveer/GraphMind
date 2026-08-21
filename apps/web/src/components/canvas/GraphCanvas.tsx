@@ -23,6 +23,8 @@ import { Button } from "@/components/ui/button";
 interface GraphCanvasProps {
   tree: ConversationTree | null;
   onSelectNode: (nodeId: string) => void;
+  onExploreBranch?: (nodeId: string, contextText?: string) => void;
+  onSwitchToChat?: (nodeId: string) => void;
   onFitViewRef?: React.MutableRefObject<(() => void) | null>;
   onCenterActiveRef?: React.MutableRefObject<(() => void) | null>;
 }
@@ -34,6 +36,8 @@ const nodeTypes = {
 function FlowCanvas({
   tree,
   onSelectNode,
+  onExploreBranch,
+  onSwitchToChat,
   onFitViewRef,
   onCenterActiveRef,
 }: GraphCanvasProps) {
@@ -42,21 +46,26 @@ function FlowCanvas({
   const isFirstRender = useRef(true);
 
   const { nodes: initialNodes, edges: initialEdges } = useMemo(() => {
-    return treeToGraph(tree, tree?.activeNodeId);
-  }, [tree]);
+    return treeToGraph(tree, {
+      activeNodeId: tree?.activeNodeId,
+      onExploreBranch,
+      onSwitchToChat,
+    });
+  }, [tree, onExploreBranch, onSwitchToChat]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<CustomNodeData>>(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
   // Synchronize graph nodes and edges whenever the tree state updates
   useEffect(() => {
-    const { nodes: newNodes, edges: newEdges } = treeToGraph(
-      tree,
-      tree?.activeNodeId
-    );
+    const { nodes: newNodes, edges: newEdges } = treeToGraph(tree, {
+      activeNodeId: tree?.activeNodeId,
+      onExploreBranch,
+      onSwitchToChat,
+    });
     setNodes(newNodes);
     setEdges(newEdges);
-  }, [tree, setNodes, setEdges]);
+  }, [tree, onExploreBranch, onSwitchToChat, setNodes, setEdges]);
 
   // Center camera smoothly on a specific node card
   const centerOnNode = useCallback(
@@ -66,9 +75,9 @@ function FlowCanvas({
 
       const targetNode = nodes.find((n) => n.id === targetId);
       if (targetNode) {
-        // Node dimensions are approx 288px width by 120px height
-        const centerX = targetNode.position.x + 144;
-        const centerY = targetNode.position.y + 60;
+        // Node dimensions are approx 320px width by 140px height
+        const centerX = targetNode.position.x + 160;
+        const centerY = targetNode.position.y + 70;
         setCenter(centerX, centerY, { zoom: 0.95, duration: 450 });
       }
     },

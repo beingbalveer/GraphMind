@@ -71,6 +71,17 @@ export function ChatContainer() {
     [switchBranch, handleJumpToMessage, viewMode]
   );
 
+  const handleSwitchToChat = useCallback(
+    (nodeId: string) => {
+      switchBranch(nodeId);
+      setViewMode("chat");
+      setTimeout(() => {
+        handleJumpToMessage(nodeId);
+      }, 50);
+    },
+    [switchBranch, handleJumpToMessage]
+  );
+
   // Power-user Keyboard navigation
   const handlePrevBranch = useCallback(() => {
     if (!tree) return;
@@ -188,6 +199,10 @@ export function ChatContainer() {
               <GraphCanvas
                 tree={tree}
                 onSelectNode={handleSelectTreeNode}
+                onExploreBranch={(nodeId, text) => {
+                  setBranchContext(nodeId, text || "");
+                }}
+                onSwitchToChat={handleSwitchToChat}
                 onFitViewRef={fitViewRef}
                 onCenterActiveRef={centerActiveRef}
               />
