@@ -39,6 +39,7 @@ interface GraphCanvasProps {
   onRetry?: () => void;
   onFitViewRef?: React.MutableRefObject<(() => void) | null>;
   onCenterActiveRef?: React.MutableRefObject<(() => void) | null>;
+  onAutoLayoutRef?: React.MutableRefObject<(() => void) | null>;
 }
 
 const nodeTypes = {
@@ -58,6 +59,7 @@ function FlowCanvas({
   onRetry,
   onFitViewRef,
   onCenterActiveRef,
+  onAutoLayoutRef,
 }: GraphCanvasProps) {
   const { fitView, setCenter, zoomTo } = useReactFlow();
   const [showMinimap, setShowMinimap] = useState(true);
@@ -118,6 +120,20 @@ function FlowCanvas({
     zoomTo(1.0, { duration: 350 });
   }, [zoomTo]);
 
+  const handleAutoLayout = useCallback(() => {
+    const raw = treeToGraph(tree, {
+      activeNodeId: tree?.activeNodeId,
+      isStreaming,
+      onExploreBranch,
+      onSwitchToChat,
+      onRetry,
+    });
+    const layouted = getLayoutedElements(raw.nodes, raw.edges, direction);
+    setNodes(layouted.nodes);
+    setEdges(layouted.edges);
+    handleFitView();
+  }, [tree, isStreaming, onExploreBranch, onSwitchToChat, onRetry, direction, handleFitView, setNodes, setEdges]);
+
   const handleToggleDirection = useCallback(() => {
     const newDir = direction === "TB" ? "LR" : "TB";
     setDirection(newDir);
@@ -130,7 +146,8 @@ function FlowCanvas({
   useEffect(() => {
     if (onFitViewRef) onFitViewRef.current = handleFitView;
     if (onCenterActiveRef) onCenterActiveRef.current = () => centerOnNode();
-  }, [onFitViewRef, onCenterActiveRef, handleFitView, centerOnNode]);
+    if (onAutoLayoutRef) onAutoLayoutRef.current = handleAutoLayout;
+  }, [onFitViewRef, onCenterActiveRef, onAutoLayoutRef, handleFitView, centerOnNode, handleAutoLayout]);
 
   // Fit view on initial load or smooth pan on branch switch
   useEffect(() => {
@@ -209,19 +226,7 @@ function FlowCanvas({
         <Button
           variant="ghost"
           size="iconSm"
-          onClick={() => {
-            const raw = treeToGraph(tree, {
-              activeNodeId: tree?.activeNodeId,
-              isStreaming,
-              onExploreBranch,
-              onSwitchToChat,
-              onRetry,
-            });
-            const layouted = getLayoutedElements(raw.nodes, raw.edges, direction);
-            setNodes(layouted.nodes);
-            setEdges(layouted.edges);
-            handleFitView();
-          }}
+          onClick={handleAutoLayout}
           className="h-7 w-7 text-zinc-600 hover:text-zinc-950"
           title="Recompute Clean Auto-Layout (⌘L)"
         >

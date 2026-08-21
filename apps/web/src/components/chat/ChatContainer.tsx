@@ -9,6 +9,7 @@ import { BranchBreadcrumbs } from "./BranchBreadcrumbs";
 import { TreeSidebar } from "../tree/TreeSidebar";
 import { GraphCanvas } from "../canvas/GraphCanvas";
 import { FocusDrawer } from "../canvas/FocusDrawer";
+import { CommandPalette } from "../canvas/CommandPalette";
 import { Toast } from "@/components/ui/toast";
 import { useChatStream } from "@/hooks/useChatStream";
 import { useScrollAnchor } from "@/hooks/useScrollAnchor";
@@ -34,11 +35,13 @@ export function ChatContainer() {
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isPaletteOpen, setIsPaletteOpen] = useState(false);
   const [drawerNodeId, setDrawerNodeId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("chat");
 
   const fitViewRef = useRef<(() => void) | null>(null);
   const centerActiveRef = useRef<(() => void) | null>(null);
+  const autoLayoutRef = useRef<(() => void) | null>(null);
 
   const {
     scrollRef,
@@ -136,14 +139,16 @@ export function ChatContainer() {
   }, [tree, switchBranch, handleJumpToMessage, viewMode]);
 
   const handleEscape = useCallback(() => {
-    if (isDrawerOpen) {
+    if (isPaletteOpen) {
+      setIsPaletteOpen(false);
+    } else if (isDrawerOpen) {
       setIsDrawerOpen(false);
     } else if (isSidebarOpen) {
       setIsSidebarOpen(false);
     } else if (activeBranch) {
       clearBranchContext();
     }
-  }, [isDrawerOpen, isSidebarOpen, activeBranch, clearBranchContext]);
+  }, [isPaletteOpen, isDrawerOpen, isSidebarOpen, activeBranch, clearBranchContext]);
 
   useKeyboardShortcuts({
     onToggleSidebar: () => setIsSidebarOpen((prev) => !prev),
@@ -153,6 +158,8 @@ export function ChatContainer() {
     onEscape: handleEscape,
     onFitView: () => fitViewRef.current?.(),
     onCenterActive: () => centerActiveRef.current?.(),
+    onAutoLayout: () => autoLayoutRef.current?.(),
+    onCommandPalette: () => setIsPaletteOpen((prev) => !prev),
   });
 
   const activeDrawerNode = (tree && drawerNodeId && tree.nodes[drawerNodeId])
@@ -186,6 +193,7 @@ export function ChatContainer() {
         onClearChat={() => {
           clearMessages();
           setIsDrawerOpen(false);
+          setIsPaletteOpen(false);
         }}
         messageCount={activeMessages.length}
         isSidebarOpen={isSidebarOpen}
@@ -226,6 +234,7 @@ export function ChatContainer() {
                 onRetry={retryLastMessage}
                 onFitViewRef={fitViewRef}
                 onCenterActiveRef={centerActiveRef}
+                onAutoLayoutRef={autoLayoutRef}
               />
 
               {/* Side Focus Reader Drawer */}
@@ -363,6 +372,23 @@ export function ChatContainer() {
           </div>
         </div>
       </div>
+
+      {/* Command Palette (⌘K) */}
+      <CommandPalette
+        isOpen={isPaletteOpen}
+        onClose={() => setIsPaletteOpen(false)}
+        tree={tree}
+        viewMode={viewMode}
+        onSelectNode={handleSelectTreeNode}
+        onToggleViewMode={() => setViewMode((prev) => (prev === "chat" ? "canvas" : "chat"))}
+        onFitView={() => fitViewRef.current?.()}
+        onCenterActive={() => centerActiveRef.current?.()}
+        onAutoLayout={() => autoLayoutRef.current?.()}
+        onClearChat={() => {
+          clearMessages();
+          setIsDrawerOpen(false);
+        }}
+      />
 
       {/* Non-intrusive Floating Toast Notification */}
       <Toast message={error} onDismiss={clearError} />
