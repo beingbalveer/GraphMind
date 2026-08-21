@@ -6,12 +6,13 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import rehypeHighlight from "rehype-highlight";
-import { User, Sparkles, Copy, Check } from "lucide-react";
+import { User, Sparkles, Copy, Check, RotateCcw } from "lucide-react";
 import { Message } from "@/hooks/useChatStream";
 import { Button } from "@/components/ui/button";
 
 interface ChatMessageProps {
   message: Message;
+  onRetry?: () => void;
 }
 
 function CodeBlock({ children, className, ...props }: any) {
@@ -77,7 +78,7 @@ function CodeBlock({ children, className, ...props }: any) {
   );
 }
 
-export function ChatMessage({ message }: ChatMessageProps) {
+export function ChatMessage({ message, onRetry }: ChatMessageProps) {
   const isUser = message.role === "user";
   const [copied, setCopied] = useState(false);
 
@@ -98,7 +99,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
               <User className="w-3.5 h-3.5" />
             </div>
           ) : (
-            <div className="w-6 h-6 rounded-full bg-zinc-900 text-white flex items-center justify-center font-bold text-xs shadow-xs">
+            <div className={`w-6 h-6 rounded-full ${message.isError ? "bg-rose-600" : "bg-zinc-900"} text-white flex items-center justify-center font-bold text-xs shadow-xs`}>
               <Sparkles className="w-3.5 h-3.5" />
             </div>
           )}
@@ -107,7 +108,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
         {/* Message Content Container */}
         <div className="flex-1 min-w-0 space-y-2">
           {/* Markdown Rendered Body with Explicit Element Styling */}
-          <div className="text-[15.5px] text-zinc-900 leading-[1.8] break-words">
+          <div className={`text-[15.5px] ${message.isError ? "text-rose-700" : "text-zinc-900"} leading-[1.8] break-words`}>
             {message.content ? (
               <ReactMarkdown
                 remarkPlugins={[remarkGfm, remarkMath]}
@@ -116,7 +117,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
                   code: CodeBlock,
                   p({ children, ...props }: any) {
                     return (
-                      <p className="my-3.5 leading-[1.8] text-[15.5px] text-zinc-800" {...props}>
+                      <p className="my-3.5 leading-[1.8] text-[15.5px]" {...props}>
                         {children}
                       </p>
                     );
@@ -154,14 +155,14 @@ export function ChatMessage({ message }: ChatMessageProps) {
                   },
                   ul({ children, ...props }: any) {
                     return (
-                      <ul className="my-3.5 pl-5 list-disc space-y-2 text-[15px] leading-[1.75] text-zinc-800" {...props}>
+                      <ul className="my-3.5 pl-5 list-disc space-y-2 text-[15px] leading-[1.75]" {...props}>
                         {children}
                       </ul>
                     );
                   },
                   ol({ children, ...props }: any) {
                     return (
-                      <ol className="my-3.5 pl-5 list-decimal space-y-2 text-[15px] leading-[1.75] text-zinc-800" {...props}>
+                      <ol className="my-3.5 pl-5 list-decimal space-y-2 text-[15px] leading-[1.75]" {...props}>
                         {children}
                       </ol>
                     );
@@ -241,12 +242,12 @@ export function ChatMessage({ message }: ChatMessageProps) {
 
           {/* Action Row */}
           {!isUser && message.content && (
-            <div className="pt-2 flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="pt-2 flex items-center space-x-2">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={handleCopy}
-                className="h-6 px-2 text-[11px] text-zinc-400 hover:text-zinc-800 flex items-center space-x-1"
+                className="h-6 px-2 text-[11px] text-zinc-400 hover:text-zinc-800 flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity"
                 title="Copy response"
               >
                 {copied ? (
@@ -261,6 +262,19 @@ export function ChatMessage({ message }: ChatMessageProps) {
                   </>
                 )}
               </Button>
+
+              {message.isError && onRetry && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onRetry}
+                  className="h-6 px-2 text-[11px] text-zinc-700 hover:text-zinc-950 border-zinc-200 flex items-center space-x-1 shadow-2xs"
+                  title="Retry generation"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  <span>Retry</span>
+                </Button>
+              )}
             </div>
           )}
         </div>

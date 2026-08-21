@@ -9,6 +9,7 @@ export interface Message {
   model?: string;
   createdAt: string;
   isStreaming?: boolean;
+  isError?: boolean;
 }
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8008";
@@ -60,6 +61,7 @@ export function useChatStream() {
         model: model,
         createdAt: new Date().toISOString(),
         isStreaming: true,
+        isError: false,
       };
 
       setMessages((prev) => [...prev, userMessage, assistantMessage]);
@@ -116,7 +118,7 @@ export function useChatStream() {
                   setMessages((prev) =>
                     prev.map((msg) =>
                       msg.id === assistantMessageId
-                        ? { ...msg, content: accumulatedContent }
+                        ? { ...msg, content: accumulatedContent, isError: false }
                         : msg
                     )
                   );
@@ -138,6 +140,7 @@ export function useChatStream() {
                 ? {
                     ...msg,
                     isStreaming: false,
+                    isError: false,
                     content: msg.content || "*(Generation stopped)*",
                   }
                 : msg
@@ -148,8 +151,8 @@ export function useChatStream() {
           const isConnectionError =
             err.name === "TypeError" || err.message?.includes("fetch");
           const errorText = isConnectionError
-            ? `⚠️ Cannot connect to backend at ${API_BASE_URL}. Please verify the FastAPI server is running.`
-            : `⚠️ ${err.message || "An unexpected error occurred during streaming."}`;
+            ? `Cannot connect to backend at ${API_BASE_URL}. Please verify the FastAPI server is running.`
+            : err.message || "An unexpected error occurred during streaming.";
 
           setError(errorText);
           setMessages((prev) =>
@@ -158,7 +161,8 @@ export function useChatStream() {
                 ? {
                     ...msg,
                     isStreaming: false,
-                    content: msg.content || errorText,
+                    isError: true,
+                    content: msg.content || `⚠️ ${errorText}`,
                   }
                 : msg
             )
@@ -177,8 +181,25 @@ export function useChatStream() {
     [isStreaming]
   );
 
+  const retryLastMessage = useCallback(() => {
+    // Find the last user message and re-send
+    const lastUserMessage = [...messages].reverse().find((m) => m.role === "user");
+    if (lastUserMessage) {
+      // Remove trailing failed assistant messages
+      setMessages((prev) => {
+        const lastIdx = prev.findLastIndex((m) => m.role === "user");
+        return prev.slice(0, lastIdx);
+      });
+      sendMessage(lastUserMessage.content);
+    }
+  }, [messages, sendMessage]);
+
   const clearMessages = useCallback(() => {
     setMessages([]);
+    setError(null);
+  }, []);
+
+  const clearError = useCallback(() => {
     setError(null);
   }, []);
 
@@ -186,7 +207,9 @@ export function useChatStream() {
     messages,
     isStreaming,
     error,
+    clearError,
     sendMessage,
+    retryLastMessage,
     stopStreaming,
     clearMessages,
   };

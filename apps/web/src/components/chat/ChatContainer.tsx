@@ -4,6 +4,7 @@ import React, { useEffect } from "react";
 import { Terminal, Cpu, GitBranch, ArrowDown } from "lucide-react";
 import { ChatMessage } from "./ChatMessage";
 import { ChatInput } from "./ChatInput";
+import { Toast } from "@/components/ui/toast";
 import { useChatStream } from "@/hooks/useChatStream";
 import { useScrollAnchor } from "@/hooks/useScrollAnchor";
 import { Navbar } from "../layout/Navbar";
@@ -12,7 +13,10 @@ export function ChatContainer() {
   const {
     messages,
     isStreaming,
+    error,
+    clearError,
     sendMessage,
+    retryLastMessage,
     stopStreaming,
     clearMessages,
   } = useChatStream();
@@ -108,7 +112,11 @@ export function ChatContainer() {
           /* Messages Stream List */
           <div className="w-full pb-4">
             {messages.map((msg) => (
-              <ChatMessage key={msg.id} message={msg} />
+              <ChatMessage
+                key={msg.id}
+                message={msg}
+                onRetry={retryLastMessage}
+              />
             ))}
             <div ref={bottomRef} />
           </div>
@@ -138,6 +146,9 @@ export function ChatContainer() {
           isStreaming={isStreaming}
         />
       </div>
+
+      {/* Non-intrusive Floating Toast Notification */}
+      <Toast message={error} onDismiss={clearError} />
     </div>
   );
 }
