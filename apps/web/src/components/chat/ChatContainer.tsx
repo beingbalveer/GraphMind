@@ -8,6 +8,7 @@ import { ChatInput } from "./ChatInput";
 import { BranchBreadcrumbs } from "./BranchBreadcrumbs";
 import { TreeSidebar } from "../tree/TreeSidebar";
 import { GraphCanvas } from "../canvas/GraphCanvas";
+import { FocusDrawer } from "../canvas/FocusDrawer";
 import { Toast } from "@/components/ui/toast";
 import { useChatStream } from "@/hooks/useChatStream";
 import { useScrollAnchor } from "@/hooks/useScrollAnchor";
@@ -32,6 +33,8 @@ export function ChatContainer() {
   } = useChatStream();
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [drawerNodeId, setDrawerNodeId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("chat");
 
   const fitViewRef = useRef<(() => void) | null>(null);
@@ -62,7 +65,10 @@ export function ChatContainer() {
   const handleSelectTreeNode = useCallback(
     (nodeId: string) => {
       switchBranch(nodeId);
-      if (viewMode === "chat") {
+      setDrawerNodeId(nodeId);
+      if (viewMode === "canvas") {
+        setIsDrawerOpen(true);
+      } else {
         setTimeout(() => {
           handleJumpToMessage(nodeId);
         }, 50);
@@ -75,6 +81,7 @@ export function ChatContainer() {
     (nodeId: string) => {
       switchBranch(nodeId);
       setViewMode("chat");
+      setIsDrawerOpen(false);
       setTimeout(() => {
         handleJumpToMessage(nodeId);
       }, 50);
@@ -85,7 +92,6 @@ export function ChatContainer() {
   // Power-user Keyboard navigation
   const handlePrevBranch = useCallback(() => {
     if (!tree) return;
-    // Search backwards through active lineage for a node whose parent has multiple children
     for (let i = activeMessages.length - 1; i >= 0; i--) {
       const node = activeMessages[i];
       if (node.parentId) {
@@ -94,6 +100,7 @@ export function ChatContainer() {
           const currentIndex = siblings.findIndex((s) => s.id === node.id);
           const prevIndex = (currentIndex - 1 + siblings.length) % siblings.length;
           switchBranch(siblings[prevIndex].id);
+          setDrawerNodeId(siblings[prevIndex].id);
           return;
         }
       }
@@ -110,6 +117,7 @@ export function ChatContainer() {
           const currentIndex = siblings.findIndex((s) => s.id === node.id);
           const nextIndex = (currentIndex + 1) % siblings.length;
           switchBranch(siblings[nextIndex].id);
+          setDrawerNodeId(siblings[nextIndex].id);
           return;
         }
       }
@@ -119,6 +127,7 @@ export function ChatContainer() {
   const handleJumpToRoot = useCallback(() => {
     if (!tree) return;
     switchBranch(tree.rootNodeId);
+    setDrawerNodeId(tree.rootNodeId);
     if (viewMode === "chat") {
       setTimeout(() => {
         handleJumpToMessage(tree.rootNodeId);
@@ -127,12 +136,14 @@ export function ChatContainer() {
   }, [tree, switchBranch, handleJumpToMessage, viewMode]);
 
   const handleEscape = useCallback(() => {
-    if (isSidebarOpen) {
+    if (isDrawerOpen) {
+      setIsDrawerOpen(false);
+    } else if (isSidebarOpen) {
       setIsSidebarOpen(false);
     } else if (activeBranch) {
       clearBranchContext();
     }
-  }, [isSidebarOpen, activeBranch, clearBranchContext]);
+  }, [isDrawerOpen, isSidebarOpen, activeBranch, clearBranchContext]);
 
   useKeyboardShortcuts({
     onToggleSidebar: () => setIsSidebarOpen((prev) => !prev),
@@ -143,6 +154,10 @@ export function ChatContainer() {
     onFitView: () => fitViewRef.current?.(),
     onCenterActive: () => centerActiveRef.current?.(),
   });
+
+  const activeDrawerNode = (tree && drawerNodeId && tree.nodes[drawerNodeId])
+    ? tree.nodes[drawerNodeId]
+    : (tree && tree.nodes[tree.activeNodeId]) || null;
 
   const starterPrompts = [
     {
@@ -168,7 +183,10 @@ export function ChatContainer() {
   return (
     <div className="w-screen h-screen flex flex-col bg-white overflow-hidden font-sans selection:bg-zinc-200 selection:text-zinc-900">
       <Navbar
-        onClearChat={clearMessages}
+        onClearChat={() => {
+          clearMessages();
+          setIsDrawerOpen(false);
+        }}
         messageCount={activeMessages.length}
         isSidebarOpen={isSidebarOpen}
         onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
@@ -202,11 +220,34 @@ export function ChatContainer() {
                 onSelectNode={handleSelectTreeNode}
                 onExploreBranch={(nodeId, text) => {
                   setBranchContext(nodeId, text || "");
+                  setIsDrawerOpen(true);
                 }}
                 onSwitchToChat={handleSwitchToChat}
                 onRetry={retryLastMessage}
                 onFitViewRef={fitViewRef}
                 onCenterActiveRef={centerActiveRef}
+              />
+
+              {/* Side Focus Reader Drawer */}
+              <FocusDrawer
+                node={activeDrawerNode}
+                tree={tree}
+                isOpen={isDrawerOpen}
+                isStreaming={isStreaming}
+                onClose={() => setIsDrawerOpen(false)}
+                onSelectBranch={(childId) => {
+                  switchBranch(childId);
+                  setDrawerNodeId(childId);
+                }}
+                onExploreBranch={(parentId, highlightedText) => {
+                  setBranchContext(parentId, highlightedText);
+                }}
+                onSendFollowUp={(prompt, parentId, highlightedText) => {
+                  sendMessage(prompt, "gemini", "gemini-2.5-flash", {
+                    parentNodeId: parentId,
+                    highlightedText: highlightedText || "",
+                  });
+                }}
               />
             </div>
           ) : (
