@@ -2,7 +2,8 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
+from pydantic.alias_generators import to_camel
 
 from ai_core.base import ChatRole
 
@@ -10,8 +11,10 @@ from ai_core.base import ChatRole
 class TreeNode(BaseModel):
     """
     Core data structure representing a message node within a hierarchical
-    conversation tree.
+    conversation tree. Supports both camelCase (TS) and snake_case (Python).
     """
+
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel)
 
     id: str = Field(
         default_factory=lambda: f"node_{uuid.uuid4().hex[:12]}",
@@ -106,7 +109,10 @@ class TreeNode(BaseModel):
 class ConversationTree(BaseModel):
     """
     Container representing a complete conversation tree with fast node lookup.
+    Supports both camelCase (TS) and snake_case (Python).
     """
+
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel)
 
     id: str = Field(
         default_factory=lambda: f"tree_{uuid.uuid4().hex[:12]}",

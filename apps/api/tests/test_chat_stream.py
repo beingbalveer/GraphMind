@@ -100,6 +100,51 @@ async def test_chat_stream_with_tree_lineage() -> None:
 
 
 @pytest.mark.asyncio
+async def test_chat_stream_with_camel_case_tree_payload() -> None:
+    """Verify that frontend camelCase JSON payload from Next.js is accepted without 422 errors."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        camel_tree_payload = {
+            "id": "tree_ts_1",
+            "rootNodeId": "node_1",
+            "activeNodeId": "node_2",
+            "nodes": {
+                "node_1": {
+                    "id": "node_1",
+                    "parentId": None,
+                    "childrenIds": ["node_2"],
+                    "role": "user",
+                    "content": "Explain Python data structures.",
+                    "createdAt": "2026-08-21T12:00:00Z",
+                },
+                "node_2": {
+                    "id": "node_2",
+                    "parentId": "node_1",
+                    "childrenIds": [],
+                    "role": "assistant",
+                    "content": "Python provides lists, dictionaries, tuples.",
+                    "createdAt": "2026-08-21T12:00:01Z",
+                },
+            },
+            "createdAt": "2026-08-21T12:00:00Z",
+            "updatedAt": "2026-08-21T12:00:01Z",
+        }
+
+        payload = {
+            "prompt": "How do hash tables work?",
+            "parentNodeId": "node_2",
+            "highlightedContext": "dictionaries",
+            "tree": camel_tree_payload,
+            "provider": "mock",
+            "metadata": {"stream_delay": 0.001},
+        }
+
+        response = await client.post("/api/v1/chat/stream", json=payload)
+        assert response.status_code == 200
+        assert "text/event-stream" in response.headers.get("content-type", "")
+
+
+@pytest.mark.asyncio
 async def test_chat_stream_error_simulation() -> None:
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:

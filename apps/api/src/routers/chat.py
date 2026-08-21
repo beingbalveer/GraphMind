@@ -14,7 +14,8 @@ from ai_core import (
 from config import get_settings
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic.alias_generators import to_camel
 
 logger = structlog.get_logger()
 router = APIRouter(prefix="/api/v1/chat", tags=["Chat"])
@@ -22,6 +23,8 @@ settings = get_settings()
 
 
 class ChatStreamRequest(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel)
+
     prompt: Optional[str] = Field(default=None, description="Single prompt string")
     messages: Optional[List[ChatMessage]] = Field(
         default=None, description="Full conversation history"
