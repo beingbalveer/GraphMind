@@ -2,7 +2,15 @@ import json
 from typing import Any, AsyncIterator, Dict, List, Optional
 
 import structlog
-from ai_core import ChatMessage, ChatRole, GenerationResult, ModelConfig, get_provider
+from ai_core import (
+    ChatMessage,
+    ChatRole,
+    ConversationTree,
+    GenerationResult,
+    ModelConfig,
+    get_provider,
+    resolve_conversation_lineage,
+)
 from config import get_settings
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
@@ -17,6 +25,15 @@ class ChatStreamRequest(BaseModel):
     prompt: Optional[str] = Field(default=None, description="Single prompt string")
     messages: Optional[List[ChatMessage]] = Field(
         default=None, description="Full conversation history"
+    )
+    tree: Optional[ConversationTree] = Field(
+        default=None, description="Active conversation tree for lineage traversal"
+    )
+    parent_node_id: Optional[str] = Field(
+        default=None, description="Target parent node ID being branched from"
+    )
+    highlighted_context: Optional[str] = Field(
+        default=None, description="Optional highlighted text excerpt from parent message"
     )
     provider: Optional[str] = Field(
         default=None, description="AI provider name (gemini, openai, mock)"
@@ -52,6 +69,22 @@ def _resolve_api_key(provider_name: str) -> Optional[str]:
     return None
 
 
+def _build_conversation_input(body: ChatStreamRequest) -> List[ChatMessage]:
+    """
+    Construct input messages from tree lineage, explicit message list, or raw prompt.
+    """
+    if body.tree:
+        return resolve_conversation_lineage(
+            tree=body.tree,
+            target_node_id=body.parent_node_id,
+            new_prompt=body.prompt or "",
+            highlighted_context=body.highlighted_context,
+        )
+    if body.messages:
+        return body.messages
+    return [ChatMessage(role=ChatRole.USER, content=body.prompt or "")]
+
+
 @router.post("/completions", response_model=GenerationResult)
 async def create_chat_completion(body: ChatCompletionRequest) -> GenerationResult:
     """
@@ -66,6 +99,7 @@ async def create_chat_completion(body: ChatCompletionRequest) -> GenerationResul
         provider=resolved_provider,
         model=resolved_model,
         has_api_key=bool(api_key),
+        has_tree=bool(body.tree),
     )
 
     try:
@@ -80,11 +114,7 @@ async def create_chat_completion(body: ChatCompletionRequest) -> GenerationResul
         metadata=body.metadata or {},
     )
 
-    conversation_input: List[ChatMessage]
-    if body.messages:
-        conversation_input = body.messages
-    else:
-        conversation_input = [ChatMessage(role=ChatRole.USER, content=body.prompt or "")]
+    conversation_input = _build_conversation_input(body)
 
     try:
         result = await provider.generate(conversation_input, config)
@@ -117,6 +147,7 @@ async def stream_chat(
         provider=resolved_provider,
         model=resolved_model,
         has_api_key=bool(api_key),
+        has_tree=bool(body.tree),
     )
 
     try:
@@ -131,12 +162,7 @@ async def stream_chat(
         metadata=body.metadata or {},
     )
 
-    # Normalize into List[ChatMessage]
-    conversation_input: List[ChatMessage]
-    if body.messages:
-        conversation_input = body.messages
-    else:
-        conversation_input = [ChatMessage(role=ChatRole.USER, content=body.prompt or "")]
+    conversation_input = _build_conversation_input(body)
 
     async def event_generator() -> AsyncIterator[str]:
         try:

@@ -10,6 +10,7 @@ from ai_core.base import (
     StreamChunk,
     TokenUsage,
 )
+from ai_core.lineage import get_ancestor_nodes, resolve_conversation_lineage
 from ai_core.providers import (
     GeminiProvider,
     MockProvider,
@@ -39,4 +40,6 @@ __all__ = [
     "register_provider",
     "TreeNode",
     "ConversationTree",
+    "get_ancestor_nodes",
+    "resolve_conversation_lineage",
 ]

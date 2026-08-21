@@ -56,6 +56,50 @@ async def test_chat_stream_with_messages_history() -> None:
 
 
 @pytest.mark.asyncio
+async def test_chat_stream_with_tree_lineage() -> None:
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        tree_payload = {
+            "id": "tree_123",
+            "root_node_id": "node_1",
+            "active_node_id": "node_2",
+            "nodes": {
+                "node_1": {
+                    "id": "node_1",
+                    "parent_id": None,
+                    "children_ids": ["node_2"],
+                    "role": "user",
+                    "content": "Explain React state.",
+                    "created_at": "2026-08-21T12:00:00Z",
+                },
+                "node_2": {
+                    "id": "node_2",
+                    "parent_id": "node_1",
+                    "children_ids": [],
+                    "role": "assistant",
+                    "content": "React state manages component data.",
+                    "created_at": "2026-08-21T12:00:01Z",
+                },
+            },
+            "created_at": "2026-08-21T12:00:00Z",
+            "updated_at": "2026-08-21T12:00:01Z",
+        }
+
+        payload = {
+            "prompt": "How does useState work under the hood?",
+            "parent_node_id": "node_2",
+            "highlighted_context": "component data",
+            "tree": tree_payload,
+            "provider": "mock",
+            "metadata": {"stream_delay": 0.001},
+        }
+
+        response = await client.post("/api/v1/chat/stream", json=payload)
+        assert response.status_code == 200
+        assert "text/event-stream" in response.headers.get("content-type", "")
+
+
+@pytest.mark.asyncio
 async def test_chat_stream_error_simulation() -> None:
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
