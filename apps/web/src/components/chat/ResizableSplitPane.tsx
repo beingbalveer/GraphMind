@@ -63,14 +63,13 @@ export function ResizableSplitPane({
     };
   }, [isDragging, leftPercent]);
 
-  // If right pane is not open, left pane takes 100% width
-  if (!isOpen || !rightPane) {
-    return (
-      <div className="w-full h-full flex flex-col min-w-0 bg-white relative">
-        {leftPane}
-      </div>
-    );
-  }
+  // Smooth animation styles
+  const transitionStyle = isDragging
+    ? "transition-none"
+    : "transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]";
+
+  const effectiveLeftWidth = isOpen && rightPane ? `${leftPercent}%` : "100%";
+  const effectiveRightWidth = isOpen && rightPane ? `${100 - leftPercent}%` : "0%";
 
   return (
     <div
@@ -81,8 +80,8 @@ export function ResizableSplitPane({
     >
       {/* Left Main Chat Pane */}
       <div
-        style={{ width: `${leftPercent}%` }}
-        className="h-full flex flex-col min-w-[320px] overflow-hidden bg-white relative transition-[width] duration-75 ease-out"
+        style={{ width: effectiveLeftWidth }}
+        className={`h-full flex flex-col min-w-0 overflow-hidden bg-white relative ${transitionStyle}`}
       >
         {leftPane}
       </div>
@@ -90,7 +89,13 @@ export function ResizableSplitPane({
       {/* Draggable Vertical Splitter Divider */}
       <div
         onMouseDown={handleMouseDown}
-        className="w-2 relative z-20 flex items-center justify-center cursor-col-resize group select-none shrink-0 bg-zinc-100 hover:bg-zinc-200 border-x border-zinc-200/90 transition-colors"
+        style={{
+          width: isOpen && rightPane ? "8px" : "0px",
+          opacity: isOpen && rightPane ? 1 : 0,
+        }}
+        className={`relative z-20 flex items-center justify-center cursor-col-resize group select-none shrink-0 bg-zinc-100 hover:bg-zinc-200 border-x border-zinc-200/90 overflow-hidden ${
+          isOpen && rightPane ? "pointer-events-auto" : "pointer-events-none border-none"
+        } ${transitionStyle}`}
         title="Drag to resize split panes"
       >
         <div className="w-0.5 h-8 rounded-full bg-zinc-400 group-hover:bg-zinc-700 transition-colors" />
@@ -98,10 +103,16 @@ export function ResizableSplitPane({
 
       {/* Right Branch Chat Pane */}
       <div
-        style={{ width: `${100 - leftPercent}%` }}
-        className="h-full flex flex-col min-w-[320px] overflow-hidden bg-zinc-50/50 border-l border-zinc-200/90 relative transition-[width] duration-75 ease-out"
+        style={{ width: effectiveRightWidth }}
+        className={`h-full flex flex-col overflow-hidden bg-zinc-50/50 relative ${
+          isOpen && rightPane
+            ? "opacity-100 border-l border-zinc-200/90 pointer-events-auto"
+            : "opacity-0 border-none pointer-events-none"
+        } ${transitionStyle}`}
       >
-        {rightPane}
+        <div className="w-full h-full min-w-[320px] flex flex-col overflow-hidden">
+          {rightPane}
+        </div>
       </div>
     </div>
   );
