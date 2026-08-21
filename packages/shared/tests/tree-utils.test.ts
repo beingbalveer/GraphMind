@@ -200,4 +200,79 @@ describe("ConversationTree Utilities", () => {
     expect(leaves.map((l) => l.id)).toContain(branch1.id);
     expect(leaves.map((l) => l.id)).toContain(branch2.id);
   });
+
+  it("stress tests deep 20-level lineage chains without stack overflow", () => {
+    let currentTree = createConversationTree({
+      role: "user",
+      content: "Level 0 Root",
+    });
+    let currentParentId = currentTree.rootNodeId;
+
+    for (let i = 1; i <= 20; i++) {
+      const { tree, node } = addChildNode(currentTree, {
+        parentId: currentParentId,
+        role: i % 2 === 1 ? "assistant" : "user",
+        content: `Node at level ${i}`,
+      });
+      currentTree = tree;
+      currentParentId = node.id;
+    }
+
+    const path = getAncestorPath(currentTree, currentParentId);
+    expect(path).toHaveLength(21); // Root (0) + 20 levels
+    expect(path[0].content).toBe("Level 0 Root");
+    expect(path[20].content).toBe("Node at level 20");
+  });
+
+  it("handles 10 parallel sibling branches from a single node", () => {
+    const tree0 = createConversationTree({
+      role: "user",
+      content: "Architecture Topics",
+    });
+    const rootId = tree0.rootNodeId;
+
+    let tree = tree0;
+    const branchIds: string[] = [];
+
+    for (let i = 1; i <= 10; i++) {
+      const { tree: updatedTree, node } = addChildNode(tree, {
+        parentId: rootId,
+        role: "assistant",
+        content: `Architecture Branch ${i}`,
+        highlightedContext: `Topic ${i}`,
+      });
+      tree = updatedTree;
+      branchIds.push(node.id);
+    }
+
+    const children = getNodeChildren(tree, rootId);
+    expect(children).toHaveLength(10);
+    expect(children.map((c) => c.id)).toEqual(branchIds);
+
+    const siblings = getSiblingNodes(tree, branchIds[0]);
+    expect(siblings).toHaveLength(9);
+  });
+
+  it("recovers activeNodeId safely to parent when active node is pruned", () => {
+    const tree0 = createConversationTree({
+      role: "user",
+      content: "Root",
+    });
+
+    const { tree: tree1, node: branchA } = addChildNode(tree0, {
+      parentId: tree0.rootNodeId,
+      role: "assistant",
+      content: "Branch A",
+    });
+
+    // Active node is currently branchA
+    expect(tree1.activeNodeId).toBe(branchA.id);
+
+    // Prune branchA
+    const pruned = pruneSubtree(tree1, branchA.id);
+
+    // activeNodeId should safely fallback to root
+    expect(pruned.activeNodeId).toBe(tree0.rootNodeId);
+    expect(pruned.nodes[branchA.id]).toBeUndefined();
+  });
 });
