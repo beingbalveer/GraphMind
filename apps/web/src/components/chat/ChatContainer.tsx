@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useRef, useEffect } from "react";
-import { Terminal, Cpu, GitBranch } from "lucide-react";
+import React, { useEffect } from "react";
+import { Terminal, Cpu, GitBranch, ArrowDown } from "lucide-react";
 import { ChatMessage } from "./ChatMessage";
 import { ChatInput } from "./ChatInput";
 import { useChatStream } from "@/hooks/useChatStream";
+import { useScrollAnchor } from "@/hooks/useScrollAnchor";
 import { Navbar } from "../layout/Navbar";
 
 export function ChatContainer() {
@@ -16,12 +17,20 @@ export function ChatContainer() {
     clearMessages,
   } = useChatStream();
 
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const {
+    scrollRef,
+    bottomRef,
+    isAtBottom,
+    showScrollButton,
+    scrollToBottom,
+  } = useScrollAnchor({ threshold: 80 });
 
-  // Auto-scroll to bottom on new messages / streaming tokens
+  // Auto-scroll when user is at the bottom
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isStreaming]);
+    if (isAtBottom) {
+      scrollToBottom(false);
+    }
+  }, [messages, isStreaming, isAtBottom, scrollToBottom]);
 
   const starterPrompts = [
     {
@@ -49,7 +58,10 @@ export function ChatContainer() {
       <Navbar onClearChat={clearMessages} messageCount={messages.length} />
 
       {/* Dedicated Scrollable Feed */}
-      <main className="flex-1 overflow-y-auto min-h-0 flex flex-col bg-white">
+      <main
+        ref={scrollRef}
+        className="flex-1 overflow-y-auto min-h-0 flex flex-col bg-white"
+      >
         {messages.length === 0 ? (
           /* Clean Empty State */
           <div className="flex-1 flex flex-col items-center justify-center max-w-2xl mx-auto px-4 py-8 text-center space-y-8 my-auto">
@@ -72,7 +84,10 @@ export function ChatContainer() {
                 return (
                   <button
                     key={index}
-                    onClick={() => sendMessage(item.prompt)}
+                    onClick={() => {
+                      sendMessage(item.prompt);
+                      scrollToBottom(true);
+                    }}
                     className="p-3.5 rounded-xl border border-zinc-200 hover:border-zinc-300 hover:bg-zinc-50/70 transition-all text-left group flex flex-col justify-between space-y-2 cursor-pointer"
                   >
                     <Icon className="w-4 h-4 text-zinc-400 group-hover:text-zinc-700 transition-colors" />
@@ -95,15 +110,30 @@ export function ChatContainer() {
             {messages.map((msg) => (
               <ChatMessage key={msg.id} message={msg} />
             ))}
-            <div ref={messagesEndRef} />
+            <div ref={bottomRef} />
           </div>
         )}
       </main>
 
-      {/* Permanently Static Bottom Input Bar */}
-      <div className="shrink-0 bg-gradient-to-t from-white via-white to-transparent pt-2 z-20">
+      {/* Permanently Static Bottom Input Bar with Floating Jump Button */}
+      <div className="relative shrink-0 bg-gradient-to-t from-white via-white to-transparent pt-2 z-20">
+        {showScrollButton && messages.length > 0 && (
+          <button
+            type="button"
+            onClick={() => scrollToBottom(true)}
+            className="absolute -top-9 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-white border border-zinc-200 shadow-md text-zinc-700 hover:text-zinc-950 hover:border-zinc-300 text-xs font-medium flex items-center space-x-1.5 transition-all animate-in fade-in-50 slide-in-from-bottom-2 duration-150 cursor-pointer select-none"
+            title="Scroll to bottom"
+          >
+            <ArrowDown className="w-3.5 h-3.5" />
+            <span>Latest messages</span>
+          </button>
+        )}
+
         <ChatInput
-          onSendMessage={sendMessage}
+          onSendMessage={(prompt, provider, model) => {
+            sendMessage(prompt, provider, model);
+            scrollToBottom(true);
+          }}
           onStopStreaming={stopStreaming}
           isStreaming={isStreaming}
         />
