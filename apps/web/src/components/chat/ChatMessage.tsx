@@ -214,12 +214,10 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
                   e.stopPropagation();
                   onOpenSideBranch?.(leafId, excerptText);
                 }}
-                className="inline-flex items-center gap-1 mx-1 px-2 py-0.5 rounded-md bg-zinc-100 hover:bg-zinc-200 text-zinc-900 border border-zinc-300 font-semibold text-[13.5px] cursor-pointer transition-all duration-150 hover:scale-[1.03] active:scale-95 shadow-2xs group select-none no-underline align-baseline"
+                className="inline text-blue-600 hover:text-blue-800 underline underline-offset-2 decoration-blue-400/80 hover:decoration-blue-600 font-medium cursor-pointer transition-colors bg-transparent border-0 p-0 align-baseline"
                 title={`Open branch for "${excerptText}" in parallel split pane`}
               >
-                <GitBranch className="w-3.5 h-3.5 text-zinc-600 group-hover:text-zinc-950 shrink-0" />
-                <span>{children}</span>
-                <span className="text-[10px] text-zinc-400 group-hover:text-zinc-800 font-normal">↗</span>
+                {children}
               </button>
             );
           }
