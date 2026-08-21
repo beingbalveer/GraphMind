@@ -146,7 +146,7 @@ export function ChatContainer() {
     (messageId: string, highlightedText: string) => {
       setSideBranchExcerpt(highlightedText);
       sendMessage(
-        `Explain in detail: "${highlightedText}"`,
+        `Briefly explain: "${highlightedText}". Keep the explanation concise and direct in 1-2 paragraphs.`,
         "gemini",
         "gemini-2.5-flash",
         {

@@ -21,6 +21,12 @@ logger = structlog.get_logger()
 router = APIRouter(prefix="/api/v1/chat", tags=["Chat"])
 settings = get_settings()
 
+DEFAULT_CONCISE_SYSTEM_PROMPT = (
+    "You are GraphMind AI, a concise and high-precision technical assistant. "
+    "Provide crisp, direct, and focused answers. Keep explanations brief (2-3 short paragraphs max or clean bullet points) "
+    "without unnecessary conversational filler so the user can quickly grasp key technical concepts."
+)
+
 
 class ChatStreamRequest(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel)
@@ -132,7 +138,7 @@ async def create_chat_completion(body: ChatCompletionRequest) -> GenerationResul
 
     config = ModelConfig(
         model_name=resolved_model,
-        system_prompt=body.system_prompt,
+        system_prompt=body.system_prompt or DEFAULT_CONCISE_SYSTEM_PROMPT,
         metadata=body.metadata or {},
     )
 
@@ -180,7 +186,7 @@ async def stream_chat(
 
     config = ModelConfig(
         model_name=resolved_model,
-        system_prompt=body.system_prompt,
+        system_prompt=body.system_prompt or DEFAULT_CONCISE_SYSTEM_PROMPT,
         metadata=body.metadata or {},
     )
 
