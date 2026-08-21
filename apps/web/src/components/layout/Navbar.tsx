@@ -48,7 +48,7 @@ export function Navbar({
             className={`h-7 w-7 text-zinc-600 hover:text-zinc-950 transition-colors ${
               isSidebarOpen ? "bg-zinc-100 text-zinc-900" : ""
             }`}
-            title="Toggle Conversation Tree Sidebar"
+            title="Toggle Conversation Tree (⌘B / Ctrl+B)"
           >
             <PanelLeft className="w-4 h-4" />
           </Button>

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { Terminal, Cpu, GitBranch, ArrowDown } from "lucide-react";
+import { getNodeChildren } from "@graphmind/shared";
 import { ChatMessage } from "./ChatMessage";
 import { ChatInput } from "./ChatInput";
 import { BranchBreadcrumbs } from "./BranchBreadcrumbs";
@@ -9,6 +10,7 @@ import { TreeSidebar } from "../tree/TreeSidebar";
 import { Toast } from "@/components/ui/toast";
 import { useChatStream } from "@/hooks/useChatStream";
 import { useScrollAnchor } from "@/hooks/useScrollAnchor";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { Navbar } from "../layout/Navbar";
 
 export function ChatContainer() {
@@ -61,6 +63,64 @@ export function ChatContainer() {
     },
     [switchBranch, handleJumpToMessage]
   );
+
+  // Power-user Keyboard navigation
+  const handlePrevBranch = useCallback(() => {
+    if (!tree) return;
+    // Search backwards through active lineage for a node whose parent has multiple children
+    for (let i = activeMessages.length - 1; i >= 0; i--) {
+      const node = activeMessages[i];
+      if (node.parentId) {
+        const siblings = getNodeChildren(tree, node.parentId);
+        if (siblings.length > 1) {
+          const currentIndex = siblings.findIndex((s) => s.id === node.id);
+          const prevIndex = (currentIndex - 1 + siblings.length) % siblings.length;
+          switchBranch(siblings[prevIndex].id);
+          return;
+        }
+      }
+    }
+  }, [tree, activeMessages, switchBranch]);
+
+  const handleNextBranch = useCallback(() => {
+    if (!tree) return;
+    for (let i = activeMessages.length - 1; i >= 0; i--) {
+      const node = activeMessages[i];
+      if (node.parentId) {
+        const siblings = getNodeChildren(tree, node.parentId);
+        if (siblings.length > 1) {
+          const currentIndex = siblings.findIndex((s) => s.id === node.id);
+          const nextIndex = (currentIndex + 1) % siblings.length;
+          switchBranch(siblings[nextIndex].id);
+          return;
+        }
+      }
+    }
+  }, [tree, activeMessages, switchBranch]);
+
+  const handleJumpToRoot = useCallback(() => {
+    if (!tree) return;
+    switchBranch(tree.rootNodeId);
+    setTimeout(() => {
+      handleJumpToMessage(tree.rootNodeId);
+    }, 50);
+  }, [tree, switchBranch, handleJumpToMessage]);
+
+  const handleEscape = useCallback(() => {
+    if (isSidebarOpen) {
+      setIsSidebarOpen(false);
+    } else if (activeBranch) {
+      clearBranchContext();
+    }
+  }, [isSidebarOpen, activeBranch, clearBranchContext]);
+
+  useKeyboardShortcuts({
+    onToggleSidebar: () => setIsSidebarOpen((prev) => !prev),
+    onPrevBranch: handlePrevBranch,
+    onNextBranch: handleNextBranch,
+    onJumpToRoot: handleJumpToRoot,
+    onEscape: handleEscape,
+  });
 
   const starterPrompts = [
     {
