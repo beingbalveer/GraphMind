@@ -19,6 +19,25 @@ export function useChatStream() {
   const [error, setError] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
+  const stopStreaming = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setIsStreaming(false);
+    setMessages((prev) =>
+      prev.map((msg) =>
+        msg.isStreaming
+          ? {
+              ...msg,
+              isStreaming: false,
+              content: msg.content || "*(Generation stopped)*",
+            }
+          : msg
+      )
+    );
+  }, []);
+
   const sendMessage = useCallback(
     async (prompt: string, provider = "gemini", model = "gemini-2.5-flash") => {
       if (!prompt.trim() || isStreaming) return;
@@ -78,7 +97,7 @@ export function useChatStream() {
 
           lineBuffer += decoder.decode(value, { stream: true });
           const lines = lineBuffer.split("\n");
-          // Keep the last incomplete fragment in lineBuffer
+          // Keep incomplete line fragment in buffer
           lineBuffer = lines.pop() || "";
 
           for (const line of lines) {
@@ -112,7 +131,18 @@ export function useChatStream() {
         }
       } catch (err: any) {
         if (err.name === "AbortError") {
-          console.log("Stream generation stopped by user");
+          // Clean user cancellation
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === assistantMessageId
+                ? {
+                    ...msg,
+                    isStreaming: false,
+                    content: msg.content || "*(Generation stopped)*",
+                  }
+                : msg
+            )
+          );
         } else {
           console.error("Chat streaming error:", err);
           const isConnectionError =
@@ -127,6 +157,7 @@ export function useChatStream() {
               msg.id === assistantMessageId
                 ? {
                     ...msg,
+                    isStreaming: false,
                     content: msg.content || errorText,
                   }
                 : msg
@@ -145,14 +176,6 @@ export function useChatStream() {
     },
     [isStreaming]
   );
-
-  const stopStreaming = useCallback(() => {
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      abortControllerRef.current = null;
-      setIsStreaming(false);
-    }
-  }, []);
 
   const clearMessages = useCallback(() => {
     setMessages([]);
