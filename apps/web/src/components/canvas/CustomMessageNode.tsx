@@ -15,9 +15,9 @@ export const CustomMessageNode = memo(function CustomMessageNode({
 
   return (
     <div
-      className={`w-72 rounded-2xl bg-white p-3.5 shadow-sm transition-all duration-150 border select-none cursor-pointer ${
+      className={`w-72 rounded-2xl bg-white p-3.5 shadow-sm transition-shadow duration-150 border select-none cursor-pointer transform-gpu will-change-transform ${
         isActive
-          ? "border-zinc-900 ring-2 ring-zinc-900/10 shadow-md"
+          ? "border-zinc-900 ring-2 ring-zinc-900/10 shadow-md z-10"
           : "border-zinc-200/90 hover:border-zinc-300 hover:shadow-md"
       }`}
     >

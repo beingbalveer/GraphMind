@@ -76,7 +76,7 @@ function FlowCanvas({
   );
 
   const handleFitView = useCallback(() => {
-    fitView({ padding: 0.2, duration: 450 });
+    fitView({ padding: 0.2, maxZoom: 1.0, duration: 450 });
   }, [fitView]);
 
   const handleResetZoom = useCallback(() => {
@@ -117,6 +117,9 @@ function FlowCanvas({
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onNodeClick={handleNodeClick}
+        onlyRenderVisibleElements={true}
+        elevateNodesOnSelect={true}
+        selectNodesOnDrag={false}
         minZoom={0.15}
         maxZoom={1.8}
         defaultViewport={{ x: 0, y: 0, zoom: 0.85 }}
