@@ -1,18 +1,13 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
-
-export interface Message {
-  id: string;
-  parentId?: string | null;
-  role: "user" | "assistant";
-  content: string;
-  highlightedContext?: string | null;
-  model?: string;
-  createdAt: string;
-  isStreaming?: boolean;
-  isError?: boolean;
-}
+import { useState, useRef, useCallback, useMemo } from "react";
+import {
+  ConversationTree,
+  createConversationTree,
+  addChildNode,
+  updateNodeContent,
+  getAncestorPath,
+} from "@graphmind/shared";
 
 export interface BranchContext {
   parentNodeId: string;
@@ -22,11 +17,17 @@ export interface BranchContext {
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8008";
 
 export function useChatStream() {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [tree, setTree] = useState<ConversationTree | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeBranch, setActiveBranch] = useState<BranchContext | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Active path messages to display in the main chat feed
+  const activeMessages = useMemo(() => {
+    if (!tree || !tree.activeNodeId) return [];
+    return getAncestorPath(tree, tree.activeNodeId);
+  }, [tree]);
 
   const stopStreaming = useCallback(() => {
     if (abortControllerRef.current) {
@@ -34,17 +35,17 @@ export function useChatStream() {
       abortControllerRef.current = null;
     }
     setIsStreaming(false);
-    setMessages((prev) =>
-      prev.map((msg) =>
-        msg.isStreaming
-          ? {
-              ...msg,
-              isStreaming: false,
-              content: msg.content || "*(Generation stopped)*",
-            }
-          : msg
-      )
-    );
+  }, []);
+
+  const switchBranch = useCallback((nodeId: string) => {
+    setTree((prev) => {
+      if (!prev || !prev.nodes[nodeId]) return prev;
+      return {
+        ...prev,
+        activeNodeId: nodeId,
+        updatedAt: new Date().toISOString(),
+      };
+    });
   }, []);
 
   const sendMessage = useCallback(
@@ -58,68 +59,102 @@ export function useChatStream() {
 
       setError(null);
       const branch = branchOverride !== undefined ? branchOverride : activeBranch;
-      const userMessageId = `user-${Date.now()}`;
-      const assistantMessageId = `assistant-${Date.now()}`;
+      setActiveBranch(null); // Clear branch input badge
 
-      const userMessage: Message = {
-        id: userMessageId,
-        parentId: branch?.parentNodeId || null,
-        role: "user",
-        content: prompt.trim(),
-        highlightedContext: branch?.highlightedText || null,
-        createdAt: new Date().toISOString(),
-      };
+      let currentTree = tree;
+      let targetParentId: string | null = null;
+      let userNodeId: string;
+      let assistantNodeId: string;
 
-      const assistantMessage: Message = {
-        id: assistantMessageId,
-        parentId: userMessageId,
-        role: "assistant",
-        content: "",
-        model: model,
-        createdAt: new Date().toISOString(),
-        isStreaming: true,
-        isError: false,
-      };
+      if (!currentTree) {
+        // 1. Initial Root Prompt
+        currentTree = createConversationTree({
+          role: "user",
+          content: prompt.trim(),
+          provider,
+          model,
+        });
+        userNodeId = currentTree.rootNodeId;
 
-      setMessages((prev) => [...prev, userMessage, assistantMessage]);
+        // Add streaming assistant child node
+        const { tree: treeWithAssistant, node: assistantNode } = addChildNode(
+          currentTree,
+          {
+            role: "assistant",
+            parentId: userNodeId,
+            content: "",
+            provider,
+            model,
+          }
+        );
+        currentTree = treeWithAssistant;
+        assistantNodeId = assistantNode.id;
+      } else {
+        // 2. Subsequent Turn or Branch from Parent
+        targetParentId = branch?.parentNodeId || currentTree.activeNodeId;
+
+        // Add user child node
+        const { tree: treeWithUser, node: userNode } = addChildNode(
+          currentTree,
+          {
+            role: "user",
+            parentId: targetParentId,
+            content: prompt.trim(),
+            highlightedContext: branch?.highlightedText || null,
+            provider,
+            model,
+          }
+        );
+        userNodeId = userNode.id;
+
+        // Add assistant child node
+        const { tree: treeWithAssistant, node: assistantNode } = addChildNode(
+          treeWithUser,
+          {
+            role: "assistant",
+            parentId: userNodeId,
+            content: "",
+            provider,
+            model,
+          }
+        );
+        currentTree = treeWithAssistant;
+        assistantNodeId = assistantNode.id;
+      }
+
+      setTree(currentTree);
       setIsStreaming(true);
-      setActiveBranch(null); // Clear branch badge once sent
 
       const abortController = new AbortController();
       abortControllerRef.current = abortController;
 
       try {
-        // Collect existing non-error, non-streaming messages for conversational context
-        const history = messages
-          .filter((m) => m.content && !m.isStreaming && !m.isError)
-          .map((m) => ({
-            role: m.role,
-            content: m.content,
-          }));
+        // Build ancestor conversation lineage to forward to API
+        const ancestorPath = getAncestorPath(currentTree, userNodeId);
+        const messagesPayload = ancestorPath.map((node) => {
+          let content = node.content;
+          if (node.id === userNodeId && node.highlightedContext) {
+            content = `[Focusing on excerpt: "${node.highlightedContext.trim()}"]\n\n${node.content}`;
+          }
+          return {
+            role: node.role,
+            content,
+          };
+        });
 
-        // Format user message with highlighted excerpt if branching
         const formattedPrompt = branch?.highlightedText
           ? `[Focusing on excerpt: "${branch.highlightedText.trim()}"]\n\n${prompt.trim()}`
           : prompt.trim();
 
-        const messagesPayload = [
-          ...history,
-          { role: "user", content: formattedPrompt },
-        ];
-
         const payload: Record<string, any> = {
           prompt: formattedPrompt,
           messages: messagesPayload,
+          tree: currentTree,
+          parent_node_id: targetParentId,
+          highlighted_context: branch?.highlightedText,
           provider,
           model,
         };
-
-        if (branch?.parentNodeId) {
-          payload.parent_node_id = branch.parentNodeId;
-        }
-        if (branch?.highlightedText) {
-          payload.highlighted_context = branch.highlightedText;
-        }
 
         const response = await fetch(`${API_BASE_URL}/api/v1/chat/stream`, {
           method: "POST",
@@ -131,7 +166,9 @@ export function useChatStream() {
         });
 
         if (!response.ok || !response.body) {
-          throw new Error(`Server returned HTTP ${response.status}: ${response.statusText}`);
+          throw new Error(
+            `Server returned HTTP ${response.status}: ${response.statusText}`
+          );
         }
 
         const reader = response.body.getReader();
@@ -145,7 +182,6 @@ export function useChatStream() {
 
           lineBuffer += decoder.decode(value, { stream: true });
           const lines = lineBuffer.split("\n");
-          // Keep incomplete line fragment in buffer
           lineBuffer = lines.pop() || "";
 
           for (const line of lines) {
@@ -161,13 +197,10 @@ export function useChatStream() {
                 }
                 if (parsed.content) {
                   accumulatedContent += parsed.content;
-                  setMessages((prev) =>
-                    prev.map((msg) =>
-                      msg.id === assistantMessageId
-                        ? { ...msg, content: accumulatedContent, isError: false }
-                        : msg
-                    )
-                  );
+                  setTree((prev) => {
+                    if (!prev) return prev;
+                    return updateNodeContent(prev, assistantNodeId, accumulatedContent);
+                  });
                 }
               } catch (parseError: any) {
                 if (parseError.message && !parseError.message.includes("JSON")) {
@@ -179,19 +212,15 @@ export function useChatStream() {
         }
       } catch (err: any) {
         if (err.name === "AbortError") {
-          // Clean user cancellation
-          setMessages((prev) =>
-            prev.map((msg) =>
-              msg.id === assistantMessageId
-                ? {
-                    ...msg,
-                    isStreaming: false,
-                    isError: false,
-                    content: msg.content || "*(Generation stopped)*",
-                  }
-                : msg
-            )
-          );
+          setTree((prev) => {
+            if (!prev) return prev;
+            const node = prev.nodes[assistantNodeId];
+            return updateNodeContent(
+              prev,
+              assistantNodeId,
+              node?.content || "*(Generation stopped)*"
+            );
+          });
         } else {
           console.error("Chat streaming error:", err);
           const isConnectionError =
@@ -201,44 +230,31 @@ export function useChatStream() {
             : err.message || "An unexpected error occurred during streaming.";
 
           setError(errorText);
-          setMessages((prev) =>
-            prev.map((msg) =>
-              msg.id === assistantMessageId
-                ? {
-                    ...msg,
-                    isStreaming: false,
-                    isError: true,
-                    content: msg.content || `⚠️ ${errorText}`,
-                  }
-                : msg
-            )
-          );
+          setTree((prev) => {
+            if (!prev) return prev;
+            return updateNodeContent(
+              prev,
+              assistantNodeId,
+              `⚠️ ${errorText}`
+            );
+          });
         }
       } finally {
         setIsStreaming(false);
         abortControllerRef.current = null;
-        setMessages((prev) =>
-          prev.map((msg) =>
-            msg.id === assistantMessageId ? { ...msg, isStreaming: false } : msg
-          )
-        );
       }
     },
-    [isStreaming, activeBranch, messages]
+    [isStreaming, activeBranch, tree]
   );
 
   const retryLastMessage = useCallback(() => {
-    // Find the last user message and re-send
-    const lastUserMessage = [...messages].reverse().find((m) => m.role === "user");
-    if (lastUserMessage) {
-      // Remove trailing failed assistant messages
-      setMessages((prev) => {
-        const lastIdx = prev.findLastIndex((m) => m.role === "user");
-        return prev.slice(0, lastIdx);
-      });
-      sendMessage(lastUserMessage.content);
+    if (!tree) return;
+    const activeNodes = getAncestorPath(tree, tree.activeNodeId);
+    const lastUserNode = [...activeNodes].reverse().find((n) => n.role === "user");
+    if (lastUserNode) {
+      sendMessage(lastUserNode.content);
     }
-  }, [messages, sendMessage]);
+  }, [tree, sendMessage]);
 
   const setBranchContext = useCallback(
     (parentNodeId: string, highlightedText: string) => {
@@ -252,7 +268,7 @@ export function useChatStream() {
   }, []);
 
   const clearMessages = useCallback(() => {
-    setMessages([]);
+    setTree(null);
     setError(null);
     setActiveBranch(null);
   }, []);
@@ -262,12 +278,14 @@ export function useChatStream() {
   }, []);
 
   return {
-    messages,
+    tree,
+    activeMessages,
     isStreaming,
     error,
     activeBranch,
     setBranchContext,
     clearBranchContext,
+    switchBranch,
     clearError,
     sendMessage,
     retryLastMessage,

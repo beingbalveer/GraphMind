@@ -1,16 +1,24 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Plus } from "lucide-react";
+import { Plus, PanelLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface NavbarProps {
   onClearChat?: () => void;
   messageCount: number;
   breadcrumbs?: React.ReactNode;
+  isSidebarOpen?: boolean;
+  onToggleSidebar?: () => void;
 }
 
-export function Navbar({ onClearChat, messageCount, breadcrumbs }: NavbarProps) {
+export function Navbar({
+  onClearChat,
+  messageCount,
+  breadcrumbs,
+  isSidebarOpen,
+  onToggleSidebar,
+}: NavbarProps) {
   const [apiOnline, setApiOnline] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -30,8 +38,22 @@ export function Navbar({ onClearChat, messageCount, breadcrumbs }: NavbarProps) 
 
   return (
     <header className="h-13 border-b border-zinc-200/80 bg-white/80 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between z-30 shrink-0 select-none">
-      {/* Left: Brand + Connection Status */}
+      {/* Left: Sidebar Toggle + Brand + Connection Status */}
       <div className="flex items-center space-x-2.5 shrink-0">
+        {onToggleSidebar && (
+          <Button
+            variant="ghost"
+            size="iconSm"
+            onClick={onToggleSidebar}
+            className={`h-7 w-7 text-zinc-600 hover:text-zinc-950 transition-colors ${
+              isSidebarOpen ? "bg-zinc-100 text-zinc-900" : ""
+            }`}
+            title="Toggle Conversation Tree Sidebar"
+          >
+            <PanelLeft className="w-4 h-4" />
+          </Button>
+        )}
+
         <div className="w-6 h-6 rounded-md bg-zinc-900 text-white flex items-center justify-center font-bold text-xs shadow-xs">
           🧠
         </div>

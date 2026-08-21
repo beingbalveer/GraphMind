@@ -2,10 +2,10 @@
 
 import React from "react";
 import { ChevronRight, GitBranch, MessageSquare } from "lucide-react";
-import { Message } from "@/hooks/useChatStream";
+import { TreeNode } from "@graphmind/shared";
 
 interface BranchBreadcrumbsProps {
-  messages: Message[];
+  messages: TreeNode[];
   onJumpToMessage?: (messageId: string) => void;
 }
 

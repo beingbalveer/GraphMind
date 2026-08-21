@@ -7,15 +7,19 @@ import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import rehypeHighlight from "rehype-highlight";
 import { User, Sparkles, Copy, Check, RotateCcw, GitBranch } from "lucide-react";
-import { Message } from "@/hooks/useChatStream";
+import { TreeNode, ConversationTree } from "@graphmind/shared";
 import { Button } from "@/components/ui/button";
 import { useTextSelection } from "@/hooks/useTextSelection";
 import { SelectionTooltip } from "./SelectionTooltip";
+import { BranchSwitcher } from "./BranchSwitcher";
 
 interface ChatMessageProps {
-  message: Message;
+  message: TreeNode & { isStreaming?: boolean; isError?: boolean };
+  tree?: ConversationTree | null;
+  activeChildId?: string;
   onRetry?: () => void;
   onExploreBranch?: (messageId: string, highlightedText: string) => void;
+  onSelectBranch?: (nodeId: string) => void;
 }
 
 function CodeBlock({ children, className, ...props }: any) {
@@ -205,8 +209,11 @@ const MarkdownRenderer = memo(function MarkdownRenderer({
 
 export function ChatMessage({
   message,
+  tree,
+  activeChildId,
   onRetry,
   onExploreBranch,
+  onSelectBranch,
 }: ChatMessageProps) {
   const isUser = message.role === "user";
   const [copied, setCopied] = useState(false);
@@ -299,43 +306,55 @@ export function ChatMessage({
             )}
           </div>
 
-          {/* Action Row */}
-          {!isUser && message.content && (
-            <div className="pt-2 flex items-center space-x-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleCopy}
-                className="h-6 px-2 text-[11px] text-zinc-400 hover:text-zinc-800 flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                title="Copy response"
-              >
-                {copied ? (
-                  <>
-                    <Check className="w-3 h-3 text-emerald-600" />
-                    <span className="text-emerald-600">Copied</span>
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-3 h-3" />
-                    <span>Copy</span>
-                  </>
-                )}
-              </Button>
-
-              {message.isError && onRetry && (
+          {/* Action Row & Branch Switcher */}
+          <div className="pt-2 flex flex-wrap items-center justify-between gap-2">
+            {!isUser && message.content ? (
+              <div className="flex items-center space-x-2">
                 <Button
-                  variant="outline"
+                  variant="ghost"
                   size="sm"
-                  onClick={onRetry}
-                  className="h-6 px-2 text-[11px] text-zinc-700 hover:text-zinc-950 border-zinc-200 flex items-center space-x-1 shadow-2xs"
-                  title="Retry generation"
+                  onClick={handleCopy}
+                  className="h-6 px-2 text-[11px] text-zinc-400 hover:text-zinc-800 flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                  title="Copy response"
                 >
-                  <RotateCcw className="w-3 h-3" />
-                  <span>Retry</span>
+                  {copied ? (
+                    <>
+                      <Check className="w-3 h-3 text-emerald-600" />
+                      <span className="text-emerald-600">Copied</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3 h-3" />
+                      <span>Copy</span>
+                    </>
+                  )}
                 </Button>
-              )}
-            </div>
-          )}
+
+                {message.isError && onRetry && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={onRetry}
+                    className="h-6 px-2 text-[11px] text-zinc-700 hover:text-zinc-950 border-zinc-200 flex items-center space-x-1 shadow-2xs"
+                    title="Retry generation"
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    <span>Retry</span>
+                  </Button>
+                )}
+              </div>
+            ) : <div />}
+
+            {/* Sibling Branch Switcher for multiple pathways */}
+            {tree && onSelectBranch && (
+              <BranchSwitcher
+                tree={tree}
+                parentNodeId={message.id}
+                activeChildId={activeChildId}
+                onSelectBranch={onSelectBranch}
+              />
+            )}
+          </div>
         </div>
       </div>
     </div>
