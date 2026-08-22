@@ -1,8 +1,9 @@
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from database import get_db
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from schemas.workspace import (
+    ChatListResponse,
     GraphDeltaUpdateRequest,
     GraphSnapshotResponse,
     NodeCreate,
@@ -95,15 +96,55 @@ async def delete_workspace(
         )
 
 
+@router.get("/{workspace_id}/chats", response_model=ChatListResponse)
+async def list_workspace_chats(
+    workspace_id: str,
+    db: AsyncSession = Depends(get_db),
+) -> ChatListResponse:
+    """
+    List all distinct conversation trees (chats) belonging to a workspace.
+    """
+    ws = await WorkspaceService.get_workspace(db, workspace_id)
+    if not ws:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Workspace '{workspace_id}' not found",
+        )
+    chats = await WorkspaceService.list_workspace_chats(db, workspace_id)
+    return ChatListResponse(
+        workspace_id=workspace_id,
+        chats=chats,
+        total=len(chats),
+    )
+
+
+@router.delete("/{workspace_id}/chats/{chat_root_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_chat_tree(
+    workspace_id: str,
+    chat_root_id: str,
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """
+    Delete a conversation tree (chat) and all its branched responses from a workspace.
+    """
+    deleted = await WorkspaceService.delete_chat(db, workspace_id, chat_root_id)
+    if not deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Chat '{chat_root_id}' not found in workspace '{workspace_id}'",
+        )
+
+
 @router.get("/{workspace_id}/graph", response_model=GraphSnapshotResponse)
 async def get_graph_snapshot(
     workspace_id: str,
+    root_id: Optional[str] = Query(default=None, description="Optional root node ID to filter a single chat tree"),
     db: AsyncSession = Depends(get_db),
 ) -> GraphSnapshotResponse:
     """
-    Retrieve full graph topology (nodes, edges, viewport) for a workspace.
+    Retrieve graph topology (nodes, edges, viewport) for a workspace or single chat tree.
     """
-    snapshot = await WorkspaceService.get_graph_snapshot(db, workspace_id)
+    snapshot = await WorkspaceService.get_graph_snapshot(db, workspace_id, root_id)
     if not snapshot:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

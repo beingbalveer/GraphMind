@@ -3,9 +3,20 @@ import { ChatContainer } from "@/components/chat/ChatContainer";
 
 interface GraphPageProps {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ chat?: string }>;
 }
 
-export default async function GraphPage({ params }: GraphPageProps) {
+export default async function GraphPage({
+  params,
+  searchParams,
+}: GraphPageProps) {
   const { id } = await params;
-  return <ChatContainer initialWorkspaceId={id} initialViewMode="canvas" />;
+  const { chat } = await searchParams;
+  return (
+    <ChatContainer
+      initialWorkspaceId={id}
+      initialChatId={chat}
+      initialViewMode="canvas"
+    />
+  );
 }

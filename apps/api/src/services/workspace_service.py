@@ -3,6 +3,7 @@ from typing import List, Optional, Tuple
 import structlog
 from models.workspace import EdgeModel, NodeModel, Workspace
 from schemas.workspace import (
+    ChatSummary,
     EdgeResponse,
     GraphDeltaUpdateRequest,
     GraphSnapshotResponse,
@@ -145,10 +146,10 @@ class WorkspaceService:
 
     @staticmethod
     async def get_graph_snapshot(
-        session: AsyncSession, workspace_id: str
+        session: AsyncSession, workspace_id: str, root_id: Optional[str] = None
     ) -> Optional[GraphSnapshotResponse]:
         """
-        Retrieve complete graph topology (nodes, edges, root, active node) for a workspace.
+        Retrieve complete graph topology for a workspace, optionally filtered to a single chat tree (root_id).
         """
         stmt = (
             select(Workspace)
@@ -159,6 +160,29 @@ class WorkspaceService:
         ws = result.scalar_one_or_none()
         if not ws:
             return None
+
+        nodes = ws.nodes
+        edges = ws.edges
+
+        if root_id:
+            # Filter to only the nodes and edges in the specified chat tree
+            node_map = {n.id: n for n in ws.nodes}
+            children_map: dict[str, list[str]] = {}
+            for n in ws.nodes:
+                if n.parent_id:
+                    children_map.setdefault(n.parent_id, []).append(n.id)
+
+            subtree_ids = set()
+            if root_id in node_map:
+                queue = [root_id]
+                while queue:
+                    curr_id = queue.pop(0)
+                    subtree_ids.add(curr_id)
+                    for child_id in children_map.get(curr_id, []):
+                        queue.append(child_id)
+
+            nodes = [n for n in ws.nodes if n.id in subtree_ids]
+            edges = [e for e in ws.edges if e.source_id in subtree_ids and e.target_id in subtree_ids]
 
         node_responses = [
             NodeResponse(
@@ -176,12 +200,24 @@ class WorkspaceService:
                 created_at=n.created_at,
                 updated_at=n.updated_at,
             )
-            for n in ws.nodes
+            for n in nodes
         ]
 
-        root_node = next((n for n in ws.nodes if n.parent_id is None), None)
-        root_id = root_node.id if root_node else (ws.nodes[0].id if ws.nodes else None)
-        active_id = ws.nodes[-1].id if ws.nodes else None
+        edge_responses = [
+            EdgeResponse(
+                id=e.id,
+                workspace_id=e.workspace_id,
+                source_id=e.source_id,
+                target_id=e.target_id,
+                relation_type=e.relation_type,
+                highlighted_context=e.highlighted_context,
+                created_at=e.created_at,
+            )
+            for e in edges
+        ]
+
+        active_id = nodes[-1].id if nodes else None
+        target_root_id = root_id or (nodes[0].id if nodes else None)
 
         ws_response = WorkspaceResponse(
             id=ws.id,
@@ -198,21 +234,95 @@ class WorkspaceService:
         return GraphSnapshotResponse(
             workspace=ws_response,
             nodes=node_responses,
-            edges=[
-                EdgeResponse(
-                    id=e.id,
-                    workspace_id=e.workspace_id,
-                    source_id=e.source_id,
-                    target_id=e.target_id,
-                    relation_type=e.relation_type,
-                    highlighted_context=e.highlighted_context,
-                    created_at=e.created_at,
-                )
-                for e in ws.edges
-            ],
-            root_node_id=root_id,
+            edges=edge_responses,
+            root_node_id=target_root_id,
             active_node_id=active_id,
         )
+
+    @staticmethod
+    async def list_workspace_chats(
+        session: AsyncSession, workspace_id: str
+    ) -> List[ChatSummary]:
+        """
+        List all distinct conversation trees (chats) in a workspace.
+        Each chat corresponds to a root node with parent_id is None.
+        """
+        stmt = (
+            select(Workspace)
+            .options(selectinload(Workspace.nodes))
+            .where(Workspace.id == workspace_id)
+        )
+        result = await session.execute(stmt)
+        ws = result.scalar_one_or_none()
+        if not ws:
+            return []
+
+        # Find all root nodes (parent_id is None)
+        root_nodes = [n for n in ws.nodes if n.parent_id is None]
+        if not root_nodes:
+            return []
+
+        # Map parent -> children for fast subtree traversal
+        node_map = {n.id: n for n in ws.nodes}
+        children_map: dict[str, list[str]] = {}
+        for n in ws.nodes:
+            if n.parent_id:
+                children_map.setdefault(n.parent_id, []).append(n.id)
+
+        chats: List[ChatSummary] = []
+        for root in root_nodes:
+            subtree_nodes: List[NodeModel] = [root]
+            queue = [root.id]
+            while queue:
+                curr_id = queue.pop(0)
+                for child_id in children_map.get(curr_id, []):
+                    if child_id in node_map:
+                        subtree_nodes.append(node_map[child_id])
+                        queue.append(child_id)
+
+            latest_updated = max(n.updated_at for n in subtree_nodes)
+            active_node = subtree_nodes[-1]
+            title = root.metadata_payload.get("title") if root.metadata_payload else None
+            if not title:
+                title = root.content[:40].strip() + ("..." if len(root.content) > 40 else "")
+            if not title:
+                title = "Untitled Chat"
+
+            chats.append(
+                ChatSummary(
+                    id=root.id,
+                    workspace_id=workspace_id,
+                    title=title,
+                    node_count=len(subtree_nodes),
+                    created_at=root.created_at,
+                    updated_at=latest_updated,
+                    active_node_id=active_node.id,
+                )
+            )
+
+        # Sort by updated_at descending
+        chats.sort(key=lambda c: c.updated_at, reverse=True)
+        return chats
+
+    @staticmethod
+    async def delete_chat(
+        session: AsyncSession, workspace_id: str, chat_root_id: str
+    ) -> bool:
+        """
+        Delete a conversation tree (chat) by deleting its root node and cascading to all descendants.
+        """
+        stmt = select(NodeModel).where(
+            NodeModel.id == chat_root_id, NodeModel.workspace_id == workspace_id
+        )
+        result = await session.execute(stmt)
+        root = result.scalar_one_or_none()
+        if not root:
+            return False
+
+        await session.delete(root)
+        await session.flush()
+        logger.info("Chat tree deleted", workspace_id=workspace_id, chat_root_id=chat_root_id)
+        return True
 
     @staticmethod
     async def add_node_and_edge(

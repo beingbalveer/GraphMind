@@ -20,21 +20,25 @@ import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { Navbar, ViewMode } from "../layout/Navbar";
 import {
   WorkspaceItem,
+  ChatItem,
   fetchWorkspaces,
   createWorkspace,
+  fetchWorkspaceChats,
+  deleteWorkspaceChat,
   fetchGraphSnapshot,
   saveGraphDelta,
-  deleteWorkspace,
   snapshotToTree,
 } from "@/lib/workspaceApi";
 
 interface ChatContainerProps {
   initialWorkspaceId?: string;
+  initialChatId?: string;
   initialViewMode?: ViewMode;
 }
 
 export function ChatContainer({
   initialWorkspaceId,
+  initialChatId,
   initialViewMode = "chat",
 }: ChatContainerProps = {}) {
   const {
@@ -58,8 +62,12 @@ export function ChatContainer({
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
   const [isWorkspaceModalOpen, setIsWorkspaceModalOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [workspaces, setWorkspaces] = useState<WorkspaceItem[]>([]);
+
+  // Two-Tier State: Workspaces (Outer Vault) and Chats (Inner Trees)
   const [currentWorkspace, setCurrentWorkspace] = useState<WorkspaceItem | null>(null);
+  const [chats, setChats] = useState<ChatItem[]>([]);
+  const [activeChatId, setActiveChatId] = useState<string | null>(initialChatId || null);
+
   const [syncStatus, setSyncStatus] = useState<"saved" | "syncing" | "offline">("saved");
   const [drawerNodeId, setDrawerNodeId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode);
@@ -80,57 +88,59 @@ export function ChatContainer({
     scrollToBottom,
   } = useScrollAnchor({ threshold: 80 });
 
-  // Refresh workspace list
-  const refreshWorkspaces = useCallback(async () => {
+  // Refresh chats for current workspace
+  const refreshChats = useCallback(async (wsId: string) => {
     try {
-      const list = await fetchWorkspaces();
-      setWorkspaces(list);
+      const list = await fetchWorkspaceChats(wsId);
+      setChats(list);
       return list;
     } catch {
       return [];
     }
   }, []);
 
-  // Initialize or fetch workspace from backend and sync URL
+  // Initialize or fetch workspace & chats
   useEffect(() => {
     async function initWorkspace() {
       try {
-        const list = await refreshWorkspaces();
+        let ws: WorkspaceItem | null = null;
 
         if (initialWorkspaceId) {
           const snapshot = await fetchGraphSnapshot(initialWorkspaceId);
           if (snapshot) {
-            setCurrentWorkspace(snapshot.workspace);
-            const loadedTree = snapshotToTree(snapshot);
-            if (loadedTree) {
-              loadTree(loadedTree);
-            }
-            if (typeof window !== "undefined") {
-              window.history.replaceState(null, "", `/graph/${snapshot.workspace.id}`);
-            }
-            return;
+            ws = snapshot.workspace;
           }
         }
 
-        if (list && list.length > 0) {
-          const ws = list[0];
-          setCurrentWorkspace(ws);
-          const snapshot = await fetchGraphSnapshot(ws.id);
-          if (snapshot) {
-            const loadedTree = snapshotToTree(snapshot);
-            if (loadedTree) {
-              loadTree(loadedTree);
+        if (!ws) {
+          const list = await fetchWorkspaces();
+          if (list && list.length > 0) {
+            ws = list[0];
+          } else {
+            ws = await createWorkspace("Main Workspace", "Default knowledge vault");
+          }
+        }
+
+        setCurrentWorkspace(ws);
+
+        if (ws) {
+          const workspaceChats = await refreshChats(ws.id);
+          const targetChatId = initialChatId || (workspaceChats.length > 0 ? workspaceChats[0].id : null);
+          setActiveChatId(targetChatId);
+
+          if (targetChatId) {
+            const snapshot = await fetchGraphSnapshot(ws.id, targetChatId);
+            if (snapshot) {
+              const loadedTree = snapshotToTree(snapshot);
+              if (loadedTree) {
+                loadTree(loadedTree);
+              }
             }
           }
+
           if (typeof window !== "undefined") {
-            window.history.replaceState(null, "", `/graph/${ws.id}`);
-          }
-        } else {
-          const created = await createWorkspace("New Chat", "Conversation tree");
-          setCurrentWorkspace(created);
-          setWorkspaces([created]);
-          if (typeof window !== "undefined") {
-            window.history.replaceState(null, "", `/graph/${created.id}`);
+            const url = targetChatId ? `/graph/${ws.id}?chat=${targetChatId}` : `/graph/${ws.id}`;
+            window.history.replaceState(null, "", url);
           }
         }
       } catch {
@@ -138,35 +148,32 @@ export function ChatContainer({
       }
     }
     initWorkspace();
-  }, [initialWorkspaceId, loadTree, refreshWorkspaces]);
+  }, [initialWorkspaceId, initialChatId, loadTree, refreshChats]);
 
-  // Start a completely fresh chat tree
-  const handleNewChat = useCallback(async () => {
-    try {
-      const created = await createWorkspace("New Chat", "Conversation tree");
-      setCurrentWorkspace(created);
-      clearMessages();
-      setSideBranchNodeId(null);
-      setIsDrawerOpen(false);
-      await refreshWorkspaces();
-      if (typeof window !== "undefined") {
-        window.history.replaceState(null, "", `/graph/${created.id}`);
-      }
-    } catch {
-      clearMessages();
+  // Start a completely fresh chat tree inside the current workspace
+  const handleNewChat = useCallback(() => {
+    clearMessages();
+    setActiveChatId(null);
+    setSideBranchNodeId(null);
+    setIsDrawerOpen(false);
+    if (currentWorkspace && typeof window !== "undefined") {
+      window.history.replaceState(null, "", `/graph/${currentWorkspace.id}`);
     }
-  }, [clearMessages, refreshWorkspaces]);
+  }, [clearMessages, currentWorkspace]);
 
-  // Select an existing workspace from sidebar or modal
-  const handleSelectWorkspace = useCallback(
-    async (ws: WorkspaceItem) => {
-      setCurrentWorkspace(ws);
+  // Select an existing chat inside the current workspace
+  const handleSelectChat = useCallback(
+    async (chat: ChatItem) => {
+      if (!currentWorkspace) return;
+      setActiveChatId(chat.id);
       setSideBranchNodeId(null);
       setIsDrawerOpen(false);
+
       if (typeof window !== "undefined") {
-        window.history.replaceState(null, "", `/graph/${ws.id}`);
+        window.history.replaceState(null, "", `/graph/${currentWorkspace.id}?chat=${chat.id}`);
       }
-      const snapshot = await fetchGraphSnapshot(ws.id);
+
+      const snapshot = await fetchGraphSnapshot(currentWorkspace.id, chat.id);
       if (snapshot) {
         const loadedTree = snapshotToTree(snapshot);
         loadTree(loadedTree);
@@ -174,23 +181,53 @@ export function ChatContainer({
         clearMessages();
       }
     },
-    [loadTree, clearMessages]
+    [currentWorkspace, loadTree, clearMessages]
   );
 
-  // Delete a workspace
-  const handleDeleteWorkspace = useCallback(
-    async (id: string) => {
-      await deleteWorkspace(id);
-      const remaining = await refreshWorkspaces();
-      if (currentWorkspace?.id === id) {
+  // Delete a chat from the workspace
+  const handleDeleteChat = useCallback(
+    async (chatId: string) => {
+      if (!currentWorkspace) return;
+      await deleteWorkspaceChat(currentWorkspace.id, chatId);
+      const remaining = await refreshChats(currentWorkspace.id);
+      if (activeChatId === chatId) {
         if (remaining.length > 0) {
-          handleSelectWorkspace(remaining[0]);
+          handleSelectChat(remaining[0]);
         } else {
           handleNewChat();
         }
       }
     },
-    [currentWorkspace, refreshWorkspaces, handleSelectWorkspace, handleNewChat]
+    [currentWorkspace, activeChatId, refreshChats, handleSelectChat, handleNewChat]
+  );
+
+  // Switch active workspace from Workspace Modal
+  const handleSelectWorkspace = useCallback(
+    async (ws: WorkspaceItem) => {
+      setCurrentWorkspace(ws);
+      setSideBranchNodeId(null);
+      setIsDrawerOpen(false);
+
+      const workspaceChats = await refreshChats(ws.id);
+      const targetChat = workspaceChats.length > 0 ? workspaceChats[0] : null;
+      setActiveChatId(targetChat?.id || null);
+
+      if (targetChat) {
+        const snapshot = await fetchGraphSnapshot(ws.id, targetChat.id);
+        if (snapshot) {
+          const loadedTree = snapshotToTree(snapshot);
+          loadTree(loadedTree);
+        }
+      } else {
+        clearMessages();
+      }
+
+      if (typeof window !== "undefined") {
+        const url = targetChat ? `/graph/${ws.id}?chat=${targetChat.id}` : `/graph/${ws.id}`;
+        window.history.replaceState(null, "", url);
+      }
+    },
+    [refreshChats, loadTree, clearMessages]
   );
 
   // Auto-scroll when user is at the bottom in chat mode
@@ -200,28 +237,32 @@ export function ChatContainer({
     }
   }, [activeMessages, isStreaming, isAtBottom, scrollToBottom, viewMode]);
 
-  // Auto-rename chat from first user message if still titled "New Chat"
+  // Send message and update chat list
   const handleSendMessage = useCallback(
     async (prompt: string, provider = "gemini", model = "gemini-2.5-flash") => {
       if (!currentWorkspace) return;
 
-      // Auto-name chat based on first query
-      if (
-        (currentWorkspace.name === "New Chat" || currentWorkspace.name === "Main Workspace") &&
-        (!tree || Object.keys(tree.nodes).length === 0)
-      ) {
-        const cleanTitle = prompt.slice(0, 36).trim() + (prompt.length > 36 ? "..." : "");
-        const updated = { ...currentWorkspace, name: cleanTitle };
-        setCurrentWorkspace(updated);
-        saveGraphDelta(currentWorkspace.id, {
-          workspaceUpdate: { name: cleanTitle },
-        }).then(() => refreshWorkspaces());
-      }
+      const isFirstMessageInNewChat = !activeChatId || !tree || Object.keys(tree.nodes).length === 0;
 
-      await sendMessage(prompt, provider, model);
+      await sendMessage(prompt, provider, model, {
+        onNodeCreated: ({ userNodeId }) => {
+          if (isFirstMessageInNewChat) {
+            setActiveChatId(userNodeId);
+            if (typeof window !== "undefined") {
+              window.history.replaceState(null, "", `/graph/${currentWorkspace.id}?chat=${userNodeId}`);
+            }
+          }
+        },
+      });
+
       scrollToBottom(true);
+
+      // Refresh chats list after message creation
+      setTimeout(() => {
+        refreshChats(currentWorkspace.id);
+      }, 500);
     },
-    [currentWorkspace, tree, sendMessage, scrollToBottom, refreshWorkspaces]
+    [currentWorkspace, activeChatId, tree, sendMessage, scrollToBottom, refreshChats]
   );
 
   // Debounced auto-save to PostgreSQL backend whenever tree changes
@@ -425,17 +466,19 @@ export function ChatContainer({
         }
       />
 
-      {/* Main App Layout: Sidebar + Canvas / Split-Pane Chat */}
+      {/* Main App Layout: Workspace Chats Sidebar + Canvas / Split-Pane Chat */}
       <div className="flex-1 min-h-0 flex relative overflow-hidden">
-        {/* Left ChatGPT-style Chat History Sidebar */}
+        {/* Left Workspace Chats History Sidebar */}
         <ChatSidebar
           isOpen={isSidebarOpen}
           onToggle={() => setIsSidebarOpen((prev) => !prev)}
-          workspaces={workspaces}
-          activeWorkspaceId={currentWorkspace?.id || null}
-          onSelectWorkspace={handleSelectWorkspace}
+          workspaceName={currentWorkspace?.name || "Main Workspace"}
+          chats={chats}
+          activeChatId={activeChatId}
+          onSelectChat={handleSelectChat}
           onNewChat={handleNewChat}
-          onDeleteWorkspace={handleDeleteWorkspace}
+          onDeleteChat={handleDeleteChat}
+          onOpenWorkspaceModal={() => setIsWorkspaceModalOpen(true)}
         />
 
         {/* Content Area */}
@@ -499,10 +542,10 @@ export function ChatContainer({
                             🧠
                           </div>
                           <h2 className="text-xl font-semibold text-zinc-900 tracking-tight">
-                            Where knowledge connects
+                            {currentWorkspace?.name || "Where knowledge connects"}
                           </h2>
                           <p className="text-xs sm:text-sm text-zinc-500 max-w-sm mx-auto leading-relaxed">
-                            Ask a technical question, explore system architecture, or test streaming.
+                            Ask a technical question, explore system architecture, or create new branches in this workspace.
                           </p>
                         </div>
 

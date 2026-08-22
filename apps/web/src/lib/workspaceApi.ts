@@ -20,6 +20,22 @@ export interface WorkspaceListResponse {
   total: number;
 }
 
+export interface ChatItem {
+  id: string;
+  workspaceId: string;
+  title: string;
+  nodeCount: number;
+  createdAt: string;
+  updatedAt: string;
+  activeNodeId?: string | null;
+}
+
+export interface ChatListResponse {
+  workspaceId: string;
+  chats: ChatItem[];
+  total: number;
+}
+
 export interface GraphSnapshotNode {
   id: string;
   workspaceId: string;
@@ -138,17 +154,50 @@ export async function createWorkspace(
   return res.json();
 }
 
-export async function fetchGraphSnapshot(
-  workspaceId: string
-): Promise<GraphSnapshotResponse | null> {
+export async function fetchWorkspaceChats(workspaceId: string): Promise<ChatItem[]> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/v1/workspaces/${workspaceId}/chats`, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    });
+    if (!res.ok) return [];
+    const data: ChatListResponse = await res.json();
+    return data.chats;
+  } catch (err) {
+    console.warn("Could not fetch chats for workspace:", err);
+    return [];
+  }
+}
+
+export async function deleteWorkspaceChat(
+  workspaceId: string,
+  chatRootId: string
+): Promise<boolean> {
   try {
     const res = await fetch(
-      `${API_BASE_URL}/api/v1/workspaces/${workspaceId}/graph`,
+      `${API_BASE_URL}/api/v1/workspaces/${workspaceId}/chats/${chatRootId}`,
       {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
+        method: "DELETE",
       }
     );
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+export async function fetchGraphSnapshot(
+  workspaceId: string,
+  rootId?: string
+): Promise<GraphSnapshotResponse | null> {
+  try {
+    const url = rootId
+      ? `${API_BASE_URL}/api/v1/workspaces/${workspaceId}/graph?root_id=${encodeURIComponent(rootId)}`
+      : `${API_BASE_URL}/api/v1/workspaces/${workspaceId}/graph`;
+    const res = await fetch(url, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    });
     if (!res.ok) return null;
     return res.json();
   } catch {

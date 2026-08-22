@@ -120,3 +120,19 @@ class SemanticSearchRequest(BaseSchema):
 class GraphDeltaUpdateRequest(BaseSchema):
     workspace_update: Optional[WorkspaceUpdate] = None
     moved_nodes: Optional[List[NodePositionUpdate]] = None
+
+
+class ChatSummary(BaseSchema):
+    id: str = Field(description="Root node ID of the conversation tree")
+    workspace_id: str
+    title: str = Field(description="Title of the conversation tree")
+    node_count: int = Field(default=0, description="Total nodes in this conversation tree")
+    created_at: datetime
+    updated_at: datetime
+    active_node_id: Optional[str] = None
+
+
+class ChatListResponse(BaseSchema):
+    workspace_id: str
+    chats: List[ChatSummary]
+    total: int

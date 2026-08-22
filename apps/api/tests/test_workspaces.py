@@ -65,7 +65,15 @@ async def test_workspace_crud_lifecycle() -> None:
         assert graph_data["edges"][0]["sourceId"] == f"node_root_{ws_id}"
         assert graph_data["edges"][0]["targetId"] == f"node_child_{ws_id}"
 
-        # 6. Apply Delta Updates (auto-save moved nodes and viewport)
+        # 6. List Chats in Workspace
+        chats_resp = await client.get(f"/api/v1/workspaces/{ws_id}/chats")
+        assert chats_resp.status_code == 200
+        chats_data = chats_resp.json()
+        assert chats_data["total"] == 1
+        assert chats_data["chats"][0]["id"] == f"node_root_{ws_id}"
+        assert chats_data["chats"][0]["nodeCount"] == 2
+
+        # 7. Apply Delta Updates (auto-save moved nodes and viewport)
         delta_resp = await client.post(
             f"/api/v1/workspaces/{ws_id}/delta",
             json={
@@ -77,10 +85,18 @@ async def test_workspace_crud_lifecycle() -> None:
         )
         assert delta_resp.status_code == 200
 
-        # 7. Delete Workspace
+        # 8. Delete Single Chat Tree
+        del_chat_resp = await client.delete(f"/api/v1/workspaces/{ws_id}/chats/{f'node_root_{ws_id}'}")
+        assert del_chat_resp.status_code == 204
+
+        # Verify chat tree nodes are removed
+        chats_after = await client.get(f"/api/v1/workspaces/{ws_id}/chats")
+        assert chats_after.json()["total"] == 0
+
+        # 9. Delete Workspace
         del_resp = await client.delete(f"/api/v1/workspaces/{ws_id}")
         assert del_resp.status_code == 204
 
-        # 8. Verify 404 after deletion
+        # 10. Verify 404 after deletion
         get_404 = await client.get(f"/api/v1/workspaces/{ws_id}")
         assert get_404.status_code == 404
