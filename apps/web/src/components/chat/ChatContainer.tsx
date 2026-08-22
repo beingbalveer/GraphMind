@@ -167,8 +167,10 @@ export function ChatContainer({
           }
 
           if (typeof window !== "undefined") {
-            const url = targetChatId ? `/graph/${ws.id}?chat=${targetChatId}` : `/graph/${ws.id}`;
-            window.history.replaceState(null, "", url);
+            const url = targetChatId
+              ? buildChatUrl(ws.id, targetChatId)
+              : buildWorkspaceUrl(ws.id);
+            router.replace(url);
           }
         }
       } catch {
@@ -185,10 +187,10 @@ export function ChatContainer({
     setActiveChatId(null);
     setSideBranchNodeId(null);
     setIsDrawerOpen(false);
-    if (currentWorkspace && typeof window !== "undefined") {
-      window.history.replaceState(null, "", `/graph/${currentWorkspace.id}`);
+    if (currentWorkspace) {
+      router.push(buildWorkspaceUrl(currentWorkspace.id));
     }
-  }, [clearMessages, currentWorkspace]);
+  }, [clearMessages, currentWorkspace, router]);
 
   // Select an existing chat inside the current workspace
   const handleSelectChat = useCallback(
@@ -198,9 +200,7 @@ export function ChatContainer({
       setSideBranchNodeId(null);
       setIsDrawerOpen(false);
 
-      if (typeof window !== "undefined") {
-        window.history.replaceState(null, "", `/graph/${currentWorkspace.id}?chat=${chat.id}`);
-      }
+      router.push(buildChatUrl(currentWorkspace.id, chat.id));
 
       const snapshot = await fetchGraphSnapshot(currentWorkspace.id, chat.id);
       if (snapshot) {
@@ -210,7 +210,7 @@ export function ChatContainer({
         clearMessages();
       }
     },
-    [currentWorkspace, loadTree, clearMessages]
+    [currentWorkspace, loadTree, clearMessages, router]
   );
 
   // Delete a chat from the workspace
@@ -251,12 +251,12 @@ export function ChatContainer({
         clearMessages();
       }
 
-      if (typeof window !== "undefined") {
-        const url = targetChat ? `/graph/${ws.id}?chat=${targetChat.id}` : `/graph/${ws.id}`;
-        window.history.replaceState(null, "", url);
-      }
+      const url = targetChat
+        ? buildChatUrl(ws.id, targetChat.id)
+        : buildWorkspaceUrl(ws.id);
+      router.push(url);
     },
-    [refreshChats, loadTree, clearMessages]
+    [refreshChats, loadTree, clearMessages, router]
   );
 
   // Auto-scroll when user is at the bottom in chat mode
@@ -265,6 +265,15 @@ export function ChatContainer({
       scrollToBottom(false);
     }
   }, [activeMessages, isStreaming, isAtBottom, scrollToBottom, viewMode]);
+
+  // Scroll to a deep-linked node once messages are populated (?node= query param)
+  useEffect(() => {
+    if (!initialNodeId || activeMessages.length === 0) return;
+    const timeout = setTimeout(() => handleJumpToMessage(initialNodeId), 300);
+    return () => clearTimeout(timeout);
+  // Only run once when messages first populate
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialNodeId, activeMessages.length > 0]);
 
   // Send message, persist nodes to PostgreSQL, and update chat list
   const handleSendMessage = useCallback(
@@ -283,9 +292,7 @@ export function ChatContainer({
 
           if (isFirstMessageInNewChat) {
             setActiveChatId(userNodeId);
-            if (typeof window !== "undefined") {
-              window.history.replaceState(null, "", `/graph/${currentWorkspace.id}?chat=${userNodeId}`);
-            }
+            router.replace(buildChatUrl(currentWorkspace.id, userNodeId));
           }
 
           // Persist user node immediately to backend
@@ -320,7 +327,7 @@ export function ChatContainer({
         }, 1000);
       }
     },
-    [currentWorkspace, activeChatId, tree, sendMessage, scrollToBottom, refreshChats]
+    [currentWorkspace, activeChatId, tree, sendMessage, scrollToBottom, refreshChats, router]
   );
 
   // Debounced auto-save of entire active tree nodes to PostgreSQL backend
@@ -367,6 +374,15 @@ export function ChatContainer({
     }
   }, []);
 
+  // Scroll to deep-linked target node if provided via URL
+  useEffect(() => {
+    if (initialNodeId && activeMessages.length > 0) {
+      setTimeout(() => {
+        handleJumpToMessage(initialNodeId);
+      }, 200);
+    }
+  }, [initialNodeId, activeMessages.length, handleJumpToMessage]);
+
   // Handle opening of parallel split pane from inline Obsidian-style blue links
   const handleOpenSideBranch = useCallback((leafId: string, excerpt: string) => {
     setSideBranchNodeId(leafId);
@@ -408,11 +424,14 @@ export function ChatContainer({
     (nodeId: string) => {
       switchBranch(nodeId);
       setViewMode("chat");
+      if (currentWorkspace && activeChatId) {
+        router.push(buildChatUrl(currentWorkspace.id, activeChatId));
+      }
       setTimeout(() => {
         handleJumpToMessage(nodeId);
       }, 100);
     },
-    [switchBranch, handleJumpToMessage]
+    [switchBranch, handleJumpToMessage, currentWorkspace, activeChatId, router]
   );
 
   // Keyboard navigation helpers
@@ -518,7 +537,15 @@ export function ChatContainer({
       {/* Top Main Navigation Bar */}
       <Navbar
         viewMode={viewMode}
-        onViewModeChange={(mode) => setViewMode(mode)}
+        onViewModeChange={(mode) => {
+          setViewMode(mode);
+          if (currentWorkspace && activeChatId) {
+            const url = mode === "canvas"
+              ? buildCanvasUrl(currentWorkspace.id, activeChatId)
+              : buildChatUrl(currentWorkspace.id, activeChatId);
+            router.push(url);
+          }
+        }}
         syncStatus={syncStatus}
         workspaceName={currentWorkspace?.name || "Main Workspace"}
         onOpenWorkspaceModal={() => setIsWorkspaceModalOpen(true)}
@@ -734,7 +761,16 @@ export function ChatContainer({
         tree={tree}
         viewMode={viewMode}
         onSelectNode={handleSelectTreeNode}
-        onToggleViewMode={() => setViewMode((prev) => (prev === "chat" ? "canvas" : "chat"))}
+        onToggleViewMode={() => {
+          const nextMode = viewMode === "chat" ? "canvas" : "chat";
+          setViewMode(nextMode);
+          if (currentWorkspace && activeChatId) {
+            const url = nextMode === "canvas"
+              ? buildCanvasUrl(currentWorkspace.id, activeChatId)
+              : buildChatUrl(currentWorkspace.id, activeChatId);
+            router.push(url);
+          }
+        }}
         onFitView={() => fitViewRef.current?.()}
         onCenterActive={() => centerActiveRef.current?.()}
         onAutoLayout={() => autoLayoutRef.current?.()}
