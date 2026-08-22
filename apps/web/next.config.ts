@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  transpilePackages: ["@graphmind/shared"],
+  transpilePackages: ["@graphmind/shared", "@xyflow/react"],
   reactStrictMode: true,
   async redirects() {
     return [
