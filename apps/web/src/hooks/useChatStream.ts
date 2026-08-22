@@ -27,6 +27,7 @@ const STORAGE_KEY = "graphmind_active_tree_v1";
 export function useChatStream() {
   const [tree, setTree] = useState<ConversationTree | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [streamingNodeId, setStreamingNodeId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [activeBranch, setActiveBranch] = useState<BranchContext | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
@@ -74,6 +75,7 @@ export function useChatStream() {
       abortControllerRef.current = null;
     }
     setIsStreaming(false);
+    setStreamingNodeId(null);
   }, []);
 
   const switchBranch = useCallback((nodeId: string) => {
@@ -226,10 +228,12 @@ export function useChatStream() {
 
       setTree(currentTree);
       setIsStreaming(true);
+      setStreamingNodeId(assistantNodeId);
 
       const abortController = new AbortController();
       abortControllerRef.current = abortController;
 
+      let accumulatedContent = "";
       try {
         // Build ancestor conversation lineage to forward to API
         const ancestorPath = getAncestorPath(currentTree, userNodeId);
@@ -276,7 +280,7 @@ export function useChatStream() {
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
-        let accumulatedContent = "";
+        
         let lineBuffer = "";
 
         while (true) {
@@ -339,10 +343,11 @@ export function useChatStream() {
         }
       } finally {
         setIsStreaming(false);
+        setStreamingNodeId(null);
         abortControllerRef.current = null;
       }
 
-      return { userNodeId, assistantNodeId };
+      return { userNodeId, assistantNodeId, content: accumulatedContent };
     },
     [tree, isStreaming, activeBranch]
   );
@@ -372,6 +377,7 @@ export function useChatStream() {
     tree,
     activeMessages,
     isStreaming,
+    streamingNodeId,
     error,
     activeBranch,
     setBranchContext,

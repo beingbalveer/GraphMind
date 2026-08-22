@@ -125,8 +125,9 @@ export function snapshotToTree(snapshot: GraphSnapshotResponse): ConversationTre
         const mainlineChildId =
           currentTrunkNode.childrenIds.find(
             (id) => !nodesRecord[id]?.highlightedContext
-          ) || currentTrunkNode.childrenIds[0];
+          );
 
+        if (!mainlineChildId) break;
         const nextNode = nodesRecord[mainlineChildId];
         if (!nextNode) break;
         currentTrunkNode = nextNode;

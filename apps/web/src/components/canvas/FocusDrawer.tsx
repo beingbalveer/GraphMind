@@ -20,6 +20,7 @@ interface FocusDrawerProps {
   tree: ConversationTree | null;
   isOpen: boolean;
   isStreaming?: boolean;
+  streamingNodeId?: string | null;
   onClose: () => void;
   onSelectBranch: (childNodeId: string) => void;
   onExploreBranch: (parentNodeId: string, highlightedText: string) => void;
@@ -31,12 +32,14 @@ export function FocusDrawer({
   tree,
   isOpen,
   isStreaming = false,
+  streamingNodeId = null,
   onClose,
   onSendFollowUp,
 }: FocusDrawerProps) {
   const [copied, setCopied] = useState(false);
   const [drawerPrompt, setDrawerPrompt] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
+  const prevNodeIdRef = useRef<string | null>(null);
 
   // Compute all messages on this thread's lineage path
   const threadMessages: TreeNode[] = useMemo(() => {
@@ -47,9 +50,13 @@ export function FocusDrawer({
   // Auto-scroll on new messages
   useEffect(() => {
     if (bottomRef.current) {
-      bottomRef.current.scrollIntoView({ behavior: "smooth" });
+      const isNewNode = prevNodeIdRef.current !== node?.id;
+      bottomRef.current.scrollIntoView({ 
+        behavior: isNewNode ? "auto" : "smooth" 
+      });
+      prevNodeIdRef.current = node?.id || null;
     }
-  }, [threadMessages, isStreaming]);
+  }, [threadMessages, isStreaming, node?.id]);
 
   if (!isOpen || !node) return null;
 
@@ -128,11 +135,10 @@ export function FocusDrawer({
 
       {/* Drawer Scrollable Content Body with Full Markdown Rendering */}
       <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 text-sm bg-zinc-50/40">
-        {threadMessages.map((msg, index) => {
+        {threadMessages.map((msg, _index) => {
           const isUser = msg.role === "user";
           const isAssistant = msg.role === "assistant";
-          const isLast = index === threadMessages.length - 1;
-          const isNodeStreaming = isLast && isAssistant && isStreaming;
+          const isNodeStreaming = isAssistant && isStreaming && msg.id === streamingNodeId;
 
           return (
             <div

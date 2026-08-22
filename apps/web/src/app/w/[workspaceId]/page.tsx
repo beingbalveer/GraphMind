@@ -9,9 +9,8 @@ interface WorkspacePageProps {
  * /w/{workspaceId} — Workspace landing page.
  *
  * Renders ChatContainer in chat mode with no specific chatId.
- * ChatContainer's initWorkspace effect resolves the most recent chat
- * and calls router.replace() to push the full canonical URL:
- *   /w/{workspaceId}/chat/{chatId}
+ * This serves as the "New Chat" empty state. Once a message is sent,
+ * the chat is persisted and the URL is updated to /w/{workspaceId}/chat/{chatId}.
  */
 export default async function WorkspaceLandingPage({
   params,

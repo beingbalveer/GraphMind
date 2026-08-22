@@ -58,6 +58,7 @@ export function ChatContainer({
     tree,
     activeMessages,
     isStreaming,
+    streamingNodeId,
     error,
     activeBranch,
     setBranchContext,
@@ -177,7 +178,7 @@ export function ChatContainer({
             workspaceChats = await refreshChats(ws.id);
           }
 
-          const targetChatId = initialChatId || (workspaceChats.length > 0 ? workspaceChats[0].id : null);
+          const targetChatId = initialChatId || null;
           setActiveChatId(targetChatId);
 
           if (targetChatId) {
@@ -320,7 +321,8 @@ export function ChatContainer({
 
           if (isFirstMessageInNewChat) {
             setActiveChatId(userNodeId);
-            router.replace(buildChatUrl(currentWorkspace.id, userNodeId));
+            // We NO LONGER redirect here, because redirecting unmounts the component and cancels the streaming state!
+            // We wait until streaming finishes.
           }
 
           // Persist user node immediately to backend
@@ -339,6 +341,7 @@ export function ChatContainer({
 
       const targetAssistantId = result?.assistantNodeId || createdAssistantNodeId;
       const targetUserId = result?.userNodeId || createdUserNodeId;
+      const assistantContent = result?.content || "";
 
       // When streaming finishes, persist final assistant response node
       if (targetAssistantId && targetUserId) {
@@ -347,11 +350,15 @@ export function ChatContainer({
             id: targetAssistantId,
             parentId: targetUserId,
             role: "assistant",
-            content: "", // Backend will upsert content
+            content: assistantContent, // Pass the FULL content
             provider,
             model,
           });
           await refreshChats(currentWorkspace.id);
+          
+          if (isFirstMessageInNewChat && targetUserId) {
+            router.replace(buildChatUrl(currentWorkspace.id, targetUserId));
+          }
         }, 1000);
       }
     },
@@ -655,6 +662,7 @@ export function ChatContainer({
                 tree={tree}
                 isOpen={isDrawerOpen}
                 isStreaming={isStreaming}
+                streamingNodeId={streamingNodeId}
                 onClose={() => setIsDrawerOpen(false)}
                 onSelectBranch={(childId) => {
                   switchBranch(childId);
@@ -783,6 +791,7 @@ export function ChatContainer({
                     branchLeafNodeId={sideBranchNodeId}
                     highlightedContext={sideBranchExcerpt || undefined}
                     isStreaming={isStreaming}
+                    streamingNodeId={streamingNodeId}
                     onClose={() => setSideBranchNodeId(null)}
                     onSelectBranchLeaf={(leafId) => setSideBranchNodeId(leafId)}
                     onSendBranchMessage={(prompt, parentNodeId) => {

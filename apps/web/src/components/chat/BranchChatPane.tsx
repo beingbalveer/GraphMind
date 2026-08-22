@@ -29,6 +29,7 @@ interface BranchChatPaneProps {
   branchLeafNodeId: string;
   highlightedContext?: string;
   isStreaming?: boolean;
+  streamingNodeId?: string | null;
   onClose: () => void;
   onSelectBranchLeaf: (leafId: string) => void;
   onSendBranchMessage: (prompt: string, parentNodeId: string) => void;
@@ -40,6 +41,7 @@ export function BranchChatPane({
   branchLeafNodeId,
   highlightedContext,
   isStreaming = false,
+  streamingNodeId = null,
   onClose,
   onSelectBranchLeaf,
   onSendBranchMessage,
@@ -50,6 +52,7 @@ export function BranchChatPane({
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const prevBranchLeafIdRef = useRef<string | null>(null);
 
   // Compute full lineage for the currently active leaf node
   const activeLineage: TreeNode[] = useMemo(() => {
@@ -139,9 +142,13 @@ export function BranchChatPane({
   // Auto-scroll on new streaming tokens
   useEffect(() => {
     if (bottomRef.current) {
-      bottomRef.current.scrollIntoView({ behavior: "smooth" });
+      const isNewBranch = prevBranchLeafIdRef.current !== branchLeafNodeId;
+      bottomRef.current.scrollIntoView({ 
+        behavior: isNewBranch ? "auto" : "smooth" 
+      });
+      prevBranchLeafIdRef.current = branchLeafNodeId;
     }
-  }, [branchMessages, isStreaming]);
+  }, [branchMessages, isStreaming, branchLeafNodeId]);
 
   // Focus input when opening draft tab
   useEffect(() => {
@@ -320,11 +327,10 @@ export function BranchChatPane({
           </div>
         ) : (
           /* Active Branch Conversation Messages */
-          branchMessages.map((msg, index) => {
+          branchMessages.map((msg, _index) => {
             const isUser = msg.role === "user";
             const isAssistant = msg.role === "assistant";
-            const isLast = index === branchMessages.length - 1;
-            const isNodeStreaming = isLast && isAssistant && isStreaming;
+            const isNodeStreaming = isAssistant && isStreaming && msg.id === streamingNodeId;
 
             return (
               <div
