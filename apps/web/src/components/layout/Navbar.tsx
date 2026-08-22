@@ -10,6 +10,7 @@ import {
   RotateCw,
   PanelLeft,
 } from "lucide-react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { LogoBadge } from "@/components/ui/Logo";
 
@@ -75,11 +76,13 @@ export function Navbar({
           </Button>
         )}
 
-        <LogoBadge size="sm" />
         <div className="flex items-center space-x-1">
-          <span className="font-semibold text-zinc-950 text-[13px] tracking-tight hidden sm:inline">
-            GraphMind
-          </span>
+          <Link href="/" className="flex items-center space-x-1 hover:opacity-80 transition-opacity mr-1">
+            <LogoBadge size="sm" />
+            <span className="font-semibold text-zinc-950 text-[13px] tracking-tight hidden sm:inline ml-1">
+              GraphMind
+            </span>
+          </Link>
           <div
             className={`w-1.5 h-1.5 rounded-full ${
               apiOnline === true
