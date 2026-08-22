@@ -15,6 +15,7 @@ import { WorkspaceModal } from "../workspace/WorkspaceModal";
 import { ResizableSplitPane } from "./ResizableSplitPane";
 import { BranchChatPane } from "./BranchChatPane";
 import { Toast } from "@/components/ui/toast";
+import { LogoBadge } from "@/components/ui/Logo";
 import { useChatStream } from "@/hooks/useChatStream";
 import { useScrollAnchor } from "@/hooks/useScrollAnchor";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
@@ -640,10 +641,8 @@ export function ChatContainer({
                     {activeMessages.length === 0 ? (
                       /* Clean Empty State */
                       <div className="flex-1 flex flex-col items-center justify-center max-w-2xl mx-auto px-4 py-8 text-center space-y-8 my-auto">
-                        <div className="space-y-2">
-                          <div className="w-10 h-10 rounded-xl bg-zinc-900 text-white flex items-center justify-center font-bold text-lg mx-auto shadow-xs">
-                            🧠
-                          </div>
+                        <div className="space-y-3">
+                          <LogoBadge size="lg" className="mx-auto" />
                           <h2 className="text-xl font-semibold text-zinc-900 tracking-tight">
                             {currentWorkspace?.name || "Where knowledge connects"}
                           </h2>

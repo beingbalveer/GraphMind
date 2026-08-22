@@ -11,6 +11,7 @@ import {
   PanelLeft,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { LogoBadge } from "@/components/ui/Logo";
 
 export type ViewMode = "chat" | "canvas";
 
@@ -74,11 +75,9 @@ export function Navbar({
           </Button>
         )}
 
-        <div className="w-6 h-6 rounded-md bg-zinc-900 text-white flex items-center justify-center font-bold text-xs shadow-xs">
-          🧠
-        </div>
+        <LogoBadge size="sm" />
         <div className="flex items-center space-x-1">
-          <span className="font-semibold text-zinc-900 text-sm tracking-tight hidden sm:inline">
+          <span className="font-semibold text-zinc-950 text-[13px] tracking-tight hidden sm:inline">
             GraphMind
           </span>
           <div
