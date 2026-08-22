@@ -386,7 +386,6 @@ export function ChatContainer() {
                       /* Main Active Lineage Branch Message Stream */
                       <div className="w-full pb-4">
                         {activeMessages.map((node, index) => {
-                          const nextActiveNode = activeMessages[index + 1];
                           const isLastAssistant =
                             index === activeMessages.length - 1 &&
                             node.role === "assistant" &&
@@ -401,12 +400,8 @@ export function ChatContainer() {
                                 isStreaming: isLastAssistant,
                               }}
                               tree={tree}
-                              activeChildId={nextActiveNode?.id}
                               onRetry={retryLastMessage}
                               onExploreBranch={handleExplainBranch}
-                              onSelectBranch={(childId) => {
-                                switchBranch(childId);
-                              }}
                               onOpenSideBranch={handleOpenSideBranch}
                             />
                           );

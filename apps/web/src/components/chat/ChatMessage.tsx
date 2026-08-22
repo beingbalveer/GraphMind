@@ -17,7 +17,6 @@ import { TreeNode, ConversationTree, getNodeChildren } from "@graphmind/shared";
 import { Button } from "@/components/ui/button";
 import { useTextSelection } from "@/hooks/useTextSelection";
 import { SelectionTooltip } from "./SelectionTooltip";
-import { BranchSwitcher } from "./BranchSwitcher";
 
 export interface BranchLinkInfo {
   excerpt: string;
@@ -27,10 +26,8 @@ export interface BranchLinkInfo {
 interface ChatMessageProps {
   message: TreeNode & { isStreaming?: boolean; isError?: boolean };
   tree?: ConversationTree | null;
-  activeChildId?: string;
   onRetry?: () => void;
   onExploreBranch?: (messageId: string, highlightedText: string) => void;
-  onSelectBranch?: (nodeId: string) => void;
   onOpenSideBranch?: (childNodeId: string, excerpt: string) => void;
 }
 
@@ -280,10 +277,8 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
 export function ChatMessage({
   message,
   tree,
-  activeChildId,
   onRetry,
   onExploreBranch,
-  onSelectBranch,
   onOpenSideBranch,
 }: ChatMessageProps) {
   const isUser = message.role === "user";
@@ -445,17 +440,7 @@ export function ChatMessage({
                   </Button>
                 )}
               </div>
-            ) : <div />}
-
-            {/* Sibling Branch Switcher for multiple pathways */}
-            {tree && onSelectBranch && (
-              <BranchSwitcher
-                tree={tree}
-                parentNodeId={message.id}
-                activeChildId={activeChildId}
-                onSelectBranch={onSelectBranch}
-              />
-            )}
+            ) : null}
           </div>
         </div>
       </div>
