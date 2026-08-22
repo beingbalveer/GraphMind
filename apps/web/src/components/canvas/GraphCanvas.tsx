@@ -10,6 +10,7 @@ import {
   useEdgesState,
   useReactFlow,
   ReactFlowProvider,
+  useViewport,
   BackgroundVariant,
   Node,
 } from "@xyflow/react";
@@ -24,10 +25,10 @@ import {
   Sparkles,
 } from "lucide-react";
 import { ConversationTree } from "@graphmind/shared";
-import { treeToGraph, CustomNodeData } from "@/lib/treeToGraph";
+import { treeToGraph } from "@/lib/treeToGraph";
 import { getLayoutedElements, LayoutDirection } from "@/lib/layoutEngine";
-import { CustomMessageNode } from "./CustomMessageNode";
-import { CustomBranchEdge } from "./CustomBranchEdge";
+import { MindMapNode, MindMapNodeData, ZoomMode } from "./MindMapNode";
+import { MindMapEdge } from "./MindMapEdge";
 import { Button } from "@/components/ui/button";
 
 interface GraphCanvasProps {
@@ -43,11 +44,11 @@ interface GraphCanvasProps {
 }
 
 const nodeTypes = {
-  customMessageNode: CustomMessageNode,
+  mindMapNode: MindMapNode,
 };
 
 const edgeTypes = {
-  customBranchEdge: CustomBranchEdge,
+  mindMapEdge: MindMapEdge,
 };
 
 function FlowCanvas({
@@ -62,31 +63,41 @@ function FlowCanvas({
   onAutoLayoutRef,
 }: GraphCanvasProps) {
   const { fitView, setCenter, zoomTo } = useReactFlow();
+  const { zoom } = useViewport();
   const [showMinimap, setShowMinimap] = useState(true);
-  const [direction, setDirection] = useState<LayoutDirection>("TB");
+  const [direction, setDirection] = useState<LayoutDirection>("LR");
   const isFirstRender = useRef(true);
+
+  // Compute adaptive LOD Zoom Mode
+  const zoomMode: ZoomMode = useMemo(() => {
+    if (zoom < 0.6) return "orb";
+    if (zoom >= 1.25) return "detailed";
+    return "capsule";
+  }, [zoom]);
 
   // Compute raw nodes & edges then layout with Dagre
   const { initialNodes, initialEdges } = useMemo(() => {
     const raw = treeToGraph(tree, {
       activeNodeId: tree?.activeNodeId,
       isStreaming,
+      zoomMode,
       onExploreBranch,
       onSwitchToChat,
       onRetry,
     });
     const layouted = getLayoutedElements(raw.nodes, raw.edges, direction);
     return { initialNodes: layouted.nodes, initialEdges: layouted.edges };
-  }, [tree, isStreaming, onExploreBranch, onSwitchToChat, onRetry, direction]);
+  }, [tree, isStreaming, zoomMode, onExploreBranch, onSwitchToChat, onRetry, direction]);
 
-  const [nodes, setNodes, onNodesChange] = useNodesState<Node<CustomNodeData>>(initialNodes);
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node<MindMapNodeData>>(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
-  // Synchronize graph nodes and edges whenever the tree state or layout direction updates
+  // Synchronize graph nodes and edges whenever the tree state, zoomMode, or layout direction updates
   useEffect(() => {
     const raw = treeToGraph(tree, {
       activeNodeId: tree?.activeNodeId,
       isStreaming,
+      zoomMode,
       onExploreBranch,
       onSwitchToChat,
       onRetry,
@@ -94,7 +105,7 @@ function FlowCanvas({
     const layouted = getLayoutedElements(raw.nodes, raw.edges, direction);
     setNodes(layouted.nodes);
     setEdges(layouted.edges);
-  }, [tree, isStreaming, onExploreBranch, onSwitchToChat, onRetry, direction, setNodes, setEdges]);
+  }, [tree, isStreaming, zoomMode, onExploreBranch, onSwitchToChat, onRetry, direction, setNodes, setEdges]);
 
   // Center camera smoothly on a specific node card
   const centerOnNode = useCallback(
@@ -104,26 +115,27 @@ function FlowCanvas({
 
       const targetNode = nodes.find((n) => n.id === targetId);
       if (targetNode) {
-        const centerX = targetNode.position.x + 160;
-        const centerY = targetNode.position.y + 80;
-        setCenter(centerX, centerY, { zoom: 0.95, duration: 450 });
+        const centerX = targetNode.position.x + 110;
+        const centerY = targetNode.position.y + 22;
+        setCenter(centerX, centerY, { zoom: 1.0, duration: 400 });
       }
     },
     [nodes, tree?.activeNodeId, setCenter]
   );
 
   const handleFitView = useCallback(() => {
-    fitView({ padding: 0.2, maxZoom: 1.0, duration: 450 });
+    fitView({ padding: 0.25, maxZoom: 1.1, duration: 400 });
   }, [fitView]);
 
   const handleResetZoom = useCallback(() => {
-    zoomTo(1.0, { duration: 350 });
+    zoomTo(1.0, { duration: 300 });
   }, [zoomTo]);
 
   const handleAutoLayout = useCallback(() => {
     const raw = treeToGraph(tree, {
       activeNodeId: tree?.activeNodeId,
       isStreaming,
+      zoomMode,
       onExploreBranch,
       onSwitchToChat,
       onRetry,
@@ -132,10 +144,10 @@ function FlowCanvas({
     setNodes(layouted.nodes);
     setEdges(layouted.edges);
     handleFitView();
-  }, [tree, isStreaming, onExploreBranch, onSwitchToChat, onRetry, direction, handleFitView, setNodes, setEdges]);
+  }, [tree, isStreaming, zoomMode, onExploreBranch, onSwitchToChat, onRetry, direction, handleFitView, setNodes, setEdges]);
 
   const handleToggleDirection = useCallback(() => {
-    const newDir = direction === "TB" ? "LR" : "TB";
+    const newDir = direction === "LR" ? "TB" : "LR";
     setDirection(newDir);
     setTimeout(() => {
       handleFitView();
@@ -183,12 +195,12 @@ function FlowCanvas({
         selectNodesOnDrag={false}
         minZoom={0.15}
         maxZoom={1.8}
-        defaultViewport={{ x: 0, y: 0, zoom: 0.85 }}
+        defaultViewport={{ x: 0, y: 0, zoom: 0.9 }}
         className="touch-none"
       >
         <Background
           variant={BackgroundVariant.Dots}
-          gap={20}
+          gap={18}
           size={1.2}
           color="#d4d4d8"
         />
@@ -198,9 +210,9 @@ function FlowCanvas({
         />
         {showMinimap && (
           <MiniMap
-            nodeStrokeWidth={3}
+            nodeStrokeWidth={2}
             nodeColor={(node) => {
-              const data = node.data as CustomNodeData;
+              const data = node.data as MindMapNodeData;
               return data?.isActive ? "#18181b" : "#e4e4e7";
             }}
             className="bg-white/95 border border-zinc-200/90 shadow-md rounded-xl overflow-hidden hidden sm:block"
@@ -210,24 +222,30 @@ function FlowCanvas({
 
       {/* Floating Canvas Camera & Layout Toolbar */}
       <div className="absolute top-4 right-4 z-20 flex items-center space-x-1.5 p-1 bg-white/90 backdrop-blur-md border border-zinc-200/90 rounded-xl shadow-md select-none">
+        {/* LOD Mode Indicator Badge */}
+        <div className="px-2 py-0.5 rounded-lg bg-zinc-100 border border-zinc-200 text-[10px] font-semibold text-zinc-700 capitalize">
+          {zoomMode === "orb" ? "🌌 Galaxy View" : zoomMode === "detailed" ? "🔍 Focus View" : "🌿 Mind Map"}
+        </div>
+        <div className="w-px h-4 bg-zinc-200 mx-0.5" />
+
         <Button
           variant="ghost"
           size="iconSm"
           onClick={handleToggleDirection}
-          className="h-7 w-7 text-zinc-600 hover:text-zinc-950"
-          title={`Switch Layout: ${direction === "TB" ? "Vertical (Top-to-Bottom)" : "Horizontal (Left-to-Right)"}`}
+          className="h-7 w-7 text-zinc-600 hover:text-zinc-950 cursor-pointer"
+          title={`Switch Layout: ${direction === "LR" ? "Horizontal (Left-to-Right)" : "Vertical (Top-to-Bottom)"}`}
         >
-          {direction === "TB" ? (
-            <Columns3 className="w-3.5 h-3.5" />
-          ) : (
+          {direction === "LR" ? (
             <Rows3 className="w-3.5 h-3.5" />
+          ) : (
+            <Columns3 className="w-3.5 h-3.5" />
           )}
         </Button>
         <Button
           variant="ghost"
           size="iconSm"
           onClick={handleAutoLayout}
-          className="h-7 w-7 text-zinc-600 hover:text-zinc-950"
+          className="h-7 w-7 text-zinc-600 hover:text-zinc-950 cursor-pointer"
           title="Recompute Clean Auto-Layout (⌘L)"
         >
           <Sparkles className="w-3.5 h-3.5" />
@@ -237,7 +255,7 @@ function FlowCanvas({
           variant="ghost"
           size="iconSm"
           onClick={() => centerOnNode()}
-          className="h-7 w-7 text-zinc-600 hover:text-zinc-950"
+          className="h-7 w-7 text-zinc-600 hover:text-zinc-950 cursor-pointer"
           title="Center on Active Node (⌘.)"
         >
           <Crosshair className="w-3.5 h-3.5" />
@@ -246,7 +264,7 @@ function FlowCanvas({
           variant="ghost"
           size="iconSm"
           onClick={handleFitView}
-          className="h-7 w-7 text-zinc-600 hover:text-zinc-950"
+          className="h-7 w-7 text-zinc-600 hover:text-zinc-950 cursor-pointer"
           title="Fit All Nodes in View (⌘0)"
         >
           <Maximize2 className="w-3.5 h-3.5" />
@@ -255,7 +273,7 @@ function FlowCanvas({
           variant="ghost"
           size="iconSm"
           onClick={handleResetZoom}
-          className="h-7 w-7 text-zinc-600 hover:text-zinc-950"
+          className="h-7 w-7 text-zinc-600 hover:text-zinc-950 cursor-pointer"
           title="Reset Zoom to 100%"
         >
           <RotateCcw className="w-3.5 h-3.5" />
@@ -265,7 +283,7 @@ function FlowCanvas({
           variant="ghost"
           size="iconSm"
           onClick={() => setShowMinimap((prev) => !prev)}
-          className={`h-7 w-7 text-zinc-600 hover:text-zinc-950 ${
+          className={`h-7 w-7 text-zinc-600 hover:text-zinc-950 cursor-pointer ${
             showMinimap ? "bg-zinc-100 text-zinc-900" : ""
           }`}
           title="Toggle Radar Minimap"

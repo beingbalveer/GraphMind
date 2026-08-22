@@ -5,6 +5,7 @@ import {
   getAncestorPath,
 } from "@graphmind/shared";
 import { Node, Edge, MarkerType } from "@xyflow/react";
+import { MindMapNodeData, ZoomMode } from "@/components/canvas/MindMapNode";
 
 export interface CustomNodeData {
   node: TreeNode;
@@ -14,6 +15,7 @@ export interface CustomNodeData {
   totalSiblings?: number;
   siblingIndex?: number;
   childCount?: number;
+  zoomMode?: ZoomMode;
   onExploreBranch?: (nodeId: string, contextText?: string) => void;
   onSwitchToChat?: (nodeId: string) => void;
   onRetry?: () => void;
@@ -23,6 +25,7 @@ export interface CustomNodeData {
 export interface TreeToGraphOptions {
   activeNodeId?: string;
   isStreaming?: boolean;
+  zoomMode?: ZoomMode;
   onExploreBranch?: (nodeId: string, contextText?: string) => void;
   onSwitchToChat?: (nodeId: string) => void;
   onRetry?: () => void;
@@ -34,7 +37,7 @@ export interface TreeToGraphOptions {
 export function treeToGraph(
   tree: ConversationTree | null,
   options?: TreeToGraphOptions
-): { nodes: Node<CustomNodeData>[]; edges: Edge[] } {
+): { nodes: Node<MindMapNodeData>[]; edges: Edge[] } {
   if (!tree || !tree.rootNodeId || !tree.nodes[tree.rootNodeId]) {
     return { nodes: [], edges: [] };
   }
@@ -42,12 +45,13 @@ export function treeToGraph(
   const {
     activeNodeId = tree.activeNodeId,
     isStreaming = false,
+    zoomMode = "capsule",
     onExploreBranch,
     onSwitchToChat,
     onRetry,
   } = options || {};
 
-  const nodes: Node<CustomNodeData>[] = [];
+  const nodes: Node<MindMapNodeData>[] = [];
   const edges: Edge[] = [];
   const rootNode = tree.nodes[tree.rootNodeId];
 
@@ -55,33 +59,33 @@ export function treeToGraph(
   const activePath = getAncestorPath(tree, activeNodeId);
   const activePathIds = new Set(activePath.map((n) => n.id));
 
-  // Map to track the horizontal offset allocated for subtrees at each level
+  // Map to track coordinates
   let leafCounter = 0;
   const positions = new Map<string, { x: number; y: number }>();
 
-  // Helper function to assign hierarchical coordinates
+  // Helper function to assign hierarchical coordinates (horizontal layout: x is depth, y is sibling order)
   function calculatePositions(node: TreeNode, depth: number) {
     const children = getNodeChildren(tree!, node.id);
 
     if (children.length === 0) {
-      const x = leafCounter * 380;
-      const y = depth * 220;
+      const x = depth * 280;
+      const y = leafCounter * 60;
       positions.set(node.id, { x, y });
       leafCounter += 1;
-      return x;
+      return y;
     }
 
-    const childXCoords: number[] = [];
+    const childYCoords: number[] = [];
     for (const child of children) {
-      const childX = calculatePositions(child, depth + 1);
-      childXCoords.push(childX);
+      const childY = calculatePositions(child, depth + 1);
+      childYCoords.push(childY);
     }
 
-    // Center parent above its children
-    const midX = (childXCoords[0] + childXCoords[childXCoords.length - 1]) / 2;
-    const y = depth * 220;
-    positions.set(node.id, { x: midX, y });
-    return midX;
+    // Center parent relative to children
+    const midY = (childYCoords[0] + childYCoords[childYCoords.length - 1]) / 2;
+    const x = depth * 280;
+    positions.set(node.id, { x, y: midY });
+    return midY;
   }
 
   calculatePositions(rootNode, 0);
@@ -105,7 +109,7 @@ export function treeToGraph(
 
     nodes.push({
       id: node.id,
-      type: "customMessageNode",
+      type: "mindMapNode",
       position: pos,
       data: {
         node,
@@ -115,6 +119,7 @@ export function treeToGraph(
         totalSiblings,
         siblingIndex,
         childCount: children.length,
+        zoomMode,
         onExploreBranch,
         onSwitchToChat,
         onRetry,
@@ -130,18 +135,18 @@ export function treeToGraph(
         id: `${node.parentId}->${node.id}`,
         source: node.parentId,
         target: node.id,
-        type: "customBranchEdge",
+        type: "mindMapEdge",
         animated: isTargetStreaming,
         data: {
-          isActive: isEdgeInActiveLineage,
+          isActiveLineage: isEdgeInActiveLineage,
           isStreaming: isTargetStreaming,
           highlightedContext: node.highlightedContext,
         },
         markerEnd: {
           type: MarkerType.ArrowClosed,
-          width: 14,
-          height: 14,
-          color: isEdgeInActiveLineage ? "#18181b" : "#a1a1aa",
+          width: 12,
+          height: 12,
+          color: isEdgeInActiveLineage ? "#18181b" : "#d4d4d8",
         },
       });
     }
