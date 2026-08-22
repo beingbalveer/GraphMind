@@ -8,6 +8,8 @@ import {
   FolderGit2,
   Check,
   RotateCw,
+  PanelLeft,
+  PanelLeftClose,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -22,17 +24,23 @@ interface NavbarProps {
   workspaceName?: string;
   onOpenWorkspaceModal?: () => void;
   syncStatus?: "saved" | "syncing" | "offline";
+  isSidebarOpen?: boolean;
+  onToggleSidebar?: () => void;
+  onNewChat?: () => void;
 }
 
 export function Navbar({
-  onClearChat,
-  messageCount,
+  onClearChat: _onClearChat,
+  messageCount: _messageCount,
   breadcrumbs,
   viewMode = "chat",
   onViewModeChange,
   workspaceName = "Main Workspace",
   onOpenWorkspaceModal,
   syncStatus = "saved",
+  isSidebarOpen = false,
+  onToggleSidebar,
+  onNewChat,
 }: NavbarProps) {
   const [apiOnline, setApiOnline] = useState<boolean | null>(null);
 
@@ -52,9 +60,37 @@ export function Navbar({
   }, []);
 
   return (
-    <header className="h-13 border-b border-zinc-200/80 bg-white/80 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between z-30 shrink-0 select-none">
-      {/* Left: Brand + Workspace Selector */}
-      <div className="flex items-center space-x-2.5 shrink-0">
+    <header className="h-13 border-b border-zinc-200/80 bg-white/80 backdrop-blur-md px-3 sm:px-5 flex items-center justify-between z-30 shrink-0 select-none">
+      {/* Left: Sidebar Toggle + Brand + Workspace Selector */}
+      <div className="flex items-center space-x-2 shrink-0">
+        {onToggleSidebar && (
+          <Button
+            variant="ghost"
+            size="iconSm"
+            onClick={onToggleSidebar}
+            className="h-8 w-8 text-zinc-600 hover:text-zinc-950 cursor-pointer"
+            title={isSidebarOpen ? "Close sidebar (⌘S)" : "Open chats sidebar (⌘S)"}
+          >
+            {isSidebarOpen ? (
+              <PanelLeftClose className="w-4 h-4" />
+            ) : (
+              <PanelLeft className="w-4 h-4" />
+            )}
+          </Button>
+        )}
+
+        {onNewChat && !isSidebarOpen && (
+          <Button
+            variant="ghost"
+            size="iconSm"
+            onClick={onNewChat}
+            className="h-8 w-8 text-zinc-600 hover:text-zinc-950 cursor-pointer hidden sm:flex"
+            title="Start new chat (⌘N)"
+          >
+            <Plus className="w-4 h-4" />
+          </Button>
+        )}
+
         <div className="w-6 h-6 rounded-md bg-zinc-900 text-white flex items-center justify-center font-bold text-xs shadow-xs">
           🧠
         </div>
@@ -89,7 +125,7 @@ export function Navbar({
 
         {/* Sync Status Badge */}
         <div
-          className="hidden sm:flex items-center space-x-1 text-[11px] text-zinc-400 pl-1"
+          className="hidden md:flex items-center space-x-1 text-[11px] text-zinc-400 pl-1"
           title={
             syncStatus === "syncing"
               ? "Syncing graph changes to PostgreSQL database..."
@@ -99,36 +135,37 @@ export function Navbar({
           {syncStatus === "syncing" ? (
             <>
               <RotateCw className="w-3 h-3 animate-spin text-zinc-500" />
-              <span className="text-zinc-500">Syncing...</span>
+              <span>Syncing...</span>
             </>
+          ) : syncStatus === "offline" ? (
+            <span className="text-amber-500">Offline</span>
           ) : (
             <>
-              <Check className="w-3 h-3 text-emerald-600" />
-              <span className="text-zinc-400">Saved</span>
+              <Check className="w-3 h-3 text-emerald-500" />
+              <span>Saved</span>
             </>
           )}
         </div>
       </div>
 
       {/* Center: Branch Breadcrumbs */}
-      <div className="hidden md:flex items-center px-4 min-w-0">
+      <div className="hidden lg:flex items-center justify-center flex-1 mx-4 min-w-0">
         {breadcrumbs}
       </div>
 
-      {/* Right Controls: View Switcher + New Chat */}
-      <div className="flex items-center space-x-2.5 shrink-0">
-        {/* Chat vs Canvas View Switcher */}
-        {messageCount > 0 && onViewModeChange && (
-          <div className="flex items-center p-0.5 rounded-lg bg-zinc-100/90 border border-zinc-200/80 text-xs">
+      {/* Right: View Mode Toggle (Chat ⟷ 2D Spatial Canvas) & Actions */}
+      <div className="flex items-center space-x-2 shrink-0">
+        {/* Toggle Mode Pill Button */}
+        {onViewModeChange && (
+          <div className="flex items-center p-0.5 bg-zinc-100 border border-zinc-200/80 rounded-lg shadow-2xs">
             <button
               type="button"
               onClick={() => onViewModeChange("chat")}
-              className={`px-2.5 py-1 rounded-md font-medium transition-all flex items-center space-x-1.5 cursor-pointer ${
+              className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all cursor-pointer ${
                 viewMode === "chat"
-                  ? "bg-white text-zinc-900 shadow-2xs font-semibold"
+                  ? "bg-white text-zinc-950 shadow-2xs font-semibold"
                   : "text-zinc-500 hover:text-zinc-900"
               }`}
-              title="Chat Feed View"
             >
               <MessageSquare className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Chat</span>
@@ -136,30 +173,16 @@ export function Navbar({
             <button
               type="button"
               onClick={() => onViewModeChange("canvas")}
-              className={`px-2.5 py-1 rounded-md font-medium transition-all flex items-center space-x-1.5 cursor-pointer ${
+              className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all cursor-pointer ${
                 viewMode === "canvas"
-                  ? "bg-white text-zinc-900 shadow-2xs font-semibold"
+                  ? "bg-white text-zinc-950 shadow-2xs font-semibold"
                   : "text-zinc-500 hover:text-zinc-900"
               }`}
-              title="2D Spatial Graph Canvas"
             >
               <LayoutGrid className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Canvas</span>
             </button>
           </div>
-        )}
-
-        {messageCount > 0 && onClearChat && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClearChat}
-            className="text-zinc-500 hover:text-zinc-900 text-xs font-medium flex items-center space-x-1"
-            title="Start New Chat"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>New Chat</span>
-          </Button>
         )}
       </div>
     </header>

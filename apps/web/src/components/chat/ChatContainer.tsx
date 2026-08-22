@@ -6,6 +6,7 @@ import { getNodeChildren } from "@graphmind/shared";
 import { ChatMessage } from "./ChatMessage";
 import { ChatInput } from "./ChatInput";
 import { BranchBreadcrumbs } from "./BranchBreadcrumbs";
+import { ChatSidebar } from "./ChatSidebar";
 import { GraphCanvas } from "../canvas/GraphCanvas";
 import { FocusDrawer } from "../canvas/FocusDrawer";
 import { CommandPalette } from "../canvas/CommandPalette";
@@ -23,6 +24,7 @@ import {
   createWorkspace,
   fetchGraphSnapshot,
   saveGraphDelta,
+  deleteWorkspace,
   snapshotToTree,
 } from "@/lib/workspaceApi";
 
@@ -55,6 +57,8 @@ export function ChatContainer({
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
   const [isWorkspaceModalOpen, setIsWorkspaceModalOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [workspaces, setWorkspaces] = useState<WorkspaceItem[]>([]);
   const [currentWorkspace, setCurrentWorkspace] = useState<WorkspaceItem | null>(null);
   const [syncStatus, setSyncStatus] = useState<"saved" | "syncing" | "offline">("saved");
   const [drawerNodeId, setDrawerNodeId] = useState<string | null>(null);
@@ -76,10 +80,23 @@ export function ChatContainer({
     scrollToBottom,
   } = useScrollAnchor({ threshold: 80 });
 
+  // Refresh workspace list
+  const refreshWorkspaces = useCallback(async () => {
+    try {
+      const list = await fetchWorkspaces();
+      setWorkspaces(list);
+      return list;
+    } catch {
+      return [];
+    }
+  }, []);
+
   // Initialize or fetch workspace from backend and sync URL
   useEffect(() => {
     async function initWorkspace() {
       try {
+        const list = await refreshWorkspaces();
+
         if (initialWorkspaceId) {
           const snapshot = await fetchGraphSnapshot(initialWorkspaceId);
           if (snapshot) {
@@ -95,7 +112,6 @@ export function ChatContainer({
           }
         }
 
-        const list = await fetchWorkspaces();
         if (list && list.length > 0) {
           const ws = list[0];
           setCurrentWorkspace(ws);
@@ -110,8 +126,9 @@ export function ChatContainer({
             window.history.replaceState(null, "", `/graph/${ws.id}`);
           }
         } else {
-          const created = await createWorkspace("Main Workspace", "Default knowledge tree");
+          const created = await createWorkspace("New Chat", "Conversation tree");
           setCurrentWorkspace(created);
+          setWorkspaces([created]);
           if (typeof window !== "undefined") {
             window.history.replaceState(null, "", `/graph/${created.id}`);
           }
@@ -121,7 +138,60 @@ export function ChatContainer({
       }
     }
     initWorkspace();
-  }, [initialWorkspaceId, loadTree]);
+  }, [initialWorkspaceId, loadTree, refreshWorkspaces]);
+
+  // Start a completely fresh chat tree
+  const handleNewChat = useCallback(async () => {
+    try {
+      const created = await createWorkspace("New Chat", "Conversation tree");
+      setCurrentWorkspace(created);
+      clearMessages();
+      setSideBranchNodeId(null);
+      setIsDrawerOpen(false);
+      await refreshWorkspaces();
+      if (typeof window !== "undefined") {
+        window.history.replaceState(null, "", `/graph/${created.id}`);
+      }
+    } catch {
+      clearMessages();
+    }
+  }, [clearMessages, refreshWorkspaces]);
+
+  // Select an existing workspace from sidebar or modal
+  const handleSelectWorkspace = useCallback(
+    async (ws: WorkspaceItem) => {
+      setCurrentWorkspace(ws);
+      setSideBranchNodeId(null);
+      setIsDrawerOpen(false);
+      if (typeof window !== "undefined") {
+        window.history.replaceState(null, "", `/graph/${ws.id}`);
+      }
+      const snapshot = await fetchGraphSnapshot(ws.id);
+      if (snapshot) {
+        const loadedTree = snapshotToTree(snapshot);
+        loadTree(loadedTree);
+      } else {
+        clearMessages();
+      }
+    },
+    [loadTree, clearMessages]
+  );
+
+  // Delete a workspace
+  const handleDeleteWorkspace = useCallback(
+    async (id: string) => {
+      await deleteWorkspace(id);
+      const remaining = await refreshWorkspaces();
+      if (currentWorkspace?.id === id) {
+        if (remaining.length > 0) {
+          handleSelectWorkspace(remaining[0]);
+        } else {
+          handleNewChat();
+        }
+      }
+    },
+    [currentWorkspace, refreshWorkspaces, handleSelectWorkspace, handleNewChat]
+  );
 
   // Auto-scroll when user is at the bottom in chat mode
   useEffect(() => {
@@ -129,6 +199,30 @@ export function ChatContainer({
       scrollToBottom(false);
     }
   }, [activeMessages, isStreaming, isAtBottom, scrollToBottom, viewMode]);
+
+  // Auto-rename chat from first user message if still titled "New Chat"
+  const handleSendMessage = useCallback(
+    async (prompt: string, provider = "gemini", model = "gemini-2.5-flash") => {
+      if (!currentWorkspace) return;
+
+      // Auto-name chat based on first query
+      if (
+        (currentWorkspace.name === "New Chat" || currentWorkspace.name === "Main Workspace") &&
+        (!tree || Object.keys(tree.nodes).length === 0)
+      ) {
+        const cleanTitle = prompt.slice(0, 36).trim() + (prompt.length > 36 ? "..." : "");
+        const updated = { ...currentWorkspace, name: cleanTitle };
+        setCurrentWorkspace(updated);
+        saveGraphDelta(currentWorkspace.id, {
+          workspaceUpdate: { name: cleanTitle },
+        }).then(() => refreshWorkspaces());
+      }
+
+      await sendMessage(prompt, provider, model);
+      scrollToBottom(true);
+    },
+    [currentWorkspace, tree, sendMessage, scrollToBottom, refreshWorkspaces]
+  );
 
   // Debounced auto-save to PostgreSQL backend whenever tree changes
   useEffect(() => {
@@ -276,6 +370,8 @@ export function ChatContainer({
     onCenterActive: () => centerActiveRef.current?.(),
     onAutoLayout: () => autoLayoutRef.current?.(),
     onCommandPalette: () => setIsPaletteOpen((prev) => !prev),
+    onToggleSidebar: () => setIsSidebarOpen((prev) => !prev),
+    onNewChat: handleNewChat,
   });
 
   const activeDrawerNode = (tree && drawerNodeId && tree.nodes[drawerNodeId])
@@ -313,6 +409,9 @@ export function ChatContainer({
         workspaceName={currentWorkspace?.name || "Main Workspace"}
         onOpenWorkspaceModal={() => setIsWorkspaceModalOpen(true)}
         messageCount={activeMessages.length}
+        isSidebarOpen={isSidebarOpen}
+        onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
+        onNewChat={handleNewChat}
         onClearChat={() => {
           clearMessages();
           setIsDrawerOpen(false);
@@ -326,179 +425,191 @@ export function ChatContainer({
         }
       />
 
-      {/* Main Content Area: Split-Pane Chat View OR 2D Spatial Canvas */}
+      {/* Main App Layout: Sidebar + Canvas / Split-Pane Chat */}
       <div className="flex-1 min-h-0 flex relative overflow-hidden">
-        {viewMode === "canvas" ? (
-          /* 2D Spatial Mind Map & Knowledge Graph Canvas View */
-          <div className="w-full h-full relative">
-            <GraphCanvas
-              tree={tree}
-              isStreaming={isStreaming}
-              onSelectNode={handleSelectTreeNode}
-              onExploreBranch={(nodeId, text) => {
-                setBranchContext(nodeId, text || "");
-                setIsDrawerOpen(true);
-              }}
-              onSwitchToChat={handleSwitchToChat}
-              onRetry={retryLastMessage}
-              onFitViewRef={fitViewRef}
-              onCenterActiveRef={centerActiveRef}
-              onAutoLayoutRef={autoLayoutRef}
-            />
+        {/* Left ChatGPT-style Chat History Sidebar */}
+        <ChatSidebar
+          isOpen={isSidebarOpen}
+          onToggle={() => setIsSidebarOpen((prev) => !prev)}
+          workspaces={workspaces}
+          activeWorkspaceId={currentWorkspace?.id || null}
+          onSelectWorkspace={handleSelectWorkspace}
+          onNewChat={handleNewChat}
+          onDeleteWorkspace={handleDeleteWorkspace}
+        />
 
-            {/* Side Focus Reader Drawer */}
-            <FocusDrawer
-              node={activeDrawerNode}
-              tree={tree}
-              isOpen={isDrawerOpen}
-              isStreaming={isStreaming}
-              onClose={() => setIsDrawerOpen(false)}
-              onSelectBranch={(childId) => {
-                switchBranch(childId);
-                setDrawerNodeId(childId);
-              }}
-              onExploreBranch={(parentId, highlightedText) => {
-                setBranchContext(parentId, highlightedText);
-              }}
-              onSendFollowUp={(prompt, parentId, highlightedText) => {
-                sendMessage(prompt, "gemini", "gemini-2.5-flash", {
-                  parentNodeId: parentId,
-                  highlightedText: highlightedText || "",
-                });
-              }}
-            />
-          </div>
-        ) : (
-          /* Resizable Parallel Split-Pane Chat View */
-          <ResizableSplitPane
-            isOpen={Boolean(sideBranchNodeId)}
-            onClose={() => setSideBranchNodeId(null)}
-            leftPane={
-              <div className="h-full flex flex-col min-w-0 relative">
-                <main
-                  ref={scrollRef}
-                  className="flex-1 overflow-y-auto min-h-0 flex flex-col bg-white"
-                >
-                  {activeMessages.length === 0 ? (
-                    /* Clean Empty State */
-                    <div className="flex-1 flex flex-col items-center justify-center max-w-2xl mx-auto px-4 py-8 text-center space-y-8 my-auto">
-                      <div className="space-y-2">
-                        <div className="w-10 h-10 rounded-xl bg-zinc-900 text-white flex items-center justify-center font-bold text-lg mx-auto shadow-xs">
-                          🧠
+        {/* Content Area */}
+        <div className="flex-1 min-w-0 flex relative overflow-hidden">
+          {viewMode === "canvas" ? (
+            /* 2D Spatial Mind Map & Knowledge Graph Canvas View */
+            <div className="w-full h-full relative">
+              <GraphCanvas
+                tree={tree}
+                isStreaming={isStreaming}
+                onSelectNode={handleSelectTreeNode}
+                onExploreBranch={(nodeId, text) => {
+                  setBranchContext(nodeId, text || "");
+                  setIsDrawerOpen(true);
+                }}
+                onSwitchToChat={handleSwitchToChat}
+                onRetry={retryLastMessage}
+                onFitViewRef={fitViewRef}
+                onCenterActiveRef={centerActiveRef}
+                onAutoLayoutRef={autoLayoutRef}
+              />
+
+              {/* Side Focus Reader Drawer */}
+              <FocusDrawer
+                node={activeDrawerNode}
+                tree={tree}
+                isOpen={isDrawerOpen}
+                isStreaming={isStreaming}
+                onClose={() => setIsDrawerOpen(false)}
+                onSelectBranch={(childId) => {
+                  switchBranch(childId);
+                  setDrawerNodeId(childId);
+                }}
+                onExploreBranch={(parentId, highlightedText) => {
+                  setBranchContext(parentId, highlightedText);
+                }}
+                onSendFollowUp={(prompt, parentId, highlightedText) => {
+                  sendMessage(prompt, "gemini", "gemini-2.5-flash", {
+                    parentNodeId: parentId,
+                    highlightedText: highlightedText || "",
+                  });
+                }}
+              />
+            </div>
+          ) : (
+            /* Resizable Parallel Split-Pane Chat View */
+            <ResizableSplitPane
+              isOpen={Boolean(sideBranchNodeId)}
+              onClose={() => setSideBranchNodeId(null)}
+              leftPane={
+                <div className="h-full flex flex-col min-w-0 relative">
+                  <main
+                    ref={scrollRef}
+                    className="flex-1 overflow-y-auto min-h-0 flex flex-col bg-white"
+                  >
+                    {activeMessages.length === 0 ? (
+                      /* Clean Empty State */
+                      <div className="flex-1 flex flex-col items-center justify-center max-w-2xl mx-auto px-4 py-8 text-center space-y-8 my-auto">
+                        <div className="space-y-2">
+                          <div className="w-10 h-10 rounded-xl bg-zinc-900 text-white flex items-center justify-center font-bold text-lg mx-auto shadow-xs">
+                            🧠
+                          </div>
+                          <h2 className="text-xl font-semibold text-zinc-900 tracking-tight">
+                            Where knowledge connects
+                          </h2>
+                          <p className="text-xs sm:text-sm text-zinc-500 max-w-sm mx-auto leading-relaxed">
+                            Ask a technical question, explore system architecture, or test streaming.
+                          </p>
                         </div>
-                        <h2 className="text-xl font-semibold text-zinc-900 tracking-tight">
-                          Where knowledge connects
-                        </h2>
-                        <p className="text-xs sm:text-sm text-zinc-500 max-w-sm mx-auto leading-relaxed">
-                          Ask a technical question, explore system architecture, or test streaming.
-                        </p>
-                      </div>
 
-                      {/* Quick Starter Cards */}
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 w-full text-left">
-                        {starterPrompts.map((item, index) => {
-                          const Icon = item.icon;
+                        {/* Quick Starter Cards */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 w-full text-left">
+                          {starterPrompts.map((item, index) => {
+                            const Icon = item.icon;
+                            return (
+                              <button
+                                key={index}
+                                type="button"
+                                onClick={() => {
+                                  handleSendMessage(item.prompt, "gemini", "gemini-2.5-flash");
+                                }}
+                                className="p-3 rounded-xl border border-zinc-200/80 bg-zinc-50/50 hover:bg-zinc-100/80 hover:border-zinc-300 text-left transition-all duration-150 group cursor-pointer shadow-2xs"
+                              >
+                                <div className="w-6 h-6 rounded-md bg-white border border-zinc-200 flex items-center justify-center mb-2 text-zinc-700 group-hover:text-zinc-950 transition-colors shadow-2xs">
+                                  <Icon className="w-3.5 h-3.5" />
+                                </div>
+                                <h3 className="text-xs font-semibold text-zinc-800 group-hover:text-zinc-950 mb-1 leading-snug">
+                                  {item.title}
+                                </h3>
+                                <p className="text-[11px] text-zinc-500 line-clamp-2 leading-relaxed">
+                                  {item.subtitle}
+                                </p>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ) : (
+                      /* Main Active Lineage Branch Message Stream */
+                      <div className="w-full pb-4">
+                        {activeMessages.map((node, index) => {
+                          const isLastAssistant =
+                            index === activeMessages.length - 1 &&
+                            node.role === "assistant" &&
+                            isStreaming &&
+                            !sideBranchNodeId;
+
                           return (
-                            <button
-                              key={index}
-                              type="button"
-                              onClick={() => {
-                                sendMessage(item.prompt, "gemini", "gemini-2.5-flash");
-                                scrollToBottom(true);
+                            <ChatMessage
+                              key={node.id}
+                              message={{
+                                ...node,
+                                isStreaming: isLastAssistant,
                               }}
-                              className="p-3 rounded-xl border border-zinc-200/80 bg-zinc-50/50 hover:bg-zinc-100/80 hover:border-zinc-300 text-left transition-all duration-150 group cursor-pointer shadow-2xs"
-                            >
-                              <div className="w-6 h-6 rounded-md bg-white border border-zinc-200 flex items-center justify-center mb-2 text-zinc-700 group-hover:text-zinc-950 transition-colors shadow-2xs">
-                                <Icon className="w-3.5 h-3.5" />
-                              </div>
-                              <h3 className="text-xs font-semibold text-zinc-800 group-hover:text-zinc-950 mb-1 leading-snug">
-                                {item.title}
-                              </h3>
-                              <p className="text-[11px] text-zinc-500 line-clamp-2 leading-relaxed">
-                                {item.subtitle}
-                              </p>
-                            </button>
+                              tree={tree}
+                              onRetry={retryLastMessage}
+                              onExploreBranch={handleExplainBranch}
+                              onOpenSideBranch={handleOpenSideBranch}
+                            />
                           );
                         })}
+                        <div ref={bottomRef} />
                       </div>
-                    </div>
-                  ) : (
-                    /* Main Active Lineage Branch Message Stream */
-                    <div className="w-full pb-4">
-                      {activeMessages.map((node, index) => {
-                        const isLastAssistant =
-                          index === activeMessages.length - 1 &&
-                          node.role === "assistant" &&
-                          isStreaming &&
-                          !sideBranchNodeId;
+                    )}
+                  </main>
 
-                        return (
-                          <ChatMessage
-                            key={node.id}
-                            message={{
-                              ...node,
-                              isStreaming: isLastAssistant,
-                            }}
-                            tree={tree}
-                            onRetry={retryLastMessage}
-                            onExploreBranch={handleExplainBranch}
-                            onOpenSideBranch={handleOpenSideBranch}
-                          />
-                        );
-                      })}
-                      <div ref={bottomRef} />
-                    </div>
-                  )}
-                </main>
+                  {/* Left Main Chat Input Bar */}
+                  <div className="relative shrink-0 bg-gradient-to-t from-white via-white to-transparent pt-2 z-20">
+                    {showScrollButton && activeMessages.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => scrollToBottom(true)}
+                        className="absolute -top-9 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-white border border-zinc-200 shadow-md text-zinc-700 hover:text-zinc-950 hover:border-zinc-300 text-xs font-medium flex items-center space-x-1.5 transition-all animate-in fade-in-50 slide-in-from-bottom-2 duration-150 cursor-pointer select-none"
+                      >
+                        <span>Scroll to bottom</span>
+                        <ArrowDown className="w-3 h-3" />
+                      </button>
+                    )}
 
-                {/* Left Main Chat Input Bar */}
-                <div className="relative shrink-0 bg-gradient-to-t from-white via-white to-transparent pt-2 z-20">
-                  {showScrollButton && activeMessages.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => scrollToBottom(true)}
-                      className="absolute -top-9 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-white border border-zinc-200 shadow-md text-zinc-700 hover:text-zinc-950 hover:border-zinc-300 text-xs font-medium flex items-center space-x-1.5 transition-all animate-in fade-in-50 slide-in-from-bottom-2 duration-150 cursor-pointer select-none"
-                    >
-                      <span>Scroll to bottom</span>
-                      <ArrowDown className="w-3 h-3" />
-                    </button>
-                  )}
-
-                  <ChatInput
-                    onSendMessage={(prompt, provider, model) => {
-                      sendMessage(prompt, provider, model);
-                      scrollToBottom(true);
-                    }}
-                    onStopStreaming={stopStreaming}
-                    isStreaming={isStreaming}
-                    activeBranch={activeBranch}
-                    onClearBranch={clearBranchContext}
-                  />
+                    <ChatInput
+                      onSendMessage={(prompt, provider, model) => {
+                        handleSendMessage(prompt, provider, model);
+                      }}
+                      onStopStreaming={stopStreaming}
+                      isStreaming={isStreaming}
+                      activeBranch={activeBranch}
+                      onClearBranch={clearBranchContext}
+                    />
+                  </div>
                 </div>
-              </div>
-            }
-            rightPane={
-              sideBranchNodeId ? (
-                <BranchChatPane
-                  tree={tree}
-                  branchLeafNodeId={sideBranchNodeId}
-                  highlightedContext={sideBranchExcerpt || undefined}
-                  isStreaming={isStreaming}
-                  onClose={() => setSideBranchNodeId(null)}
-                  onSendBranchMessage={(prompt, parentNodeId) => {
-                    sendMessage(prompt, "gemini", "gemini-2.5-flash", {
-                      branchOverride: { parentNodeId, highlightedText: "" },
-                      preserveActiveNodeId: true,
-                      onNodeCreated: ({ assistantNodeId }) => {
-                        setSideBranchNodeId(assistantNodeId);
-                      },
-                    });
-                  }}
-                />
-              ) : null
-            }
-          />
-        )}
+              }
+              rightPane={
+                sideBranchNodeId ? (
+                  <BranchChatPane
+                    tree={tree}
+                    branchLeafNodeId={sideBranchNodeId}
+                    highlightedContext={sideBranchExcerpt || undefined}
+                    isStreaming={isStreaming}
+                    onClose={() => setSideBranchNodeId(null)}
+                    onSendBranchMessage={(prompt, parentNodeId) => {
+                      sendMessage(prompt, "gemini", "gemini-2.5-flash", {
+                        branchOverride: { parentNodeId, highlightedText: "" },
+                        preserveActiveNodeId: true,
+                        onNodeCreated: ({ assistantNodeId }) => {
+                          setSideBranchNodeId(assistantNodeId);
+                        },
+                      });
+                    }}
+                  />
+                ) : null
+              }
+            />
+          )}
+        </div>
       </div>
 
       {/* Global Command Palette (⌘K) */}
@@ -524,18 +635,7 @@ export function ChatContainer({
         isOpen={isWorkspaceModalOpen}
         onClose={() => setIsWorkspaceModalOpen(false)}
         currentWorkspace={currentWorkspace}
-        onSelectWorkspace={async (ws) => {
-          setCurrentWorkspace(ws);
-          setSideBranchNodeId(null);
-          if (typeof window !== "undefined") {
-            window.history.replaceState(null, "", `/graph/${ws.id}`);
-          }
-          const snapshot = await fetchGraphSnapshot(ws.id);
-          if (snapshot) {
-            const loadedTree = snapshotToTree(snapshot);
-            loadTree(loadedTree);
-          }
-        }}
+        onSelectWorkspace={handleSelectWorkspace}
         activeTree={tree}
       />
 

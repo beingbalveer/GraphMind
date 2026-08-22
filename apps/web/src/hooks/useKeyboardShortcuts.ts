@@ -11,6 +11,8 @@ interface KeyboardShortcutsHandlers {
   onCenterActive?: () => void;
   onAutoLayout?: () => void;
   onCommandPalette?: () => void;
+  onToggleSidebar?: () => void;
+  onNewChat?: () => void;
 }
 
 export function useKeyboardShortcuts({
@@ -22,6 +24,8 @@ export function useKeyboardShortcuts({
   onCenterActive,
   onAutoLayout,
   onCommandPalette,
+  onToggleSidebar,
+  onNewChat,
 }: KeyboardShortcutsHandlers) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -34,49 +38,63 @@ export function useKeyboardShortcuts({
         return;
       }
 
-      // 2. Recompute Auto-Layout: Cmd+L / Ctrl+L
+      // 2. Toggle Sidebar: Cmd+B / Ctrl+B
+      if (isModifier && e.key.toLowerCase() === "b") {
+        e.preventDefault();
+        onToggleSidebar?.();
+        return;
+      }
+
+      // 3. New Chat: Cmd+Shift+O / Ctrl+Shift+O or Cmd+N (when allowed)
+      if (isModifier && e.shiftKey && e.key.toLowerCase() === "o") {
+        e.preventDefault();
+        onNewChat?.();
+        return;
+      }
+
+      // 4. Recompute Auto-Layout: Cmd+L / Ctrl+L
       if (isModifier && e.key.toLowerCase() === "l") {
         e.preventDefault();
         onAutoLayout?.();
         return;
       }
 
-      // 3. Previous Branch: Cmd+[ / Ctrl+[
+      // 5. Previous Branch: Cmd+[ / Ctrl+[
       if (isModifier && e.key === "[") {
         e.preventDefault();
         onPrevBranch?.();
         return;
       }
 
-      // 4. Next Branch: Cmd+] / Ctrl+]
+      // 6. Next Branch: Cmd+] / Ctrl+]
       if (isModifier && e.key === "]") {
         e.preventDefault();
         onNextBranch?.();
         return;
       }
 
-      // 5. Jump to Root / Top: Cmd+Shift+Up / Ctrl+Shift+Up
+      // 7. Jump to Root / Top: Cmd+Shift+Up / Ctrl+Shift+Up
       if (isModifier && e.shiftKey && e.key === "ArrowUp") {
         e.preventDefault();
         onJumpToRoot?.();
         return;
       }
 
-      // 6. Fit View on Canvas: Cmd+0 / Ctrl+0
+      // 8. Fit View on Canvas: Cmd+0 / Ctrl+0
       if (isModifier && e.key === "0") {
         e.preventDefault();
         onFitView?.();
         return;
       }
 
-      // 7. Center on Active Node: Cmd+. / Ctrl+.
+      // 9. Center on Active Node: Cmd+. / Ctrl+.
       if (isModifier && e.key === ".") {
         e.preventDefault();
         onCenterActive?.();
         return;
       }
 
-      // 8. Escape: Close palette / drawer / side branch
+      // 10. Escape: Close palette / drawer / side branch
       if (e.key === "Escape") {
         onEscape?.();
         return;
@@ -94,5 +112,7 @@ export function useKeyboardShortcuts({
     onCenterActive,
     onAutoLayout,
     onCommandPalette,
+    onToggleSidebar,
+    onNewChat,
   ]);
 }
