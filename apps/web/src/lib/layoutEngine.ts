@@ -1,21 +1,21 @@
 import dagre from "@dagrejs/dagre";
 import { Node, Edge, Position } from "@xyflow/react";
-import { MindMapNodeData } from "@/components/canvas/MindMapNode";
+import { ThreadNodeData } from "@/components/canvas/ThreadGraphNode";
 
 export type LayoutDirection = "TB" | "LR";
 
-const NODE_WIDTH = 220;
-const NODE_HEIGHT = 44;
+const NODE_WIDTH = 230;
+const NODE_HEIGHT = 52;
 
 /**
- * Computes deterministic, collision-free hierarchical coordinates for nodes and edges
+ * Computes deterministic, collision-free hierarchical coordinates for Thread nodes and edges
  * using the Dagre directed graph layout engine.
  */
 export function getLayoutedElements(
-  nodes: Node<MindMapNodeData>[],
+  nodes: Node<ThreadNodeData>[],
   edges: Edge[],
   direction: LayoutDirection = "LR"
-): { nodes: Node<MindMapNodeData>[]; edges: Edge[] } {
+): { nodes: Node<ThreadNodeData>[]; edges: Edge[] } {
   if (nodes.length === 0) {
     return { nodes: [], edges: [] };
   }
@@ -26,13 +26,13 @@ export function getLayoutedElements(
 
   dagreGraph.setGraph({
     rankdir: direction,
-    ranksep: isHorizontal ? 75 : 60,
-    nodesep: isHorizontal ? 26 : 50,
+    ranksep: isHorizontal ? 90 : 70,
+    nodesep: isHorizontal ? 35 : 60,
     marginx: 40,
     marginy: 40,
   });
 
-  // Register nodes with compact mind map dimensions
+  // Register nodes with compact note dimensions
   for (const node of nodes) {
     dagreGraph.setNode(node.id, {
       width: NODE_WIDTH,

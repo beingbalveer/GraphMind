@@ -27,7 +27,7 @@ import {
 import { ConversationTree } from "@graphmind/shared";
 import { treeToGraph } from "@/lib/treeToGraph";
 import { getLayoutedElements, LayoutDirection } from "@/lib/layoutEngine";
-import { MindMapNode, MindMapNodeData, ZoomMode } from "./MindMapNode";
+import { ThreadGraphNode, ThreadNodeData, ZoomMode } from "./ThreadGraphNode";
 import { MindMapEdge } from "./MindMapEdge";
 import { Button } from "@/components/ui/button";
 
@@ -44,7 +44,7 @@ interface GraphCanvasProps {
 }
 
 const nodeTypes = {
-  mindMapNode: MindMapNode,
+  threadGraphNode: ThreadGraphNode,
 };
 
 const edgeTypes = {
@@ -55,9 +55,6 @@ function FlowCanvas({
   tree,
   isStreaming = false,
   onSelectNode,
-  onExploreBranch,
-  onSwitchToChat,
-  onRetry,
   onFitViewRef,
   onCenterActiveRef,
   onAutoLayoutRef,
@@ -75,48 +72,45 @@ function FlowCanvas({
     return "capsule";
   }, [zoom]);
 
-  // Compute raw nodes & edges then layout with Dagre
+  // Compute Thread Nodes & Branch Edges
   const { initialNodes, initialEdges } = useMemo(() => {
     const raw = treeToGraph(tree, {
       activeNodeId: tree?.activeNodeId,
       isStreaming,
       zoomMode,
-      onExploreBranch,
-      onSwitchToChat,
-      onRetry,
     });
     const layouted = getLayoutedElements(raw.nodes, raw.edges, direction);
     return { initialNodes: layouted.nodes, initialEdges: layouted.edges };
-  }, [tree, isStreaming, zoomMode, onExploreBranch, onSwitchToChat, onRetry, direction]);
+  }, [tree, isStreaming, zoomMode, direction]);
 
-  const [nodes, setNodes, onNodesChange] = useNodesState<Node<MindMapNodeData>>(initialNodes);
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node<ThreadNodeData>>(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
-  // Synchronize graph nodes and edges whenever the tree state, zoomMode, or layout direction updates
+  // Synchronize graph nodes and edges whenever tree, zoomMode, or direction updates
   useEffect(() => {
     const raw = treeToGraph(tree, {
       activeNodeId: tree?.activeNodeId,
       isStreaming,
       zoomMode,
-      onExploreBranch,
-      onSwitchToChat,
-      onRetry,
     });
     const layouted = getLayoutedElements(raw.nodes, raw.edges, direction);
     setNodes(layouted.nodes);
     setEdges(layouted.edges);
-  }, [tree, isStreaming, zoomMode, onExploreBranch, onSwitchToChat, onRetry, direction, setNodes, setEdges]);
+  }, [tree, isStreaming, zoomMode, direction, setNodes, setEdges]);
 
-  // Center camera smoothly on a specific node card
+  // Center camera on a specific thread node
   const centerOnNode = useCallback(
-    (nodeId?: string) => {
-      const targetId = nodeId || tree?.activeNodeId;
+    (threadId?: string) => {
+      const targetId = threadId || tree?.activeNodeId;
       if (!targetId) return;
 
-      const targetNode = nodes.find((n) => n.id === targetId);
+      const targetNode = nodes.find(
+        (n) => n.id === targetId || n.data.thread.messages.some((m) => m.id === targetId)
+      );
+
       if (targetNode) {
-        const centerX = targetNode.position.x + 110;
-        const centerY = targetNode.position.y + 22;
+        const centerX = targetNode.position.x + 115;
+        const centerY = targetNode.position.y + 26;
         setCenter(centerX, centerY, { zoom: 1.0, duration: 400 });
       }
     },
@@ -136,15 +130,12 @@ function FlowCanvas({
       activeNodeId: tree?.activeNodeId,
       isStreaming,
       zoomMode,
-      onExploreBranch,
-      onSwitchToChat,
-      onRetry,
     });
     const layouted = getLayoutedElements(raw.nodes, raw.edges, direction);
     setNodes(layouted.nodes);
     setEdges(layouted.edges);
     handleFitView();
-  }, [tree, isStreaming, zoomMode, onExploreBranch, onSwitchToChat, onRetry, direction, handleFitView, setNodes, setEdges]);
+  }, [tree, isStreaming, zoomMode, direction, handleFitView, setNodes, setEdges]);
 
   const handleToggleDirection = useCallback(() => {
     const newDir = direction === "LR" ? "TB" : "LR";
@@ -161,7 +152,7 @@ function FlowCanvas({
     if (onAutoLayoutRef) onAutoLayoutRef.current = handleAutoLayout;
   }, [onFitViewRef, onCenterActiveRef, onAutoLayoutRef, handleFitView, centerOnNode, handleAutoLayout]);
 
-  // Fit view on initial load or smooth pan on branch switch
+  // Fit view on initial load or smooth pan
   useEffect(() => {
     if (nodes.length === 0) return;
 
@@ -171,13 +162,15 @@ function FlowCanvas({
         handleFitView();
       }, 60);
       return () => clearTimeout(timer);
-    } else if (tree?.activeNodeId) {
-      centerOnNode(tree.activeNodeId);
     }
-  }, [tree?.activeNodeId, nodes.length, handleFitView, centerOnNode]);
+  }, [nodes.length, handleFitView]);
 
   const handleNodeClick = (_: React.MouseEvent, node: Node) => {
-    onSelectNode(node.id);
+    const nodeData = node.data as ThreadNodeData;
+    if (nodeData?.thread) {
+      // Select the deepest leaf node of this thread to open full thread in Focus Drawer
+      onSelectNode(nodeData.thread.leafNodeId);
+    }
   };
 
   return (
@@ -212,8 +205,8 @@ function FlowCanvas({
           <MiniMap
             nodeStrokeWidth={2}
             nodeColor={(node) => {
-              const data = node.data as MindMapNodeData;
-              return data?.isActive ? "#18181b" : "#e4e4e7";
+              const data = node.data as ThreadNodeData;
+              return data?.thread?.isActive ? "#18181b" : "#e4e4e7";
             }}
             className="bg-white/95 border border-zinc-200/90 shadow-md rounded-xl overflow-hidden hidden sm:block"
           />
@@ -224,7 +217,7 @@ function FlowCanvas({
       <div className="absolute top-4 right-4 z-20 flex items-center space-x-1.5 p-1 bg-white/90 backdrop-blur-md border border-zinc-200/90 rounded-xl shadow-md select-none">
         {/* LOD Mode Indicator Badge */}
         <div className="px-2 py-0.5 rounded-lg bg-zinc-100 border border-zinc-200 text-[10px] font-semibold text-zinc-700 capitalize">
-          {zoomMode === "orb" ? "🌌 Galaxy View" : zoomMode === "detailed" ? "🔍 Focus View" : "🌿 Mind Map"}
+          {zoomMode === "orb" ? "🌌 Galaxy View" : zoomMode === "detailed" ? "🔍 Focus View" : "📄 Thread Tree"}
         </div>
         <div className="w-px h-4 bg-zinc-200 mx-0.5" />
 

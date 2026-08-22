@@ -1,156 +1,115 @@
-import {
-  ConversationTree,
-  TreeNode,
-  getNodeChildren,
-  getAncestorPath,
-} from "@graphmind/shared";
+import { ConversationTree } from "@graphmind/shared";
 import { Node, Edge, MarkerType } from "@xyflow/react";
-import { MindMapNodeData, ZoomMode } from "@/components/canvas/MindMapNode";
-
-export interface CustomNodeData {
-  node: TreeNode;
-  isRoot: boolean;
-  isActive: boolean;
-  isStreaming?: boolean;
-  totalSiblings?: number;
-  siblingIndex?: number;
-  childCount?: number;
-  zoomMode?: ZoomMode;
-  onExploreBranch?: (nodeId: string, contextText?: string) => void;
-  onSwitchToChat?: (nodeId: string) => void;
-  onRetry?: () => void;
-  [key: string]: unknown;
-}
+import { extractConversationThreads, ConversationThread } from "./threadUtils";
+import { ThreadNodeData, ZoomMode } from "@/components/canvas/ThreadGraphNode";
 
 export interface TreeToGraphOptions {
   activeNodeId?: string;
   isStreaming?: boolean;
   zoomMode?: ZoomMode;
-  onExploreBranch?: (nodeId: string, contextText?: string) => void;
-  onSwitchToChat?: (nodeId: string) => void;
-  onRetry?: () => void;
+  onSelectThread?: (threadId: string) => void;
 }
 
 /**
- * Transform a ConversationTree into positioned React Flow nodes and custom directed edges.
+ * Transform a ConversationTree into high-level Thread Nodes (Obsidian Note style) and directed branch edges.
  */
 export function treeToGraph(
   tree: ConversationTree | null,
   options?: TreeToGraphOptions
-): { nodes: Node<MindMapNodeData>[]; edges: Edge[] } {
+): { nodes: Node<ThreadNodeData>[]; edges: Edge[]; threads: ConversationThread[] } {
   if (!tree || !tree.rootNodeId || !tree.nodes[tree.rootNodeId]) {
-    return { nodes: [], edges: [] };
+    return { nodes: [], edges: [], threads: [] };
   }
 
   const {
     activeNodeId = tree.activeNodeId,
     isStreaming = false,
     zoomMode = "capsule",
-    onExploreBranch,
-    onSwitchToChat,
-    onRetry,
+    onSelectThread,
   } = options || {};
 
-  const nodes: Node<MindMapNodeData>[] = [];
+  const { threads, edges: rawEdges } = extractConversationThreads(
+    tree,
+    activeNodeId,
+    isStreaming
+  );
+
+  const nodes: Node<ThreadNodeData>[] = [];
   const edges: Edge[] = [];
-  const rootNode = tree.nodes[tree.rootNodeId];
 
-  // Active lineage path nodes set
-  const activePath = getAncestorPath(tree, activeNodeId);
-  const activePathIds = new Set(activePath.map((n) => n.id));
+  // Build tree hierarchy layout mapping
+  const threadMap = new Map<string, ConversationThread>();
+  threads.forEach((t) => threadMap.set(t.id, t));
 
-  // Map to track coordinates
   let leafCounter = 0;
   const positions = new Map<string, { x: number; y: number }>();
 
-  // Helper function to assign hierarchical coordinates (horizontal layout: x is depth, y is sibling order)
-  function calculatePositions(node: TreeNode, depth: number) {
-    const children = getNodeChildren(tree!, node.id);
+  function calculatePositions(threadId: string, depth: number) {
+    const thread = threadMap.get(threadId);
+    if (!thread) return 0;
 
-    if (children.length === 0) {
-      const x = depth * 280;
-      const y = leafCounter * 60;
-      positions.set(node.id, { x, y });
+    const childThreads = threads.filter((t) => t.parentThreadId === threadId);
+
+    if (childThreads.length === 0) {
+      const x = depth * 320;
+      const y = leafCounter * 80;
+      positions.set(threadId, { x, y });
       leafCounter += 1;
       return y;
     }
 
     const childYCoords: number[] = [];
-    for (const child of children) {
-      const childY = calculatePositions(child, depth + 1);
+    for (const child of childThreads) {
+      const childY = calculatePositions(child.id, depth + 1);
       childYCoords.push(childY);
     }
 
-    // Center parent relative to children
     const midY = (childYCoords[0] + childYCoords[childYCoords.length - 1]) / 2;
-    const x = depth * 280;
-    positions.set(node.id, { x, y: midY });
+    const x = depth * 320;
+    positions.set(threadId, { x, y: midY });
     return midY;
   }
 
-  calculatePositions(rootNode, 0);
-
-  // Build React Flow nodes and edges
-  for (const node of Object.values(tree.nodes)) {
-    const pos = positions.get(node.id) || { x: 0, y: 0 };
-    const isActive = node.id === activeNodeId;
-    const isRoot = node.id === tree.rootNodeId;
-    const isNodeStreaming = isActive && node.role === "assistant" && isStreaming;
-
-    let totalSiblings = 1;
-    let siblingIndex = 0;
-    if (node.parentId && tree.nodes[node.parentId]) {
-      const siblings = getNodeChildren(tree, node.parentId);
-      totalSiblings = siblings.length;
-      siblingIndex = siblings.findIndex((s) => s.id === node.id);
-    }
-
-    const children = getNodeChildren(tree, node.id);
-
-    nodes.push({
-      id: node.id,
-      type: "mindMapNode",
-      position: pos,
-      data: {
-        node,
-        isRoot,
-        isActive,
-        isStreaming: isNodeStreaming,
-        totalSiblings,
-        siblingIndex,
-        childCount: children.length,
-        zoomMode,
-        onExploreBranch,
-        onSwitchToChat,
-        onRetry,
-      },
-    });
-
-    if (node.parentId && tree.nodes[node.parentId]) {
-      const isEdgeInActiveLineage =
-        activePathIds.has(node.parentId) && activePathIds.has(node.id);
-      const isTargetStreaming = isStreaming && node.id === activeNodeId;
-
-      edges.push({
-        id: `${node.parentId}->${node.id}`,
-        source: node.parentId,
-        target: node.id,
-        type: "mindMapEdge",
-        animated: isTargetStreaming,
-        data: {
-          isActiveLineage: isEdgeInActiveLineage,
-          isStreaming: isTargetStreaming,
-          highlightedContext: node.highlightedContext,
-        },
-        markerEnd: {
-          type: MarkerType.ArrowClosed,
-          width: 12,
-          height: 12,
-          color: isEdgeInActiveLineage ? "#18181b" : "#d4d4d8",
-        },
-      });
-    }
+  const rootThread = threads.find((t) => !t.parentThreadId);
+  if (rootThread) {
+    calculatePositions(rootThread.id, 0);
   }
 
-  return { nodes, edges };
+  for (const thread of threads) {
+    const pos = positions.get(thread.id) || { x: 0, y: 0 };
+
+    nodes.push({
+      id: thread.id,
+      type: "threadGraphNode",
+      position: pos,
+      data: {
+        thread,
+        zoomMode,
+        onSelectThread,
+      },
+    });
+  }
+
+  for (const edge of rawEdges) {
+    edges.push({
+      id: edge.id,
+      source: edge.sourceThreadId,
+      target: edge.targetThreadId,
+      type: "mindMapEdge",
+      animated: edge.isStreaming,
+      data: {
+        isActiveLineage: edge.isActive,
+        isStreaming: edge.isStreaming,
+        highlightedContext: edge.highlightedContext,
+      },
+      markerEnd: {
+        type: MarkerType.ArrowClosed,
+        width: 14,
+        height: 14,
+        color: edge.isActive ? "#18181b" : "#d4d4d8",
+      },
+    });
+  }
+
+  return { nodes, edges, threads };
 }

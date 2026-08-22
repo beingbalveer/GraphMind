@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useMemo, useEffect } from "react";
 import {
   X,
   User,
@@ -11,11 +11,9 @@ import {
   Copy,
   Check,
 } from "lucide-react";
-import { TreeNode, ConversationTree } from "@graphmind/shared";
+import { TreeNode, ConversationTree, getAncestorPath } from "@graphmind/shared";
 import { Button } from "@/components/ui/button";
-import { SelectionTooltip } from "../chat/SelectionTooltip";
-import { BranchSwitcher } from "../chat/BranchSwitcher";
-import { useTextSelection } from "@/hooks/useTextSelection";
+import { MarkdownRenderer } from "../chat/ChatMessage";
 
 interface FocusDrawerProps {
   node: TreeNode | null;
@@ -34,25 +32,33 @@ export function FocusDrawer({
   isOpen,
   isStreaming = false,
   onClose,
-  onSelectBranch,
-  onExploreBranch,
   onSendFollowUp,
 }: FocusDrawerProps) {
   const [copied, setCopied] = useState(false);
   const [drawerPrompt, setDrawerPrompt] = useState("");
-  const [activeHighlight, setActiveHighlight] = useState<string | null>(null);
-  const drawerBodyRef = useRef<HTMLDivElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
 
-  const { selection, clearSelection } = useTextSelection(drawerBodyRef);
+  // Compute all messages on this thread's lineage path
+  const threadMessages: TreeNode[] = useMemo(() => {
+    if (!tree || !node) return [];
+    return getAncestorPath(tree, node.id);
+  }, [tree, node]);
+
+  // Auto-scroll on new messages
+  useEffect(() => {
+    if (bottomRef.current) {
+      bottomRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [threadMessages, isStreaming]);
 
   if (!isOpen || !node) return null;
 
-  const isUser = node.role === "user";
-  const isAssistant = node.role === "assistant";
-
-  const handleCopy = async () => {
+  const handleCopyThread = async () => {
     try {
-      await navigator.clipboard.writeText(node.content);
+      const fullText = threadMessages
+        .map((m) => `${m.role === "user" ? "### You" : "### AI"}:\n${m.content}`)
+        .join("\n\n---\n\n");
+      await navigator.clipboard.writeText(fullText);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -60,18 +66,11 @@ export function FocusDrawer({
     }
   };
 
-  const handleExploreSelection = (text: string) => {
-    setActiveHighlight(text);
-    onExploreBranch(node.id, text);
-    clearSelection();
-  };
-
   const handleSubmitFollowUp = (e: React.FormEvent) => {
     e.preventDefault();
     if (!drawerPrompt.trim() || isStreaming) return;
-    onSendFollowUp(drawerPrompt.trim(), node.id, activeHighlight || undefined);
+    onSendFollowUp(drawerPrompt.trim(), node.id);
     setDrawerPrompt("");
-    setActiveHighlight(null);
   };
 
   return (
@@ -81,24 +80,22 @@ export function FocusDrawer({
       {/* Drawer Top Header */}
       <div className="h-14 px-5 border-b border-zinc-200/80 flex items-center justify-between shrink-0 bg-white/95 backdrop-blur-md">
         <div className="flex items-center space-x-2.5 min-w-0">
-          <div
-            className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-xs ${
-              isUser
-                ? "bg-zinc-100 text-zinc-700 border border-zinc-200"
-                : "bg-zinc-900 text-white shadow-2xs"
-            }`}
-          >
-            {isUser ? <User className="w-3.5 h-3.5" /> : <Sparkles className="w-3.5 h-3.5" />}
+          <div className="w-6 h-6 rounded-lg bg-zinc-900 text-white flex items-center justify-center shrink-0 text-xs shadow-2xs">
+            {node.highlightedContext ? (
+              <GitBranch className="w-3.5 h-3.5 text-emerald-400" />
+            ) : (
+              <Sparkles className="w-3.5 h-3.5" />
+            )}
           </div>
           <div className="min-w-0">
-            <span className="font-semibold text-xs tracking-tight text-zinc-900 capitalize">
-              {isUser ? "User Prompt" : "Assistant Response"}
+            <span className="font-semibold text-xs tracking-tight text-zinc-900 truncate block">
+              {node.highlightedContext
+                ? `Branch: "${node.highlightedContext}"`
+                : "Conversation Thread"}
             </span>
-            {node.model && (
-              <span className="text-[10px] text-zinc-400 font-mono ml-2">
-                {node.model}
-              </span>
-            )}
+            <span className="text-[10px] text-zinc-400 font-mono">
+              {threadMessages.length} message{threadMessages.length > 1 ? "s" : ""}
+            </span>
           </div>
         </div>
 
@@ -106,18 +103,22 @@ export function FocusDrawer({
           <Button
             variant="ghost"
             size="iconSm"
-            onClick={handleCopy}
-            className="h-7 w-7 text-zinc-500 hover:text-zinc-900"
-            title="Copy content"
+            onClick={handleCopyThread}
+            className="h-7 w-7 text-zinc-500 hover:text-zinc-900 cursor-pointer"
+            title="Copy entire thread to clipboard"
           >
-            {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+            {copied ? (
+              <Check className="w-3.5 h-3.5 text-emerald-600" />
+            ) : (
+              <Copy className="w-3.5 h-3.5" />
+            )}
           </Button>
 
           <Button
             variant="ghost"
             size="iconSm"
             onClick={onClose}
-            className="h-7 w-7 text-zinc-400 hover:text-zinc-900"
+            className="h-7 w-7 text-zinc-400 hover:text-zinc-900 cursor-pointer"
             title="Close Focus Drawer (Esc)"
           >
             <X className="w-4 h-4" />
@@ -125,83 +126,88 @@ export function FocusDrawer({
         </div>
       </div>
 
-      {/* Sibling Branch Switcher Bar if node has siblings */}
-      {tree && node.parentId && (
-        <div className="px-5 py-2 bg-zinc-50/70 border-b border-zinc-200/80 flex items-center justify-between text-xs">
-          <span className="text-[11px] text-zinc-500 font-medium">Branch Lineage</span>
-          <BranchSwitcher
-            tree={tree}
-            parentNodeId={node.parentId}
-            activeChildId={node.id}
-            onSelectBranch={onSelectBranch}
-          />
-        </div>
-      )}
+      {/* Drawer Scrollable Content Body with Full Markdown Rendering */}
+      <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 text-sm bg-zinc-50/40">
+        {threadMessages.map((msg, index) => {
+          const isUser = msg.role === "user";
+          const isAssistant = msg.role === "assistant";
+          const isLast = index === threadMessages.length - 1;
+          const isNodeStreaming = isLast && isAssistant && isStreaming;
 
-      {/* Drawer Scrollable Content Body */}
-      <div
-        ref={drawerBodyRef}
-        className="flex-1 overflow-y-auto p-5 sm:p-6 relative prose prose-zinc max-w-none text-zinc-800 text-sm leading-relaxed"
-      >
-        {/* Context Excerpt Badge */}
-        {node.highlightedContext && (
-          <div className="mb-4 not-prose flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-zinc-100/90 border border-zinc-200/80 text-xs text-zinc-700">
-            <GitBranch className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-            <span className="font-medium">Focusing on:</span>
-            <span className="italic truncate">&ldquo;{node.highlightedContext}&rdquo;</span>
-          </div>
-        )}
+          return (
+            <div
+              key={msg.id}
+              className={`p-4 rounded-2xl border transition-all ${
+                isUser
+                  ? "bg-zinc-100/90 border-zinc-200/90 ml-4 sm:ml-6"
+                  : "bg-white border-zinc-200/90 shadow-2xs mr-2 sm:mr-4"
+              }`}
+            >
+              {/* Message Header */}
+              <div className="flex items-center space-x-2 mb-2">
+                <div
+                  className={`w-5 h-5 rounded-full flex items-center justify-center text-xs ${
+                    isUser
+                      ? "bg-zinc-200 text-zinc-700"
+                      : "bg-zinc-900 text-white shadow-2xs"
+                  }`}
+                >
+                  {isUser ? <User className="w-3 h-3" /> : <Sparkles className="w-3 h-3" />}
+                </div>
+                <span className="text-xs font-semibold text-zinc-900 capitalize">
+                  {isUser ? "You" : "Assistant"}
+                </span>
+                {msg.model && (
+                  <span className="text-[10px] text-zinc-400 font-mono">
+                    {msg.model.replace("gemini-", "").replace("gpt-", "")}
+                  </span>
+                )}
+              </div>
 
-        {/* Text Content */}
-        <div className="whitespace-pre-wrap font-sans break-words">
-          {node.content || (isAssistant ? "Generating response..." : "Empty message")}
-        </div>
+              {/* Context Excerpt Badge if this message branched */}
+              {msg.highlightedContext && (
+                <div className="mb-2 inline-flex items-center space-x-1.5 px-2 py-0.5 rounded-md bg-zinc-100 border border-zinc-200/80 text-[11px] text-zinc-700">
+                  <GitBranch className="w-3 h-3 text-zinc-500" />
+                  <span className="font-semibold text-zinc-900">Branch:</span>
+                  <span className="italic truncate max-w-[200px]">
+                    &ldquo;{msg.highlightedContext}&rdquo;
+                  </span>
+                </div>
+              )}
 
-        {/* Floating Selection Tooltip inside Drawer */}
-        {isAssistant && selection && (
-          <SelectionTooltip
-            selection={selection}
-            onExplore={handleExploreSelection}
-          />
-        )}
+              {/* Message Content with Markdown & Math Rendering */}
+              <div className="prose prose-zinc max-w-none text-zinc-800 text-xs sm:text-sm leading-relaxed">
+                <MarkdownRenderer content={msg.content} />
+              </div>
+
+              {isNodeStreaming && (
+                <div className="flex items-center space-x-1.5 mt-2 text-xs text-zinc-500 font-mono animate-pulse">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>Thinking...</span>
+                </div>
+              )}
+            </div>
+          );
+        })}
+        <div ref={bottomRef} />
       </div>
 
-      {/* Drawer Footer: Inline Branch Composer */}
-      <div className="p-4 border-t border-zinc-200/80 bg-zinc-50/60 shrink-0">
-        {activeHighlight && (
-          <div className="mb-2 flex items-center justify-between px-2.5 py-1 rounded-md bg-zinc-200/70 text-xs text-zinc-800">
-            <div className="flex items-center space-x-1.5 truncate">
-              <GitBranch className="w-3.5 h-3.5 text-zinc-600 shrink-0" />
-              <span className="truncate italic">&ldquo;{activeHighlight}&rdquo;</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => setActiveHighlight(null)}
-              className="text-zinc-500 hover:text-zinc-900 cursor-pointer ml-2"
-            >
-              <X className="w-3 h-3" />
-            </button>
-          </div>
-        )}
-
+      {/* In-Drawer Follow-up Prompt Bar */}
+      <div className="p-4 border-t border-zinc-200/80 bg-white shrink-0">
         <form onSubmit={handleSubmitFollowUp} className="relative flex items-center">
           <input
             type="text"
             value={drawerPrompt}
             onChange={(e) => setDrawerPrompt(e.target.value)}
-            placeholder={
-              activeHighlight
-                ? "Ask a follow-up about the selected text..."
-                : "Branch a follow-up from this message..."
-            }
-            className="w-full pl-3 pr-10 py-2.5 rounded-xl border border-zinc-200 bg-white text-xs text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-900 shadow-2xs"
+            placeholder="Ask follow-up in this thread..."
             disabled={isStreaming}
+            className="w-full pl-3.5 pr-10 py-2.5 rounded-xl border border-zinc-200 bg-white text-xs sm:text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-900 shadow-2xs disabled:bg-zinc-50"
           />
           <button
             type="submit"
             disabled={!drawerPrompt.trim() || isStreaming}
             className="absolute right-1.5 p-1.5 rounded-lg bg-zinc-900 text-white hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
-            title="Send Branch Prompt"
+            title="Send follow-up"
           >
             {isStreaming ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
