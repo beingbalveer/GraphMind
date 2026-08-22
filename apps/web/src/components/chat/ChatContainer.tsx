@@ -36,6 +36,7 @@ import {
   saveGraphDelta,
   addNodeToWorkspace,
   snapshotToTree,
+  seedDemoWorkspace,
 } from "@/lib/workspaceApi";
 
 interface ChatContainerProps {
@@ -129,7 +130,29 @@ export function ChatContainer({
           if (list && list.length > 0) {
             ws = list[0];
           } else {
-            ws = await createWorkspace("Main Workspace", "Default knowledge vault");
+            // No workspaces exist. Check if we've seeded the demo before.
+            const hasSeeded = localStorage.getItem("graphmind_demo_seeded") === "true";
+            if (!hasSeeded) {
+              try {
+                const seedResult = await seedDemoWorkspace();
+                localStorage.setItem("graphmind_demo_seeded", "true");
+                // The new workspace will be fetched below if we just reload the page, 
+                // but we can also just fetch it now by ID to proceed smoothly.
+                const snapshot = await fetchGraphSnapshot(seedResult.workspaceId);
+                if (snapshot) {
+                  ws = snapshot.workspace;
+                  // We override initialChatId with the seeded one so the rest of the flow works
+                  // However, initialChatId is a prop. We can just set it locally.
+                }
+              } catch (seedErr) {
+                console.error("Failed to seed demo workspace, falling back to blank", seedErr);
+                ws = await createWorkspace("Main Workspace", "Default knowledge vault");
+              }
+            }
+            
+            if (!ws) {
+              ws = await createWorkspace("Main Workspace", "Default knowledge vault");
+            }
           }
         }
 

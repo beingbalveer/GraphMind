@@ -114,7 +114,28 @@ export function snapshotToTree(snapshot: GraphSnapshotResponse): ConversationTre
   }
 
   const rootId = snapshot.rootNodeId || snapshot.nodes[0].id;
-  const activeId = snapshot.activeNodeId || snapshot.nodes[snapshot.nodes.length - 1].id;
+
+  // Resolve activeId by following the mainline conversation trunk (nodes without highlightedContext)
+  let activeId = snapshot.activeNodeId;
+  if (!activeId || !nodesRecord[activeId]) {
+    let currentTrunkNode = nodesRecord[rootId];
+    if (currentTrunkNode) {
+      while (currentTrunkNode.childrenIds.length > 0) {
+        // Prefer mainline children (no highlightedContext) over side-branch explorations
+        const mainlineChildId =
+          currentTrunkNode.childrenIds.find(
+            (id) => !nodesRecord[id]?.highlightedContext
+          ) || currentTrunkNode.childrenIds[0];
+
+        const nextNode = nodesRecord[mainlineChildId];
+        if (!nextNode) break;
+        currentTrunkNode = nextNode;
+      }
+      activeId = currentTrunkNode.id;
+    } else {
+      activeId = rootId;
+    }
+  }
 
   return {
     id: snapshot.workspace.id,
@@ -151,6 +172,15 @@ export async function createWorkspace(
     body: JSON.stringify({ name, description }),
   });
   if (!res.ok) throw new Error("Failed to create workspace");
+  return res.json();
+}
+
+export async function seedDemoWorkspace(): Promise<{ workspaceId: string; initialChatId: string }> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/workspaces/seed`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+  });
+  if (!res.ok) throw new Error("Failed to seed demo workspace");
   return res.json();
 }
 

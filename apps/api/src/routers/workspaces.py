@@ -45,6 +45,20 @@ async def create_workspace(
     return await WorkspaceService.create_workspace(db, data)
 
 
+@router.post("/seed", response_model=Dict[str, str], status_code=status.HTTP_201_CREATED)
+async def seed_demo_workspace(
+    db: AsyncSession = Depends(get_db),
+) -> Dict[str, str]:
+    """
+    Seeds a full demo workspace for first-time onboarding.
+    Returns the workspaceId and initialChatId.
+    """
+    from services.seed_service import seed_demo_workspace as seed_svc
+    ws_id, chat_id = await seed_svc(db)
+    return {"workspaceId": ws_id, "initialChatId": chat_id}
+
+
+
 @router.get("/{workspace_id}", response_model=WorkspaceResponse)
 async def get_workspace(
     workspace_id: str,
