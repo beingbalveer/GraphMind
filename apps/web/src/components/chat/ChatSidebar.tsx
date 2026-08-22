@@ -2,7 +2,6 @@
 
 import React from "react";
 import {
-  Plus,
   MessageSquare,
   Trash2,
   PanelLeftClose,
@@ -19,7 +18,6 @@ interface ChatSidebarProps {
   chats: ChatItem[];
   activeChatId: string | null;
   onSelectChat: (chat: ChatItem) => void;
-  onNewChat: () => void;
   onDeleteChat: (id: string) => void;
   onOpenWorkspaceModal?: () => void;
 }
@@ -31,7 +29,6 @@ export function ChatSidebar({
   chats,
   activeChatId,
   onSelectChat,
-  onNewChat,
   onDeleteChat,
   onOpenWorkspaceModal,
 }: ChatSidebarProps) {
@@ -82,7 +79,7 @@ export function ChatSidebar({
             : "w-0 -translate-x-full md:w-0 md:translate-x-0 overflow-hidden border-r-0"
         }`}
       >
-        {/* Sidebar Header with Workspace Badge and New Chat Button */}
+        {/* Sidebar Header with Workspace Badge */}
         <div className="p-3 border-b border-zinc-200/80 space-y-2 shrink-0 bg-white/80">
           {/* Workspace Switcher Header Pill */}
           <div className="flex items-center justify-between">
@@ -106,22 +103,6 @@ export function ChatSidebar({
               <PanelLeftClose className="w-4 h-4" />
             </Button>
           </div>
-
-          {/* New Chat Primary Button */}
-          <button
-            type="button"
-            onClick={onNewChat}
-            className="w-full px-3 py-2 rounded-xl bg-white hover:bg-zinc-100/90 border border-zinc-200/90 hover:border-zinc-300 text-zinc-800 hover:text-zinc-950 flex items-center justify-between text-xs font-semibold shadow-2xs transition-all cursor-pointer group"
-            title="Start a new conversation in this workspace (⌘N)"
-          >
-            <div className="flex items-center space-x-2">
-              <Plus className="w-3.5 h-3.5 text-zinc-500 group-hover:text-zinc-950 transition-colors" />
-              <span>New chat</span>
-            </div>
-            <kbd className="hidden sm:inline text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-500 border border-zinc-200/80">
-              ⌘N
-            </kbd>
-          </button>
 
           {/* Quick Filter Search Input */}
           {chats.length > 4 && (
@@ -159,7 +140,7 @@ export function ChatSidebar({
                   className={`group relative flex items-center justify-between px-2.5 py-2 rounded-xl text-xs transition-all cursor-pointer ${
                     isActive
                       ? "bg-white text-zinc-950 font-semibold border border-zinc-200/90 shadow-2xs"
-                      : "text-zinc-700 hover:bg-zinc-200/60 hover:text-zinc-900"
+                      : "text-zinc-700 hover:bg-zinc-200/60 hover:text-zinc-950"
                   }`}
                 >
                   <div className="flex items-center space-x-2 min-w-0 pr-1">

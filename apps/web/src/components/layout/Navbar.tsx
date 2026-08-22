@@ -143,19 +143,6 @@ export function Navbar({
 
       {/* Right: Clean Light New Chat Button + View Mode Toggle */}
       <div className="flex items-center space-x-2.5 shrink-0">
-        {/* Top Right Clean Light New Chat Button */}
-        {onNewChat && (
-          <button
-            type="button"
-            onClick={onNewChat}
-            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-zinc-200/90 bg-white hover:bg-zinc-50 hover:border-zinc-300 text-zinc-700 hover:text-zinc-950 text-xs font-medium shadow-2xs transition-all cursor-pointer group"
-            title="Start a new chat (⌘N)"
-          >
-            <Plus className="w-3.5 h-3.5 text-zinc-500 group-hover:text-zinc-900 transition-colors" />
-            <span className="font-semibold">New chat</span>
-          </button>
-        )}
-
         {/* Toggle Mode Pill Button */}
         {onViewModeChange && (
           <div className="flex items-center p-0.5 bg-zinc-100 border border-zinc-200/80 rounded-lg shadow-2xs">
@@ -184,6 +171,19 @@ export function Navbar({
               <span className="hidden sm:inline">Canvas</span>
             </button>
           </div>
+        )}
+
+        {/* Top Right Clean Light New Chat Button (At the very last position) */}
+        {onNewChat && (
+          <button
+            type="button"
+            onClick={onNewChat}
+            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-zinc-200/90 bg-white hover:bg-zinc-50 hover:border-zinc-300 text-zinc-700 hover:text-zinc-950 text-xs font-medium shadow-2xs transition-all cursor-pointer group"
+            title="Start a new chat (⌘N)"
+          >
+            <Plus className="w-3.5 h-3.5 text-zinc-500 group-hover:text-zinc-900 transition-colors" />
+            <span className="font-semibold">New chat</span>
+          </button>
         )}
       </div>
     </header>

@@ -539,7 +539,6 @@ export function ChatContainer({
           chats={chats}
           activeChatId={activeChatId}
           onSelectChat={handleSelectChat}
-          onNewChat={handleNewChat}
           onDeleteChat={handleDeleteChat}
           onOpenWorkspaceModal={() => setIsWorkspaceModalOpen(true)}
         />
