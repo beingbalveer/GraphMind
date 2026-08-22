@@ -78,3 +78,7 @@ async def test_semantic_search_and_discovery_pipeline(monkeypatch: pytest.Monkey
         assert links_resp.status_code == 200
         links_data = links_resp.json()
         assert "links" in links_data
+
+        # 5. Clean up test workspace
+        del_resp = await client.delete(f"/api/v1/workspaces/{ws_id}")
+        assert del_resp.status_code == 204
