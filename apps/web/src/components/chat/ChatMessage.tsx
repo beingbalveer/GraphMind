@@ -335,6 +335,15 @@ export function ChatMessage({
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleSearch = (text: string) => {
+    window.open(
+      `https://www.google.com/search?q=${encodeURIComponent(text)}`,
+      "_blank",
+      "noopener,noreferrer"
+    );
+    clearSelection();
+  };
+
   const handleExplore = (text: string) => {
     if (onExploreBranch) {
       onExploreBranch(message.id, text);
@@ -347,9 +356,13 @@ export function ChatMessage({
       id={message.id}
       className="py-5 px-4 sm:px-6 bg-white group transition-colors relative"
     >
-      {/* Floating Selection Tooltip */}
+      {/* Floating Selection Context Menu */}
       {!isUser && selection && (
-        <SelectionTooltip selection={selection} onExplore={handleExplore} />
+        <SelectionTooltip
+          selection={selection}
+          onExplore={handleExplore}
+          onSearch={handleSearch}
+        />
       )}
 
       <div className="max-w-3xl mx-auto flex gap-3.5 sm:gap-4.5 animate-in fade-in duration-200">

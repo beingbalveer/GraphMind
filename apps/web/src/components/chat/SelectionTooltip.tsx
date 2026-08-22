@@ -1,17 +1,19 @@
 "use client";
 
 import React from "react";
-import { GitBranch } from "lucide-react";
+import { GitBranch, Search } from "lucide-react";
 import { SelectionState } from "@/hooks/useTextSelection";
 
 interface SelectionTooltipProps {
   selection: SelectionState | null;
   onExplore: (highlightedText: string) => void;
+  onSearch: (highlightedText: string) => void;
 }
 
 export function SelectionTooltip({
   selection,
   onExplore,
+  onSearch,
 }: SelectionTooltipProps) {
   if (!selection) return null;
 
@@ -21,31 +23,63 @@ export function SelectionTooltip({
         position: "fixed",
         left: `${selection.x}px`,
         top: `${selection.y}px`,
-        transform: "translate(-50%, -100%)",
+        transform: "translate(-50%, calc(-100% - 6px))",
       }}
       onMouseDown={(e) => {
         // Prevent clearing browser selection on container click/drag
         e.preventDefault();
       }}
-      className="z-50 select-none pb-2 animate-in fade-in-50 zoom-in-95 duration-150"
+      className="z-50 select-none animate-in fade-in-50 zoom-in-95 duration-150"
     >
       <div className="relative flex flex-col items-center">
-        <button
-          type="button"
-          onMouseDown={(e) => {
-            // Prevent losing text highlight on button press
-            e.preventDefault();
-          }}
-          onClick={() => onExplore(selection.text)}
-          className="px-3.5 py-1.5 rounded-full bg-zinc-900 text-white hover:bg-zinc-800 border border-zinc-900 shadow-lg flex items-center space-x-1.5 text-xs font-semibold cursor-pointer transition-all duration-150 hover:scale-[1.03] active:scale-95"
-          title="Explain this concept in a parallel side branch"
-        >
-          <GitBranch className="w-3.5 h-3.5 text-zinc-300" />
-          <span>Explain this</span>
-        </button>
+        {/* Menu Card */}
+        <div className="bg-white border border-zinc-200 rounded-xl shadow-lg shadow-zinc-900/10 overflow-hidden min-w-[172px]">
+          {/* Explain Action */}
+          <button
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => onExplore(selection.text)}
+            className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-zinc-50 transition-colors duration-100 cursor-pointer group"
+          >
+            <span className="flex items-center justify-center w-6 h-6 rounded-md bg-zinc-900 text-white shrink-0 group-hover:bg-zinc-800 transition-colors">
+              <GitBranch className="w-3.5 h-3.5" />
+            </span>
+            <div className="flex flex-col items-start text-left min-w-0">
+              <span className="text-[12.5px] font-semibold text-zinc-800 leading-tight">
+                Explain
+              </span>
+              <span className="text-[10.5px] text-zinc-400 leading-tight">
+                Open in side branch
+              </span>
+            </div>
+          </button>
 
-        {/* Subtle Bottom Caret */}
-        <div className="w-2 h-2 bg-zinc-900 rotate-45 -mt-1 shadow-2xs" />
+          {/* Divider */}
+          <div className="h-px bg-zinc-100 mx-2" />
+
+          {/* Search Action */}
+          <button
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => onSearch(selection.text)}
+            className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-zinc-50 transition-colors duration-100 cursor-pointer group"
+          >
+            <span className="flex items-center justify-center w-6 h-6 rounded-md bg-zinc-100 text-zinc-600 border border-zinc-200 shrink-0 group-hover:bg-zinc-200 group-hover:text-zinc-900 transition-colors">
+              <Search className="w-3.5 h-3.5" />
+            </span>
+            <div className="flex flex-col items-start text-left min-w-0">
+              <span className="text-[12.5px] font-semibold text-zinc-800 leading-tight">
+                Search
+              </span>
+              <span className="text-[10.5px] text-zinc-400 leading-tight">
+                Search on the web
+              </span>
+            </div>
+          </button>
+        </div>
+
+        {/* Bottom Caret pointing down toward the selection */}
+        <div className="w-2.5 h-2.5 bg-white border-r border-b border-zinc-200 rotate-45 -mt-[5px] shadow-sm" />
       </div>
     </div>
   );
