@@ -3,12 +3,10 @@
 import React from "react";
 import {
   Trash2,
-  PanelLeftClose,
   Search,
   FolderGit2,
 } from "lucide-react";
 import { ChatItem } from "@/lib/workspaceApi";
-import { Button } from "@/components/ui/button";
 
 interface ChatSidebarProps {
   isOpen: boolean;
@@ -63,22 +61,12 @@ export function ChatSidebar({
             <button
               type="button"
               onClick={onOpenWorkspaceModal}
-              className="flex items-center space-x-1.5 px-2 py-1 rounded-md hover:bg-zinc-200/60 text-zinc-700 hover:text-zinc-950 text-xs font-medium max-w-[190px] truncate transition-colors cursor-pointer"
+              className="flex items-center space-x-1.5 px-2 py-1 rounded-md hover:bg-zinc-200/60 text-zinc-700 hover:text-zinc-950 text-xs font-medium max-w-full truncate transition-colors cursor-pointer"
               title="Click to switch or manage workspaces"
             >
               <FolderGit2 className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
               <span className="truncate">{workspaceName}</span>
             </button>
-
-            <Button
-              variant="ghost"
-              size="iconSm"
-              onClick={onToggle}
-              className="h-7 w-7 text-zinc-400 hover:text-zinc-700 hover:bg-zinc-200/60 cursor-pointer"
-              title="Close sidebar (⌘B)"
-            >
-              <PanelLeftClose className="w-4 h-4" />
-            </Button>
           </div>
 
           {/* Quick Filter Search Input */}

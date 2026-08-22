@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { GitBranch, ArrowDown } from "lucide-react";
 import { getNodeChildren } from "@graphmind/shared";
 import { ChatMessage } from "./ChatMessage";
@@ -19,6 +20,11 @@ import { useScrollAnchor } from "@/hooks/useScrollAnchor";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { Navbar, ViewMode } from "../layout/Navbar";
 import {
+  buildWorkspaceUrl,
+  buildChatUrl,
+  buildCanvasUrl,
+} from "@/lib/urls";
+import {
   WorkspaceItem,
   ChatItem,
   fetchWorkspaces,
@@ -34,14 +40,18 @@ import {
 interface ChatContainerProps {
   initialWorkspaceId?: string;
   initialChatId?: string;
+  /** Optional node ID from ?node= query param — scrolls to that message on load. */
+  initialNodeId?: string;
   initialViewMode?: ViewMode;
 }
 
 export function ChatContainer({
   initialWorkspaceId,
   initialChatId,
+  initialNodeId,
   initialViewMode = "chat",
 }: ChatContainerProps = {}) {
+  const router = useRouter();
   const {
     tree,
     activeMessages,

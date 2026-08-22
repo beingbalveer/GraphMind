@@ -9,7 +9,6 @@ import {
   Check,
   RotateCw,
   PanelLeft,
-  PanelLeftClose,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -38,7 +37,7 @@ export function Navbar({
   workspaceName = "Main Workspace",
   onOpenWorkspaceModal,
   syncStatus = "saved",
-  isSidebarOpen = false,
+  isSidebarOpen: _isSidebarOpen = false,
   onToggleSidebar,
   onNewChat,
 }: NavbarProps) {
@@ -61,24 +60,8 @@ export function Navbar({
 
   return (
     <header className="h-13 border-b border-zinc-200/80 bg-white/80 backdrop-blur-md px-3 sm:px-5 flex items-center justify-between z-30 shrink-0 select-none">
-      {/* Left: Sidebar Toggle + Brand + Workspace Selector */}
+      {/* Left: Brand + Workspace Selector + Sync Status */}
       <div className="flex items-center space-x-2 shrink-0">
-        {onToggleSidebar && (
-          <Button
-            variant="ghost"
-            size="iconSm"
-            onClick={onToggleSidebar}
-            className="h-8 w-8 text-zinc-600 hover:text-zinc-950 cursor-pointer"
-            title={isSidebarOpen ? "Close sidebar (⌘B)" : "Open chats sidebar (⌘B)"}
-          >
-            {isSidebarOpen ? (
-              <PanelLeftClose className="w-4 h-4" />
-            ) : (
-              <PanelLeft className="w-4 h-4" />
-            )}
-          </Button>
-        )}
-
         <div className="w-6 h-6 rounded-md bg-zinc-900 text-white flex items-center justify-center font-bold text-xs shadow-xs">
           🧠
         </div>
@@ -141,8 +124,21 @@ export function Navbar({
         {breadcrumbs}
       </div>
 
-      {/* Right: Clean Light New Chat Button + View Mode Toggle */}
-      <div className="flex items-center space-x-2.5 shrink-0">
+      {/* Right: Sidebar Toggle + View Mode Toggle + New Chat Button */}
+      <div className="flex items-center space-x-2 shrink-0">
+        {/* Constant Single Sidebar Toggle Button in Top Right */}
+        {onToggleSidebar && (
+          <Button
+            variant="ghost"
+            size="iconSm"
+            onClick={onToggleSidebar}
+            className="h-8 w-8 text-zinc-600 hover:text-zinc-950 cursor-pointer"
+            title="Toggle sidebar (⌘B)"
+          >
+            <PanelLeft className="w-4 h-4" />
+          </Button>
+        )}
+
         {/* Toggle Mode Pill Button */}
         {onViewModeChange && (
           <div className="flex items-center p-0.5 bg-zinc-100 border border-zinc-200/80 rounded-lg shadow-2xs">
