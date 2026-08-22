@@ -167,10 +167,14 @@ export function ChatContainer({
           }
 
           if (typeof window !== "undefined") {
-            const url = targetChatId
-              ? buildChatUrl(ws.id, targetChatId)
-              : buildWorkspaceUrl(ws.id);
-            router.replace(url);
+            if (targetChatId) {
+              const url = initialViewMode === "canvas"
+                ? buildCanvasUrl(ws.id, targetChatId)
+                : buildChatUrl(ws.id, targetChatId);
+              router.replace(url);
+            } else {
+              router.replace(buildWorkspaceUrl(ws.id));
+            }
           }
         }
       } catch {

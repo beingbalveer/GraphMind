@@ -63,10 +63,9 @@ export function ResizableSplitPane({
     };
   }, [isDragging, leftPercent]);
 
-  // Smooth animation styles
   const transitionStyle = isDragging
     ? "transition-none"
-    : "transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]";
+    : "transition-[width,opacity] duration-200 ease-in-out";
 
   const effectiveLeftWidth = isOpen && rightPane ? `${leftPercent}%` : "100%";
   const effectiveRightWidth = isOpen && rightPane ? `${100 - leftPercent}%` : "0%";
@@ -86,27 +85,23 @@ export function ResizableSplitPane({
         {leftPane}
       </div>
 
-      {/* Draggable Vertical Splitter Divider */}
-      <div
-        onMouseDown={handleMouseDown}
-        style={{
-          width: isOpen && rightPane ? "8px" : "0px",
-          opacity: isOpen && rightPane ? 1 : 0,
-        }}
-        className={`relative z-20 flex items-center justify-center cursor-col-resize group select-none shrink-0 bg-zinc-100 hover:bg-zinc-200 border-x border-zinc-200/90 overflow-hidden ${
-          isOpen && rightPane ? "pointer-events-auto" : "pointer-events-none border-none"
-        } ${transitionStyle}`}
-        title="Drag to resize split panes"
-      >
-        <div className="w-0.5 h-8 rounded-full bg-zinc-400 group-hover:bg-zinc-700 transition-colors" />
-      </div>
+      {/* Draggable Thin Vertical Splitter Hit Area (No wide bar, no highlight) */}
+      {isOpen && rightPane && (
+        <div
+          onMouseDown={handleMouseDown}
+          className="relative z-30 w-0 h-full flex items-center justify-center cursor-col-resize select-none shrink-0"
+          title="Drag to resize split panes"
+        >
+          <div className="w-2 -ml-1 h-full bg-transparent absolute inset-0 z-30" />
+        </div>
+      )}
 
       {/* Right Branch Chat Pane */}
       <div
         style={{ width: effectiveRightWidth }}
-        className={`h-full flex flex-col overflow-hidden bg-zinc-50/50 relative ${
+        className={`h-full flex flex-col overflow-hidden bg-zinc-50/50 relative border-l border-zinc-200/70 ${
           isOpen && rightPane
-            ? "opacity-100 border-l border-zinc-200/90 pointer-events-auto"
+            ? "opacity-100 pointer-events-auto"
             : "opacity-0 border-none pointer-events-none"
         } ${transitionStyle}`}
       >

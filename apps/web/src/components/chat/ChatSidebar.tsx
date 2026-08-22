@@ -192,7 +192,7 @@ export function ChatSidebar({
           <span className="font-mono text-[10px] text-zinc-400">GraphMind</span>
         </div>
 
-        {/* Right-Edge Drag Handle for Resizing */}
+        {/* Right-Edge Transparent Drag Handle for Resizing */}
         {isOpen && (
           <div
             onMouseDown={startResizing}
@@ -200,7 +200,7 @@ export function ChatSidebar({
               setWidth(DEFAULT_WIDTH);
               localStorage.setItem("graphmind_sidebar_width_v1", DEFAULT_WIDTH.toString());
             }}
-            className="absolute top-0 right-0 w-1.5 h-full cursor-col-resize hover:bg-zinc-300/80 active:bg-zinc-400 transition-colors z-50"
+            className="absolute top-0 -right-1 w-2 h-full cursor-col-resize z-50 bg-transparent"
             title="Drag to resize sidebar (double-click to reset)"
           />
         )}

@@ -1,4 +1,5 @@
 import React from "react";
+import { ChatContainer } from "@/components/chat/ChatContainer";
 
 interface WorkspacePageProps {
   params: Promise<{ workspaceId: string }>;
@@ -7,23 +8,15 @@ interface WorkspacePageProps {
 /**
  * /w/{workspaceId} — Workspace landing page.
  *
- * This is a pure redirect: the server immediately sends the user to the most
- * recent chat in the workspace. The actual chat list resolution happens in
- * ChatContainer (client) because we don't yet have server-side auth/session.
- *
- * When server-side auth lands (Phase 4), this page can be upgraded to fetch
- * the most recent chatId from the DB and redirect directly to
- * /w/{workspaceId}/chat/{chatId}, skipping the client round-trip.
+ * Renders ChatContainer in chat mode with no specific chatId.
+ * ChatContainer's initWorkspace effect resolves the most recent chat
+ * and calls router.replace() to push the full canonical URL:
+ *   /w/{workspaceId}/chat/{chatId}
  */
 export default async function WorkspaceLandingPage({
   params,
 }: WorkspacePageProps) {
   const { workspaceId } = await params;
-
-  // For now, render ChatContainer in chat mode without a specific chatId.
-  // ChatContainer will auto-resolve and push the canonical URL client-side.
-  // Import here avoids a dynamic import cycle with the redirect.
-  const { ChatContainer } = await import("@/components/chat/ChatContainer");
 
   return (
     <ChatContainer
@@ -33,12 +26,10 @@ export default async function WorkspaceLandingPage({
   );
 }
 
-export async function generateMetadata({
-  params,
-}: WorkspacePageProps) {
+export async function generateMetadata({ params }: WorkspacePageProps) {
   const { workspaceId } = await params;
   return {
-    title: `Workspace — GraphMind`,
+    title: "GraphMind — AI Knowledge Workspace",
     description: `GraphMind workspace ${workspaceId}`,
   };
 }
