@@ -99,6 +99,13 @@ export function useChatStream() {
     setError(null);
   }, []);
 
+  const loadTree = useCallback((newTree: ConversationTree | null) => {
+    setTree(newTree);
+    if (newTree && typeof window !== "undefined") {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(newTree));
+    }
+  }, []);
+
   const clearMessages = useCallback(() => {
     stopStreaming();
     setTree(null);
@@ -371,5 +378,6 @@ export function useChatStream() {
     retryLastMessage,
     stopStreaming,
     clearMessages,
+    loadTree,
   };
 }

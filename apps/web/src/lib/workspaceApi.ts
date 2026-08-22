@@ -1,3 +1,5 @@
+import { ConversationTree, TreeNode } from "@graphmind/shared";
+
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8008";
 
@@ -65,6 +67,47 @@ export interface GraphDeltaPayload {
     positionX: number;
     positionY: number;
   }>;
+}
+
+export function snapshotToTree(snapshot: GraphSnapshotResponse): ConversationTree | null {
+  if (!snapshot.nodes || snapshot.nodes.length === 0) return null;
+
+  const nodesRecord: Record<string, TreeNode> = {};
+
+  // First pass: build base node map
+  for (const n of snapshot.nodes) {
+    nodesRecord[n.id] = {
+      id: n.id,
+      parentId: n.parentId || null,
+      childrenIds: [],
+      role: n.role,
+      content: n.content,
+      highlightedContext: n.highlightedContext || null,
+      provider: n.provider || null,
+      model: n.model || null,
+      createdAt: n.createdAt,
+      metadata: n.metadata || {},
+    };
+  }
+
+  // Second pass: wire children references
+  for (const n of snapshot.nodes) {
+    if (n.parentId && nodesRecord[n.parentId]) {
+      nodesRecord[n.parentId].childrenIds.push(n.id);
+    }
+  }
+
+  const rootId = snapshot.rootNodeId || snapshot.nodes[0].id;
+  const activeId = snapshot.activeNodeId || snapshot.nodes[snapshot.nodes.length - 1].id;
+
+  return {
+    id: snapshot.workspace.id,
+    rootNodeId: rootId,
+    activeNodeId: activeId,
+    nodes: nodesRecord,
+    createdAt: snapshot.workspace.createdAt,
+    updatedAt: snapshot.workspace.updatedAt,
+  };
 }
 
 export async function fetchWorkspaces(): Promise<WorkspaceItem[]> {
