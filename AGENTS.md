@@ -51,3 +51,26 @@ Every single task must follow this strict **3-step workflow**:
 - **Frontend**: Next.js 15+ (App Router), TypeScript (strict), Tailwind CSS, `shadcn/ui`, `pnpm` workspaces, `vitest`.
 - **Infrastructure**: Docker & Docker Compose (`docker-compose.yml`), PostgreSQL 16 (`pgvector`), Redis.
 - **Git Conventions**: Conventional Commits (`feat:`, `fix:`, `refactor:`, `docs:`, `test:`).
+
+---
+
+## 4. URL Contract (Non-Negotiable)
+
+**Read [`docs/URL_DESIGN.md`](./docs/URL_DESIGN.md) and [`docs/adr/0006-url-routing-design.md`](./docs/adr/0006-url-routing-design.md) before touching any routing code.**
+
+The canonical URL hierarchy is:
+
+```
+/w/{workspaceId}                          → Workspace landing
+/w/{workspaceId}/chat/{chatId}            → Chat/thread view
+/w/{workspaceId}/chat/{chatId}/canvas     → Canvas/graph view
+```
+
+### Mandatory URL Rules for All Agents
+
+1. **Never use `window.history.replaceState` or `pushState` directly.** Use Next.js `router.push()` / `router.replace()`.
+2. **Never put `chatId` or `workspaceId` in a query param for primary navigation.** They belong in the path.
+3. **Never hardcode URL strings in components.** Import and use the helpers from `@/lib/urls`.
+4. **Always redirect old `/graph/` and `/workspace/` routes** via `next.config.ts` — never remove those redirects.
+5. **View mode (chat ↔ canvas) is a path segment**, not a query param or state variable stored in a cookie.
+
