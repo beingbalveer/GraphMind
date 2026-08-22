@@ -113,8 +113,9 @@ class GraphSnapshotResponse(BaseSchema):
 class SemanticSearchRequest(BaseSchema):
     query: str = Field(..., description="Natural language semantic search query")
     top_k: int = Field(default=5, ge=1, le=50, description="Max results to return")
-    min_similarity: float = Field(default=0.3, ge=0.0, le=1.0, description="Minimum cosine similarity threshold")
-
+    min_similarity: float = Field(
+        default=0.3, ge=0.0, le=1.0, description="Minimum cosine similarity threshold"
+    )
 
 
 class GraphDeltaUpdateRequest(BaseSchema):

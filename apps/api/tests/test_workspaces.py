@@ -86,7 +86,9 @@ async def test_workspace_crud_lifecycle() -> None:
         assert delta_resp.status_code == 200
 
         # 8. Delete Single Chat Tree
-        del_chat_resp = await client.delete(f"/api/v1/workspaces/{ws_id}/chats/{f'node_root_{ws_id}'}")
+        del_chat_resp = await client.delete(
+            f"/api/v1/workspaces/{ws_id}/chats/{f'node_root_{ws_id}'}"
+        )
         assert del_chat_resp.status_code == 204
 
         # Verify chat tree nodes are removed

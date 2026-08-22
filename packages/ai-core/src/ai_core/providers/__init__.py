@@ -75,7 +75,9 @@ def get_embedding_provider(
     """
     Embedding provider factory resolving requested embedding provider or falling back gracefully.
     """
-    default_name = os.getenv("DEFAULT_EMBEDDING_PROVIDER") or os.getenv("DEFAULT_PROVIDER") or "gemini"
+    default_name = (
+        os.getenv("DEFAULT_EMBEDDING_PROVIDER") or os.getenv("DEFAULT_PROVIDER") or "gemini"
+    )
     name = (provider_name or default_name).lower().strip()
 
     if name in _EMBEDDING_PROVIDER_REGISTRY:

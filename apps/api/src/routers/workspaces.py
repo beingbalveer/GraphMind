@@ -54,9 +54,9 @@ async def seed_demo_workspace(
     Returns the workspaceId and initialChatId.
     """
     from services.seed_service import seed_demo_workspace as seed_svc
+
     ws_id, chat_id = await seed_svc(db)
     return {"workspaceId": ws_id, "initialChatId": chat_id}
-
 
 
 @router.get("/{workspace_id}", response_model=WorkspaceResponse)
@@ -152,7 +152,9 @@ async def delete_chat_tree(
 @router.get("/{workspace_id}/graph", response_model=GraphSnapshotResponse)
 async def get_graph_snapshot(
     workspace_id: str,
-    root_id: Optional[str] = Query(default=None, description="Optional root node ID to filter a single chat tree"),
+    root_id: Optional[str] = Query(
+        default=None, description="Optional root node ID to filter a single chat tree"
+    ),
     db: AsyncSession = Depends(get_db),
 ) -> GraphSnapshotResponse:
     """
@@ -267,4 +269,3 @@ async def discover_cross_branch_links(
         "total_links": len(links),
         "links": [link.model_dump() for link in links],
     }
-

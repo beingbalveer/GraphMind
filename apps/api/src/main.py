@@ -51,7 +51,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         async with engine.begin() as conn:
             await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
             await conn.run_sync(Base.metadata.create_all)
-            await conn.execute(text("ALTER TABLE nodes ADD COLUMN IF NOT EXISTS embedding vector(768);"))
+            await conn.execute(
+                text("ALTER TABLE nodes ADD COLUMN IF NOT EXISTS embedding vector(768);")
+            )
         logger.info("Database schema and pgvector extension initialized successfully")
     except Exception as e:
         logger.warning("Database synchronization deferred or failed", error=str(e))
