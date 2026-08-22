@@ -278,3 +278,30 @@ export function getBranchLeafNode(tree: ConversationTree, startNodeId: string): 
   }
   return current;
 }
+
+/**
+ * Return all nodes along the mainline conversation trunk (starting from root,
+ * following linear replies where highlightedContext is null).
+ * Guarantees sub-branch nodes are excluded from the main chat feed.
+ */
+export function getMainlineTrunkPath(tree: ConversationTree | null): TreeNode[] {
+  if (!tree || !tree.rootNodeId || !tree.nodes[tree.rootNodeId]) return [];
+
+  const path: TreeNode[] = [];
+  let current: TreeNode | undefined = tree.nodes[tree.rootNodeId];
+
+  while (current) {
+    path.push(current);
+    if (current.childrenIds.length === 0) break;
+
+    // Find direct mainline child (no highlightedContext)
+    const mainlineChildId: string | undefined = current.childrenIds.find(
+      (id: string) => !tree.nodes[id]?.highlightedContext
+    );
+
+    if (!mainlineChildId) break;
+    current = tree.nodes[mainlineChildId];
+  }
+
+  return path;
+}

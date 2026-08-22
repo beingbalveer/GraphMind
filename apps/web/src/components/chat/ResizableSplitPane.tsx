@@ -16,18 +16,21 @@ export function ResizableSplitPane({
   isOpen,
   defaultLeftPercent = 50,
 }: ResizableSplitPaneProps) {
-  const [leftPercent, setLeftPercent] = useState<number>(() => {
-    if (typeof window !== "undefined") {
+  const [leftPercent, setLeftPercent] = useState<number>(defaultLeftPercent);
+
+  useEffect(() => {
+    try {
       const saved = localStorage.getItem("graphmind_split_width_v1");
       if (saved) {
         const parsed = parseFloat(saved);
         if (!isNaN(parsed) && parsed >= 25 && parsed <= 75) {
-          return parsed;
+          setLeftPercent(parsed);
         }
       }
+    } catch {
+      // ignore
     }
-    return defaultLeftPercent;
-  });
+  }, []);
 
   const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);

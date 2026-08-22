@@ -10,6 +10,7 @@ import {
   getAllLeafNodes,
   getSiblingSubBranches,
   getBranchLeafNode,
+  getMainlineTrunkPath,
 } from "../src/tree-utils";
 
 describe("ConversationTree Utilities", () => {
@@ -312,5 +313,44 @@ describe("ConversationTree Utilities", () => {
 
     const leafOfNode1 = getBranchLeafNode(tree3, node1.id);
     expect(leafOfNode1.id).toBe(node1.id);
+  });
+
+  it("extracts mainline trunk path excluding side branches with highlightedContext", () => {
+    const tree0 = createConversationTree({
+      role: "user",
+      content: "Main query 1",
+    });
+    const rootId = tree0.rootNodeId;
+
+    const { tree: tree1, node: reply1 } = addChildNode(tree0, {
+      parentId: rootId,
+      role: "assistant",
+      content: "Main reply 1",
+    });
+
+    // Side sub-branch from reply 1
+    const { tree: tree2 } = addChildNode(tree1, {
+      parentId: reply1.id,
+      role: "user",
+      content: "Explain sub-topic",
+      highlightedContext: "sub-topic",
+    });
+
+    // Follow-up on main chat trunk
+    const { tree: tree3, node: followUpUser } = addChildNode(tree2, {
+      parentId: reply1.id,
+      role: "user",
+      content: "Main query 2",
+    });
+
+    const { tree: tree4, node: followUpReply } = addChildNode(tree3, {
+      parentId: followUpUser.id,
+      role: "assistant",
+      content: "Main reply 2",
+    });
+
+    const mainline = getMainlineTrunkPath(tree4);
+    expect(mainline).toHaveLength(4);
+    expect(mainline.map((n) => n.id)).toEqual([rootId, reply1.id, followUpUser.id, followUpReply.id]);
   });
 });

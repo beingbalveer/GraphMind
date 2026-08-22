@@ -35,19 +35,22 @@ export function ChatSidebar({
 }: ChatSidebarProps) {
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Resizable sidebar width with local storage persistence
-  const [width, setWidth] = useState<number>(() => {
-    if (typeof window !== "undefined") {
+  // Resizable sidebar width with local storage persistence (synced in useEffect to prevent SSR hydration mismatch)
+  const [width, setWidth] = useState<number>(DEFAULT_WIDTH);
+
+  useEffect(() => {
+    try {
       const saved = localStorage.getItem("graphmind_sidebar_width_v1");
       if (saved) {
         const parsed = parseInt(saved, 10);
         if (!isNaN(parsed) && parsed >= MIN_WIDTH && parsed <= MAX_WIDTH) {
-          return parsed;
+          setWidth(parsed);
         }
       }
+    } catch {
+      // ignore
     }
-    return DEFAULT_WIDTH;
-  });
+  }, []);
 
   const [isResizing, setIsResizing] = useState(false);
   const isResizingRef = useRef(false);

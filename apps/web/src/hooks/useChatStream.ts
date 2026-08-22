@@ -7,6 +7,7 @@ import {
   addChildNode,
   updateNodeContent,
   getAncestorPath,
+  getMainlineTrunkPath,
 } from "@graphmind/shared";
 
 export interface BranchContext {
@@ -62,10 +63,9 @@ export function useChatStream() {
     }
   }, [tree, isHydrated]);
 
-  // Active path messages to display in the main chat feed
+  // Mainline trunk messages strictly displayed in the main chat feed
   const activeMessages = useMemo(() => {
-    if (!tree || !tree.activeNodeId) return [];
-    return getAncestorPath(tree, tree.activeNodeId);
+    return getMainlineTrunkPath(tree);
   }, [tree]);
 
   const stopStreaming = useCallback(() => {
