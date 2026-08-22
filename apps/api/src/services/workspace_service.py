@@ -329,22 +329,44 @@ class WorkspaceService:
         session: AsyncSession, workspace_id: str, data: NodeCreate
     ) -> NodeResponse:
         """
-        Add a conversation node to a workspace and automatically create the directed edge from parent.
+        Add or update a conversation node in a workspace and ensure the directed edge from parent exists.
         """
-        node = NodeModel(
-            id=data.id,
-            workspace_id=workspace_id,
-            parent_id=data.parent_id,
-            role=data.role,
-            content=data.content,
-            highlighted_context=data.highlighted_context,
-            provider=data.provider,
-            model=data.model,
-            position_x=data.position_x,
-            position_y=data.position_y,
-            metadata_payload=data.metadata,
-        )
-        session.add(node)
+        existing_node = None
+        if data.id:
+            stmt = select(NodeModel).where(
+                NodeModel.id == data.id, NodeModel.workspace_id == workspace_id
+            )
+            res = await session.execute(stmt)
+            existing_node = res.scalar_one_or_none()
+
+        if existing_node:
+            existing_node.content = data.content
+            if data.provider:
+                existing_node.provider = data.provider
+            if data.model:
+                existing_node.model = data.model
+            if data.position_x != 0.0:
+                existing_node.position_x = data.position_x
+            if data.position_y != 0.0:
+                existing_node.position_y = data.position_y
+            if data.metadata:
+                existing_node.metadata_payload = data.metadata
+            node = existing_node
+        else:
+            node = NodeModel(
+                id=data.id,
+                workspace_id=workspace_id,
+                parent_id=data.parent_id,
+                role=data.role,
+                content=data.content,
+                highlighted_context=data.highlighted_context,
+                provider=data.provider,
+                model=data.model,
+                position_x=data.position_x,
+                position_y=data.position_y,
+                metadata_payload=data.metadata,
+            )
+            session.add(node)
         await session.flush()
 
         # Compute and persist vector embedding for semantic search
@@ -355,7 +377,7 @@ class WorkspaceService:
         except Exception as e:
             logger.warning("Embedding generation deferred on node creation", error=str(e))
 
-        if data.parent_id:
+        if data.parent_id and not existing_node:
             edge_id = f"{data.parent_id}->{node.id}"
             edge = EdgeModel(
                 id=edge_id,

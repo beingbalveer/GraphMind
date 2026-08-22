@@ -27,6 +27,7 @@ import {
   deleteWorkspaceChat,
   fetchGraphSnapshot,
   saveGraphDelta,
+  addNodeToWorkspace,
   snapshotToTree,
 } from "@/lib/workspaceApi";
 
@@ -124,7 +125,24 @@ export function ChatContainer({
         setCurrentWorkspace(ws);
 
         if (ws) {
-          const workspaceChats = await refreshChats(ws.id);
+          let workspaceChats = await refreshChats(ws.id);
+
+          // If backend had no chats yet, but user has local tree with messages, auto-sync it to backend!
+          if (workspaceChats.length === 0 && tree && Object.keys(tree.nodes).length > 0) {
+            for (const node of Object.values(tree.nodes)) {
+              await addNodeToWorkspace(ws.id, {
+                id: node.id,
+                parentId: node.parentId,
+                role: node.role,
+                content: node.content,
+                highlightedContext: node.highlightedContext,
+                provider: node.provider,
+                model: node.model,
+              });
+            }
+            workspaceChats = await refreshChats(ws.id);
+          }
+
           const targetChatId = initialChatId || (workspaceChats.length > 0 ? workspaceChats[0].id : null);
           setActiveChatId(targetChatId);
 
@@ -148,7 +166,8 @@ export function ChatContainer({
       }
     }
     initWorkspace();
-  }, [initialWorkspaceId, initialChatId, loadTree, refreshChats]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialWorkspaceId, initialChatId]);
 
   // Start a completely fresh chat tree inside the current workspace
   const handleNewChat = useCallback(() => {
@@ -237,50 +256,94 @@ export function ChatContainer({
     }
   }, [activeMessages, isStreaming, isAtBottom, scrollToBottom, viewMode]);
 
-  // Send message and update chat list
+  // Send message, persist nodes to PostgreSQL, and update chat list
   const handleSendMessage = useCallback(
     async (prompt: string, provider = "gemini", model = "gemini-2.5-flash") => {
       if (!currentWorkspace) return;
 
       const isFirstMessageInNewChat = !activeChatId || !tree || Object.keys(tree.nodes).length === 0;
 
-      await sendMessage(prompt, provider, model, {
-        onNodeCreated: ({ userNodeId }) => {
+      let createdUserNodeId: string | null = null;
+      let createdAssistantNodeId: string | null = null;
+
+      const result = await sendMessage(prompt, provider, model, {
+        onNodeCreated: ({ userNodeId, assistantNodeId }) => {
+          createdUserNodeId = userNodeId;
+          createdAssistantNodeId = assistantNodeId;
+
           if (isFirstMessageInNewChat) {
             setActiveChatId(userNodeId);
             if (typeof window !== "undefined") {
               window.history.replaceState(null, "", `/graph/${currentWorkspace.id}?chat=${userNodeId}`);
             }
           }
+
+          // Persist user node immediately to backend
+          addNodeToWorkspace(currentWorkspace.id, {
+            id: userNodeId,
+            parentId: isFirstMessageInNewChat ? null : (tree?.activeNodeId || null),
+            role: "user",
+            content: prompt.trim(),
+            provider,
+            model,
+          }).then(() => refreshChats(currentWorkspace.id));
         },
       });
 
       scrollToBottom(true);
 
-      // Refresh chats list after message creation
-      setTimeout(() => {
-        refreshChats(currentWorkspace.id);
-      }, 500);
+      const targetAssistantId = result?.assistantNodeId || createdAssistantNodeId;
+      const targetUserId = result?.userNodeId || createdUserNodeId;
+
+      // When streaming finishes, persist final assistant response node
+      if (targetAssistantId && targetUserId) {
+        setTimeout(async () => {
+          await addNodeToWorkspace(currentWorkspace.id, {
+            id: targetAssistantId,
+            parentId: targetUserId,
+            role: "assistant",
+            content: "", // Backend will upsert content
+            provider,
+            model,
+          });
+          await refreshChats(currentWorkspace.id);
+        }, 1000);
+      }
     },
     [currentWorkspace, activeChatId, tree, sendMessage, scrollToBottom, refreshChats]
   );
 
-  // Debounced auto-save to PostgreSQL backend whenever tree changes
+  // Debounced auto-save of entire active tree nodes to PostgreSQL backend
   useEffect(() => {
     if (!currentWorkspace || !tree || !tree.rootNodeId) return;
 
     setSyncStatus("syncing");
     const timeout = setTimeout(async () => {
+      // Sync any updated nodes in tree to PostgreSQL
+      for (const node of Object.values(tree.nodes)) {
+        await addNodeToWorkspace(currentWorkspace.id, {
+          id: node.id,
+          parentId: node.parentId,
+          role: node.role,
+          content: node.content,
+          highlightedContext: node.highlightedContext,
+          provider: node.provider,
+          model: node.model,
+        });
+      }
+
       const success = await saveGraphDelta(currentWorkspace.id, {
         workspaceUpdate: {
           name: currentWorkspace.name,
         },
       });
+
       setSyncStatus(success ? "saved" : "offline");
-    }, 800);
+      refreshChats(currentWorkspace.id);
+    }, 1000);
 
     return () => clearTimeout(timeout);
-  }, [tree, currentWorkspace]);
+  }, [tree, currentWorkspace, refreshChats]);
 
   // Jump smoothly to a specific message card in the active feed
   const handleJumpToMessage = useCallback((messageId: string) => {

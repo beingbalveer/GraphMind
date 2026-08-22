@@ -169,6 +169,48 @@ export async function fetchWorkspaceChats(workspaceId: string): Promise<ChatItem
   }
 }
 
+export interface CreateNodePayload {
+  id?: string;
+  parentId?: string | null;
+  role: "user" | "assistant" | "system";
+  content: string;
+  highlightedContext?: string | null;
+  provider?: string | null;
+  model?: string | null;
+  positionX?: number;
+  positionY?: number;
+  metadata?: Record<string, unknown>;
+}
+
+export async function addNodeToWorkspace(
+  workspaceId: string,
+  payload: CreateNodePayload
+): Promise<GraphSnapshotNode | null> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/v1/workspaces/${workspaceId}/nodes`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: payload.id,
+        parentId: payload.parentId || null,
+        role: payload.role,
+        content: payload.content,
+        highlightedContext: payload.highlightedContext || null,
+        provider: payload.provider || null,
+        model: payload.model || null,
+        positionX: payload.positionX || 0,
+        positionY: payload.positionY || 0,
+        metadata: payload.metadata || {},
+      }),
+    });
+    if (!res.ok) return null;
+    return res.json();
+  } catch (err) {
+    console.warn("Failed to persist node to workspace:", err);
+    return null;
+  }
+}
+
 export async function deleteWorkspaceChat(
   workspaceId: string,
   chatRootId: string
