@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
   Trash2,
   Search,
@@ -19,6 +19,10 @@ interface ChatSidebarProps {
   onOpenWorkspaceModal?: () => void;
 }
 
+const DEFAULT_WIDTH = 260;
+const MIN_WIDTH = 180;
+const MAX_WIDTH = 480;
+
 export function ChatSidebar({
   isOpen,
   onToggle,
@@ -29,9 +33,60 @@ export function ChatSidebar({
   onDeleteChat,
   onOpenWorkspaceModal,
 }: ChatSidebarProps) {
-  const [searchQuery, setSearchQuery] = React.useState("");
+  const [searchQuery, setSearchQuery] = useState("");
 
-  const filteredChats = React.useMemo(() => {
+  // Resizable sidebar width with local storage persistence
+  const [width, setWidth] = useState<number>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("graphmind_sidebar_width_v1");
+      if (saved) {
+        const parsed = parseInt(saved, 10);
+        if (!isNaN(parsed) && parsed >= MIN_WIDTH && parsed <= MAX_WIDTH) {
+          return parsed;
+        }
+      }
+    }
+    return DEFAULT_WIDTH;
+  });
+
+  const [isResizing, setIsResizing] = useState(false);
+  const isResizingRef = useRef(false);
+
+  const startResizing = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+    isResizingRef.current = true;
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+  }, []);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizingRef.current) return;
+      const newWidth = Math.min(Math.max(e.clientX, MIN_WIDTH), MAX_WIDTH);
+      setWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      if (isResizingRef.current) {
+        isResizingRef.current = false;
+        setIsResizing(false);
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+        localStorage.setItem("graphmind_sidebar_width_v1", width.toString());
+      }
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [width]);
+
+  const filteredChats = useMemo(() => {
     if (!searchQuery.trim()) return chats;
     const q = searchQuery.toLowerCase().trim();
     return chats.filter((c) => c.title.toLowerCase().includes(q));
@@ -47,13 +102,14 @@ export function ChatSidebar({
         />
       )}
 
-      {/* Collapsible Left Sidebar Container */}
+      {/* Collapsible & Resizable Left Sidebar Container */}
       <aside
-        className={`fixed md:static inset-y-0 left-0 z-40 flex flex-col bg-zinc-50/70 border-r border-zinc-200/70 transition-all duration-200 ease-in-out select-none ${
+        style={{ width: isOpen ? `${width}px` : 0 }}
+        className={`fixed md:static inset-y-0 left-0 z-40 flex flex-col bg-zinc-50/70 border-r border-zinc-200/70 select-none relative ${
           isOpen
-            ? "w-[260px] sm:w-[270px] translate-x-0"
-            : "w-0 -translate-x-full md:w-0 md:translate-x-0 overflow-hidden border-r-0"
-        }`}
+            ? "translate-x-0"
+            : "-translate-x-full md:translate-x-0 overflow-hidden border-r-0"
+        } ${isResizing ? "transition-none" : "transition-[width,transform] duration-200 ease-in-out"}`}
       >
         {/* Sidebar Header with Workspace Badge */}
         <div className="p-2.5 border-b border-zinc-200/60 space-y-2 shrink-0 bg-white/40">
@@ -135,6 +191,19 @@ export function ChatSidebar({
           <span>{chats.length} conversation{chats.length === 1 ? "" : "s"}</span>
           <span className="font-mono text-[10px] text-zinc-400">GraphMind</span>
         </div>
+
+        {/* Right-Edge Drag Handle for Resizing */}
+        {isOpen && (
+          <div
+            onMouseDown={startResizing}
+            onDoubleClick={() => {
+              setWidth(DEFAULT_WIDTH);
+              localStorage.setItem("graphmind_sidebar_width_v1", DEFAULT_WIDTH.toString());
+            }}
+            className="absolute top-0 right-0 w-1.5 h-full cursor-col-resize hover:bg-zinc-300/80 active:bg-zinc-400 transition-colors z-50"
+            title="Drag to resize sidebar (double-click to reset)"
+          />
+        )}
       </aside>
     </>
   );
