@@ -91,8 +91,8 @@ export function WorkspaceModal({
         {/* Header */}
         <div className="h-14 px-5 border-b border-zinc-200/80 flex items-center justify-between shrink-0 bg-zinc-50/70">
           <div className="flex items-center space-x-2.5">
-            <div className="w-7 h-7 rounded-lg bg-zinc-900 text-white flex items-center justify-center">
-              <FolderGit2 className="w-4 h-4" />
+            <div className="w-7 h-7 rounded-lg bg-zinc-100 border border-zinc-200/90 text-zinc-800 flex items-center justify-center shadow-2xs">
+              <FolderGit2 className="w-4 h-4 text-zinc-600" />
             </div>
             <div>
               <h3 className="font-semibold text-sm text-zinc-900 leading-tight">Workspaces</h3>
