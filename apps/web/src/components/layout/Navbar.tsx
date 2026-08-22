@@ -69,25 +69,13 @@ export function Navbar({
             size="iconSm"
             onClick={onToggleSidebar}
             className="h-8 w-8 text-zinc-600 hover:text-zinc-950 cursor-pointer"
-            title={isSidebarOpen ? "Close sidebar (⌘S)" : "Open chats sidebar (⌘S)"}
+            title={isSidebarOpen ? "Close sidebar (⌘B)" : "Open chats sidebar (⌘B)"}
           >
             {isSidebarOpen ? (
               <PanelLeftClose className="w-4 h-4" />
             ) : (
               <PanelLeft className="w-4 h-4" />
             )}
-          </Button>
-        )}
-
-        {onNewChat && !isSidebarOpen && (
-          <Button
-            variant="ghost"
-            size="iconSm"
-            onClick={onNewChat}
-            className="h-8 w-8 text-zinc-600 hover:text-zinc-950 cursor-pointer hidden sm:flex"
-            title="Start new chat (⌘N)"
-          >
-            <Plus className="w-4 h-4" />
           </Button>
         )}
 
@@ -153,8 +141,21 @@ export function Navbar({
         {breadcrumbs}
       </div>
 
-      {/* Right: View Mode Toggle (Chat ⟷ 2D Spatial Canvas) & Actions */}
-      <div className="flex items-center space-x-2 shrink-0">
+      {/* Right: Clean Light New Chat Button + View Mode Toggle */}
+      <div className="flex items-center space-x-2.5 shrink-0">
+        {/* Top Right Clean Light New Chat Button */}
+        {onNewChat && (
+          <button
+            type="button"
+            onClick={onNewChat}
+            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-zinc-200/90 bg-white hover:bg-zinc-50 hover:border-zinc-300 text-zinc-700 hover:text-zinc-950 text-xs font-medium shadow-2xs transition-all cursor-pointer group"
+            title="Start a new chat (⌘N)"
+          >
+            <Plus className="w-3.5 h-3.5 text-zinc-500 group-hover:text-zinc-900 transition-colors" />
+            <span className="font-semibold">New chat</span>
+          </button>
+        )}
+
         {/* Toggle Mode Pill Button */}
         {onViewModeChange && (
           <div className="flex items-center p-0.5 bg-zinc-100 border border-zinc-200/80 rounded-lg shadow-2xs">

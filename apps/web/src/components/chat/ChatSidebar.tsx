@@ -111,14 +111,14 @@ export function ChatSidebar({
           <button
             type="button"
             onClick={onNewChat}
-            className="w-full px-3 py-2 rounded-xl bg-zinc-900 text-white hover:bg-zinc-800 flex items-center justify-between text-xs font-semibold shadow-xs transition-all cursor-pointer group"
+            className="w-full px-3 py-2 rounded-xl bg-white hover:bg-zinc-100/90 border border-zinc-200/90 hover:border-zinc-300 text-zinc-800 hover:text-zinc-950 flex items-center justify-between text-xs font-semibold shadow-2xs transition-all cursor-pointer group"
             title="Start a new conversation in this workspace (⌘N)"
           >
             <div className="flex items-center space-x-2">
-              <Plus className="w-3.5 h-3.5 text-zinc-300 group-hover:text-white" />
+              <Plus className="w-3.5 h-3.5 text-zinc-500 group-hover:text-zinc-950 transition-colors" />
               <span>New chat</span>
             </div>
-            <kbd className="hidden sm:inline text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400">
+            <kbd className="hidden sm:inline text-[10px] font-mono px-1.5 py-0.5 rounded bg-zinc-100 text-zinc-500 border border-zinc-200/80">
               ⌘N
             </kbd>
           </button>
