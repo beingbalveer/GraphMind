@@ -135,14 +135,18 @@ export function useChatStream() {
       if (optionsOrBranch) {
         if ("parentNodeId" in optionsOrBranch) {
           branch = optionsOrBranch;
-          preserveActiveNodeId = Boolean(branch.highlightedText);
+          preserveActiveNodeId = true;
         } else {
           branch = optionsOrBranch.branchOverride || null;
-          preserveActiveNodeId = Boolean(optionsOrBranch.preserveActiveNodeId);
+          preserveActiveNodeId =
+            optionsOrBranch.preserveActiveNodeId !== undefined
+              ? Boolean(optionsOrBranch.preserveActiveNodeId)
+              : Boolean(branch);
           onNodeCreated = optionsOrBranch.onNodeCreated;
         }
       } else {
         branch = activeBranch;
+        preserveActiveNodeId = Boolean(activeBranch?.highlightedText);
       }
 
       setActiveBranch(null); // Clear branch input badge

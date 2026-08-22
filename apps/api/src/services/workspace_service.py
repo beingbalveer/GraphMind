@@ -164,25 +164,27 @@ class WorkspaceService:
         nodes = ws.nodes
         edges = ws.edges
 
+        node_map = {n.id: n for n in ws.nodes}
+        tree_children_map: dict[str, list[str]] = {}
+        for n in ws.nodes:
+            if n.parent_id:
+                tree_children_map.setdefault(n.parent_id, []).append(n.id)
+
         if root_id:
             # Filter to only the nodes and edges in the specified chat tree
-            node_map = {n.id: n for n in ws.nodes}
-            children_map: dict[str, list[str]] = {}
-            for n in ws.nodes:
-                if n.parent_id:
-                    children_map.setdefault(n.parent_id, []).append(n.id)
-
             subtree_ids = set()
             if root_id in node_map:
                 queue = [root_id]
                 while queue:
                     curr_id = queue.pop(0)
                     subtree_ids.add(curr_id)
-                    for child_id in children_map.get(curr_id, []):
+                    for child_id in tree_children_map.get(curr_id, []):
                         queue.append(child_id)
 
             nodes = [n for n in ws.nodes if n.id in subtree_ids]
-            edges = [e for e in ws.edges if e.source_id in subtree_ids and e.target_id in subtree_ids]
+            edges = [
+                e for e in ws.edges if e.source_id in subtree_ids and e.target_id in subtree_ids
+            ]
 
         node_responses = [
             NodeResponse(
@@ -216,8 +218,30 @@ class WorkspaceService:
             for e in edges
         ]
 
-        active_id = nodes[-1].id if nodes else None
+        filtered_node_map = {n.id: n for n in nodes}
+        filtered_children_map: dict[str, list[str]] = {}
+        for n in nodes:
+            if n.parent_id:
+                filtered_children_map.setdefault(n.parent_id, []).append(n.id)
+
         target_root_id = root_id or (nodes[0].id if nodes else None)
+        active_id = None
+        if target_root_id and target_root_id in filtered_node_map:
+            curr_id = target_root_id
+            while curr_id in filtered_children_map and filtered_children_map[curr_id]:
+                c_ids = filtered_children_map[curr_id]
+                mainline_c = next(
+                    (
+                        cid
+                        for cid in c_ids
+                        if not getattr(filtered_node_map.get(cid), "highlighted_context", None)
+                    ),
+                    c_ids[0],
+                )
+                curr_id = mainline_c
+            active_id = curr_id
+        elif nodes:
+            active_id = nodes[-1].id
 
         ws_response = WorkspaceResponse(
             id=ws.id,
@@ -240,9 +264,7 @@ class WorkspaceService:
         )
 
     @staticmethod
-    async def list_workspace_chats(
-        session: AsyncSession, workspace_id: str
-    ) -> List[ChatSummary]:
+    async def list_workspace_chats(session: AsyncSession, workspace_id: str) -> List[ChatSummary]:
         """
         List all distinct conversation trees (chats) in a workspace.
         Each chat corresponds to a root node with parent_id is None.
@@ -305,9 +327,7 @@ class WorkspaceService:
         return chats
 
     @staticmethod
-    async def delete_chat(
-        session: AsyncSession, workspace_id: str, chat_root_id: str
-    ) -> bool:
+    async def delete_chat(session: AsyncSession, workspace_id: str, chat_root_id: str) -> bool:
         """
         Delete a conversation tree (chat) by deleting its root node and cascading to all descendants.
         """
@@ -372,6 +392,7 @@ class WorkspaceService:
         # Compute and persist vector embedding for semantic search
         try:
             from services.semantic_service import SemanticService
+
             semantic_service = SemanticService()
             await semantic_service.compute_and_save_node_embedding(session, node)
         except Exception as e:

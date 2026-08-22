@@ -1,11 +1,10 @@
 import uuid
-from typing import Dict, Any, Tuple
+from typing import Tuple
 
-from sqlalchemy.ext.asyncio import AsyncSession
 import structlog
-
-from schemas.workspace import WorkspaceCreate, NodeCreate
+from schemas.workspace import NodeCreate, WorkspaceCreate
 from services.workspace_service import WorkspaceService
+from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = structlog.get_logger()
 
@@ -53,40 +52,56 @@ async def seed_demo_workspace(session: AsyncSession) -> Tuple[str, str]:
     await WorkspaceService.add_node_and_edge(
         session, ws_id, create_node(c1_n1_id, None, "user", "What is GraphMind?")
     )
-    
+
     # Assistant reply
     await WorkspaceService.add_node_and_edge(
-        session, ws_id, create_node(
-            c1_n2_id, c1_n1_id, "assistant", 
+        session,
+        ws_id,
+        create_node(
+            c1_n2_id,
+            c1_n1_id,
+            "assistant",
             "GraphMind is a knowledge workspace where your conversations branch out into a spatial graph. "
             "Instead of a single scrolling list, your ideas map out visually like a tree, "
-            "letting you explore different tangents without losing your original context."
-        )
+            "letting you explore different tangents without losing your original context.",
+        ),
     )
-    
+
     # Branch A: Why graphs?
     await WorkspaceService.add_node_and_edge(
-        session, ws_id, create_node(c1_n3_id, c1_n2_id, "user", "Why use a graph instead of standard chat history?")
+        session,
+        ws_id,
+        create_node(
+            c1_n3_id, c1_n2_id, "user", "Why use a graph instead of standard chat history?"
+        ),
     )
     await WorkspaceService.add_node_and_edge(
-        session, ws_id, create_node(
-            c1_n4_id, c1_n3_id, "assistant", 
+        session,
+        ws_id,
+        create_node(
+            c1_n4_id,
+            c1_n3_id,
+            "assistant",
             "Because human thought isn't linear! When you're brainstorming or learning, "
             "one answer usually sparks multiple new questions. In a standard chat, exploring one question means abandoning the others. "
-            "Here, you can just start a new branch. Try selecting text in a message to create a branch!"
-        )
+            "Here, you can just start a new branch. Try selecting text in a message to create a branch!",
+        ),
     )
-    
+
     # Branch B: Show me an example
     await WorkspaceService.add_node_and_edge(
         session, ws_id, create_node(c1_n5_id, c1_n2_id, "user", "Show me a real example.")
     )
     await WorkspaceService.add_node_and_edge(
-        session, ws_id, create_node(
-            c1_n6_id, c1_n5_id, "assistant", 
+        session,
+        ws_id,
+        create_node(
+            c1_n6_id,
+            c1_n5_id,
+            "assistant",
             "Check out the other chat in the sidebar titled 'How does the human brain learn?' "
-            "It demonstrates how you can break down a complex topic into connected concepts."
-        )
+            "It demonstrates how you can break down a complex topic into connected concepts.",
+        ),
     )
 
     # ---------------------------------------------------------
@@ -103,14 +118,18 @@ async def seed_demo_workspace(session: AsyncSession) -> Tuple[str, str]:
     await WorkspaceService.add_node_and_edge(
         session, ws_id, create_node(c2_n1_id, None, "user", "How does the human brain learn?")
     )
-    
+
     # Assistant reply
     await WorkspaceService.add_node_and_edge(
-        session, ws_id, create_node(
-            c2_n2_id, c2_n1_id, "assistant", 
+        session,
+        ws_id,
+        create_node(
+            c2_n2_id,
+            c2_n1_id,
+            "assistant",
             "Learning is physically wiring the brain! When you learn something new, neurons fire together and form new synapses (connections). "
-            "The more often you recall the information, the stronger those connections become. This relies heavily on spaced repetition."
-        )
+            "The more often you recall the information, the stronger those connections become. This relies heavily on spaced repetition.",
+        ),
     )
 
     # Branch A: Spaced repetition
@@ -118,25 +137,37 @@ async def seed_demo_workspace(session: AsyncSession) -> Tuple[str, str]:
         session, ws_id, create_node(c2_n3_id, c2_n2_id, "user", "What is spaced repetition?")
     )
     await WorkspaceService.add_node_and_edge(
-        session, ws_id, create_node(
-            c2_n4_id, c2_n3_id, "assistant", 
+        session,
+        ws_id,
+        create_node(
+            c2_n4_id,
+            c2_n3_id,
+            "assistant",
             "It's a learning technique where you review information at gradually increasing intervals. "
             "Instead of cramming, you review a concept after 1 day, then 3 days, then a week. "
-            "This actively interrupts the 'forgetting curve' and builds long-term memory."
-        )
+            "This actively interrupts the 'forgetting curve' and builds long-term memory.",
+        ),
     )
 
     # Branch B: Tying it back
     await WorkspaceService.add_node_and_edge(
-        session, ws_id, create_node(c2_n5_id, c2_n2_id, "user", "How does this relate to how I should use GraphMind?")
+        session,
+        ws_id,
+        create_node(
+            c2_n5_id, c2_n2_id, "user", "How does this relate to how I should use GraphMind?"
+        ),
     )
     await WorkspaceService.add_node_and_edge(
-        session, ws_id, create_node(
-            c2_n6_id, c2_n5_id, "assistant", 
+        session,
+        ws_id,
+        create_node(
+            c2_n6_id,
+            c2_n5_id,
+            "assistant",
             "By mapping out ideas spatially, you are mirroring how neural networks form connections. "
             "When you revisit this graph later, seeing the visual layout of branches helps trigger your spatial memory, "
-            "making it easier to recall the whole concept at once!"
-        )
+            "making it easier to recall the whole concept at once!",
+        ),
     )
 
     # The transaction will be committed by the router dependency.
