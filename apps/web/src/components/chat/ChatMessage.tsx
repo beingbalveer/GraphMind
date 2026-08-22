@@ -6,7 +6,13 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import rehypeHighlight from "rehype-highlight";
-import { User, Sparkles, Copy, Check, RotateCcw, GitBranch } from "lucide-react";
+import {
+  User,
+  Sparkles,
+  RotateCcw,
+  Copy,
+  Check,
+} from "lucide-react";
 import { TreeNode, ConversationTree, getNodeChildren } from "@graphmind/shared";
 import { Button } from "@/components/ui/button";
 import { useTextSelection } from "@/hooks/useTextSelection";
@@ -371,17 +377,6 @@ export function ChatMessage({
 
         {/* Message Content Container */}
         <div className="flex-1 min-w-0 space-y-1.5">
-          {/* Highlighted Sub-topic Context Badge */}
-          {message.highlightedContext && (
-            <div className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-zinc-100/90 border border-zinc-200/80 text-xs text-zinc-700 select-none mb-1.5">
-              <GitBranch className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-              <span className="font-semibold text-zinc-900 shrink-0">Sub-topic:</span>
-              <span className="italic text-zinc-600 truncate max-w-md">
-                &ldquo;{message.highlightedContext}&rdquo;
-              </span>
-            </div>
-          )}
-
           {/* Markdown Rendered Body with Obsidian-Style Inline Clickable Links */}
           <div
             ref={contentRef}
