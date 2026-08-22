@@ -304,7 +304,7 @@ export function ChatContainer({
   ];
 
   return (
-    <div className="h-screen w-screen flex flex-col bg-white overflow-hidden select-none">
+    <div className="h-screen w-screen flex flex-col bg-white overflow-hidden select-text">
       {/* Top Main Navigation Bar */}
       <Navbar
         viewMode={viewMode}

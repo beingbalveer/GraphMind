@@ -375,7 +375,7 @@ export function ChatMessage({
           {/* Markdown Rendered Body with Obsidian-Style Inline Clickable Links */}
           <div
             ref={contentRef}
-            className={`text-[15.5px] ${
+            className={`text-[15.5px] select-text ${
               message.isError ? "text-rose-700" : "text-zinc-900"
             } leading-[1.8] break-words`}
           >
