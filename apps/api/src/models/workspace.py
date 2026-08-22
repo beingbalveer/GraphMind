@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from database import Base
+from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     JSON,
     DateTime,
@@ -102,6 +103,12 @@ class NodeModel(Base):
         "metadata",
         JSON,
         default=dict,
+    )
+
+    # 768-dimensional dense vector embedding for semantic search and discovery
+    embedding: Mapped[Optional[List[float]]] = mapped_column(
+        Vector(768),
+        nullable=True,
     )
 
     created_at: Mapped[datetime] = mapped_column(

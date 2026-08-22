@@ -237,6 +237,14 @@ class WorkspaceService:
         session.add(node)
         await session.flush()
 
+        # Compute and persist vector embedding for semantic search
+        try:
+            from services.semantic_service import SemanticService
+            semantic_service = SemanticService()
+            await semantic_service.compute_and_save_node_embedding(session, node)
+        except Exception as e:
+            logger.warning("Embedding generation deferred on node creation", error=str(e))
+
         if data.parent_id:
             edge_id = f"{data.parent_id}->{node.id}"
             edge = EdgeModel(

@@ -146,3 +146,47 @@ class BaseLLMProvider(ABC):
 
 # Backward compatibility alias
 BaseProvider = BaseLLMProvider
+
+
+class EmbeddingResult(BaseModel):
+    """
+    Dense vector embeddings generated for input texts.
+    """
+
+    embeddings: List[List[float]] = Field(..., description="List of vector embeddings")
+    model_name: str = Field(..., description="Embedding model name used")
+    dimension: int = Field(..., description="Vector dimensionality")
+    usage: Optional[TokenUsage] = Field(default=None)
+
+
+class BaseEmbeddingProvider(ABC):
+    """
+    Abstract interface for AI vector embedding providers.
+    """
+
+    def __init__(self, api_key: Optional[str] = None) -> None:
+        self.api_key = api_key
+
+    @abstractmethod
+    async def embed(
+        self,
+        texts: List[str],
+        model_name: Optional[str] = None,
+    ) -> EmbeddingResult:
+        """
+        Generate dense vector embeddings for a list of text strings.
+        """
+        pass
+
+    async def embed_query(
+        self,
+        query: str,
+        model_name: Optional[str] = None,
+    ) -> List[float]:
+        """
+        Convenience method to generate an embedding vector for a single query string.
+        """
+        res = await self.embed([query], model_name=model_name)
+        if not res.embeddings:
+            raise ValueError("No embedding returned for query")
+        return res.embeddings[0]

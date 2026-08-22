@@ -1,3 +1,4 @@
+import sys
 from typing import AsyncGenerator, Optional
 
 import structlog
@@ -9,6 +10,7 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.pool import NullPool
 
 logger = structlog.get_logger()
 settings = get_settings()
@@ -43,14 +45,22 @@ def get_engine() -> AsyncEngine:
     global _engine
     if _engine is None:
         db_url = get_db_url()
-        logger.info("Initializing SQLAlchemy async database engine", url=db_url.split("@")[-1])
-        _engine = create_async_engine(
-            db_url,
-            echo=False,
-            pool_pre_ping=True,
-            pool_size=10,
-            max_overflow=20,
-        )
+        is_test = "pytest" in sys.modules or settings.ENVIRONMENT == "test"
+        if is_test:
+            _engine = create_async_engine(
+                db_url,
+                echo=False,
+                poolclass=NullPool,
+            )
+        else:
+            logger.info("Initializing SQLAlchemy async database engine", url=db_url.split("@")[-1])
+            _engine = create_async_engine(
+                db_url,
+                echo=False,
+                pool_pre_ping=True,
+                pool_size=10,
+                max_overflow=20,
+            )
     return _engine
 
 

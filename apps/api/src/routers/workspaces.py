@@ -7,11 +7,13 @@ from schemas.workspace import (
     GraphSnapshotResponse,
     NodeCreate,
     NodeResponse,
+    SemanticSearchRequest,
     WorkspaceCreate,
     WorkspaceListResponse,
     WorkspaceResponse,
     WorkspaceUpdate,
 )
+from services.semantic_service import SemanticService
 from services.workspace_service import WorkspaceService
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -147,3 +149,67 @@ async def save_graph_delta(
         )
     await WorkspaceService.apply_graph_delta(db, workspace_id, delta)
     return {"status": "ok", "workspace_id": workspace_id}
+
+
+@router.post("/{workspace_id}/search/semantic")
+async def search_workspace_semantic(
+    workspace_id: str,
+    data: SemanticSearchRequest,
+    db: AsyncSession = Depends(get_db),
+) -> Dict[str, Any]:
+    """
+    Execute pgvector cosine similarity search across all embedded nodes in this workspace.
+    """
+    ws = await WorkspaceService.get_workspace(db, workspace_id)
+    if not ws:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Workspace '{workspace_id}' not found",
+        )
+
+    semantic_service = SemanticService()
+    matches = await semantic_service.search_workspace_nodes(
+        db=db,
+        workspace_id=workspace_id,
+        query=data.query,
+        top_k=data.top_k,
+        min_similarity=data.min_similarity,
+    )
+    return {
+        "workspace_id": workspace_id,
+        "query": data.query,
+        "total_matches": len(matches),
+        "results": [m.model_dump() for m in matches],
+    }
+
+
+@router.get("/{workspace_id}/discover/links")
+async def discover_cross_branch_links(
+    workspace_id: str,
+    min_similarity: float = Query(default=0.75, ge=0.0, le=1.0),
+    limit: int = Query(default=10, ge=1, le=50),
+    db: AsyncSession = Depends(get_db),
+) -> Dict[str, Any]:
+    """
+    Discover cross-branch semantic connection opportunities across disparate turns.
+    """
+    ws = await WorkspaceService.get_workspace(db, workspace_id)
+    if not ws:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Workspace '{workspace_id}' not found",
+        )
+
+    semantic_service = SemanticService()
+    links = await semantic_service.discover_cross_branch_links(
+        db=db,
+        workspace_id=workspace_id,
+        min_similarity=min_similarity,
+        limit=limit,
+    )
+    return {
+        "workspace_id": workspace_id,
+        "total_links": len(links),
+        "links": [link.model_dump() for link in links],
+    }
+
