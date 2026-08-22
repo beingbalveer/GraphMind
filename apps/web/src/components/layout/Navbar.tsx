@@ -60,8 +60,20 @@ export function Navbar({
 
   return (
     <header className="h-13 border-b border-zinc-200/80 bg-white/80 backdrop-blur-md px-3 sm:px-5 flex items-center justify-between z-30 shrink-0 select-none">
-      {/* Left: Brand + Workspace Selector + Sync Status */}
+      {/* Top Extreme Left: Constant Static Sidebar Toggle + Brand + Workspace Selector */}
       <div className="flex items-center space-x-2 shrink-0">
+        {onToggleSidebar && (
+          <Button
+            variant="ghost"
+            size="iconSm"
+            onClick={onToggleSidebar}
+            className="h-8 w-8 text-zinc-600 hover:text-zinc-950 cursor-pointer -ml-1 mr-0.5"
+            title="Toggle sidebar (⌘B)"
+          >
+            <PanelLeft className="w-4 h-4" />
+          </Button>
+        )}
+
         <div className="w-6 h-6 rounded-md bg-zinc-900 text-white flex items-center justify-center font-bold text-xs shadow-xs">
           🧠
         </div>
@@ -124,21 +136,8 @@ export function Navbar({
         {breadcrumbs}
       </div>
 
-      {/* Right: Sidebar Toggle + View Mode Toggle + New Chat Button */}
+      {/* Right: View Mode Toggle + New Chat Button */}
       <div className="flex items-center space-x-2 shrink-0">
-        {/* Constant Single Sidebar Toggle Button in Top Right */}
-        {onToggleSidebar && (
-          <Button
-            variant="ghost"
-            size="iconSm"
-            onClick={onToggleSidebar}
-            className="h-8 w-8 text-zinc-600 hover:text-zinc-950 cursor-pointer"
-            title="Toggle sidebar (⌘B)"
-          >
-            <PanelLeft className="w-4 h-4" />
-          </Button>
-        )}
-
         {/* Toggle Mode Pill Button */}
         {onViewModeChange && (
           <div className="flex items-center p-0.5 bg-zinc-100 border border-zinc-200/80 rounded-lg shadow-2xs">
