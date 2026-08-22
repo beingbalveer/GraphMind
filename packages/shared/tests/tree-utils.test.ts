@@ -8,6 +8,8 @@ import {
   getSiblingNodes,
   pruneSubtree,
   getAllLeafNodes,
+  getSiblingSubBranches,
+  getBranchLeafNode,
 } from "../src/tree-utils";
 
 describe("ConversationTree Utilities", () => {
@@ -274,5 +276,41 @@ describe("ConversationTree Utilities", () => {
     // activeNodeId should safely fallback to root
     expect(pruned.activeNodeId).toBe(tree0.rootNodeId);
     expect(pruned.nodes[branchA.id]).toBeUndefined();
+  });
+
+  it("retrieves sibling sub-branches matching highlighted context", () => {
+    const tree0 = createConversationTree({
+      role: "user",
+      content: "Main query",
+    });
+    const rootId = tree0.rootNodeId;
+
+    const { tree: tree1, node: node1 } = addChildNode(tree0, {
+      parentId: rootId,
+      role: "user",
+      content: "Explain Raft",
+      highlightedContext: "Raft",
+    });
+
+    const { tree: tree2, node: node2 } = addChildNode(tree1, {
+      parentId: rootId,
+      role: "user",
+      content: "Raft Code Example",
+      highlightedContext: "Raft",
+    });
+
+    const { tree: tree3 } = addChildNode(tree2, {
+      parentId: rootId,
+      role: "user",
+      content: "Explain Paxos",
+      highlightedContext: "Paxos",
+    });
+
+    const raftBranches = getSiblingSubBranches(tree3, rootId, "Raft");
+    expect(raftBranches).toHaveLength(2);
+    expect(raftBranches.map((b) => b.id)).toEqual([node1.id, node2.id]);
+
+    const leafOfNode1 = getBranchLeafNode(tree3, node1.id);
+    expect(leafOfNode1.id).toBe(node1.id);
   });
 });

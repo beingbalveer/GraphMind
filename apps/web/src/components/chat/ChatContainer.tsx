@@ -417,6 +417,27 @@ export function ChatContainer({
     [sendMessage]
   );
 
+  // Handle starting a new sibling sub-branch query from the BranchChatPane tab bar
+  const handleSendNewSiblingBranch = useCallback(
+    async (prompt: string, parentNodeId: string, highlightedText: string) => {
+      setSideBranchExcerpt(highlightedText);
+
+      await sendMessage(
+        prompt,
+        "gemini",
+        "gemini-2.5-flash",
+        {
+          branchOverride: { parentNodeId, highlightedText },
+          preserveActiveNodeId: true,
+          onNodeCreated: ({ assistantNodeId }) => {
+            setSideBranchNodeId(assistantNodeId);
+          },
+        }
+      );
+    },
+    [sendMessage]
+  );
+
   // Switch to canvas and focus drawer when selecting a node in the graph
   const handleSelectTreeNode = useCallback((nodeId: string) => {
     switchBranch(nodeId);
@@ -740,6 +761,7 @@ export function ChatContainer({
                     highlightedContext={sideBranchExcerpt || undefined}
                     isStreaming={isStreaming}
                     onClose={() => setSideBranchNodeId(null)}
+                    onSelectBranchLeaf={(leafId) => setSideBranchNodeId(leafId)}
                     onSendBranchMessage={(prompt, parentNodeId) => {
                       sendMessage(prompt, "gemini", "gemini-2.5-flash", {
                         branchOverride: { parentNodeId, highlightedText: "" },
@@ -749,6 +771,7 @@ export function ChatContainer({
                         },
                       });
                     }}
+                    onSendNewSiblingBranch={handleSendNewSiblingBranch}
                   />
                 ) : null
               }

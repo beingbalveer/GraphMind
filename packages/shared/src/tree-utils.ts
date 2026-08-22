@@ -244,3 +244,37 @@ export function pruneSubtree(
 export function getAllLeafNodes(tree: ConversationTree): TreeNode[] {
   return Object.values(tree.nodes).filter((node) => node.childrenIds.length === 0);
 }
+
+/**
+ * Return all sibling sub-branch roots stemming from a parent node,
+ * optionally matching a specific highlightedContext.
+ */
+export function getSiblingSubBranches(
+  tree: ConversationTree,
+  parentNodeId: string,
+  highlightedContext?: string | null
+): TreeNode[] {
+  const children = getNodeChildren(tree, parentNodeId);
+  if (!highlightedContext) return children;
+
+  const exactMatches = children.filter(
+    (c) => c.highlightedContext?.trim() === highlightedContext.trim()
+  );
+  return exactMatches.length > 0 ? exactMatches : children;
+}
+
+/**
+ * Return the deepest active leaf descendant for a given branch node.
+ */
+export function getBranchLeafNode(tree: ConversationTree, startNodeId: string): TreeNode {
+  let current = tree.nodes[startNodeId];
+  if (!current) return current;
+
+  while (current.childrenIds.length > 0) {
+    const nextChildId = current.childrenIds[current.childrenIds.length - 1];
+    const nextChild = tree.nodes[nextChildId];
+    if (!nextChild) break;
+    current = nextChild;
+  }
+  return current;
+}

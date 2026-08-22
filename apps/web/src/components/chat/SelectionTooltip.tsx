@@ -41,7 +41,7 @@ export function SelectionTooltip({
             onClick={() => onExplore(selection.text)}
             className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-zinc-50 transition-colors duration-100 cursor-pointer group"
           >
-            <span className="flex items-center justify-center w-6 h-6 rounded-md bg-zinc-900 text-white shrink-0 group-hover:bg-zinc-800 transition-colors">
+            <span className="flex items-center justify-center w-6 h-6 rounded-md bg-zinc-100 text-zinc-700 border border-zinc-200/90 shrink-0 group-hover:bg-zinc-200 group-hover:text-zinc-950 transition-colors shadow-2xs">
               <GitBranch className="w-3.5 h-3.5" />
             </span>
             <div className="flex flex-col items-start text-left min-w-0">
