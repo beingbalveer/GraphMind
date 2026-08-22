@@ -2,7 +2,6 @@
 
 import React from "react";
 import {
-  MessageSquare,
   Trash2,
   PanelLeftClose,
   Search,
@@ -121,18 +120,9 @@ export function ChatSidebar({
                       : "text-zinc-600 hover:bg-zinc-200/50 hover:text-zinc-900"
                   }`}
                 >
-                  <div className="flex items-center space-x-2.5 min-w-0 flex-1 mr-1">
-                    <MessageSquare
-                      className={`w-3.5 h-3.5 shrink-0 ${
-                        isActive
-                          ? "text-zinc-800"
-                          : "text-zinc-400 group-hover:text-zinc-600"
-                      }`}
-                    />
-                    <span className="truncate text-[13px] leading-snug">
-                      {chat.title || "New conversation"}
-                    </span>
-                  </div>
+                  <span className="truncate text-[13px] leading-snug flex-1 mr-1">
+                    {chat.title || "New conversation"}
+                  </span>
 
                   {/* Clean Delete action button appearing smoothly on hover */}
                   <button
