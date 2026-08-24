@@ -7,6 +7,7 @@ import {
   FolderGit2,
 } from "lucide-react";
 import { ChatItem } from "@/lib/workspaceApi";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface ChatSidebarProps {
   isOpen: boolean;
@@ -34,6 +35,7 @@ export function ChatSidebar({
   onOpenWorkspaceModal,
 }: ChatSidebarProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [deletingChatId, setDeletingChatId] = useState<string | null>(null);
 
   // Resizable sidebar width with local storage persistence
   const [width, setWidth] = useState<number>(() => {
@@ -178,7 +180,7 @@ export function ChatSidebar({
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      onDeleteChat(chat.id);
+                      setDeletingChatId(chat.id);
                     }}
                     className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-zinc-300/60 text-zinc-400 hover:text-rose-600 transition-all cursor-pointer shrink-0"
                     title="Delete chat"
@@ -210,6 +212,22 @@ export function ChatSidebar({
           />
         )}
       </aside>
+
+      {/* Common Reusable Confirm Dialog for Chat Deletion */}
+      <ConfirmDialog
+        isOpen={Boolean(deletingChatId)}
+        onClose={() => setDeletingChatId(null)}
+        onConfirm={() => {
+          if (deletingChatId) {
+            onDeleteChat(deletingChatId);
+            setDeletingChatId(null);
+          }
+        }}
+        title="Delete conversation"
+        description="Are you sure you want to delete this conversation and all its branched responses? This action cannot be undone."
+        confirmText="Delete"
+        variant="destructive"
+      />
     </>
   );
 }

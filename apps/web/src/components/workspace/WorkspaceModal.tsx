@@ -12,6 +12,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   WorkspaceItem,
   fetchWorkspaces,
@@ -41,6 +42,7 @@ export function WorkspaceModal({
   const [isCreating, setIsCreating] = useState(false);
   const [newName, setNewName] = useState("");
   const [newDesc, setNewDesc] = useState("");
+  const [deletingWorkspaceId, setDeletingWorkspaceId] = useState<string | null>(null);
 
   const loadWorkspaces = async () => {
     setIsLoading(true);
@@ -58,23 +60,32 @@ export function WorkspaceModal({
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newName.trim()) return;
+
     try {
-      const created = await createWorkspace(newName.trim(), newDesc.trim() || undefined);
-      setWorkspaces((prev) => [created, ...prev]);
-      onSelectWorkspace(created);
+      const created = await createWorkspace(
+        newName.trim(),
+        newDesc.trim() || undefined
+      );
       setNewName("");
       setNewDesc("");
       setIsCreating(false);
+      await loadWorkspaces();
+      onSelectWorkspace(created);
     } catch (err) {
       console.error("Failed to create workspace:", err);
     }
   };
 
-  const handleDelete = async (e: React.MouseEvent, id: string) => {
+  const handleDelete = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    if (!confirm("Are you sure you want to delete this workspace?")) return;
-    await deleteWorkspace(id);
-    setWorkspaces((prev) => prev.filter((w) => w.id !== id));
+    setDeletingWorkspaceId(id);
+  };
+
+  const confirmDeleteWorkspace = async () => {
+    if (!deletingWorkspaceId) return;
+    await deleteWorkspace(deletingWorkspaceId);
+    setWorkspaces((prev) => prev.filter((w) => w.id !== deletingWorkspaceId));
+    setDeletingWorkspaceId(null);
   };
 
   if (!isOpen) return null;
@@ -255,6 +266,17 @@ export function WorkspaceModal({
           </div>
         </div>
       </div>
+
+      {/* Common Reusable Confirm Dialog for Workspace Deletion */}
+      <ConfirmDialog
+        isOpen={Boolean(deletingWorkspaceId)}
+        onClose={() => setDeletingWorkspaceId(null)}
+        onConfirm={confirmDeleteWorkspace}
+        title="Delete workspace"
+        description="Are you sure you want to delete this workspace and all its conversations? This action cannot be undone."
+        confirmText="Delete"
+        variant="destructive"
+      />
     </div>
   );
 }

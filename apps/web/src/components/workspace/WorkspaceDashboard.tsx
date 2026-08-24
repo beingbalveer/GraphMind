@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, LayoutGrid, Clock, MoreVertical, MessageSquare } from "lucide-react";
+import { Plus, LayoutGrid, Clock, MessageSquare } from "lucide-react";
 import { fetchWorkspaces, createWorkspace, WorkspaceItem } from "@/lib/workspaceApi";
 import { buildWorkspaceUrl } from "@/lib/urls";
 import { LogoBadge } from "@/components/ui/Logo";

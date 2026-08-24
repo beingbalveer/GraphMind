@@ -1,14 +1,17 @@
 "use client";
 
-import React, { memo } from "react";
+import React, { memo, useState } from "react";
 import { Handle, Position, NodeProps, Node } from "@xyflow/react";
 import {
   FileText,
   GitBranch,
   Loader2,
   Trash2,
+  MoreVertical,
 } from "lucide-react";
 import { ConversationThread } from "@/lib/threadUtils";
+import { DropdownMenu } from "@/components/ui/dropdown-menu";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 export type ZoomMode = "orb" | "capsule" | "detailed";
 
@@ -26,6 +29,8 @@ export const ThreadGraphNode = memo(function ThreadGraphNode({
   sourcePosition = Position.Right,
 }: NodeProps<Node<ThreadNodeData>>) {
   const { thread, zoomMode = "capsule" } = data;
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const isRoot = !thread.parentThreadId;
   const isActive = thread.isActive;
   const isStreaming = thread.isStreaming;
@@ -147,7 +152,7 @@ export const ThreadGraphNode = memo(function ThreadGraphNode({
           </div>
         </div>
 
-        {/* Message Count Badge & Delete Action */}
+        {/* Message Count Badge & Branch Menu Action */}
         <div className="flex items-center space-x-1.5 shrink-0">
           <div
             className="px-2 py-0.5 rounded-full bg-zinc-100 border border-zinc-200/80 text-[10px] font-mono text-zinc-600 font-medium"
@@ -155,20 +160,41 @@ export const ThreadGraphNode = memo(function ThreadGraphNode({
           >
             {messageCount} msg{messageCount > 1 ? "s" : ""}
           </div>
+
           {data.onDeleteThread && !isRoot && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (window.confirm("Are you sure you want to delete this branch and all its descendants? This cannot be undone.")) {
-                  data.onDeleteThread!(thread.id);
-                }
-              }}
-              className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md text-red-500/70 hover:text-red-600 hover:bg-red-50 z-10"
-              title="Delete branch"
+            <div
+              className={`nodrag nopan transition-opacity ${
+                isMenuOpen
+                  ? "opacity-100"
+                  : "opacity-0 group-hover:opacity-100"
+              }`}
             >
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
+              <DropdownMenu
+                align="right"
+                onOpenChange={setIsMenuOpen}
+                trigger={
+                  <button
+                    type="button"
+                    className={`p-1 rounded-md transition-colors cursor-pointer flex items-center justify-center ${
+                      isMenuOpen
+                        ? "text-zinc-950 bg-zinc-200/80"
+                        : "text-zinc-400 hover:text-zinc-800 hover:bg-zinc-100"
+                    }`}
+                    title="Branch options"
+                  >
+                    <MoreVertical className="w-3.5 h-3.5" />
+                  </button>
+                }
+                items={[
+                  {
+                    label: "Delete branch",
+                    icon: <Trash2 className="w-3.5 h-3.5" />,
+                    variant: "destructive",
+                    onClick: () => setIsConfirmOpen(true),
+                  },
+                ]}
+              />
+            </div>
           )}
         </div>
       </div>
@@ -196,6 +222,17 @@ export const ThreadGraphNode = memo(function ThreadGraphNode({
         type="source"
         position={sourcePosition}
         className={handleClasses}
+      />
+
+      {/* Reusable Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={isConfirmOpen}
+        onClose={() => setIsConfirmOpen(false)}
+        onConfirm={() => data.onDeleteThread?.(thread.id)}
+        title="Delete branch"
+        description="Are you sure you want to delete this branch and all its descendants? This action cannot be undone."
+        confirmText="Delete"
+        variant="destructive"
       />
     </div>
   );
