@@ -45,7 +45,8 @@ export function ChatSidebar({
   const [renamingChatId, setRenamingChatId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const renameInputRef = useRef<HTMLInputElement>(null);
-
+  // Track which chat's dropdown is open so we keep the button visible while open
+  const [openMenuChatId, setOpenMenuChatId] = useState<string | null>(null);
 
   // Resizable sidebar width with local storage persistence
   const [width, setWidth] = useState<number>(() => {
@@ -224,14 +225,21 @@ export function ChatSidebar({
                     </span>
                   )}
 
-                  {/* 3-dot context menu — vertical dots, appears on hover */}
+                  {/* 3-dot context menu — vertical dots, appears on hover; stays visible while open */}
                   {!isRenaming && (
                     <div
-                      className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                      className={`transition-opacity shrink-0 ${
+                        openMenuChatId === chat.id
+                          ? "opacity-100"
+                          : "opacity-0 group-hover:opacity-100"
+                      }`}
                       onClick={(e) => e.stopPropagation()}
                     >
                       <DropdownMenu
                         align="right"
+                        onOpenChange={(isOpen) =>
+                          setOpenMenuChatId(isOpen ? chat.id : null)
+                        }
                         trigger={
                           <div className="p-1 rounded-md hover:bg-zinc-200/70 text-zinc-400 hover:text-zinc-700 transition-colors cursor-pointer">
                             <MoreVertical className="w-3.5 h-3.5" />
@@ -260,6 +268,7 @@ export function ChatSidebar({
                       />
                     </div>
                   )}
+
                 </div>
               );
             })
