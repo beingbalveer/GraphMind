@@ -33,7 +33,6 @@ import {
   fetchWorkspaceChats,
   deleteWorkspaceChat,
   fetchGraphSnapshot,
-  saveGraphDelta,
   addNodeToWorkspace,
   snapshotToTree,
   seedDemoWorkspace,
@@ -103,6 +102,14 @@ export function ChatContainer({
     scrollToBottom,
   } = useScrollAnchor({ threshold: 80 });
 
+  // References to prevent duplicate re-initialization and route flicker
+  const loadedChatIdRef = useRef<string | null>(initialChatId || null);
+  const initializedWorkspaceIdRef = useRef<string | null>(null);
+  // Capture initial values in refs so they never change across re-renders
+  const initialWorkspaceIdRef = useRef(initialWorkspaceId);
+  const initialChatIdRef = useRef(initialChatId);
+  const initialViewModeRef = useRef(initialViewMode);
+
   // Refresh chats for current workspace
   const refreshChats = useCallback(async (wsId: string) => {
     try {
@@ -114,14 +121,22 @@ export function ChatContainer({
     }
   }, []);
 
-  // Initialize or fetch workspace & chats
+  // Initialize workspace & load initial chat — runs EXACTLY ONCE on mount.
+  // We intentionally read from frozen refs (not reactive props) so that
+  // router.replace() URL updates never cause this effect to re-fire.
   useEffect(() => {
+    if (initializedWorkspaceIdRef.current) return; // already ran
+
     async function initWorkspace() {
+      const wsId = initialWorkspaceIdRef.current;
+      const chatId = initialChatIdRef.current;
+      const viewMode = initialViewModeRef.current;
+
       try {
         let ws: WorkspaceItem | null = null;
 
-        if (initialWorkspaceId) {
-          const snapshot = await fetchGraphSnapshot(initialWorkspaceId);
+        if (wsId) {
+          const snapshot = await fetchGraphSnapshot(wsId);
           if (snapshot) {
             ws = snapshot.workspace;
           }
@@ -132,26 +147,20 @@ export function ChatContainer({
           if (list && list.length > 0) {
             ws = list[0];
           } else {
-            // No workspaces exist. Check if we've seeded the demo before.
             const hasSeeded = localStorage.getItem("graphmind_demo_seeded") === "true";
             if (!hasSeeded) {
               try {
                 const seedResult = await seedDemoWorkspace();
                 localStorage.setItem("graphmind_demo_seeded", "true");
-                // The new workspace will be fetched below if we just reload the page, 
-                // but we can also just fetch it now by ID to proceed smoothly.
                 const snapshot = await fetchGraphSnapshot(seedResult.workspaceId);
                 if (snapshot) {
                   ws = snapshot.workspace;
-                  // We override initialChatId with the seeded one so the rest of the flow works
-                  // However, initialChatId is a prop. We can just set it locally.
                 }
               } catch (seedErr) {
                 console.error("Failed to seed demo workspace, falling back to blank", seedErr);
                 ws = await createWorkspace("Main Workspace", "Default knowledge vault");
               }
             }
-            
             if (!ws) {
               ws = await createWorkspace("Main Workspace", "Default knowledge vault");
             }
@@ -161,25 +170,11 @@ export function ChatContainer({
         setCurrentWorkspace(ws);
 
         if (ws) {
-          let workspaceChats = await refreshChats(ws.id);
+          initializedWorkspaceIdRef.current = ws.id;
+          await refreshChats(ws.id);
 
-          // If backend had no chats yet, but user has local tree with messages, auto-sync it to backend!
-          if (workspaceChats.length === 0 && tree && Object.keys(tree.nodes).length > 0) {
-            for (const node of Object.values(tree.nodes)) {
-              await addNodeToWorkspace(ws.id, {
-                id: node.id,
-                parentId: node.parentId,
-                role: node.role,
-                content: node.content,
-                highlightedContext: node.highlightedContext,
-                provider: node.provider,
-                model: node.model,
-              });
-            }
-            workspaceChats = await refreshChats(ws.id);
-          }
-
-          const targetChatId = initialChatId || null;
+          const targetChatId = chatId || null;
+          loadedChatIdRef.current = targetChatId;
           setActiveChatId(targetChatId);
 
           if (targetChatId) {
@@ -192,15 +187,14 @@ export function ChatContainer({
             }
           }
 
-          if (typeof window !== "undefined") {
-            if (targetChatId) {
-              const url = initialViewMode === "canvas"
-                ? buildCanvasUrl(ws.id, targetChatId)
-                : buildChatUrl(ws.id, targetChatId);
-              router.replace(url);
-            } else {
-              router.replace(buildWorkspaceUrl(ws.id));
-            }
+          if (typeof window !== "undefined" && !targetChatId) {
+            // Only replace URL when no chatId is in the path yet
+            router.replace(buildWorkspaceUrl(ws.id), { scroll: false });
+          } else if (typeof window !== "undefined" && targetChatId && ws) {
+            const url = viewMode === "canvas"
+              ? buildCanvasUrl(ws.id, targetChatId)
+              : buildChatUrl(ws.id, targetChatId);
+            router.replace(url, { scroll: false });
           }
         }
       } catch {
@@ -209,16 +203,17 @@ export function ChatContainer({
     }
     initWorkspace();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialWorkspaceId, initialChatId]);
+  }, []); // Empty deps = run once on mount only
 
   // Start a completely fresh chat tree inside the current workspace
   const handleNewChat = useCallback(() => {
     clearMessages();
     setActiveChatId(null);
+    loadedChatIdRef.current = null;
     setSideBranchNodeId(null);
     setIsDrawerOpen(false);
     if (currentWorkspace) {
-      router.push(buildWorkspaceUrl(currentWorkspace.id));
+      router.push(buildWorkspaceUrl(currentWorkspace.id), { scroll: false });
     }
   }, [clearMessages, currentWorkspace, router]);
 
@@ -226,21 +221,28 @@ export function ChatContainer({
   const handleSelectChat = useCallback(
     async (chat: ChatItem) => {
       if (!currentWorkspace) return;
+      if (activeChatId === chat.id) return;
+
+      // Update active state immediately so sidebar reflects selection
       setActiveChatId(chat.id);
+      loadedChatIdRef.current = chat.id;
       setSideBranchNodeId(null);
       setIsDrawerOpen(false);
 
-      router.push(buildChatUrl(currentWorkspace.id, chat.id));
+      // Use replace (not push) with scroll:false so Next.js syncs the URL
+      // WITHOUT triggering a full RSC page re-fetch or unmounting ChatContainer.
+      router.replace(buildChatUrl(currentWorkspace.id, chat.id), { scroll: false });
 
+      // Fetch snapshot in background — tree swaps without clearing visible messages
       const snapshot = await fetchGraphSnapshot(currentWorkspace.id, chat.id);
       if (snapshot) {
         const loadedTree = snapshotToTree(snapshot);
-        loadTree(loadedTree);
-      } else {
-        clearMessages();
+        if (loadedTree) {
+          loadTree(loadedTree);
+        }
       }
     },
-    [currentWorkspace, loadTree, clearMessages, router]
+    [currentWorkspace, activeChatId, loadTree, router]
   );
 
   // Delete a chat from the workspace
@@ -366,37 +368,11 @@ export function ChatContainer({
     [currentWorkspace, activeChatId, tree, sendMessage, scrollToBottom, refreshChats, router]
   );
 
-  // Debounced auto-save of entire active tree nodes to PostgreSQL backend
+  // Synchronize sync status
   useEffect(() => {
-    if (!currentWorkspace || !tree || !tree.rootNodeId) return;
-
-    setSyncStatus("syncing");
-    const timeout = setTimeout(async () => {
-      // Sync any updated nodes in tree to PostgreSQL
-      for (const node of Object.values(tree.nodes)) {
-        await addNodeToWorkspace(currentWorkspace.id, {
-          id: node.id,
-          parentId: node.parentId,
-          role: node.role,
-          content: node.content,
-          highlightedContext: node.highlightedContext,
-          provider: node.provider,
-          model: node.model,
-        });
-      }
-
-      const success = await saveGraphDelta(currentWorkspace.id, {
-        workspaceUpdate: {
-          name: currentWorkspace.name,
-        },
-      });
-
-      setSyncStatus(success ? "saved" : "offline");
-      refreshChats(currentWorkspace.id);
-    }, 1000);
-
-    return () => clearTimeout(timeout);
-  }, [tree, currentWorkspace, refreshChats]);
+    if (!currentWorkspace) return;
+    setSyncStatus("saved");
+  }, [currentWorkspace, tree]);
 
   // Jump smoothly to a specific message card in the active feed
   const handleJumpToMessage = useCallback((messageId: string) => {

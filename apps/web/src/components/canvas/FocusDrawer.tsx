@@ -3,17 +3,15 @@
 import React, { useRef, useState, useMemo, useEffect } from "react";
 import {
   X,
-  User,
   Sparkles,
   GitBranch,
   CornerDownLeft,
   Loader2,
-  Copy,
-  Check,
 } from "lucide-react";
 import { TreeNode, ConversationTree, getAncestorPath } from "@graphmind/shared";
 import { Button } from "@/components/ui/button";
-import { MarkdownRenderer } from "../chat/ChatMessage";
+import { CopyButton } from "@/components/ui/copy-button";
+import { ChatMessage } from "../chat/ChatMessage";
 
 interface FocusDrawerProps {
   node: TreeNode | null;
@@ -34,9 +32,10 @@ export function FocusDrawer({
   isStreaming = false,
   streamingNodeId = null,
   onClose,
+  onSelectBranch,
+  onExploreBranch,
   onSendFollowUp,
 }: FocusDrawerProps) {
-  const [copied, setCopied] = useState(false);
   const [drawerPrompt, setDrawerPrompt] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
   const prevNodeIdRef = useRef<string | null>(null);
@@ -60,18 +59,9 @@ export function FocusDrawer({
 
   if (!isOpen || !node) return null;
 
-  const handleCopyThread = async () => {
-    try {
-      const fullText = threadMessages
-        .map((m) => `${m.role === "user" ? "### You" : "### AI"}:\n${m.content}`)
-        .join("\n\n---\n\n");
-      await navigator.clipboard.writeText(fullText);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Ignore
-    }
-  };
+  const fullText = threadMessages
+    .map((m) => `${m.role === "user" ? "### You" : "### AI"}:\n${m.content}`)
+    .join("\n\n---\n\n");
 
   const handleSubmitFollowUp = (e: React.FormEvent) => {
     e.preventDefault();
@@ -107,19 +97,10 @@ export function FocusDrawer({
         </div>
 
         <div className="flex items-center space-x-1.5 shrink-0">
-          <Button
-            variant="ghost"
-            size="iconSm"
-            onClick={handleCopyThread}
-            className="h-7 w-7 text-zinc-500 hover:text-zinc-900 cursor-pointer"
+          <CopyButton
+            text={fullText}
             title="Copy entire thread to clipboard"
-          >
-            {copied ? (
-              <Check className="w-3.5 h-3.5 text-emerald-600" />
-            ) : (
-              <Copy className="w-3.5 h-3.5" />
-            )}
-          </Button>
+          />
 
           <Button
             variant="ghost"
@@ -133,66 +114,26 @@ export function FocusDrawer({
         </div>
       </div>
 
-      {/* Drawer Scrollable Content Body with Full Markdown Rendering */}
-      <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 text-sm bg-zinc-50/40">
-        {threadMessages.map((msg, _index) => {
-          const isUser = msg.role === "user";
-          const isAssistant = msg.role === "assistant";
-          const isNodeStreaming = isAssistant && isStreaming && msg.id === streamingNodeId;
+      {/* Drawer Scrollable Content Body with Full Markdown Rendering using global ChatMessage */}
+      <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-1 bg-white">
+        {threadMessages.map((msg, index) => {
+          const isLastAssistant =
+            index === threadMessages.length - 1 &&
+            msg.role === "assistant" &&
+            isStreaming &&
+            msg.id === streamingNodeId;
 
           return (
-            <div
+            <ChatMessage
               key={msg.id}
-              className={`p-4 rounded-2xl border transition-all ${
-                isUser
-                  ? "bg-zinc-100/90 border-zinc-200/90 ml-4 sm:ml-6"
-                  : "bg-white border-zinc-200/90 shadow-2xs mr-2 sm:mr-4"
-              }`}
-            >
-              {/* Message Header */}
-              <div className="flex items-center space-x-2 mb-2">
-                <div
-                  className={`w-5 h-5 rounded-full flex items-center justify-center text-xs ${
-                    isUser
-                      ? "bg-zinc-200 text-zinc-700"
-                      : "bg-zinc-900 text-white shadow-2xs"
-                  }`}
-                >
-                  {isUser ? <User className="w-3 h-3" /> : <Sparkles className="w-3 h-3" />}
-                </div>
-                <span className="text-xs font-semibold text-zinc-900 capitalize">
-                  {isUser ? "You" : "Assistant"}
-                </span>
-                {msg.model && (
-                  <span className="text-[10px] text-zinc-400 font-mono">
-                    {msg.model.replace("gemini-", "").replace("gpt-", "")}
-                  </span>
-                )}
-              </div>
-
-              {/* Context Excerpt Badge if this message branched */}
-              {msg.highlightedContext && (
-                <div className="mb-2 inline-flex items-center space-x-1.5 px-2 py-0.5 rounded-md bg-zinc-100 border border-zinc-200/80 text-[11px] text-zinc-700">
-                  <GitBranch className="w-3 h-3 text-zinc-500" />
-                  <span className="font-semibold text-zinc-900">Branch:</span>
-                  <span className="italic truncate max-w-[200px]">
-                    &ldquo;{msg.highlightedContext}&rdquo;
-                  </span>
-                </div>
-              )}
-
-              {/* Message Content with Markdown & Math Rendering */}
-              <div className="prose prose-zinc max-w-none text-zinc-800 text-xs sm:text-sm leading-relaxed">
-                <MarkdownRenderer content={msg.content} />
-              </div>
-
-              {isNodeStreaming && (
-                <div className="flex items-center space-x-1.5 mt-2 text-xs text-zinc-500 font-mono animate-pulse">
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  <span>Thinking...</span>
-                </div>
-              )}
-            </div>
+              message={{
+                ...msg,
+                isStreaming: isLastAssistant,
+              }}
+              tree={tree}
+              onExploreBranch={onExploreBranch}
+              onOpenSideBranch={onSelectBranch}
+            />
           );
         })}
         <div ref={bottomRef} />

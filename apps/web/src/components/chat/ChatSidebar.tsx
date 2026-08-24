@@ -165,10 +165,10 @@ export function ChatSidebar({
                 <div
                   key={chat.id}
                   onClick={() => onSelectChat(chat)}
-                  className={`group relative flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-colors cursor-pointer select-none border ${
+                  className={`group relative flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-colors cursor-pointer select-none ${
                     isActive
-                      ? "bg-zinc-100 text-zinc-950 font-medium border-zinc-200/70 shadow-2xs"
-                      : "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-950 border-transparent"
+                      ? "bg-[#F1F6FE] text-zinc-950 font-medium"
+                      : "text-zinc-600 hover:bg-zinc-100/60 hover:text-zinc-950"
                   }`}
                 >
                   <span className="truncate text-[13px] leading-snug flex-1 mr-1">

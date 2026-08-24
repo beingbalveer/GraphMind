@@ -4,8 +4,6 @@ import React, { useState, useRef, useEffect, useMemo, useCallback } from "react"
 import {
   X,
   GitBranch,
-  Sparkles,
-  User,
   CornerDownLeft,
   Loader2,
   Plus,
@@ -22,7 +20,7 @@ import {
   getBranchLeafNode,
 } from "@graphmind/shared";
 import { Button } from "@/components/ui/button";
-import { MarkdownRenderer } from "./ChatMessage";
+import { ChatMessage } from "./ChatMessage";
 
 interface BranchChatPaneProps {
   tree: ConversationTree | null;
@@ -367,50 +365,27 @@ export function BranchChatPane({
             </div>
           </div>
         ) : (
-          /* Active Branch Conversation Messages */
-          branchMessages.map((msg, _index) => {
-            const isUser = msg.role === "user";
-            const isAssistant = msg.role === "assistant";
-            const isNodeStreaming = isAssistant && isStreaming && msg.id === streamingNodeId;
+          /* Active Branch Conversation Messages - Rendered using single global ChatMessage component */
+          <div className="space-y-1">
+            {branchMessages.map((msg, index) => {
+              const isLastAssistant =
+                index === branchMessages.length - 1 &&
+                msg.role === "assistant" &&
+                isStreaming &&
+                msg.id === streamingNodeId;
 
-            return (
-              <div
-                key={msg.id}
-                className={`p-4 rounded-xl border transition-all ${
-                  isUser
-                    ? "bg-zinc-100/80 border-zinc-200/80 ml-4 sm:ml-8"
-                    : "bg-white border-zinc-200/80 shadow-2xs mr-2 sm:mr-6"
-                }`}
-              >
-                {/* Message Header */}
-                <div className="flex items-center space-x-2 mb-2">
-                  <div className="w-5 h-5 rounded-md flex items-center justify-center text-xs bg-zinc-100 border border-zinc-200/80 text-zinc-700 shadow-2xs">
-                    {isUser ? <User className="w-3 h-3" /> : <Sparkles className="w-3 h-3" />}
-                  </div>
-                  <span className="text-xs font-semibold text-zinc-950 capitalize">
-                    {isUser ? "You" : "Assistant"}
-                  </span>
-                  {msg.model && (
-                    <span className="text-[10px] text-zinc-400 font-mono">
-                      {msg.model.replace("gemini-", "").replace("gpt-", "")}
-                    </span>
-                  )}
-                </div>
-
-                {/* Message Content */}
-                <div className="prose prose-zinc max-w-none text-zinc-800 text-xs sm:text-sm leading-relaxed">
-                  <MarkdownRenderer content={msg.content} />
-                </div>
-
-                {isNodeStreaming && (
-                  <div className="flex items-center space-x-1.5 mt-2 text-xs text-zinc-500 font-mono animate-pulse">
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    <span>Generating response...</span>
-                  </div>
-                )}
-              </div>
-            );
-          })
+              return (
+                <ChatMessage
+                  key={msg.id}
+                  message={{
+                    ...msg,
+                    isStreaming: isLastAssistant,
+                  }}
+                  tree={tree}
+                />
+              );
+            })}
+          </div>
         )}
         <div ref={bottomRef} />
       </div>

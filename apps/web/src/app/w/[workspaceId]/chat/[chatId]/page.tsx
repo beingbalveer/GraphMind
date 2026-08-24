@@ -1,40 +1,12 @@
-import React from "react";
-import { ChatContainer } from "@/components/chat/ChatContainer";
-
-interface ChatPageProps {
-  params: Promise<{ workspaceId: string; chatId: string }>;
-  searchParams: Promise<{ node?: string }>;
-}
-
 /**
- * /w/{workspaceId}/chat/{chatId} — Chat (thread) view.
- *
- * Both workspaceId and chatId are path segments (not query params),
- * making this URL fully shareable and server-renderable.
- *
- * Optional ?node={nodeId} query param scrolls to a specific message node.
+ * /w/{workspaceId}/chat/{chatId} — Active chat view.
+ * ChatContainer is rendered by the parent layout.tsx and persists across navigations.
+ * This page renders nothing — the layout reads chatId from usePathname().
  */
-export default async function ChatPage({
-  params,
-  searchParams,
-}: ChatPageProps) {
-  const { workspaceId, chatId } = await params;
-  const { node } = await searchParams;
-
-  return (
-    <ChatContainer
-      initialWorkspaceId={workspaceId}
-      initialChatId={chatId}
-      initialNodeId={node}
-      initialViewMode="chat"
-    />
-  );
+export default function ChatPage() {
+  return null;
 }
 
-export async function generateMetadata({ params }: ChatPageProps) {
-  const { workspaceId, chatId } = await params;
-  return {
-    title: `Chat — GraphMind`,
-    description: `GraphMind chat ${chatId} in workspace ${workspaceId}`,
-  };
+export async function generateMetadata() {
+  return { title: "Chat — GraphMind" };
 }
