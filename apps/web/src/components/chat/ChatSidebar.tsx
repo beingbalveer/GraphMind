@@ -112,49 +112,49 @@ export function ChatSidebar({
       <aside
         suppressHydrationWarning
         style={{ width: isOpen ? `${width}px` : 0 }}
-        className={`fixed md:static inset-y-0 left-0 z-40 flex flex-col bg-zinc-50/70 border-r border-zinc-200/70 select-none relative ${
+        className={`fixed md:static inset-y-0 left-0 z-40 flex flex-col bg-white border-r border-zinc-200/80 select-none relative overflow-hidden ${
           isOpen
             ? "translate-x-0"
             : "-translate-x-full md:translate-x-0 overflow-hidden border-r-0"
         } ${isResizing ? "transition-none" : "transition-[width,transform] duration-200 ease-in-out"}`}
       >
         {/* Sidebar Header with Workspace Badge */}
-        <div className="p-2.5 border-b border-zinc-200/60 space-y-2 shrink-0 bg-white/40">
+        <div className="p-3 border-b border-zinc-100 space-y-2 shrink-0 bg-white">
           <div className="flex items-center justify-between">
             <button
               type="button"
               onClick={onOpenWorkspaceModal}
-              className="flex items-center space-x-1.5 px-2 py-1 rounded-md hover:bg-zinc-200/60 text-zinc-700 hover:text-zinc-950 text-xs font-medium max-w-full truncate transition-colors cursor-pointer"
+              className="flex items-center space-x-2 px-2.5 py-1.5 rounded-xl hover:bg-zinc-100 text-zinc-800 hover:text-zinc-950 text-xs font-semibold max-w-full truncate transition-colors cursor-pointer"
               title="Click to switch or manage workspaces"
             >
-              <FolderGit2 className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+              <FolderGit2 className="w-4 h-4 text-zinc-500 shrink-0" />
               <span className="truncate">{workspaceName}</span>
             </button>
           </div>
 
           {/* Quick Filter Search Input */}
-          {chats.length > 4 && (
-            <div className="relative flex items-center">
-              <Search className="w-3.5 h-3.5 absolute left-2.5 text-zinc-400 pointer-events-none" />
+          {chats.length > 3 && (
+            <div className="relative flex items-center pt-0.5">
+              <Search className="w-3.5 h-3.5 absolute left-3 text-zinc-400 pointer-events-none" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search chats..."
-                className="w-full pl-8 pr-2.5 py-1 rounded-md border border-zinc-200/80 bg-white/80 text-xs text-zinc-800 placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-400 transition-all"
+                className="w-full pl-8 pr-3 py-1.5 rounded-xl border border-zinc-200/80 bg-white text-xs text-zinc-800 placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-900 transition-all shadow-2xs"
               />
             </div>
           )}
         </div>
 
         {/* Minimalist Flat Chat List */}
-        <div className="flex-1 overflow-y-auto px-2 py-2 space-y-0.5">
-          <div className="px-2 pt-1 pb-1.5 text-[11px] font-medium text-zinc-400">
-            Recent chats
+        <div className="flex-1 overflow-y-auto p-2 space-y-1">
+          <div className="px-2 pt-1 pb-1 text-[11px] font-medium text-zinc-400 tracking-wider uppercase">
+            Conversations
           </div>
 
           {filteredChats.length === 0 ? (
-            <div className="py-6 px-3 text-center text-xs text-zinc-400">
+            <div className="py-8 px-3 text-center text-xs text-zinc-400">
               {searchQuery ? "No matching chats" : "No chats yet"}
             </div>
           ) : (
@@ -165,10 +165,10 @@ export function ChatSidebar({
                 <div
                   key={chat.id}
                   onClick={() => onSelectChat(chat)}
-                  className={`group relative flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors cursor-pointer select-none ${
+                  className={`group relative flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-colors cursor-pointer select-none border ${
                     isActive
-                      ? "bg-zinc-200/80 text-zinc-950 font-medium"
-                      : "text-zinc-600 hover:bg-zinc-200/50 hover:text-zinc-900"
+                      ? "bg-zinc-100 text-zinc-950 font-medium border-zinc-200/70 shadow-2xs"
+                      : "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-950 border-transparent"
                   }`}
                 >
                   <span className="truncate text-[13px] leading-snug flex-1 mr-1">
@@ -182,7 +182,7 @@ export function ChatSidebar({
                       e.stopPropagation();
                       setDeletingChatId(chat.id);
                     }}
-                    className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-zinc-300/60 text-zinc-400 hover:text-rose-600 transition-all cursor-pointer shrink-0"
+                    className="opacity-0 group-hover:opacity-100 p-1 rounded-md hover:bg-zinc-200/60 text-zinc-400 hover:text-rose-600 transition-all cursor-pointer shrink-0"
                     title="Delete chat"
                   >
                     <Trash2 className="w-3.5 h-3.5" />

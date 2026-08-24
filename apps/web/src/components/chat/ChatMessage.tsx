@@ -7,11 +7,11 @@ import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import rehypeHighlight from "rehype-highlight";
 import {
-  User,
   Sparkles,
   RotateCcw,
   Copy,
   Check,
+  GitBranch,
 } from "lucide-react";
 import { TreeNode, ConversationTree, getNodeChildren } from "@graphmind/shared";
 import { Button } from "@/components/ui/button";
@@ -351,6 +351,26 @@ export function ChatMessage({
     clearSelection();
   };
 
+  if (isUser) {
+    return (
+      <div id={message.id} className="py-3 px-4 sm:px-6 bg-transparent">
+        <div className="max-w-3xl mx-auto flex justify-end">
+          <div className="max-w-2xl rounded-2xl bg-zinc-100/90 text-zinc-900 px-4.5 py-3 border border-zinc-200/70 shadow-2xs">
+            {message.highlightedContext && (
+              <div className="text-[11px] font-medium text-emerald-800 bg-emerald-50 border border-emerald-200/80 rounded-md px-2 py-0.5 mb-2 inline-flex items-center space-x-1.5 shadow-2xs">
+                <GitBranch className="w-3 h-3 text-emerald-600 shrink-0" />
+                <span className="truncate">Sub-topic: &ldquo;{message.highlightedContext}&rdquo;</span>
+              </div>
+            )}
+            <div className="text-[14.5px] leading-relaxed select-text font-normal whitespace-pre-wrap">
+              {message.content}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       id={message.id}
@@ -365,31 +385,25 @@ export function ChatMessage({
         />
       )}
 
-      <div className="max-w-3xl mx-auto flex gap-3.5 sm:gap-4.5 animate-in fade-in duration-200">
-        {/* Role Avatar aligned with first text baseline */}
+      <div className="max-w-3xl mx-auto flex gap-3.5 sm:gap-4 animate-in fade-in duration-200">
+        {/* Role Avatar */}
         <div className="shrink-0 pt-0.5">
-          {isUser ? (
-            <div className="w-6 h-6 rounded-full bg-zinc-100 text-zinc-600 border border-zinc-200/80 flex items-center justify-center font-bold text-xs">
-              <User className="w-3.5 h-3.5" />
-            </div>
-          ) : (
-            <div
-              className={`w-6 h-6 rounded-full ${
-                message.isError ? "bg-rose-600" : "bg-zinc-900"
-              } text-white flex items-center justify-center font-bold text-xs shadow-xs`}
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-            </div>
-          )}
+          <div
+            className={`w-6 h-6 rounded-lg ${
+              message.isError ? "bg-rose-600" : "bg-zinc-900"
+            } text-white flex items-center justify-center font-bold text-xs shadow-2xs`}
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+          </div>
         </div>
 
         {/* Message Content Container */}
-        <div className="flex-1 min-w-0 space-y-1.5">
-          {/* Markdown Rendered Body with Obsidian-Style Inline Clickable Links */}
+        <div className="flex-1 min-w-0 space-y-2">
+          {/* Markdown Rendered Body */}
           <div
             ref={contentRef}
-            className={`text-[15.5px] select-text ${
-              message.isError ? "text-rose-700" : "text-zinc-900"
+            className={`text-[15px] select-text ${
+              message.isError ? "text-rose-700" : "text-zinc-800"
             } leading-[1.8] break-words`}
           >
             {message.content ? (
@@ -412,12 +426,12 @@ export function ChatMessage({
 
             {/* Smooth Breathing Streaming Caret */}
             {message.isStreaming && message.content && (
-              <span className="inline-block w-[2.5px] h-[15px] ml-1 bg-zinc-900 animate-pulse align-middle rounded-full" />
+              <span className="inline-block w-[2px] h-[16px] ml-1 bg-zinc-900 animate-pulse align-middle rounded-full" />
             )}
           </div>
 
           {/* Action Row & Branch Switcher */}
-          <div className="pt-2 flex flex-wrap items-center justify-between gap-2">
+          <div className="pt-1 flex flex-wrap items-center justify-between gap-2">
             {!isUser && message.content ? (
               <div className="flex items-center space-x-2">
                 <Button

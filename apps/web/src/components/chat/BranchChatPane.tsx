@@ -223,12 +223,12 @@ export function BranchChatPane({
   return (
     <div className="w-full h-full flex flex-col bg-white font-sans select-text">
       {/* Tabbed Header with Sibling Sub-Branches */}
-      <div className="h-13 px-3 sm:px-4 border-b border-zinc-200/80 flex items-center justify-between shrink-0 bg-zinc-50/70 z-10">
-        <div className="flex items-center space-x-1.5 min-w-0 pr-2 overflow-x-auto no-scrollbar">
+      <div className="h-13 px-3 sm:px-5 border-b border-zinc-200 flex items-end justify-between shrink-0 bg-white z-10">
+        <div className="flex items-end space-x-2 min-w-0 pr-2 overflow-x-auto no-scrollbar">
           {/* Main Excerpt Identifier Badge */}
-          <div className="flex items-center space-x-1.5 px-2 py-1 rounded-md bg-zinc-200/60 text-zinc-800 text-xs font-semibold shrink-0">
+          <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded-md bg-zinc-100 text-zinc-800 text-xs font-medium shrink-0 mb-2 mr-2">
             <GitBranch className="w-3.5 h-3.5 text-zinc-600 shrink-0" />
-            <span className="max-w-[120px] truncate text-[11.5px]">{displayContext}</span>
+            <span className="max-w-[130px] truncate text-xs">{displayContext}</span>
           </div>
 
           {/* Sibling Sub-Branch Tabs */}
@@ -240,14 +240,14 @@ export function BranchChatPane({
                 key={tab.id}
                 type="button"
                 onClick={() => handleSelectTab(tab.leafId)}
-                className={`flex items-center space-x-1 px-2.5 py-1 rounded-md text-xs transition-all cursor-pointer select-none shrink-0 ${
+                className={`flex items-center space-x-2 px-3 pb-2.5 pt-1 text-[13px] font-medium transition-colors cursor-pointer select-none shrink-0 border-b-2 -mb-px ${
                   isActive
-                    ? "bg-white text-zinc-950 font-semibold shadow-2xs border border-zinc-200/90"
-                    : "text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200/50"
+                    ? "border-zinc-950 text-zinc-950 font-semibold"
+                    : "border-transparent text-zinc-500 hover:text-zinc-900 hover:border-zinc-300"
                 }`}
                 title={tab.prompt || tab.title}
               >
-                <span className="truncate max-w-[90px]">{tab.title}</span>
+                <span className="truncate max-w-[120px]">{tab.title}</span>
               </button>
             );
           })}
@@ -256,73 +256,74 @@ export function BranchChatPane({
           <button
             type="button"
             onClick={handleStartNewTab}
-            className={`p-1 rounded-md text-xs transition-all cursor-pointer select-none shrink-0 ${
+            className={`flex items-center justify-center px-2 pb-2.5 pt-1 text-[13px] font-medium transition-colors cursor-pointer select-none shrink-0 border-b-2 -mb-px ${
               isDraftingNewTab
-                ? "bg-white text-zinc-950 font-medium shadow-2xs border border-zinc-200/90"
-                : "text-zinc-400 hover:text-zinc-900 hover:bg-zinc-200/50"
+                ? "border-zinc-950 text-zinc-950 font-semibold"
+                : "border-transparent text-zinc-400 hover:text-zinc-900 hover:border-zinc-300"
             }`}
             title="Create new sub-branch query on this topic"
           >
-            <Plus className="w-3.5 h-3.5" />
+            <Plus className="w-4 h-4" />
           </button>
         </div>
 
         {/* Close Side Branch View */}
-        <Button
-          variant="ghost"
-          size="iconSm"
-          onClick={onClose}
-          className="h-7 w-7 text-zinc-400 hover:text-zinc-900 shrink-0 cursor-pointer"
-          title="Close branch view"
-        >
-          <X className="w-4 h-4" />
-        </Button>
+        <div className="mb-2">
+          <Button
+            variant="ghost"
+            size="iconSm"
+            onClick={onClose}
+            className="h-8 w-8 text-zinc-400 hover:text-zinc-900 shrink-0 cursor-pointer"
+            title="Close branch view"
+          >
+            <X className="w-4 h-4" />
+          </Button>
+        </div>
       </div>
 
       {/* Messages Scroll Area or New Tab Starter View */}
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 text-sm bg-zinc-50/30"
+        className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 text-sm bg-white"
       >
         {isDraftingNewTab ? (
-          /* Blank Draft Tab Starter View */
-          <div className="flex-1 flex flex-col justify-center max-w-md mx-auto py-6 space-y-5 animate-in fade-in-50 duration-150">
-            <div className="text-center space-y-1.5">
-              <div className="w-8 h-8 rounded-lg bg-zinc-100 border border-zinc-200/80 text-zinc-700 flex items-center justify-center mx-auto shadow-2xs">
-                <Plus className="w-4 h-4" />
+          /* Blank Draft Tab Starter View - Coursera 2-Column Card Style */
+          <div className="flex-1 flex flex-col justify-center max-w-xl mx-auto py-8 space-y-5 animate-in fade-in duration-150">
+            <div className="rounded-2xl border border-zinc-200/90 bg-white p-5 shadow-2xs space-y-4">
+              <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
+                <h3 className="text-sm font-semibold text-zinc-900">
+                  Explorations for &ldquo;{displayContext}&rdquo;
+                </h3>
+                <span className="text-[11px] text-zinc-400 font-medium">Quick Starters</span>
               </div>
-              <h3 className="text-sm font-semibold text-zinc-900">
-                New exploration on &ldquo;{displayContext}&rdquo;
-              </h3>
-              <p className="text-xs text-zinc-500">
-                Query this topic from a different perspective or choose a quick starter below:
-              </p>
-            </div>
 
-            {/* Quick Template Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {starterTemplates.map((tpl, i) => {
-                const Icon = tpl.icon;
-                return (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => handleQuickPrompt(tpl.prompt)}
-                    disabled={isStreaming}
-                    className="p-3 rounded-xl bg-white border border-zinc-200/80 hover:border-zinc-300 hover:bg-zinc-50/80 text-left transition-all group shadow-2xs cursor-pointer"
-                  >
-                    <div className="flex items-center space-x-2 mb-1">
-                      <Icon className="w-3.5 h-3.5 text-zinc-600 group-hover:text-zinc-950" />
-                      <span className="text-xs font-semibold text-zinc-900">
-                        {tpl.title}
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-zinc-500 leading-snug">
-                      {tpl.desc}
-                    </p>
-                  </button>
-                );
-              })}
+              {/* 2-Column Template Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {starterTemplates.map((tpl, i) => {
+                  const Icon = tpl.icon;
+                  return (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => handleQuickPrompt(tpl.prompt)}
+                      disabled={isStreaming}
+                      className="p-3 rounded-xl border border-zinc-200/80 hover:border-zinc-400 hover:bg-zinc-50/50 text-left transition-all group flex items-start space-x-2.5 cursor-pointer shadow-2xs"
+                    >
+                      <div className="p-1.5 rounded-lg bg-zinc-100 text-zinc-600 group-hover:text-zinc-950 group-hover:bg-zinc-200/60 shrink-0 transition-colors">
+                        <Icon className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-xs font-semibold text-zinc-900 group-hover:text-zinc-950">
+                          {tpl.title}
+                        </div>
+                        <p className="text-[11px] text-zinc-500 leading-snug mt-0.5">
+                          {tpl.desc}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
         ) : (

@@ -624,7 +624,7 @@ export function ChatContainer({
       />
 
       {/* Main App Layout: Workspace Chats Sidebar + Canvas / Split-Pane Chat */}
-      <div className="flex-1 min-h-0 flex relative overflow-hidden">
+      <div className="flex-1 min-h-0 flex relative overflow-hidden bg-white">
         {/* Left Workspace Chats History Sidebar */}
         <ChatSidebar
           isOpen={isSidebarOpen}
@@ -638,7 +638,7 @@ export function ChatContainer({
         />
 
         {/* Content Area */}
-        <div className="flex-1 min-w-0 flex relative overflow-hidden">
+        <div className="flex-1 min-w-0 flex relative bg-white overflow-hidden">
           {viewMode === "canvas" ? (
             /* 2D Spatial Mind Map & Knowledge Graph Canvas View */
             <div className="w-full h-full relative">
