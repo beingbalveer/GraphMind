@@ -33,11 +33,13 @@ import {
   fetchWorkspaceChats,
   deleteWorkspaceChat,
   renameWorkspaceChat,
+  togglePinWorkspaceChat,
   fetchGraphSnapshot,
   addNodeToWorkspace,
   snapshotToTree,
   seedDemoWorkspace,
 } from "@/lib/workspaceApi";
+
 
 interface ChatContainerProps {
   initialWorkspaceId?: string;
@@ -272,6 +274,17 @@ export function ChatContainer({
     },
     [currentWorkspace, refreshChats]
   );
+
+  // Pin or unpin a chat in the sidebar — updates metadata on the backend then refreshes list
+  const handleTogglePinChat = useCallback(
+    async (chatId: string, pinned: boolean) => {
+      if (!currentWorkspace) return;
+      await togglePinWorkspaceChat(currentWorkspace.id, chatId, pinned);
+      await refreshChats(currentWorkspace.id);
+    },
+    [currentWorkspace, refreshChats]
+  );
+
 
   // Switch active workspace from Workspace Modal
   const handleSelectWorkspace = useCallback(
@@ -622,8 +635,10 @@ export function ChatContainer({
           onSelectChat={handleSelectChat}
           onDeleteChat={handleDeleteChat}
           onRenameChat={handleRenameChat}
+          onTogglePinChat={handleTogglePinChat}
           onOpenWorkspaceModal={() => setIsWorkspaceModalOpen(true)}
         />
+
 
         {/* Content Area */}
         <div className="flex-1 min-w-0 flex relative bg-white overflow-hidden">

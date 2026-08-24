@@ -309,6 +309,7 @@ class WorkspaceService:
                 title = root.content[:40].strip() + ("..." if len(root.content) > 40 else "")
             if not title:
                 title = "Untitled Chat"
+            is_pinned = bool(root.metadata_payload.get("pinned", False)) if root.metadata_payload else False
 
             chats.append(
                 ChatSummary(
@@ -319,12 +320,14 @@ class WorkspaceService:
                     created_at=root.created_at,
                     updated_at=latest_updated,
                     active_node_id=active_node.id,
+                    pinned=is_pinned,
                 )
             )
 
-        # Sort by updated_at descending
-        chats.sort(key=lambda c: c.updated_at, reverse=True)
+        # Sort pinned chats to the top, then by updated_at descending
+        chats.sort(key=lambda c: (1 if c.pinned else 0, c.updated_at), reverse=True)
         return chats
+
     @staticmethod
     async def delete_branch(session: AsyncSession, workspace_id: str, node_id: str) -> bool:
         """
@@ -332,15 +335,15 @@ class WorkspaceService:
         """
         stmt = text("""
             WITH RECURSIVE descendants AS (
-                SELECT id FROM nodes 
+                SELECT id FROM nodes
                 WHERE id = :node_id AND workspace_id = :workspace_id
-                
+
                 UNION ALL
-                
+
                 SELECT n.id FROM nodes n
                 INNER JOIN descendants d ON n.parent_id = d.id
             )
-            DELETE FROM nodes 
+            DELETE FROM nodes
             WHERE id IN (SELECT id FROM descendants)
             RETURNING id;
         """)
@@ -348,10 +351,12 @@ class WorkspaceService:
         deleted_ids = result.fetchall()
         if not deleted_ids:
             return False
-            
+
         await session.flush()
         logger.info("Branch deleted", workspace_id=workspace_id, node_id=node_id, deleted_count=len(deleted_ids))
         return True
+
+
     @staticmethod
     async def delete_chat(session: AsyncSession, workspace_id: str, chat_root_id: str) -> bool:
         """
@@ -371,11 +376,15 @@ class WorkspaceService:
         return True
 
     @staticmethod
-    async def rename_chat(
-        session: AsyncSession, workspace_id: str, chat_root_id: str, new_title: str
+    async def update_chat_metadata(
+        session: AsyncSession,
+        workspace_id: str,
+        chat_root_id: str,
+        title: Optional[str] = None,
+        pinned: Optional[bool] = None,
     ) -> bool:
         """
-        Rename a conversation tree by updating the title in the root node's metadata_payload.
+        Update a conversation tree's metadata (title and/or pinned state).
         """
         stmt = select(NodeModel).where(
             NodeModel.id == chat_root_id, NodeModel.workspace_id == workspace_id
@@ -386,11 +395,32 @@ class WorkspaceService:
             return False
 
         payload = dict(root.metadata_payload or {})
-        payload["title"] = new_title.strip()
+        if title is not None:
+            payload["title"] = title.strip()
+        if pinned is not None:
+            payload["pinned"] = pinned
         root.metadata_payload = payload
         await session.flush()
-        logger.info("Chat renamed", workspace_id=workspace_id, chat_root_id=chat_root_id, new_title=new_title)
+        logger.info(
+            "Chat metadata updated",
+            workspace_id=workspace_id,
+            chat_root_id=chat_root_id,
+            title=title,
+            pinned=pinned,
+        )
         return True
+
+    @staticmethod
+    async def rename_chat(
+        session: AsyncSession, workspace_id: str, chat_root_id: str, new_title: str
+    ) -> bool:
+        """
+        Rename a conversation tree by updating the title in the root node's metadata_payload.
+        """
+        return await WorkspaceService.update_chat_metadata(
+            session, workspace_id, chat_root_id, title=new_title
+        )
+
 
     @staticmethod
     async def add_node_and_edge(

@@ -28,7 +28,9 @@ export interface ChatItem {
   createdAt: string;
   updatedAt: string;
   activeNodeId?: string | null;
+  pinned?: boolean;
 }
+
 
 export interface ChatListResponse {
   workspaceId: string;
@@ -300,6 +302,27 @@ export async function renameWorkspaceChat(
     return false;
   }
 }
+
+export async function togglePinWorkspaceChat(
+  workspaceId: string,
+  chatRootId: string,
+  pinned: boolean
+): Promise<boolean> {
+  try {
+    const res = await fetch(
+      `${API_BASE_URL}/api/v1/workspaces/${workspaceId}/chats/${chatRootId}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pinned }),
+      }
+    );
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 
 export async function fetchGraphSnapshot(
   workspaceId: string,

@@ -6,6 +6,7 @@ import {
   FolderGit2,
   MoreVertical,
   Pin,
+  PinOff,
   Pencil,
   Trash2,
 } from "lucide-react";
@@ -22,6 +23,7 @@ interface ChatSidebarProps {
   onSelectChat: (chat: ChatItem) => void;
   onDeleteChat: (id: string) => void;
   onRenameChat: (id: string, newTitle: string) => Promise<void>;
+  onTogglePinChat?: (id: string, pinned: boolean) => Promise<void>;
   onOpenWorkspaceModal?: () => void;
 }
 
@@ -38,8 +40,10 @@ export function ChatSidebar({
   onSelectChat,
   onDeleteChat,
   onRenameChat,
+  onTogglePinChat,
   onOpenWorkspaceModal,
 }: ChatSidebarProps) {
+
   const [searchQuery, setSearchQuery] = useState("");
   const [deletingChatId, setDeletingChatId] = useState<string | null>(null);
   const [renamingChatId, setRenamingChatId] = useState<string | null>(null);
@@ -104,10 +108,17 @@ export function ChatSidebar({
   }, [width]);
 
   const filteredChats = useMemo(() => {
-    if (!searchQuery.trim()) return chats;
-    const q = searchQuery.toLowerCase().trim();
-    return chats.filter((c) => c.title.toLowerCase().includes(q));
+    const list = !searchQuery.trim()
+      ? chats
+      : chats.filter((c) => c.title.toLowerCase().includes(searchQuery.toLowerCase().trim()));
+    return [...list].sort((a, b) => {
+      const aPinned = a.pinned ? 1 : 0;
+      const bPinned = b.pinned ? 1 : 0;
+      if (aPinned !== bPinned) return bPinned - aPinned;
+      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+    });
   }, [chats, searchQuery]);
+
 
   // Auto-focus rename input when it appears
   useEffect(() => {
@@ -220,8 +231,11 @@ export function ChatSidebar({
                       className="flex-1 mr-1 bg-white border border-blue-400 rounded-md px-2 py-0.5 text-[13px] text-zinc-950 outline-none ring-2 ring-blue-100 min-w-0"
                     />
                   ) : (
-                    <span className="truncate text-[13px] leading-snug flex-1 mr-1">
-                      {chat.title || "New conversation"}
+                    <span className="truncate text-[13px] leading-snug flex-1 mr-1 flex items-center min-w-0">
+                      {chat.pinned && (
+                        <Pin className="w-3 h-3 text-zinc-400 shrink-0 mr-1.5 fill-zinc-400/30" />
+                      )}
+                      <span className="truncate">{chat.title || "New conversation"}</span>
                     </span>
                   )}
 
@@ -247,11 +261,13 @@ export function ChatSidebar({
                         }
                         items={[
                           {
-                            label: "Pin",
-                            icon: <Pin className="w-3.5 h-3.5" />,
-                            onClick: () => {
-                              // Phase 4: pin to top — coming soon
-                            },
+                            label: chat.pinned ? "Unpin" : "Pin",
+                            icon: chat.pinned ? (
+                              <PinOff className="w-3.5 h-3.5" />
+                            ) : (
+                              <Pin className="w-3.5 h-3.5" />
+                            ),
+                            onClick: () => onTogglePinChat?.(chat.id, !chat.pinned),
                           },
                           {
                             label: "Rename",
@@ -268,6 +284,7 @@ export function ChatSidebar({
                       />
                     </div>
                   )}
+
 
                 </div>
               );

@@ -72,6 +72,21 @@ async def test_workspace_crud_lifecycle() -> None:
         assert chats_data["total"] == 1
         assert chats_data["chats"][0]["id"] == f"node_root_{ws_id}"
         assert chats_data["chats"][0]["nodeCount"] == 2
+        assert chats_data["chats"][0]["pinned"] is False
+
+        # 6a. Rename & Pin Chat
+        patch_resp = await client.patch(
+            f"/api/v1/workspaces/{ws_id}/chats/{f'node_root_{ws_id}'}",
+            json={"title": "Raft Deep Dive", "pinned": True},
+        )
+        assert patch_resp.status_code == 200
+
+        # Verify updated chat list reflects new title and pinned state
+        chats_updated_resp = await client.get(f"/api/v1/workspaces/{ws_id}/chats")
+        assert chats_updated_resp.status_code == 200
+        updated_chat = chats_updated_resp.json()["chats"][0]
+        assert updated_chat["title"] == "Raft Deep Dive"
+        assert updated_chat["pinned"] is True
 
         # 7. Apply Delta Updates (auto-save moved nodes and viewport)
         delta_resp = await client.post(
@@ -89,6 +104,7 @@ async def test_workspace_crud_lifecycle() -> None:
         del_chat_resp = await client.delete(
             f"/api/v1/workspaces/{ws_id}/chats/{f'node_root_{ws_id}'}"
         )
+
         assert del_chat_resp.status_code == 204
 
         # Verify chat tree nodes are removed

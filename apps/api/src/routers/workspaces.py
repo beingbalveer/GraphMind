@@ -150,27 +150,39 @@ async def delete_chat_tree(
 
 
 @router.patch("/{workspace_id}/chats/{chat_root_id}", status_code=status.HTTP_200_OK)
-async def rename_chat_tree(
+async def update_chat_tree(
     workspace_id: str,
     chat_root_id: str,
-    body: dict,
+    body: Dict[str, Any],
     db: AsyncSession = Depends(get_db),
-) -> dict:
-    """
-    Rename a conversation tree by updating the title in its root node's metadata.
-    Body: { "title": "new name" }
-    """
-    new_title = (body.get("title") or "").strip()
-    if not new_title:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="title is required")
+) -> Dict[str, Any]:
 
-    renamed = await WorkspaceService.rename_chat(db, workspace_id, chat_root_id, new_title)
-    if not renamed:
+    """
+    Update a conversation tree's metadata (title and/or pinned state) on its root node.
+    Body: { "title"?: string, "pinned"?: boolean }
+    """
+    title = body.get("title")
+    pinned = body.get("pinned") if "pinned" in body else body.get("isPinned")
+
+    if title is None and pinned is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="At least one field ('title' or 'pinned') must be provided",
+        )
+
+    title_val = title.strip() if isinstance(title, str) else None
+    pinned_val = bool(pinned) if pinned is not None else None
+
+    updated = await WorkspaceService.update_chat_metadata(
+        db, workspace_id, chat_root_id, title=title_val, pinned=pinned_val
+    )
+    if not updated:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Chat '{chat_root_id}' not found in workspace '{workspace_id}'",
         )
-    return {"id": chat_root_id, "title": new_title}
+    return {"id": chat_root_id, "title": title_val, "pinned": pinned_val}
+
 
 
 @router.delete("/{workspace_id}/nodes/{node_id}", status_code=status.HTTP_204_NO_CONTENT)

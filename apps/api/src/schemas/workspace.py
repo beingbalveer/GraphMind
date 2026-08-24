@@ -131,6 +131,7 @@ class ChatSummary(BaseSchema):
     created_at: datetime
     updated_at: datetime
     active_node_id: Optional[str] = None
+    pinned: bool = Field(default=False, description="Whether this chat is pinned to top")
 
 
 class ChatListResponse(BaseSchema):
