@@ -53,6 +53,8 @@ export function BranchChatPane({
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const prevBranchLeafIdRef = useRef<string | null>(null);
+  const prevDraftingRef = useRef<boolean>(isDraftingNewTab);
+  const scrollPositionsRef = useRef<Record<string, number>>({});
 
   // Compute full lineage for the currently active leaf node
   const activeLineage: TreeNode[] = useMemo(() => {
@@ -139,16 +141,39 @@ export function BranchChatPane({
     return activeLineage.slice(branchRootIndex);
   }, [activeLineage, branchRootIndex, isDraftingNewTab]);
 
-  // Auto-scroll on new streaming tokens
-  useEffect(() => {
-    if (bottomRef.current) {
-      const isNewBranch = prevBranchLeafIdRef.current !== branchLeafNodeId;
-      bottomRef.current.scrollIntoView({ 
-        behavior: isNewBranch ? "auto" : "smooth" 
-      });
-      prevBranchLeafIdRef.current = branchLeafNodeId;
+  // Track scroll position per tab
+  const handleScroll = useCallback(() => {
+    if (!scrollRef.current) return;
+    const currentKey = isDraftingNewTab ? "__draft__" : branchLeafNodeId;
+    if (currentKey) {
+      scrollPositionsRef.current[currentKey] = scrollRef.current.scrollTop;
     }
-  }, [branchMessages, isStreaming, branchLeafNodeId]);
+  }, [isDraftingNewTab, branchLeafNodeId]);
+
+  // Scroll position restoration on tab switch or follow during streaming
+  useEffect(() => {
+    const currentKey = isDraftingNewTab ? "__draft__" : branchLeafNodeId;
+    const wasDrafting = prevDraftingRef.current;
+    const isNewBranch = prevBranchLeafIdRef.current !== branchLeafNodeId;
+    const isTabSwitch = isNewBranch || wasDrafting !== isDraftingNewTab;
+
+    prevBranchLeafIdRef.current = branchLeafNodeId;
+    prevDraftingRef.current = isDraftingNewTab;
+
+    if (!scrollRef.current) return;
+
+    if (isTabSwitch) {
+      // Restore previously saved scroll position for this specific tab
+      if (currentKey && typeof scrollPositionsRef.current[currentKey] === "number") {
+        scrollRef.current.scrollTop = scrollPositionsRef.current[currentKey];
+      } else {
+        // Default to bottom for a new branch view, or top for draft view
+        scrollRef.current.scrollTop = isDraftingNewTab ? 0 : scrollRef.current.scrollHeight;
+      }
+    } else if (isStreaming && bottomRef.current) {
+      bottomRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [branchMessages, isStreaming, branchLeafNodeId, isDraftingNewTab]);
 
   // Focus input when opening draft tab
   useEffect(() => {
@@ -159,16 +184,30 @@ export function BranchChatPane({
 
   const handleSelectTab = useCallback(
     (leafId: string) => {
+      // Save scroll state before switching
+      if (scrollRef.current) {
+        const currentKey = isDraftingNewTab ? "__draft__" : branchLeafNodeId;
+        if (currentKey) {
+          scrollPositionsRef.current[currentKey] = scrollRef.current.scrollTop;
+        }
+      }
       setIsDraftingNewTab(false);
       onSelectBranchLeaf(leafId);
     },
-    [onSelectBranchLeaf]
+    [isDraftingNewTab, branchLeafNodeId, onSelectBranchLeaf]
   );
 
   const handleStartNewTab = useCallback(() => {
+    // Save scroll state before opening draft
+    if (scrollRef.current) {
+      const currentKey = isDraftingNewTab ? "__draft__" : branchLeafNodeId;
+      if (currentKey) {
+        scrollPositionsRef.current[currentKey] = scrollRef.current.scrollTop;
+      }
+    }
     setIsDraftingNewTab(true);
     setInputPrompt("");
-  }, []);
+  }, [isDraftingNewTab, branchLeafNodeId]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -284,6 +323,7 @@ export function BranchChatPane({
       {/* Messages Scroll Area or New Tab Starter View */}
       <div
         ref={scrollRef}
+        onScroll={handleScroll}
         className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 text-sm bg-white"
       >
         {isDraftingNewTab ? (
