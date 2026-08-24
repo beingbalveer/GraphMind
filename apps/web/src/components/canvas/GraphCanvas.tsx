@@ -36,6 +36,7 @@ interface GraphCanvasProps {
   onSelectNode: (nodeId: string) => void;
   onExploreBranch?: (nodeId: string, contextText?: string) => void;
   onSwitchToChat?: (nodeId: string) => void;
+  onDeleteBranch?: (nodeId: string) => void;
   onRetry?: () => void;
   onFitViewRef?: React.MutableRefObject<(() => void) | null>;
   onCenterActiveRef?: React.MutableRefObject<(() => void) | null>;
@@ -54,21 +55,23 @@ function FlowCanvas({
   tree,
   isStreaming = false,
   onSelectNode,
+  onDeleteBranch,
   onFitViewRef,
   onCenterActiveRef,
   onAutoLayoutRef,
 }: GraphCanvasProps) {
-  const { fitView, setCenter, zoomTo } = useReactFlow();
+  const [zoomMode, setZoomMode] = useState<ZoomMode>("capsule");
+  const [direction, setDirection] = useState<LayoutDirection>("LR");
+  const { fitView, setCenter, getNodes, getZoom, zoomTo } = useReactFlow();
   const { zoom } = useViewport();
   const [showMinimap, setShowMinimap] = useState(true);
-  const [direction, setDirection] = useState<LayoutDirection>("LR");
   const isFirstRender = useRef(true);
 
-  // Compute adaptive LOD Zoom Mode
-  const zoomMode: ZoomMode = useMemo(() => {
-    if (zoom < 0.6) return "orb";
-    if (zoom >= 1.25) return "detailed";
-    return "capsule";
+  // Update zoomMode based on zoom
+  useEffect(() => {
+    if (zoom < 0.6) setZoomMode("orb");
+    else if (zoom >= 1.25) setZoomMode("detailed");
+    else setZoomMode("capsule");
   }, [zoom]);
 
   // Compute Thread Nodes & Branch Edges
@@ -77,10 +80,11 @@ function FlowCanvas({
       activeNodeId: tree?.activeNodeId,
       isStreaming,
       zoomMode,
+      onDeleteThread: onDeleteBranch,
     });
     const layouted = getLayoutedElements(raw.nodes, raw.edges, direction);
     return { initialNodes: layouted.nodes, initialEdges: layouted.edges };
-  }, [tree, isStreaming, zoomMode, direction]);
+  }, [tree, isStreaming, zoomMode, direction, onDeleteBranch]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<ThreadNodeData>>(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
@@ -91,11 +95,12 @@ function FlowCanvas({
       activeNodeId: tree?.activeNodeId,
       isStreaming,
       zoomMode,
+      onDeleteThread: onDeleteBranch,
     });
     const layouted = getLayoutedElements(raw.nodes, raw.edges, direction);
     setNodes(layouted.nodes);
     setEdges(layouted.edges);
-  }, [tree, isStreaming, zoomMode, direction, setNodes, setEdges]);
+  }, [tree, isStreaming, zoomMode, direction, onDeleteBranch, setNodes, setEdges]);
 
   // Center camera on a specific thread node
   const centerOnNode = useCallback(
@@ -103,17 +108,14 @@ function FlowCanvas({
       const targetId = threadId || tree?.activeNodeId;
       if (!targetId) return;
 
-      const targetNode = nodes.find(
-        (n) => n.id === targetId || n.data.thread.messages.some((m) => m.id === targetId)
-      );
-
+      const targetNode = getNodes().find((n) => n.id === targetId);
       if (targetNode) {
-        const centerX = targetNode.position.x + 115;
-        const centerY = targetNode.position.y + 26;
-        setCenter(centerX, centerY, { zoom: 1.0, duration: 400 });
+        const x = targetNode.position.x + (targetNode.measured?.width || 200) / 2;
+        const y = targetNode.position.y + (targetNode.measured?.height || 80) / 2;
+        setCenter(x, y, { duration: 800, zoom: Math.max(getZoom(), 0.8) });
       }
     },
-    [nodes, tree?.activeNodeId, setCenter]
+    [tree?.activeNodeId, getNodes, setCenter, getZoom]
   );
 
   const handleFitView = useCallback(() => {
@@ -129,12 +131,13 @@ function FlowCanvas({
       activeNodeId: tree?.activeNodeId,
       isStreaming,
       zoomMode,
+      onDeleteThread: onDeleteBranch,
     });
     const layouted = getLayoutedElements(raw.nodes, raw.edges, direction);
     setNodes(layouted.nodes);
     setEdges(layouted.edges);
     handleFitView();
-  }, [tree, isStreaming, zoomMode, direction, handleFitView, setNodes, setEdges]);
+  }, [tree, isStreaming, zoomMode, direction, onDeleteBranch, handleFitView, setNodes, setEdges]);
 
   const handleToggleDirection = useCallback(() => {
     const newDir = direction === "LR" ? "TB" : "LR";

@@ -6,6 +6,7 @@ import {
   FileText,
   GitBranch,
   Loader2,
+  Trash2,
 } from "lucide-react";
 import { ConversationThread } from "@/lib/threadUtils";
 
@@ -15,6 +16,7 @@ export interface ThreadNodeData {
   thread: ConversationThread;
   zoomMode?: ZoomMode;
   onSelectThread?: (threadId: string) => void;
+  onDeleteThread?: (threadId: string) => void;
   [key: string]: unknown;
 }
 
@@ -145,12 +147,29 @@ export const ThreadGraphNode = memo(function ThreadGraphNode({
           </div>
         </div>
 
-        {/* Message Count Badge */}
-        <div
-          className="px-2 py-0.5 rounded-full bg-zinc-100 border border-zinc-200/80 text-[10px] font-mono text-zinc-600 font-medium shrink-0"
-          title={`${messageCount} messages in this thread`}
-        >
-          {messageCount} msg{messageCount > 1 ? "s" : ""}
+        {/* Message Count Badge & Delete Action */}
+        <div className="flex items-center space-x-1.5 shrink-0">
+          <div
+            className="px-2 py-0.5 rounded-full bg-zinc-100 border border-zinc-200/80 text-[10px] font-mono text-zinc-600 font-medium"
+            title={`${messageCount} messages in this thread`}
+          >
+            {messageCount} msg{messageCount > 1 ? "s" : ""}
+          </div>
+          {data.onDeleteThread && !isRoot && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (window.confirm("Are you sure you want to delete this branch and all its descendants? This cannot be undone.")) {
+                  data.onDeleteThread!(thread.id);
+                }
+              }}
+              className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md text-red-500/70 hover:text-red-600 hover:bg-red-50 z-10"
+              title="Delete branch"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
       </div>
 

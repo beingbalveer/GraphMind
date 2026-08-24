@@ -242,6 +242,28 @@ export async function addNodeToWorkspace(
   }
 }
 
+export async function deleteWorkspaceBranch(
+  workspaceId: string,
+  nodeId: string
+): Promise<boolean> {
+  try {
+    const res = await fetch(
+      `${API_BASE_URL}/api/v1/workspaces/${workspaceId}/nodes/${nodeId}`,
+      {
+        method: "DELETE",
+      }
+    );
+    if (!res.ok) {
+      console.error(`Failed to delete branch ${nodeId}`);
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error("Failed to delete branch:", error);
+    return false;
+  }
+}
+
 export async function deleteWorkspaceChat(
   workspaceId: string,
   chatRootId: string

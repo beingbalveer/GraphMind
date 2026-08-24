@@ -16,21 +16,22 @@ export function ResizableSplitPane({
   isOpen,
   defaultLeftPercent = 50,
 }: ResizableSplitPaneProps) {
-  const [leftPercent, setLeftPercent] = useState<number>(defaultLeftPercent);
-
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem("graphmind_split_width_v1");
-      if (saved) {
-        const parsed = parseFloat(saved);
-        if (!isNaN(parsed) && parsed >= 25 && parsed <= 75) {
-          setLeftPercent(parsed);
+  const [leftPercent, setLeftPercent] = useState<number>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("graphmind_split_width_v1");
+        if (saved) {
+          const parsed = parseFloat(saved);
+          if (!isNaN(parsed) && parsed >= 25 && parsed <= 75) {
+            return parsed;
+          }
         }
+      } catch {
+        // ignore
       }
-    } catch {
-      // ignore
     }
-  }, []);
+    return defaultLeftPercent;
+  });
 
   const [isDragging, setIsDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -82,6 +83,7 @@ export function ResizableSplitPane({
     >
       {/* Left Main Chat Pane */}
       <div
+        suppressHydrationWarning
         style={{ width: effectiveLeftWidth }}
         className={`h-full flex flex-col min-w-0 overflow-hidden bg-white relative ${transitionStyle}`}
       >
@@ -101,6 +103,7 @@ export function ResizableSplitPane({
 
       {/* Right Branch Chat Pane */}
       <div
+        suppressHydrationWarning
         style={{ width: effectiveRightWidth }}
         className={`h-full flex flex-col overflow-hidden bg-zinc-50/50 relative border-l border-zinc-200/70 ${
           isOpen && rightPane

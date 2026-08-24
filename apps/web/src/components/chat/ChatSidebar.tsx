@@ -35,22 +35,23 @@ export function ChatSidebar({
 }: ChatSidebarProps) {
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Resizable sidebar width with local storage persistence (synced in useEffect to prevent SSR hydration mismatch)
-  const [width, setWidth] = useState<number>(DEFAULT_WIDTH);
-
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem("graphmind_sidebar_width_v1");
-      if (saved) {
-        const parsed = parseInt(saved, 10);
-        if (!isNaN(parsed) && parsed >= MIN_WIDTH && parsed <= MAX_WIDTH) {
-          setWidth(parsed);
+  // Resizable sidebar width with local storage persistence
+  const [width, setWidth] = useState<number>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("graphmind_sidebar_width_v1");
+        if (saved) {
+          const parsed = parseInt(saved, 10);
+          if (!isNaN(parsed) && parsed >= MIN_WIDTH && parsed <= MAX_WIDTH) {
+            return parsed;
+          }
         }
+      } catch {
+        // ignore
       }
-    } catch {
-      // ignore
     }
-  }, []);
+    return DEFAULT_WIDTH;
+  });
 
   const [isResizing, setIsResizing] = useState(false);
   const isResizingRef = useRef(false);
@@ -107,6 +108,7 @@ export function ChatSidebar({
 
       {/* Collapsible & Resizable Left Sidebar Container */}
       <aside
+        suppressHydrationWarning
         style={{ width: isOpen ? `${width}px` : 0 }}
         className={`fixed md:static inset-y-0 left-0 z-40 flex flex-col bg-zinc-50/70 border-r border-zinc-200/70 select-none relative ${
           isOpen

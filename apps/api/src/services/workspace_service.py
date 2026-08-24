@@ -13,7 +13,7 @@ from schemas.workspace import (
     WorkspaceResponse,
     WorkspaceUpdate,
 )
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -325,7 +325,33 @@ class WorkspaceService:
         # Sort by updated_at descending
         chats.sort(key=lambda c: c.updated_at, reverse=True)
         return chats
-
+    @staticmethod
+    async def delete_branch(session: AsyncSession, workspace_id: str, node_id: str) -> bool:
+        """
+        Delete a node and all its recursive descendants efficiently using a CTE.
+        """
+        stmt = text("""
+            WITH RECURSIVE descendants AS (
+                SELECT id FROM nodes 
+                WHERE id = :node_id AND workspace_id = :workspace_id
+                
+                UNION ALL
+                
+                SELECT n.id FROM nodes n
+                INNER JOIN descendants d ON n.parent_id = d.id
+            )
+            DELETE FROM nodes 
+            WHERE id IN (SELECT id FROM descendants)
+            RETURNING id;
+        """)
+        result = await session.execute(stmt, {"node_id": node_id, "workspace_id": workspace_id})
+        deleted_ids = result.fetchall()
+        if not deleted_ids:
+            return False
+            
+        await session.flush()
+        logger.info("Branch deleted", workspace_id=workspace_id, node_id=node_id, deleted_count=len(deleted_ids))
+        return True
     @staticmethod
     async def delete_chat(session: AsyncSession, workspace_id: str, chat_root_id: str) -> bool:
         """

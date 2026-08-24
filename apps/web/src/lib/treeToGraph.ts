@@ -8,6 +8,7 @@ export interface TreeToGraphOptions {
   isStreaming?: boolean;
   zoomMode?: ZoomMode;
   onSelectThread?: (threadId: string) => void;
+  onDeleteThread?: (threadId: string) => void;
 }
 
 /**
@@ -26,6 +27,7 @@ export function treeToGraph(
     isStreaming = false,
     zoomMode = "capsule",
     onSelectThread,
+    onDeleteThread,
   } = options || {};
 
   const { threads, edges: rawEdges } = extractConversationThreads(
@@ -86,6 +88,7 @@ export function treeToGraph(
         thread,
         zoomMode,
         onSelectThread,
+        onDeleteThread,
       },
     });
   }

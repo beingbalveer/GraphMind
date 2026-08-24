@@ -149,6 +149,23 @@ async def delete_chat_tree(
         )
 
 
+@router.delete("/{workspace_id}/nodes/{node_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_branch(
+    workspace_id: str,
+    node_id: str,
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """
+    Delete a specific node and all its recursive descendants.
+    """
+    deleted = await WorkspaceService.delete_branch(db, workspace_id, node_id)
+    if not deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Node '{node_id}' not found in workspace '{workspace_id}'",
+        )
+
+
 @router.get("/{workspace_id}/graph", response_model=GraphSnapshotResponse)
 async def get_graph_snapshot(
     workspace_id: str,

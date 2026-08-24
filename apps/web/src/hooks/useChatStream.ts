@@ -108,6 +108,54 @@ export function useChatStream() {
     }
   }, []);
 
+  const deleteBranch = useCallback(
+    async (nodeId: string, workspaceId: string) => {
+      if (!workspaceId) return false;
+      try {
+        const { deleteWorkspaceBranch } = await import("@/lib/workspaceApi");
+        const success = await deleteWorkspaceBranch(workspaceId, nodeId);
+        if (success) {
+          setTree((prev) => {
+            if (!prev) return prev;
+            const newNodes = { ...prev.nodes };
+            
+            // Helper to recursively collect all descendant IDs
+            const getDescendants = (id: string): string[] => {
+              const children = Object.values(newNodes).filter(n => n.parentId === id);
+              let all = [id];
+              for (const child of children) {
+                all = all.concat(getDescendants(child.id));
+              }
+              return all;
+            };
+
+            const toDelete = getDescendants(nodeId);
+            toDelete.forEach(id => {
+              delete newNodes[id];
+            });
+
+            // If we deleted the active node, reset activeNodeId to root
+            let newActiveId = prev.activeNodeId;
+            if (toDelete.includes(newActiveId || "")) {
+              newActiveId = prev.rootNodeId;
+            }
+
+            return {
+              ...prev,
+              nodes: newNodes,
+              activeNodeId: newActiveId
+            };
+          });
+        }
+        return success;
+      } catch (err) {
+        console.error("Failed to delete branch:", err);
+        return false;
+      }
+    },
+    [setTree]
+  );
+
   const clearMessages = useCallback(() => {
     stopStreaming();
     setTree(null);
@@ -388,6 +436,7 @@ export function useChatStream() {
     retryLastMessage,
     stopStreaming,
     clearMessages,
+    deleteBranch,
     loadTree,
   };
 }

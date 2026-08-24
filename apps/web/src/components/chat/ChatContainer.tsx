@@ -69,6 +69,7 @@ export function ChatContainer({
     retryLastMessage,
     stopStreaming,
     clearMessages,
+    deleteBranch,
     loadTree,
   } = useChatStream();
 
@@ -645,6 +646,7 @@ export function ChatContainer({
                 tree={tree}
                 isStreaming={isStreaming}
                 onSelectNode={handleSelectTreeNode}
+                onDeleteBranch={(nodeId) => currentWorkspace && deleteBranch(nodeId, currentWorkspace.id)}
                 onExploreBranch={(nodeId, text) => {
                   setBranchContext(nodeId, text || "");
                   setIsDrawerOpen(true);
