@@ -2,12 +2,16 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
-  Trash2,
   Search,
   FolderGit2,
+  MoreHorizontal,
+  Pin,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import { ChatItem } from "@/lib/workspaceApi";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { DropdownMenu } from "@/components/ui/dropdown-menu";
 
 interface ChatSidebarProps {
   isOpen: boolean;
@@ -175,18 +179,42 @@ export function ChatSidebar({
                     {chat.title || "New conversation"}
                   </span>
 
-                  {/* Clean Delete action button appearing smoothly on hover */}
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setDeletingChatId(chat.id);
-                    }}
-                    className="opacity-0 group-hover:opacity-100 p-1 rounded-md hover:bg-zinc-200/60 text-zinc-400 hover:text-rose-600 transition-all cursor-pointer shrink-0"
-                    title="Delete chat"
+                  {/* 3-dot context menu — appears on hover */}
+                  <div
+                    className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                    onClick={(e) => e.stopPropagation()}
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                    <DropdownMenu
+                      align="right"
+                      trigger={
+                        <div className="p-1 rounded-md hover:bg-zinc-200/70 text-zinc-400 hover:text-zinc-700 transition-colors cursor-pointer">
+                          <MoreHorizontal className="w-3.5 h-3.5" />
+                        </div>
+                      }
+                      items={[
+                        {
+                          label: "Pin",
+                          icon: <Pin className="w-3.5 h-3.5" />,
+                          onClick: () => {
+                            // Phase 4: pin to top — coming soon
+                          },
+                        },
+                        {
+                          label: "Rename",
+                          icon: <Pencil className="w-3.5 h-3.5" />,
+                          onClick: () => {
+                            // Phase 4: inline rename — coming soon
+                          },
+                        },
+                        {
+                          label: "Delete",
+                          icon: <Trash2 className="w-3.5 h-3.5" />,
+                          variant: "destructive",
+                          onClick: () => setDeletingChatId(chat.id),
+                        },
+                      ]}
+                    />
+                  </div>
                 </div>
               );
             })
@@ -213,7 +241,7 @@ export function ChatSidebar({
         )}
       </aside>
 
-      {/* Common Reusable Confirm Dialog for Chat Deletion */}
+      {/* Delete Confirmation Dialog */}
       <ConfirmDialog
         isOpen={Boolean(deletingChatId)}
         onClose={() => setDeletingChatId(null)}
@@ -231,3 +259,4 @@ export function ChatSidebar({
     </>
   );
 }
+
