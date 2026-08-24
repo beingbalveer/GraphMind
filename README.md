@@ -60,17 +60,22 @@ Key technical decisions are preserved in [`docs/adr/`](docs/adr/):
 - [Python](https://www.python.org/) v3.12+ & [`uv`](https://docs.astral.sh/uv/)
 - [Docker](https://www.docker.com/) & Docker Compose
 
-### Running via Docker Compose
+### Running in Development (With Hot Reloading)
+For active development with instant UI and API hot-reloading:
 ```bash
-# Clone the repository
-git clone https://github.com/your-username/GraphMind.git
-cd GraphMind
+# 1. Install dependencies
+pnpm install
 
-# Launch services (PostgreSQL, Redis, API, Web)
+# 2. Start PostgreSQL & Redis in the background, plus local Next.js & FastAPI dev servers
+pnpm dev
+```
+Access the frontend at `http://localhost:3000` and backend API docs at `http://localhost:8008/docs`.
+
+### Running via Full Docker Compose (Production Build)
+If you want to run the entire stack inside Docker (Note: this creates a production build without hot-reloading):
+```bash
 docker-compose up --build
 ```
-
-Access the frontend at `http://localhost:3000` and backend API docs at `http://localhost:8000/docs`.
 
 ---
 

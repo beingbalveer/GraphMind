@@ -4,7 +4,7 @@
   "private": true,
   "description": "AI-native Knowledge Workspace",
   "scripts": {
-    "dev": "concurrently -n \"api,web\" -c \"cyan,magenta\" \"pnpm dev:api\" \"pnpm dev:web\"",
+    "dev": "docker-compose up -d postgres redis && concurrently -n \"api,web\" -c \"cyan,magenta\" \"pnpm dev:api\" \"pnpm dev:web\"",
     "dev:web": "pnpm --filter @graphmind/web dev",
     "dev:api": "uv run --package graphmind-api uvicorn --app-dir apps/api/src main:app --port 8008 --reload",
     "build": "pnpm --filter @graphmind/shared build && pnpm --filter @graphmind/web build",
