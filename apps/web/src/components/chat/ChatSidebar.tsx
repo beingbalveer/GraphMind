@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import {
   Search,
   FolderGit2,
-  MoreHorizontal,
+  MoreVertical,
   Pin,
   Pencil,
   Trash2,
@@ -21,6 +21,7 @@ interface ChatSidebarProps {
   activeChatId: string | null;
   onSelectChat: (chat: ChatItem) => void;
   onDeleteChat: (id: string) => void;
+  onRenameChat: (id: string, newTitle: string) => Promise<void>;
   onOpenWorkspaceModal?: () => void;
 }
 
@@ -36,10 +37,15 @@ export function ChatSidebar({
   activeChatId,
   onSelectChat,
   onDeleteChat,
+  onRenameChat,
   onOpenWorkspaceModal,
 }: ChatSidebarProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [deletingChatId, setDeletingChatId] = useState<string | null>(null);
+  const [renamingChatId, setRenamingChatId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const renameInputRef = useRef<HTMLInputElement>(null);
+
 
   // Resizable sidebar width with local storage persistence
   const [width, setWidth] = useState<number>(() => {
@@ -101,6 +107,27 @@ export function ChatSidebar({
     const q = searchQuery.toLowerCase().trim();
     return chats.filter((c) => c.title.toLowerCase().includes(q));
   }, [chats, searchQuery]);
+
+  // Auto-focus rename input when it appears
+  useEffect(() => {
+    if (renamingChatId) {
+      setTimeout(() => renameInputRef.current?.focus(), 0);
+    }
+  }, [renamingChatId]);
+
+  const startRename = useCallback((chat: ChatItem) => {
+    setRenamingChatId(chat.id);
+    setRenameValue(chat.title || "");
+  }, []);
+
+  const commitRename = useCallback(async () => {
+    if (!renamingChatId || !renameValue.trim()) {
+      setRenamingChatId(null);
+      return;
+    }
+    await onRenameChat(renamingChatId, renameValue.trim());
+    setRenamingChatId(null);
+  }, [renamingChatId, renameValue, onRenameChat]);
 
   return (
     <>
@@ -164,57 +191,75 @@ export function ChatSidebar({
           ) : (
             filteredChats.map((chat) => {
               const isActive = chat.id === activeChatId;
+              const isRenaming = renamingChatId === chat.id;
 
               return (
                 <div
                   key={chat.id}
-                  onClick={() => onSelectChat(chat)}
+                  onClick={() => !isRenaming && onSelectChat(chat)}
                   className={`group relative flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-colors cursor-pointer select-none ${
                     isActive
                       ? "bg-[#F1F6FE] text-zinc-950 font-medium"
                       : "text-zinc-600 hover:bg-zinc-100/60 hover:text-zinc-950"
                   }`}
                 >
-                  <span className="truncate text-[13px] leading-snug flex-1 mr-1">
-                    {chat.title || "New conversation"}
-                  </span>
-
-                  {/* 3-dot context menu — appears on hover */}
-                  <div
-                    className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <DropdownMenu
-                      align="right"
-                      trigger={
-                        <div className="p-1 rounded-md hover:bg-zinc-200/70 text-zinc-400 hover:text-zinc-700 transition-colors cursor-pointer">
-                          <MoreHorizontal className="w-3.5 h-3.5" />
-                        </div>
-                      }
-                      items={[
-                        {
-                          label: "Pin",
-                          icon: <Pin className="w-3.5 h-3.5" />,
-                          onClick: () => {
-                            // Phase 4: pin to top — coming soon
-                          },
-                        },
-                        {
-                          label: "Rename",
-                          icon: <Pencil className="w-3.5 h-3.5" />,
-                          onClick: () => {
-                            // Phase 4: inline rename — coming soon
-                          },
-                        },
-                        {
-                          label: "Delete",
-                          icon: <Trash2 className="w-3.5 h-3.5" />,
-                          variant: "destructive",
-                          onClick: () => setDeletingChatId(chat.id),
-                        },
-                      ]}
+                  {isRenaming ? (
+                    /* Inline rename input */
+                    <input
+                      ref={renameInputRef}
+                      type="text"
+                      value={renameValue}
+                      onChange={(e) => setRenameValue(e.target.value)}
+                      onBlur={commitRename}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") { e.preventDefault(); commitRename(); }
+                        if (e.key === "Escape") { e.preventDefault(); setRenamingChatId(null); }
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      className="flex-1 mr-1 bg-white border border-blue-400 rounded-md px-2 py-0.5 text-[13px] text-zinc-950 outline-none ring-2 ring-blue-100 min-w-0"
                     />
-                  </div>
+                  ) : (
+                    <span className="truncate text-[13px] leading-snug flex-1 mr-1">
+                      {chat.title || "New conversation"}
+                    </span>
+                  )}
+
+                  {/* 3-dot context menu — vertical dots, appears on hover */}
+                  {!isRenaming && (
+                    <div
+                      className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <DropdownMenu
+                        align="right"
+                        trigger={
+                          <div className="p-1 rounded-md hover:bg-zinc-200/70 text-zinc-400 hover:text-zinc-700 transition-colors cursor-pointer">
+                            <MoreVertical className="w-3.5 h-3.5" />
+                          </div>
+                        }
+                        items={[
+                          {
+                            label: "Pin",
+                            icon: <Pin className="w-3.5 h-3.5" />,
+                            onClick: () => {
+                              // Phase 4: pin to top — coming soon
+                            },
+                          },
+                          {
+                            label: "Rename",
+                            icon: <Pencil className="w-3.5 h-3.5" />,
+                            onClick: () => startRename(chat),
+                          },
+                          {
+                            label: "Delete",
+                            icon: <Trash2 className="w-3.5 h-3.5" />,
+                            variant: "destructive",
+                            onClick: () => setDeletingChatId(chat.id),
+                          },
+                        ]}
+                      />
+                    </div>
+                  )}
                 </div>
               );
             })

@@ -32,6 +32,7 @@ import {
   createWorkspace,
   fetchWorkspaceChats,
   deleteWorkspaceChat,
+  renameWorkspaceChat,
   fetchGraphSnapshot,
   addNodeToWorkspace,
   snapshotToTree,
@@ -260,6 +261,16 @@ export function ChatContainer({
       }
     },
     [currentWorkspace, activeChatId, refreshChats, handleSelectChat, handleNewChat]
+  );
+
+  // Rename a chat in the sidebar — updates metadata title on the backend then refreshes list
+  const handleRenameChat = useCallback(
+    async (chatId: string, newTitle: string) => {
+      if (!currentWorkspace || !newTitle.trim()) return;
+      await renameWorkspaceChat(currentWorkspace.id, chatId, newTitle.trim());
+      await refreshChats(currentWorkspace.id);
+    },
+    [currentWorkspace, refreshChats]
   );
 
   // Switch active workspace from Workspace Modal
@@ -610,6 +621,7 @@ export function ChatContainer({
           activeChatId={activeChatId}
           onSelectChat={handleSelectChat}
           onDeleteChat={handleDeleteChat}
+          onRenameChat={handleRenameChat}
           onOpenWorkspaceModal={() => setIsWorkspaceModalOpen(true)}
         />
 

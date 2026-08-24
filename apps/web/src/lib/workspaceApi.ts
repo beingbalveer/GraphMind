@@ -281,6 +281,26 @@ export async function deleteWorkspaceChat(
   }
 }
 
+export async function renameWorkspaceChat(
+  workspaceId: string,
+  chatRootId: string,
+  newTitle: string
+): Promise<boolean> {
+  try {
+    const res = await fetch(
+      `${API_BASE_URL}/api/v1/workspaces/${workspaceId}/chats/${chatRootId}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: newTitle }),
+      }
+    );
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 export async function fetchGraphSnapshot(
   workspaceId: string,
   rootId?: string

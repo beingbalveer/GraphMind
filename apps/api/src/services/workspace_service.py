@@ -371,6 +371,28 @@ class WorkspaceService:
         return True
 
     @staticmethod
+    async def rename_chat(
+        session: AsyncSession, workspace_id: str, chat_root_id: str, new_title: str
+    ) -> bool:
+        """
+        Rename a conversation tree by updating the title in the root node's metadata_payload.
+        """
+        stmt = select(NodeModel).where(
+            NodeModel.id == chat_root_id, NodeModel.workspace_id == workspace_id
+        )
+        result = await session.execute(stmt)
+        root = result.scalar_one_or_none()
+        if not root:
+            return False
+
+        payload = dict(root.metadata_payload or {})
+        payload["title"] = new_title.strip()
+        root.metadata_payload = payload
+        await session.flush()
+        logger.info("Chat renamed", workspace_id=workspace_id, chat_root_id=chat_root_id, new_title=new_title)
+        return True
+
+    @staticmethod
     async def add_node_and_edge(
         session: AsyncSession, workspace_id: str, data: NodeCreate
     ) -> NodeResponse:

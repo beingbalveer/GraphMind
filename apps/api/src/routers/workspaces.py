@@ -149,6 +149,30 @@ async def delete_chat_tree(
         )
 
 
+@router.patch("/{workspace_id}/chats/{chat_root_id}", status_code=status.HTTP_200_OK)
+async def rename_chat_tree(
+    workspace_id: str,
+    chat_root_id: str,
+    body: dict,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """
+    Rename a conversation tree by updating the title in its root node's metadata.
+    Body: { "title": "new name" }
+    """
+    new_title = (body.get("title") or "").strip()
+    if not new_title:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="title is required")
+
+    renamed = await WorkspaceService.rename_chat(db, workspace_id, chat_root_id, new_title)
+    if not renamed:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Chat '{chat_root_id}' not found in workspace '{workspace_id}'",
+        )
+    return {"id": chat_root_id, "title": new_title}
+
+
 @router.delete("/{workspace_id}/nodes/{node_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_branch(
     workspace_id: str,
