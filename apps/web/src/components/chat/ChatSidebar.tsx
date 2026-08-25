@@ -9,6 +9,7 @@ import {
   PinOff,
   Pencil,
   Trash2,
+  Settings,
 } from "lucide-react";
 import { ChatItem } from "@/lib/workspaceApi";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -25,7 +26,9 @@ interface ChatSidebarProps {
   onRenameChat: (id: string, newTitle: string) => Promise<void>;
   onTogglePinChat?: (id: string, pinned: boolean) => Promise<void>;
   onOpenWorkspaceModal?: () => void;
+  onOpenSettings?: () => void;
 }
+
 
 const DEFAULT_WIDTH = 260;
 const MIN_WIDTH = 180;
@@ -42,7 +45,9 @@ export function ChatSidebar({
   onRenameChat,
   onTogglePinChat,
   onOpenWorkspaceModal,
+  onOpenSettings,
 }: ChatSidebarProps) {
+
 
   const [searchQuery, setSearchQuery] = useState("");
   const [deletingChatId, setDeletingChatId] = useState<string | null>(null);
@@ -293,10 +298,23 @@ export function ChatSidebar({
         </div>
 
         {/* Sidebar Footer */}
-        <div className="px-3 py-2.5 border-t border-zinc-200/60 bg-white/20 text-[11px] text-zinc-400 flex items-center justify-between shrink-0">
-          <span>{chats.length} conversation{chats.length === 1 ? "" : "s"}</span>
+        <div className="px-3 py-2 border-t border-zinc-200/60 bg-white/20 text-[11px] text-zinc-400 flex items-center justify-between shrink-0">
+          {onOpenSettings ? (
+            <button
+              type="button"
+              onClick={onOpenSettings}
+              className="flex items-center space-x-1.5 text-zinc-600 hover:text-zinc-950 font-medium py-1 px-1.5 rounded-lg hover:bg-zinc-100/70 transition-colors cursor-pointer"
+              title="Open Settings"
+            >
+              <Settings className="w-3.5 h-3.5 text-zinc-500" />
+              <span>Settings</span>
+            </button>
+          ) : (
+            <span>{chats.length} conversation{chats.length === 1 ? "" : "s"}</span>
+          )}
           <span className="font-mono text-[10px] text-zinc-400">GraphMind</span>
         </div>
+
 
         {/* Right-Edge Transparent Drag Handle for Resizing */}
         {isOpen && (

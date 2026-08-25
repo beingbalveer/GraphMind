@@ -18,8 +18,9 @@ import { GraphCanvas } from "../canvas/GraphCanvas";
 import { FocusDrawer } from "../canvas/FocusDrawer";
 import { CommandPalette } from "../canvas/CommandPalette";
 import { WorkspaceModal } from "../workspace/WorkspaceModal";
-import { ModelConfigModal } from "./ModelConfigModal";
+import { SettingsModal } from "../settings/SettingsModal";
 import { ResizableSplitPane } from "./ResizableSplitPane";
+
 import { BranchChatPane } from "./BranchChatPane";
 import { Toast } from "@/components/ui/toast";
 import { LogoBadge } from "@/components/ui/Logo";
@@ -852,7 +853,9 @@ export function ChatContainer({
           onRenameChat={handleRenameChat}
           onTogglePinChat={handleTogglePinChat}
           onOpenWorkspaceModal={() => setIsWorkspaceModalOpen(true)}
+          onOpenSettings={() => setIsModelConfigOpen(true)}
         />
+
 
 
         {/* Content Area */}
@@ -1100,14 +1103,16 @@ export function ChatContainer({
         activeTree={tree}
       />
 
-      {/* Model & AI Parameters Configuration Modal (BYOK) */}
-      <ModelConfigModal
+      {/* Comprehensive Multi-Tab Master-Detail Settings Modal */}
+      <SettingsModal
         isOpen={isModelConfigOpen}
         onClose={() => setIsModelConfigOpen(false)}
         config={llmConfig}
         onSaveConfig={updateLLMConfig}
         onResetDefaults={resetLLMDefaults}
+        currentWorkspace={currentWorkspace}
       />
+
 
       {/* Non-intrusive Floating Toast Notification */}
       <Toast message={error} onDismiss={clearError} />
