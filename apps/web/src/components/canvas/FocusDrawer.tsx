@@ -24,6 +24,7 @@ interface FocusDrawerProps {
   onExploreBranch: (parentNodeId: string, highlightedText: string) => void;
   onSendFollowUp: (prompt: string, parentNodeId: string, highlightedText?: string) => void;
   onRegenerate?: (nodeId: string) => void;
+  onEditUserMessage?: (userNodeId: string, newContent: string) => void;
   onSwitchBranch?: (nodeId: string) => void;
 }
 
@@ -38,8 +39,10 @@ export function FocusDrawer({
   onExploreBranch,
   onSendFollowUp,
   onRegenerate,
+  onEditUserMessage,
   onSwitchBranch,
 }: FocusDrawerProps) {
+
 
   const [drawerPrompt, setDrawerPrompt] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -121,31 +124,39 @@ export function FocusDrawer({
 
       {/* Drawer Scrollable Content Body with Full Markdown Rendering using global ChatMessage */}
       <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-1 bg-white">
-        {threadMessages.map((msg, index) => {
-          const isLastAssistant =
-            index === threadMessages.length - 1 &&
-            msg.role === "assistant" &&
-            isStreaming &&
-            msg.id === streamingNodeId;
+        {(() => {
+          const lastUserIndex = threadMessages.map((m) => m.role).lastIndexOf("user");
+          const lastAssistantIndex = threadMessages.map((m) => m.role).lastIndexOf("assistant");
 
-          return (
-            <ChatMessage
-              key={msg.id}
-              message={{
-                ...msg,
-                isStreaming: isLastAssistant,
-              }}
-              tree={tree}
-              onRegenerate={onRegenerate}
-              onSwitchBranch={onSwitchBranch}
-              onExploreBranch={onExploreBranch}
-              onOpenSideBranch={onSelectBranch}
-            />
+          return threadMessages.map((msg, index) => {
+            const isLastAssistant =
+              index === threadMessages.length - 1 &&
+              msg.role === "assistant" &&
+              isStreaming &&
+              msg.id === streamingNodeId;
 
-          );
-        })}
+            return (
+              <ChatMessage
+                key={msg.id}
+                message={{
+                  ...msg,
+                  isStreaming: isLastAssistant,
+                }}
+                tree={tree}
+                isLastUserMessage={index === lastUserIndex}
+                isLastAssistantMessage={index === lastAssistantIndex}
+                onRegenerate={onRegenerate}
+                onEditUserMessage={onEditUserMessage}
+                onSwitchBranch={onSwitchBranch}
+                onExploreBranch={onExploreBranch}
+                onOpenSideBranch={onSelectBranch}
+              />
+            );
+          });
+        })()}
         <div ref={bottomRef} />
       </div>
+
 
       {/* In-Drawer Follow-up Prompt Bar */}
       <div className="p-4 border-t border-zinc-200/80 bg-white shrink-0">

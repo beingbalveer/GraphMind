@@ -52,9 +52,9 @@ interface BranchChatPaneProps {
   onRenameBranch?: (rootNodeId: string, newTitle: string) => void;
   onTogglePinBranch?: (rootNodeId: string, pinned: boolean) => void;
   onRegenerate?: (nodeId: string) => void;
+  onEditUserMessage?: (userNodeId: string, newContent: string) => void;
   onSwitchBranch?: (nodeId: string) => void;
 }
-
 
 export function BranchChatPane({
   tree,
@@ -70,8 +70,10 @@ export function BranchChatPane({
   onRenameBranch,
   onTogglePinBranch,
   onRegenerate,
+  onEditUserMessage,
   onSwitchBranch,
 }: BranchChatPaneProps) {
+
 
   const [inputPrompt, setInputPrompt] = useState("");
   const [isDraftingNewTab, setIsDraftingNewTab] = useState(false);
@@ -510,28 +512,36 @@ export function BranchChatPane({
         ) : (
           /* Active Branch Conversation Messages - Rendered using single global ChatMessage component */
           <div className="space-y-1">
-            {branchMessages.map((msg, index) => {
-              const isLastAssistant =
-                index === branchMessages.length - 1 &&
-                msg.role === "assistant" &&
-                isStreaming &&
-                msg.id === streamingNodeId;
+            {(() => {
+              const lastUserIndex = branchMessages.map((m) => m.role).lastIndexOf("user");
+              const lastAssistantIndex = branchMessages.map((m) => m.role).lastIndexOf("assistant");
 
-              return (
-                <ChatMessage
-                  key={msg.id}
-                  message={{
-                    ...msg,
-                    isStreaming: isLastAssistant,
-                  }}
-                  tree={tree}
-                  onRegenerate={onRegenerate}
-                  onSwitchBranch={onSwitchBranch}
-                />
+              return branchMessages.map((msg, index) => {
+                const isLastAssistant =
+                  index === branchMessages.length - 1 &&
+                  msg.role === "assistant" &&
+                  isStreaming &&
+                  msg.id === streamingNodeId;
 
-              );
-            })}
+                return (
+                  <ChatMessage
+                    key={msg.id}
+                    message={{
+                      ...msg,
+                      isStreaming: isLastAssistant,
+                    }}
+                    tree={tree}
+                    isLastUserMessage={index === lastUserIndex}
+                    isLastAssistantMessage={index === lastAssistantIndex}
+                    onRegenerate={onRegenerate}
+                    onEditUserMessage={onEditUserMessage}
+                    onSwitchBranch={onSwitchBranch}
+                  />
+                );
+              });
+            })()}
           </div>
+
         )}
         <div ref={bottomRef} />
       </div>

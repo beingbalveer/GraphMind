@@ -72,12 +72,14 @@ export function ChatContainer({
     sendMessage,
     retryLastMessage,
     regenerateResponse,
+    editUserMessage,
     stopStreaming,
     clearMessages,
     deleteBranch,
     updateNodeMetadata,
     loadTree,
   } = useChatStream();
+
 
 
 
@@ -712,12 +714,14 @@ export function ChatContainer({
                   });
                 }}
                 onRegenerate={regenerateResponse}
+                onEditUserMessage={editUserMessage}
                 onSwitchBranch={(nodeId) => {
                   switchBranch(nodeId);
                   setDrawerNodeId(nodeId);
                 }}
               />
             </div>
+
 
           ) : (
             /* Resizable Parallel Split-Pane Chat View */
@@ -773,32 +777,40 @@ export function ChatContainer({
                     ) : (
                       /* Main Active Lineage Branch Message Stream */
                       <div className="w-full pb-4">
-                        {activeMessages.map((node, index) => {
-                          const isLastAssistant =
-                            index === activeMessages.length - 1 &&
-                            node.role === "assistant" &&
-                            isStreaming &&
-                            !sideBranchNodeId;
+                        {(() => {
+                          const lastUserIndex = activeMessages.map((m) => m.role).lastIndexOf("user");
+                          const lastAssistantIndex = activeMessages.map((m) => m.role).lastIndexOf("assistant");
 
-                          return (
-                            <ChatMessage
-                              key={node.id}
-                              message={{
-                                ...node,
-                                isStreaming: isLastAssistant,
-                              }}
-                              tree={tree}
-                              onRetry={retryLastMessage}
-                              onRegenerate={regenerateResponse}
-                              onSwitchBranch={switchBranch}
-                              onExploreBranch={handleExplainBranch}
-                              onOpenSideBranch={handleOpenSideBranch}
-                            />
+                          return activeMessages.map((node, index) => {
+                            const isLastAssistant =
+                              index === activeMessages.length - 1 &&
+                              node.role === "assistant" &&
+                              isStreaming &&
+                              !sideBranchNodeId;
 
-                          );
-                        })}
+                            return (
+                              <ChatMessage
+                                key={node.id}
+                                message={{
+                                  ...node,
+                                  isStreaming: isLastAssistant,
+                                }}
+                                tree={tree}
+                                isLastUserMessage={index === lastUserIndex}
+                                isLastAssistantMessage={index === lastAssistantIndex}
+                                onRetry={retryLastMessage}
+                                onRegenerate={regenerateResponse}
+                                onEditUserMessage={editUserMessage}
+                                onSwitchBranch={switchBranch}
+                                onExploreBranch={handleExplainBranch}
+                                onOpenSideBranch={handleOpenSideBranch}
+                              />
+                            );
+                          });
+                        })()}
                         <div ref={bottomRef} />
                       </div>
+
                     )}
                   </main>
 
@@ -851,9 +863,11 @@ export function ChatContainer({
                     onRenameBranch={handleRenameBranch}
                     onTogglePinBranch={handleTogglePinBranch}
                     onRegenerate={regenerateResponse}
+                    onEditUserMessage={editUserMessage}
                     onSwitchBranch={switchBranch}
                   />
                 ) : null
+
 
 
               }

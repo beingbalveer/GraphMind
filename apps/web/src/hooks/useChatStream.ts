@@ -595,7 +595,29 @@ export function useChatStream() {
     [tree, isStreaming]
   );
 
+  const editUserMessage = useCallback(
+    async (userNodeId: string, newContent: string) => {
+      if (!tree || isStreaming || !newContent.trim()) return;
+      const userNode = tree.nodes[userNodeId];
+      if (!userNode) return;
+
+      sendMessage(
+        newContent.trim(),
+        userNode.provider || "gemini",
+        userNode.model || "gemini-2.5-flash",
+        {
+          branchOverride: {
+            parentNodeId: userNode.parentId || undefined,
+            highlightedText: userNode.highlightedContext || "",
+          },
+        }
+      );
+    },
+    [tree, isStreaming, sendMessage]
+  );
+
   return {
+
     tree,
     activeMessages,
     isStreaming,
@@ -609,12 +631,11 @@ export function useChatStream() {
     sendMessage,
     retryLastMessage,
     regenerateResponse,
+    editUserMessage,
     stopStreaming,
     clearMessages,
     deleteBranch,
     updateNodeMetadata,
     loadTree,
   };
-
 }
-

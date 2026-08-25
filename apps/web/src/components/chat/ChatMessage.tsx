@@ -12,6 +12,7 @@ import {
   GitBranch,
   ChevronLeft,
   ChevronRight,
+  Pencil,
 } from "lucide-react";
 import { TreeNode, ConversationTree, getNodeChildren } from "@graphmind/shared";
 import { Button } from "@/components/ui/button";
@@ -27,12 +28,16 @@ export interface BranchLinkInfo {
 interface ChatMessageProps {
   message: TreeNode & { isStreaming?: boolean; isError?: boolean };
   tree?: ConversationTree | null;
+  isLastUserMessage?: boolean;
+  isLastAssistantMessage?: boolean;
   onRetry?: () => void;
   onRegenerate?: (nodeId: string) => void;
+  onEditUserMessage?: (userNodeId: string, newContent: string) => void;
   onSwitchBranch?: (nodeId: string) => void;
   onExploreBranch?: (messageId: string, highlightedText: string) => void;
   onOpenSideBranch?: (childNodeId: string, excerpt: string) => void;
 }
+
 
 
 function escapeRegExp(string: string) {
@@ -263,21 +268,36 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
 export function ChatMessage({
   message,
   tree,
+  isLastUserMessage = false,
+  isLastAssistantMessage = false,
   onRetry,
   onRegenerate,
+  onEditUserMessage,
   onSwitchBranch,
   onExploreBranch,
   onOpenSideBranch,
 }: ChatMessageProps) {
   const isUser = message.role === "user";
   const contentRef = useRef<HTMLDivElement>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editContent, setEditContent] = useState(message.content);
+  const editTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-focus and auto-resize textarea when entering edit mode
+  useEffect(() => {
+    if (isEditing && editTextareaRef.current) {
+      editTextareaRef.current.focus();
+      editTextareaRef.current.style.height = "auto";
+      editTextareaRef.current.style.height = `${editTextareaRef.current.scrollHeight}px`;
+    }
+  }, [isEditing]);
 
   // Enable text selection tooltip for assistant responses only
   const { selection, clearSelection } = useTextSelection(
     isUser ? { current: null } : contentRef
   );
 
-  // Find sibling versions under the same parent turn (e.g. regenerated answers)
+  // Find sibling versions under the same parent turn (e.g. regenerated answers or edited user prompts)
   const siblingNodes = useMemo(() => {
     if (!tree || !message.parentId) return [];
     const parent = tree.nodes[message.parentId];
@@ -286,9 +306,13 @@ export function ChatMessage({
       .map((id) => tree.nodes[id])
       .filter(
         (n): n is TreeNode =>
-          Boolean(n && n.role === message.role && !n.highlightedContext)
+          Boolean(
+            n &&
+              n.role === message.role &&
+              (n.highlightedContext || null) === (message.highlightedContext || null)
+          )
       );
-  }, [tree, message.parentId, message.role]);
+  }, [tree, message.parentId, message.role, message.highlightedContext]);
 
   const siblingIndex = useMemo(() => {
     return siblingNodes.findIndex((n) => n.id === message.id);
@@ -349,9 +373,110 @@ export function ChatMessage({
   };
 
   if (isUser) {
+    if (isEditing) {
+      return (
+        <div id={message.id} className="py-3 px-4 sm:px-6 bg-transparent">
+          <div className="max-w-3xl mx-auto flex flex-col items-end">
+            <div className="w-full max-w-2xl bg-white rounded-2xl border border-zinc-300 shadow-md p-3.5 space-y-2.5 transition-all">
+              <textarea
+                ref={editTextareaRef}
+                value={editContent}
+                onChange={(e) => {
+                  setEditContent(e.target.value);
+                  e.target.style.height = "auto";
+                  e.target.style.height = `${e.target.scrollHeight}px`;
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    if (editContent.trim()) {
+                      onEditUserMessage?.(message.id, editContent.trim());
+                      setIsEditing(false);
+                    }
+                  }
+                  if (e.key === "Escape") {
+                    e.preventDefault();
+                    setIsEditing(false);
+                  }
+                }}
+                rows={2}
+                className="w-full text-[14.5px] text-zinc-900 leading-relaxed outline-none resize-none bg-transparent"
+                placeholder="Edit your message..."
+              />
+              <div className="flex items-center justify-end space-x-2 pt-1.5 border-t border-zinc-100">
+                <button
+                  type="button"
+                  onClick={() => setIsEditing(false)}
+                  className="px-3 py-1.5 rounded-lg border border-zinc-200 text-xs font-medium text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={!editContent.trim()}
+                  onClick={() => {
+                    if (editContent.trim()) {
+                      onEditUserMessage?.(message.id, editContent.trim());
+                      setIsEditing(false);
+                    }
+                  }}
+                  className="px-3.5 py-1.5 rounded-lg bg-zinc-900 text-white text-xs font-medium hover:bg-zinc-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer flex items-center space-x-1"
+                >
+                  <span>Save & Submit</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div id={message.id} className="py-3 px-4 sm:px-6 bg-transparent group/user">
-        <div className="max-w-3xl mx-auto flex items-center justify-end gap-2">
+        <div className="max-w-3xl mx-auto flex items-center justify-end gap-1.5">
+          {/* User message version switcher if edited versions exist (< 1/2 >) */}
+          {siblingNodes.length > 1 && siblingIndex !== -1 && (
+            <div className="flex items-center space-x-0.5 text-xs text-zinc-500 font-medium opacity-0 group-hover/user:opacity-100 transition-opacity mr-1">
+              <button
+                type="button"
+                disabled={siblingIndex <= 0}
+                onClick={() => onSwitchBranch?.(siblingNodes[siblingIndex - 1].id)}
+                className="p-0.5 rounded hover:bg-zinc-100 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer text-zinc-600 transition-colors"
+                title="Previous version"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+              <span className="text-[11px] select-none text-zinc-500 px-0.5">
+                {siblingIndex + 1}/{siblingNodes.length}
+              </span>
+              <button
+                type="button"
+                disabled={siblingIndex >= siblingNodes.length - 1}
+                onClick={() => onSwitchBranch?.(siblingNodes[siblingIndex + 1].id)}
+                className="p-0.5 rounded hover:bg-zinc-100 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer text-zinc-600 transition-colors"
+                title="Next version"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
+          {/* Edit Prompt Button (Only on the last user message) */}
+          {isLastUserMessage && onEditUserMessage && (
+            <button
+              type="button"
+              onClick={() => {
+                setEditContent(message.content);
+                setIsEditing(true);
+              }}
+              className="p-1 rounded-md text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 opacity-0 group-hover/user:opacity-100 transition-all cursor-pointer flex items-center justify-center"
+              title="Edit message"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+            </button>
+          )}
+
+          {/* Copy Button */}
           {message.content && (
             <CopyButton
               text={message.content}
@@ -359,6 +484,8 @@ export function ChatMessage({
               title="Copy prompt"
             />
           )}
+
+          {/* Bubble */}
           <div className="max-w-2xl rounded-2xl bg-zinc-100/90 text-zinc-900 px-4.5 py-3 border border-zinc-200/70 shadow-2xs">
             {message.highlightedContext && (
               <div className="text-[11px] font-medium text-emerald-800 bg-emerald-50 border border-emerald-200/80 rounded-md px-2 py-0.5 mb-2 inline-flex items-center space-x-1.5 shadow-2xs">
@@ -465,8 +592,8 @@ export function ChatMessage({
                   title="Copy response"
                 />
 
-                {/* Regenerate Button */}
-                {onRegenerate && !message.isStreaming && (
+                {/* Regenerate Button (Only on the last assistant message) */}
+                {onRegenerate && isLastAssistantMessage && !message.isStreaming && (
                   <button
                     type="button"
                     onClick={() => onRegenerate(message.id)}
@@ -498,3 +625,4 @@ export function ChatMessage({
     </div>
   );
 }
+
