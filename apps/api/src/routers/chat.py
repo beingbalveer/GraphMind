@@ -48,10 +48,20 @@ class ChatStreamRequest(BaseModel):
         default=None, description="AI provider name (gemini, openai, mock)"
     )
     model: Optional[str] = Field(default=None, description="Foundation model name")
+    api_key: Optional[str] = Field(
+        default=None, description="Optional client-provided BYOK API key"
+    )
+    temperature: Optional[float] = Field(
+        default=None, ge=0.0, le=2.0, description="Optional temperature parameter"
+    )
+    max_tokens: Optional[int] = Field(
+        default=None, ge=1, le=32768, description="Optional maximum tokens parameter"
+    )
     system_prompt: Optional[str] = Field(default=None, description="Optional system prompt context")
     metadata: Optional[Dict[str, Any]] = Field(
         default_factory=dict, description="Optional runtime metadata"
     )
+
 
     @model_validator(mode="after")
     def validate_input(self) -> "ChatStreamRequest":
@@ -64,10 +74,13 @@ class ChatStreamRequest(BaseModel):
 ChatCompletionRequest = ChatStreamRequest
 
 
-def _resolve_api_key(provider_name: str) -> Optional[str]:
+def _resolve_api_key(provider_name: str, custom_key: Optional[str] = None) -> Optional[str]:
     """
-    Extract the relevant API key from application settings.
+    Extract the relevant API key, prioritizing client-provided custom BYOK key,
+    falling back to application environment settings.
     """
+    if custom_key and custom_key.strip():
+        return custom_key.strip()
     name = provider_name.lower().strip()
     if name in ("gemini", "google"):
         key = settings.GEMINI_API_KEY or settings.GOOGLE_API_KEY
@@ -120,7 +133,7 @@ async def create_chat_completion(body: ChatCompletionRequest) -> GenerationResul
     """
     resolved_provider = body.provider or settings.DEFAULT_PROVIDER
     resolved_model = body.model or settings.DEFAULT_MODEL
-    api_key = _resolve_api_key(resolved_provider)
+    api_key = _resolve_api_key(resolved_provider, body.api_key)
 
     logger.info(
         "Received non-streaming chat completion request",
@@ -136,11 +149,17 @@ async def create_chat_completion(body: ChatCompletionRequest) -> GenerationResul
         logger.error("Failed to initialize AI provider", error=str(e))
         raise HTTPException(status_code=500, detail=f"Provider initialization failed: {str(e)}")
 
-    config = ModelConfig(
-        model_name=resolved_model,
-        system_prompt=body.system_prompt or DEFAULT_CONCISE_SYSTEM_PROMPT,
-        metadata=body.metadata or {},
-    )
+    model_kwargs: Dict[str, Any] = {
+        "model_name": resolved_model,
+        "system_prompt": body.system_prompt or DEFAULT_CONCISE_SYSTEM_PROMPT,
+        "metadata": body.metadata or {},
+    }
+    if body.temperature is not None:
+        model_kwargs["temperature"] = body.temperature
+    if body.max_tokens is not None:
+        model_kwargs["max_tokens"] = body.max_tokens
+
+    config = ModelConfig(**model_kwargs)
 
     conversation_input = _build_conversation_input(body)
 
@@ -168,7 +187,7 @@ async def stream_chat(
     """
     resolved_provider = body.provider or settings.DEFAULT_PROVIDER
     resolved_model = body.model or settings.DEFAULT_MODEL
-    api_key = _resolve_api_key(resolved_provider)
+    api_key = _resolve_api_key(resolved_provider, body.api_key)
 
     logger.info(
         "Received chat stream request",
@@ -184,11 +203,19 @@ async def stream_chat(
         logger.error("Failed to initialize AI provider", error=str(e))
         raise HTTPException(status_code=500, detail=f"Provider initialization failed: {str(e)}")
 
-    config = ModelConfig(
-        model_name=resolved_model,
-        system_prompt=body.system_prompt or DEFAULT_CONCISE_SYSTEM_PROMPT,
-        metadata=body.metadata or {},
-    )
+    stream_model_kwargs: Dict[str, Any] = {
+        "model_name": resolved_model,
+        "system_prompt": body.system_prompt or DEFAULT_CONCISE_SYSTEM_PROMPT,
+        "metadata": body.metadata or {},
+    }
+    if body.temperature is not None:
+        stream_model_kwargs["temperature"] = body.temperature
+    if body.max_tokens is not None:
+        stream_model_kwargs["max_tokens"] = body.max_tokens
+
+    config = ModelConfig(**stream_model_kwargs)
+
+
 
     conversation_input = _build_conversation_input(body)
 

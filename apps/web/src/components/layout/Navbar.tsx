@@ -9,6 +9,7 @@ import {
   Check,
   RotateCw,
   PanelLeft,
+  Sliders,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,8 @@ interface NavbarProps {
   onViewModeChange?: (mode: ViewMode) => void;
   workspaceName?: string;
   onOpenWorkspaceModal?: () => void;
+  onOpenModelConfig?: () => void;
+  activeModelName?: string;
   syncStatus?: "saved" | "syncing" | "offline";
   isSidebarOpen?: boolean;
   onToggleSidebar?: () => void;
@@ -38,11 +41,14 @@ export function Navbar({
   onViewModeChange,
   workspaceName = "Main Workspace",
   onOpenWorkspaceModal,
+  onOpenModelConfig,
+  activeModelName = "gemini-2.5-flash",
   syncStatus = "saved",
   isSidebarOpen: _isSidebarOpen = false,
   onToggleSidebar,
   onNewChat,
 }: NavbarProps) {
+
   const [apiOnline, setApiOnline] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -140,9 +146,25 @@ export function Navbar({
       </div>
 
 
-      {/* Right: View Mode Toggle + New Chat Button */}
+      {/* Right: Model Config + View Mode Toggle + New Chat Button */}
       <div className="flex items-center space-x-2 shrink-0">
+        {/* Model & AI Configuration Trigger */}
+        {onOpenModelConfig && (
+          <button
+            type="button"
+            onClick={onOpenModelConfig}
+            className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg border border-zinc-200/90 bg-white hover:bg-zinc-50 hover:border-zinc-300 text-zinc-700 hover:text-zinc-950 text-xs font-medium shadow-2xs transition-all cursor-pointer group"
+            title="Configure AI model, parameters & BYOK keys"
+          >
+            <Sliders className="w-3.5 h-3.5 text-zinc-500 group-hover:text-zinc-900 transition-colors" />
+            <span className="hidden md:inline font-mono text-[11px] text-zinc-600 group-hover:text-zinc-950 max-w-[120px] truncate">
+              {activeModelName}
+            </span>
+          </button>
+        )}
+
         {/* Toggle Mode Pill Button */}
+
         {onViewModeChange && (
           <div className="flex items-center p-0.5 bg-zinc-100 border border-zinc-200/80 rounded-lg shadow-2xs">
             <button

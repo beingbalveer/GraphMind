@@ -3,11 +3,10 @@
 import React, { useState, useRef, useEffect } from "react";
 import { ArrowUp, Square, GitBranch, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ModelSelector } from "./ModelSelector";
 import { BranchContext } from "@/hooks/useChatStream";
 
 interface ChatInputProps {
-  onSendMessage: (prompt: string, provider: string, model: string) => void;
+  onSendMessage: (prompt: string) => void;
   onStopStreaming: () => void;
   isStreaming: boolean;
   activeBranch?: BranchContext | null;
@@ -22,7 +21,6 @@ export function ChatInput({
   onClearBranch,
 }: ChatInputProps) {
   const [prompt, setPrompt] = useState("");
-  const [selectedModel, setSelectedModel] = useState("gemini-2.5-flash");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Auto-focus and scroll to bottom when branching is triggered
@@ -47,13 +45,7 @@ export function ChatInput({
     e.preventDefault();
     if (!prompt.trim() || isStreaming) return;
 
-    const provider = selectedModel.startsWith("gemini")
-      ? "gemini"
-      : selectedModel.startsWith("gpt")
-      ? "openai"
-      : "mock";
-
-    onSendMessage(prompt.trim(), provider, selectedModel);
+    onSendMessage(prompt.trim());
     setPrompt("");
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
@@ -114,12 +106,9 @@ export function ChatInput({
 
         {/* Action Bar */}
         <div className="flex items-center justify-between pt-1 px-1">
-          {/* Custom Accessible Model Selector */}
-          <ModelSelector
-            selectedModel={selectedModel}
-            onSelectModel={setSelectedModel}
-            disabled={isStreaming}
-          />
+          <div className="text-[11px] text-zinc-400 select-none pl-1">
+            Press <kbd className="font-sans px-1 py-0.5 rounded bg-zinc-100 border border-zinc-200 text-zinc-500 text-[10px]">Enter</kbd> to send
+          </div>
 
           {/* Send / Stop Button */}
           <div className="flex items-center">
@@ -129,7 +118,7 @@ export function ChatInput({
                 variant="destructive"
                 size="iconSm"
                 onClick={onStopStreaming}
-                className="rounded-full h-7 w-7"
+                className="rounded-full h-7 w-7 cursor-pointer"
                 title="Stop generating"
               >
                 <Square className="w-2.5 h-2.5 fill-current" />
@@ -150,3 +139,4 @@ export function ChatInput({
     </div>
   );
 }
+

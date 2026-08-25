@@ -19,7 +19,12 @@ export interface SendMessageOptions {
   branchOverride?: BranchContext | null;
   preserveActiveNodeId?: boolean;
   onNodeCreated?: (nodes: { userNodeId: string; assistantNodeId: string }) => void;
+  apiKey?: string;
+  temperature?: number;
+  maxTokens?: number;
+  systemPrompt?: string;
 }
+
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8300";
 
@@ -328,6 +333,8 @@ export function useChatStream() {
           ? `[Focusing on excerpt: "${branch.highlightedText.trim()}"]\n\n${prompt.trim()}`
           : prompt.trim();
 
+        const explicitOptions = optionsOrBranch && !("parentNodeId" in optionsOrBranch) ? optionsOrBranch : undefined;
+
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const payload: Record<string, any> = {
           prompt: formattedPrompt,
@@ -337,7 +344,12 @@ export function useChatStream() {
           highlighted_context: branch?.highlightedText,
           provider,
           model,
+          api_key: explicitOptions?.apiKey,
+          temperature: explicitOptions?.temperature,
+          max_tokens: explicitOptions?.maxTokens,
+          system_prompt: explicitOptions?.systemPrompt,
         };
+
 
         const response = await fetch(`${API_BASE_URL}/api/v1/chat/stream`, {
           method: "POST",

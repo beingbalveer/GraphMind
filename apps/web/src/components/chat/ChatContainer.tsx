@@ -18,13 +18,16 @@ import { GraphCanvas } from "../canvas/GraphCanvas";
 import { FocusDrawer } from "../canvas/FocusDrawer";
 import { CommandPalette } from "../canvas/CommandPalette";
 import { WorkspaceModal } from "../workspace/WorkspaceModal";
+import { ModelConfigModal } from "./ModelConfigModal";
 import { ResizableSplitPane } from "./ResizableSplitPane";
 import { BranchChatPane } from "./BranchChatPane";
 import { Toast } from "@/components/ui/toast";
 import { LogoBadge } from "@/components/ui/Logo";
 import { useChatStream } from "@/hooks/useChatStream";
+import { useModelConfig } from "@/hooks/useModelConfig";
 import { useScrollAnchor } from "@/hooks/useScrollAnchor";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+
 import { Navbar, ViewMode } from "../layout/Navbar";
 import {
   buildWorkspaceUrl,
@@ -94,9 +97,19 @@ export function ChatContainer({
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
   const [isWorkspaceModalOpen, setIsWorkspaceModalOpen] = useState(false);
+  const [isModelConfigOpen, setIsModelConfigOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
+  // Centralized Model & AI Generation Configuration (BYOK)
+  const {
+    config: llmConfig,
+    updateConfig: updateLLMConfig,
+    resetDefaults: resetLLMDefaults,
+    getEffectiveApiKey,
+  } = useModelConfig();
+
   // Two-Tier State: Workspaces (Outer Vault) and Chats (Inner Trees)
+
   const [currentWorkspace, setCurrentWorkspace] = useState<WorkspaceItem | null>(null);
   const [chats, setChats] = useState<ChatItem[]>([]);
   const [activeChatId, setActiveChatId] = useState<string | null>(initialChatId || null);
@@ -377,7 +390,7 @@ export function ChatContainer({
 
   // Send message, persist nodes to PostgreSQL, and update chat list
   const handleSendMessage = useCallback(
-    async (prompt: string, provider = "gemini", model = "gemini-2.5-flash") => {
+    async (prompt: string) => {
       if (!currentWorkspace) return;
 
       const isFirstMessageInNewChat = !activeChatId || !tree || Object.keys(tree.nodes).length === 0;
@@ -385,15 +398,21 @@ export function ChatContainer({
       let createdUserNodeId: string | null = null;
       let createdAssistantNodeId: string | null = null;
 
+      const provider = llmConfig.provider;
+      const model = llmConfig.model;
+      const effectiveApiKey = getEffectiveApiKey(provider);
+
       const result = await sendMessage(prompt, provider, model, {
+        apiKey: effectiveApiKey,
+        temperature: llmConfig.temperature,
+        maxTokens: llmConfig.maxTokens,
+        systemPrompt: llmConfig.systemPrompt || undefined,
         onNodeCreated: ({ userNodeId, assistantNodeId }) => {
           createdUserNodeId = userNodeId;
           createdAssistantNodeId = assistantNodeId;
 
           if (isFirstMessageInNewChat) {
             setActiveChatId(userNodeId);
-            // We NO LONGER redirect here, because redirecting unmounts the component and cancels the streaming state!
-            // We wait until streaming finishes.
           }
 
           // Persist user node immediately to backend
@@ -433,8 +452,9 @@ export function ChatContainer({
         }, 1000);
       }
     },
-    [currentWorkspace, activeChatId, tree, sendMessage, scrollToBottom, refreshChats, router]
+    [currentWorkspace, activeChatId, tree, llmConfig, getEffectiveApiKey, sendMessage, scrollToBottom, refreshChats, router]
   );
+
 
   // Synchronize sync status
   useEffect(() => {
@@ -496,13 +516,21 @@ export function ChatContainer({
       let createdUserNodeId: string | null = null;
       let createdAssistantNodeId: string | null = null;
 
+      const provider = llmConfig.provider;
+      const model = llmConfig.model;
+      const effectiveApiKey = getEffectiveApiKey(provider);
+
       const result = await sendMessage(
         prompt,
-        "gemini",
-        "gemini-2.5-flash",
+        provider,
+        model,
         {
           branchOverride: { parentNodeId, highlightedText },
           preserveActiveNodeId: true,
+          apiKey: effectiveApiKey,
+          temperature: llmConfig.temperature,
+          maxTokens: llmConfig.maxTokens,
+          systemPrompt: llmConfig.systemPrompt || undefined,
           onNodeCreated: ({ userNodeId, assistantNodeId }) => {
             createdUserNodeId = userNodeId;
             createdAssistantNodeId = assistantNodeId;
@@ -519,8 +547,8 @@ export function ChatContainer({
               role: "user",
               content: prompt.trim(),
               highlightedContext: highlightedText || null,
-              provider: "gemini",
-              model: "gemini-2.5-flash",
+              provider,
+              model,
             }).then(() => refreshChats(currentWorkspace.id));
           },
         }
@@ -538,15 +566,16 @@ export function ChatContainer({
             parentId: targetUserId,
             role: "assistant",
             content: assistantContent,
-            provider: "gemini",
-            model: "gemini-2.5-flash",
+            provider,
+            model,
           });
           await refreshChats(currentWorkspace.id);
         }, 500);
       }
     },
-    [currentWorkspace, sideBranchNodeId, sendMessage, refreshChats]
+    [currentWorkspace, sideBranchNodeId, llmConfig, getEffectiveApiKey, sendMessage, refreshChats]
   );
+
 
   // Handle "🌿 Explain this" action from text selection tooltip in Left Pane
   const handleExplainBranchFromLeft = useCallback(
@@ -775,7 +804,10 @@ export function ChatContainer({
         syncStatus={syncStatus}
         workspaceName={currentWorkspace?.name || "Main Workspace"}
         onOpenWorkspaceModal={() => setIsWorkspaceModalOpen(true)}
+        onOpenModelConfig={() => setIsModelConfigOpen(true)}
+        activeModelName={llmConfig.model}
         messageCount={activeMessages.length}
+
         isSidebarOpen={isSidebarOpen}
         onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
         onNewChat={handleNewChat}
@@ -910,8 +942,9 @@ export function ChatContainer({
                                 key={index}
                                 type="button"
                                 onClick={() => {
-                                  handleSendMessage(item.prompt, "gemini", "gemini-2.5-flash");
+                                  handleSendMessage(item.prompt);
                                 }}
+
                                 className="p-3 rounded-xl border border-zinc-200/80 bg-zinc-50/50 hover:bg-zinc-100/80 hover:border-zinc-300 text-left transition-all duration-150 group cursor-pointer shadow-2xs"
                               >
                                 <div className="w-6 h-6 rounded-md bg-white border border-zinc-200 flex items-center justify-center mb-2 text-zinc-700 group-hover:text-zinc-950 transition-colors shadow-2xs">
@@ -981,11 +1014,11 @@ export function ChatContainer({
                     )}
 
                     <ChatInput
-                      onSendMessage={(prompt, provider, model) => {
+                      onSendMessage={(prompt) => {
                         if (leftPaneBranchNodeId) {
                           handleSendBranchStream(prompt, leftPaneBranchNodeId, "");
                         } else {
-                          handleSendMessage(prompt, provider, model);
+                          handleSendMessage(prompt);
                         }
                       }}
                       onStopStreaming={stopStreaming}
@@ -1067,8 +1100,18 @@ export function ChatContainer({
         activeTree={tree}
       />
 
+      {/* Model & AI Parameters Configuration Modal (BYOK) */}
+      <ModelConfigModal
+        isOpen={isModelConfigOpen}
+        onClose={() => setIsModelConfigOpen(false)}
+        config={llmConfig}
+        onSaveConfig={updateLLMConfig}
+        onResetDefaults={resetLLMDefaults}
+      />
+
       {/* Non-intrusive Floating Toast Notification */}
       <Toast message={error} onDismiss={clearError} />
     </div>
   );
+
 }

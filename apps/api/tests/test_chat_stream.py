@@ -161,3 +161,24 @@ async def test_chat_stream_error_simulation() -> None:
             "event: error" in response.text
             or "Simulated MockProvider stream error" in response.text
         )
+
+
+@pytest.mark.asyncio
+async def test_chat_stream_with_byok_and_generation_params() -> None:
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        payload = {
+            "prompt": "Test BYOK parameters",
+            "provider": "mock",
+            "model": "gemini-2.5-flash",
+            "apiKey": "custom-byok-test-key-12345",
+            "temperature": 0.3,
+            "maxTokens": 1024,
+            "systemPrompt": "You are a custom tuned assistant",
+            "metadata": {"stream_delay": 0.001},
+        }
+        response = await client.post("/api/v1/chat/stream", json=payload)
+        assert response.status_code == 200
+        assert "text/event-stream" in response.headers.get("content-type", "")
+        assert "data: " in response.text
+
