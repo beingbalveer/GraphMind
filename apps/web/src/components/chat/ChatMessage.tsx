@@ -520,10 +520,10 @@ export function ChatMessage({
                         (message.metadata?.rating as string) === "up" ? null : "up"
                       )
                     }
-                    className={`p-1 rounded-md transition-all cursor-pointer flex items-center justify-center ${
+                    className={`p-1 rounded-md transition-all cursor-pointer flex items-center justify-center opacity-0 group-hover:opacity-100 ${
                       (message.metadata?.rating as string) === "up"
-                        ? "text-zinc-700 bg-zinc-100/90 border border-zinc-200/80 opacity-100 shadow-2xs"
-                        : "text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100/60 opacity-0 group-hover:opacity-100"
+                        ? "text-zinc-700 bg-zinc-100/90 border border-zinc-200/80 shadow-2xs"
+                        : "text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100/60"
                     }`}
                     title={
                       (message.metadata?.rating as string) === "up"
@@ -551,10 +551,10 @@ export function ChatMessage({
                         (message.metadata?.rating as string) === "down" ? null : "down"
                       )
                     }
-                    className={`p-1 rounded-md transition-all cursor-pointer flex items-center justify-center ${
+                    className={`p-1 rounded-md transition-all cursor-pointer flex items-center justify-center opacity-0 group-hover:opacity-100 ${
                       (message.metadata?.rating as string) === "down"
-                        ? "text-zinc-700 bg-zinc-100/90 border border-zinc-200/80 opacity-100 shadow-2xs"
-                        : "text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100/60 opacity-0 group-hover:opacity-100"
+                        ? "text-zinc-700 bg-zinc-100/90 border border-zinc-200/80 shadow-2xs"
+                        : "text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100/60"
                     }`}
                     title={
                       (message.metadata?.rating as string) === "down"
@@ -571,6 +571,7 @@ export function ChatMessage({
                     />
                   </button>
                 )}
+
 
 
 
