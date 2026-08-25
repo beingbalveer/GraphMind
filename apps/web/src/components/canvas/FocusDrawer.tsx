@@ -26,6 +26,7 @@ interface FocusDrawerProps {
   onRegenerate?: (nodeId: string) => void;
   onEditUserMessage?: (userNodeId: string, newContent: string) => void;
   onSwitchBranch?: (nodeId: string) => void;
+  onRateResponse?: (nodeId: string, rating: "up" | "down" | null) => void;
 }
 
 export function FocusDrawer({
@@ -41,7 +42,9 @@ export function FocusDrawer({
   onRegenerate,
   onEditUserMessage,
   onSwitchBranch,
+  onRateResponse,
 }: FocusDrawerProps) {
+
 
 
   const [drawerPrompt, setDrawerPrompt] = useState("");
@@ -150,7 +153,9 @@ export function FocusDrawer({
                 onSwitchBranch={onSwitchBranch}
                 onExploreBranch={onExploreBranch}
                 onOpenSideBranch={onSelectBranch}
+                onRateResponse={onRateResponse}
               />
+
             );
           });
         })()}

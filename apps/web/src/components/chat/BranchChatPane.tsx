@@ -57,6 +57,7 @@ interface BranchChatPaneProps {
   onSwitchBranch?: (nodeId: string) => void;
   onExploreBranch?: (parentNodeId: string, highlightedText: string) => void;
   onOpenSideBranch?: (childNodeId: string, excerpt: string) => void;
+  onRateResponse?: (nodeId: string, rating: "up" | "down" | null) => void;
 }
 
 export function BranchChatPane({
@@ -77,7 +78,9 @@ export function BranchChatPane({
   onSwitchBranch,
   onExploreBranch,
   onOpenSideBranch,
+  onRateResponse,
 }: BranchChatPaneProps) {
+
 
 
 
@@ -551,7 +554,9 @@ export function BranchChatPane({
                     onSwitchBranch={onSwitchBranch}
                     onExploreBranch={onExploreBranch}
                     onOpenSideBranch={onOpenSideBranch}
+                    onRateResponse={onRateResponse}
                   />
+
 
                 );
               });

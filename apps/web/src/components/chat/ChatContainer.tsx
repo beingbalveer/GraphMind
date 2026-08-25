@@ -600,6 +600,18 @@ export function ChatContainer({
     [handleSendBranchStream]
   );
 
+  // Handle response rating (👍 / 👎) with real-time PostgreSQL persistence
+  const handleRateResponse = useCallback(
+    async (nodeId: string, rating: "up" | "down" | null) => {
+      updateNodeMetadata(nodeId, { rating });
+      if (currentWorkspace) {
+        await updateWorkspaceNodeMetadata(currentWorkspace.id, nodeId, { rating });
+      }
+    },
+    [currentWorkspace, updateNodeMetadata]
+  );
+
+
   // Track all branch points along the active lineage for breadcrumbs
   const activeDeepestNodeId = sideBranchNodeId || leftPaneBranchNodeId;
   const activeLineage = useMemo(() => {
@@ -906,7 +918,9 @@ export function ChatContainer({
                   switchBranch(nodeId);
                   setDrawerNodeId(nodeId);
                 }}
+                onRateResponse={handleRateResponse}
               />
+
             </div>
           ) : (
             /* Resizable Parallel Split-Pane Chat View */
@@ -994,6 +1008,7 @@ export function ChatContainer({
                                 onSwitchBranch={switchBranch}
                                 onExploreBranch={handleExplainBranchFromLeft}
                                 onOpenSideBranch={handleOpenSideBranchFromLeft}
+                                onRateResponse={handleRateResponse}
                               />
                             );
                           });
@@ -1057,9 +1072,11 @@ export function ChatContainer({
                     onSwitchBranch={switchBranch}
                     onExploreBranch={handleExplainBranchFromRight}
                     onOpenSideBranch={handleOpenSideBranchFromRight}
+                    onRateResponse={handleRateResponse}
                   />
                 ) : null
               }
+
             />
           )}
 

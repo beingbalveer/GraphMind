@@ -11,6 +11,8 @@ import {
   RotateCcw,
   GitBranch,
   Pencil,
+  ThumbsUp,
+  ThumbsDown,
 } from "lucide-react";
 
 import { TreeNode, ConversationTree, getNodeChildren, getBranchLinearLeafNode } from "@graphmind/shared";
@@ -36,7 +38,9 @@ interface ChatMessageProps {
   onSwitchBranch?: (nodeId: string) => void;
   onExploreBranch?: (messageId: string, highlightedText: string) => void;
   onOpenSideBranch?: (childNodeId: string, excerpt: string) => void;
+  onRateResponse?: (nodeId: string, rating: "up" | "down" | null) => void;
 }
+
 
 
 
@@ -275,9 +279,10 @@ export function ChatMessage({
   onEditUserMessage,
   onSwitchBranch: _onSwitchBranch,
   onExploreBranch,
-
   onOpenSideBranch,
+  onRateResponse,
 }: ChatMessageProps) {
+
   const isUser = message.role === "user";
   const contentRef = useRef<HTMLDivElement>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -505,6 +510,68 @@ export function ChatMessage({
                   title="Copy response"
                 />
 
+                {/* Response Rating: Thumbs Up */}
+                {onRateResponse && !message.isStreaming && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onRateResponse(
+                        message.id,
+                        (message.metadata?.rating as string) === "up" ? null : "up"
+                      )
+                    }
+                    className={`p-1 rounded-md transition-all cursor-pointer flex items-center justify-center ${
+                      (message.metadata?.rating as string) === "up"
+                        ? "text-blue-600 bg-blue-50/90 border border-blue-200/70 opacity-100 shadow-2xs"
+                        : "text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 opacity-0 group-hover:opacity-100"
+                    }`}
+                    title={
+                      (message.metadata?.rating as string) === "up"
+                        ? "Remove positive rating"
+                        : "Good response (thumbs up)"
+                    }
+                  >
+                    <ThumbsUp
+                      className={`w-3.5 h-3.5 ${
+                        (message.metadata?.rating as string) === "up"
+                          ? "fill-blue-500/25 stroke-[2.2]"
+                          : ""
+                      }`}
+                    />
+                  </button>
+                )}
+
+                {/* Response Rating: Thumbs Down */}
+                {onRateResponse && !message.isStreaming && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onRateResponse(
+                        message.id,
+                        (message.metadata?.rating as string) === "down" ? null : "down"
+                      )
+                    }
+                    className={`p-1 rounded-md transition-all cursor-pointer flex items-center justify-center ${
+                      (message.metadata?.rating as string) === "down"
+                        ? "text-rose-600 bg-rose-50/90 border border-rose-200/70 opacity-100 shadow-2xs"
+                        : "text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 opacity-0 group-hover:opacity-100"
+                    }`}
+                    title={
+                      (message.metadata?.rating as string) === "down"
+                        ? "Remove negative rating"
+                        : "Poor response (thumbs down)"
+                    }
+                  >
+                    <ThumbsDown
+                      className={`w-3.5 h-3.5 ${
+                        (message.metadata?.rating as string) === "down"
+                          ? "fill-rose-500/25 stroke-[2.2]"
+                          : ""
+                      }`}
+                    />
+                  </button>
+                )}
+
                 {/* Regenerate Button (Only on the last assistant message) */}
                 {onRegenerate && isLastAssistantMessage && !message.isStreaming && (
                   <button
@@ -516,6 +583,7 @@ export function ChatMessage({
                     <RotateCcw className="w-3.5 h-3.5" />
                   </button>
                 )}
+
 
 
                 {/* Retry Error Button */}
