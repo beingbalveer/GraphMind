@@ -522,8 +522,8 @@ export function ChatMessage({
                     }
                     className={`p-1 rounded-md transition-all cursor-pointer flex items-center justify-center ${
                       (message.metadata?.rating as string) === "up"
-                        ? "text-zinc-950 bg-zinc-200/90 border border-zinc-300/80 opacity-100 shadow-2xs"
-                        : "text-zinc-400 hover:text-zinc-800 hover:bg-zinc-100 opacity-0 group-hover:opacity-100"
+                        ? "text-zinc-700 bg-zinc-100/90 border border-zinc-200/80 opacity-100 shadow-2xs"
+                        : "text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100/60 opacity-0 group-hover:opacity-100"
                     }`}
                     title={
                       (message.metadata?.rating as string) === "up"
@@ -534,7 +534,7 @@ export function ChatMessage({
                     <ThumbsUp
                       className={`w-3.5 h-3.5 ${
                         (message.metadata?.rating as string) === "up"
-                          ? "fill-zinc-900 stroke-[2]"
+                          ? "fill-zinc-400/50 stroke-[1.8]"
                           : ""
                       }`}
                     />
@@ -553,8 +553,8 @@ export function ChatMessage({
                     }
                     className={`p-1 rounded-md transition-all cursor-pointer flex items-center justify-center ${
                       (message.metadata?.rating as string) === "down"
-                        ? "text-zinc-950 bg-zinc-200/90 border border-zinc-300/80 opacity-100 shadow-2xs"
-                        : "text-zinc-400 hover:text-zinc-800 hover:bg-zinc-100 opacity-0 group-hover:opacity-100"
+                        ? "text-zinc-700 bg-zinc-100/90 border border-zinc-200/80 opacity-100 shadow-2xs"
+                        : "text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100/60 opacity-0 group-hover:opacity-100"
                     }`}
                     title={
                       (message.metadata?.rating as string) === "down"
@@ -565,12 +565,13 @@ export function ChatMessage({
                     <ThumbsDown
                       className={`w-3.5 h-3.5 ${
                         (message.metadata?.rating as string) === "down"
-                          ? "fill-zinc-900 stroke-[2]"
+                          ? "fill-zinc-400/50 stroke-[1.8]"
                           : ""
                       }`}
                     />
                   </button>
                 )}
+
 
 
                 {/* Regenerate Button (Only on the last assistant message) */}
