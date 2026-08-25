@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { GitBranch, ArrowDown, ArrowLeft } from "lucide-react";
+import { GitBranch, ArrowDown } from "lucide-react";
+
 import { getNodeChildren, getBranchLinearLeafNode, getAncestorPath, TreeNode } from "@graphmind/shared";
 
 
@@ -105,8 +106,10 @@ export function ChatContainer({
   const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode);
 
   // Parallel Split-Pane Side Branch State
+  const [leftPaneBranchNodeId, setLeftPaneBranchNodeId] = useState<string | null>(null);
   const [sideBranchNodeId, setSideBranchNodeId] = useState<string | null>(null);
   const [sideBranchExcerpt, setSideBranchExcerpt] = useState<string | null>(null);
+
 
   const fitViewRef = useRef<(() => void) | null>(null);
   const centerActiveRef = useRef<(() => void) | null>(null);
@@ -228,6 +231,7 @@ export function ChatContainer({
     clearMessages();
     setActiveChatId(null);
     loadedChatIdRef.current = null;
+    setLeftPaneBranchNodeId(null);
     setSideBranchNodeId(null);
     setIsDrawerOpen(false);
     if (currentWorkspace) {
@@ -244,8 +248,10 @@ export function ChatContainer({
       // Update active state immediately so sidebar reflects selection
       setActiveChatId(chat.id);
       loadedChatIdRef.current = chat.id;
+      setLeftPaneBranchNodeId(null);
       setSideBranchNodeId(null);
       setIsDrawerOpen(false);
+
 
       // Use replace (not push) with scroll:false so Next.js syncs the URL
       // WITHOUT triggering a full RSC page re-fetch or unmounting ChatContainer.
@@ -458,18 +464,34 @@ export function ChatContainer({
   }, [initialNodeId, activeMessages.length, handleJumpToMessage]);
 
   // Handle opening of parallel split pane from inline Obsidian-style blue links
-  const handleOpenSideBranch = useCallback((leafId: string, excerpt: string) => {
-    setSideBranchNodeId(leafId);
+  const handleOpenSideBranchFromLeft = useCallback((leafId: string, excerpt: string) => {
+
     setSideBranchExcerpt(excerpt);
+    setSideBranchNodeId(leafId);
   }, []);
+
+  const handleOpenSideBranchFromRight = useCallback((leafId: string, excerpt: string) => {
+    if (sideBranchNodeId) {
+      setLeftPaneBranchNodeId(sideBranchNodeId);
+    }
+    setSideBranchExcerpt(excerpt);
+    setSideBranchNodeId(leafId);
+  }, [sideBranchNodeId]);
 
   // Send branch message and persist both user and assistant nodes to PostgreSQL
   const handleSendBranchStream = useCallback(
-    async (prompt: string, parentNodeId: string, highlightedText = "") => {
+    async (
+      prompt: string,
+      parentNodeId: string,
+      highlightedText = "",
+      options?: { shiftRightToLeft?: boolean }
+    ) => {
       if (!currentWorkspace) return;
       if (highlightedText) {
         setSideBranchExcerpt(highlightedText);
       }
+
+      const prevRightPane = sideBranchNodeId;
 
       let createdUserNodeId: string | null = null;
       let createdAssistantNodeId: string | null = null;
@@ -484,6 +506,10 @@ export function ChatContainer({
           onNodeCreated: ({ userNodeId, assistantNodeId }) => {
             createdUserNodeId = userNodeId;
             createdAssistantNodeId = assistantNodeId;
+
+            if (options?.shiftRightToLeft && prevRightPane) {
+              setLeftPaneBranchNodeId(prevRightPane);
+            }
             setSideBranchNodeId(assistantNodeId);
 
             // Persist user branch node immediately to backend
@@ -519,38 +545,37 @@ export function ChatContainer({
         }, 500);
       }
     },
-    [currentWorkspace, sendMessage, refreshChats]
+    [currentWorkspace, sideBranchNodeId, sendMessage, refreshChats]
   );
 
-  // Handle "🌿 Explain this" action from text selection tooltip
-  const handleExplainBranch = useCallback(
+  // Handle "🌿 Explain this" action from text selection tooltip in Left Pane
+  const handleExplainBranchFromLeft = useCallback(
     async (parentNodeId: string, highlightedText: string) => {
       const branchPrompt = `Explain "${highlightedText}" in concise, direct detail with key takeaways.`;
-      await handleSendBranchStream(branchPrompt, parentNodeId, highlightedText);
+      await handleSendBranchStream(branchPrompt, parentNodeId, highlightedText, {
+        shiftRightToLeft: false,
+      });
     },
     [handleSendBranchStream]
   );
 
-  // Track all branch points along the active sideBranchNodeId lineage for sliding 2-pane display
-  const activeBranchLineage = useMemo(() => {
-    if (!tree || !sideBranchNodeId) return [];
-    return getAncestorPath(tree, sideBranchNodeId);
-  }, [tree, sideBranchNodeId]);
+  // Handle "🌿 Explain this" action from text selection tooltip in Right Pane (shifts right to left!)
+  const handleExplainBranchFromRight = useCallback(
+    async (parentNodeId: string, highlightedText: string) => {
+      const branchPrompt = `Explain "${highlightedText}" in concise, direct detail with key takeaways.`;
+      await handleSendBranchStream(branchPrompt, parentNodeId, highlightedText, {
+        shiftRightToLeft: true,
+      });
+    },
+    [handleSendBranchStream]
+  );
 
-  const activeBranchPoints = useMemo(() => {
-    if (!activeBranchLineage || activeBranchLineage.length === 0) return [];
-    const points: { node: TreeNode; title: string; leafId: string }[] = [];
-    activeBranchLineage.forEach((n) => {
-      if (n.highlightedContext) {
-        points.push({
-          node: n,
-          title: n.highlightedContext,
-          leafId: tree ? getBranchLinearLeafNode(tree, n.id).id : n.id,
-        });
-      }
-    });
-    return points;
-  }, [activeBranchLineage, tree]);
+  // Track all branch points along the active lineage for breadcrumbs
+  const activeDeepestNodeId = sideBranchNodeId || leftPaneBranchNodeId;
+  const activeLineage = useMemo(() => {
+    if (!tree || !activeDeepestNodeId) return [];
+    return getAncestorPath(tree, activeDeepestNodeId);
+  }, [tree, activeDeepestNodeId]);
 
   // Unified top navigation breadcrumbs
   const breadcrumbSteps = useMemo(() => {
@@ -562,43 +587,35 @@ export function ChatContainer({
     const steps: BreadcrumbStep[] = [
       {
         id: tree.rootNodeId,
-        leafId: tree.activeNodeId,
+        leafId: tree.rootNodeId,
         title: rootTitle,
         isRoot: true,
       },
     ];
 
-
-    activeBranchPoints.forEach((bp) => {
-      steps.push({
-        id: bp.node.id,
-        leafId: bp.leafId,
-        title: bp.title,
-      });
+    activeLineage.forEach((n) => {
+      if (n.highlightedContext) {
+        const linearLeaf = tree ? getBranchLinearLeafNode(tree, n.id) : n;
+        steps.push({
+          id: n.id,
+          leafId: linearLeaf.id,
+          title: n.highlightedContext,
+        });
+      }
     });
 
     return steps;
-  }, [tree, activeMessages, activeBranchPoints]);
+  }, [tree, activeMessages, activeLineage]);
 
-  // When branch depth >= 2 (Level 2 or deeper), the left pane slides to display the parent branch (Level N-1)
-  const isLeftPaneNestedBranch = activeBranchPoints.length >= 2;
-  const parentBranchPoint = isLeftPaneNestedBranch
-    ? activeBranchPoints[activeBranchPoints.length - 2]
-    : null;
-  const grandParentTitle =
-    activeBranchPoints.length >= 3
-      ? activeBranchPoints[activeBranchPoints.length - 3].title
-      : "Main Chat";
-
+  // Left pane displays either the mainline trunk or a specific pinned branch
   const leftPaneMessages: TreeNode[] = useMemo(() => {
-    if (!isLeftPaneNestedBranch || !parentBranchPoint || !tree) {
+    if (!leftPaneBranchNodeId || !tree) {
       return activeMessages;
     }
-    const path = getAncestorPath(tree, parentBranchPoint.leafId);
-    const rootIdx = path.findIndex((n) => n.id === parentBranchPoint.node.id);
+    const path = getAncestorPath(tree, leftPaneBranchNodeId);
+    const rootIdx = path.findIndex((n) => Boolean(n.highlightedContext));
     return rootIdx !== -1 ? path.slice(rootIdx) : path;
-  }, [isLeftPaneNestedBranch, parentBranchPoint, tree, activeMessages]);
-
+  }, [leftPaneBranchNodeId, tree, activeMessages]);
 
   // Handle starting a new sibling sub-branch query from the BranchChatPane tab bar
   const handleSendNewSiblingBranch = useCallback(
@@ -609,6 +626,7 @@ export function ChatContainer({
   );
 
   const handleEditUserMessage = useCallback(
+
     async (userNodeId: string, newContent: string) => {
       await editUserMessage(userNodeId, newContent);
       if (currentWorkspace) {
@@ -770,15 +788,22 @@ export function ChatContainer({
           <BranchBreadcrumbs
             steps={breadcrumbSteps}
             onSelectStep={(step) => {
-              if (step.isRoot) {
+              const stepIdx = breadcrumbSteps.findIndex((s) => s.id === step.id);
+              if (stepIdx <= 0) {
+                setLeftPaneBranchNodeId(null);
                 setSideBranchNodeId(null);
+              } else if (stepIdx === 1) {
+                setLeftPaneBranchNodeId(null);
+                setSideBranchNodeId(step.leafId);
               } else {
+                setLeftPaneBranchNodeId(breadcrumbSteps[stepIdx - 1].leafId);
                 setSideBranchNodeId(step.leafId);
               }
             }}
           />
         }
       />
+
 
 
       {/* Main App Layout: Workspace Chats Sidebar + Canvas / Split-Pane Chat */}
@@ -848,37 +873,17 @@ export function ChatContainer({
                 }}
               />
             </div>
-
-
           ) : (
             /* Resizable Parallel Split-Pane Chat View */
             <ResizableSplitPane
+
               isOpen={Boolean(sideBranchNodeId)}
-              onClose={() => setSideBranchNodeId(null)}
+              onClose={() => {
+                setSideBranchNodeId(null);
+                setLeftPaneBranchNodeId(null);
+              }}
               leftPane={
                 <div className="h-full flex flex-col min-w-0 relative">
-                  {/* Sliding Parent Branch Navigation Header */}
-                  {isLeftPaneNestedBranch && (
-                    <div className="h-10 px-4 bg-zinc-50 border-b border-zinc-200/80 flex items-center justify-between shrink-0 select-none z-10">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (parentBranchPoint) {
-                            setSideBranchNodeId(parentBranchPoint.leafId);
-                          }
-                        }}
-                        className="inline-flex items-center space-x-1.5 text-xs font-medium text-zinc-600 hover:text-zinc-950 transition-colors cursor-pointer group"
-                      >
-                        <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
-                        <span>Back to {grandParentTitle}</span>
-                      </button>
-                      <div className="inline-flex items-center space-x-1.5 text-xs font-semibold text-zinc-800 bg-white px-2 py-0.5 rounded-md border border-zinc-200 shadow-2xs">
-                        <GitBranch className="w-3 h-3 text-zinc-600 shrink-0" />
-                        <span className="truncate max-w-[140px]">{parentBranchPoint?.title}</span>
-                      </div>
-                    </div>
-                  )}
-
                   <main
                     ref={scrollRef}
                     className="flex-1 overflow-y-auto min-h-0 flex flex-col bg-white"
@@ -935,7 +940,7 @@ export function ChatContainer({
                               index === leftPaneMessages.length - 1 &&
                               node.role === "assistant" &&
                               isStreaming &&
-                              (!sideBranchNodeId || (isLeftPaneNestedBranch && streamingNodeId === node.id));
+                              streamingNodeId === node.id;
 
                             return (
                               <ChatMessage
@@ -951,8 +956,8 @@ export function ChatContainer({
                                 onRegenerate={regenerateResponse}
                                 onEditUserMessage={handleEditUserMessage}
                                 onSwitchBranch={switchBranch}
-                                onExploreBranch={handleExplainBranch}
-                                onOpenSideBranch={handleOpenSideBranch}
+                                onExploreBranch={handleExplainBranchFromLeft}
+                                onOpenSideBranch={handleOpenSideBranchFromLeft}
                               />
                             );
                           });
@@ -977,15 +982,15 @@ export function ChatContainer({
 
                     <ChatInput
                       onSendMessage={(prompt, provider, model) => {
-                        if (isLeftPaneNestedBranch && parentBranchPoint) {
-                          handleSendBranchStream(prompt, parentBranchPoint.leafId, "");
+                        if (leftPaneBranchNodeId) {
+                          handleSendBranchStream(prompt, leftPaneBranchNodeId, "");
                         } else {
                           handleSendMessage(prompt, provider, model);
                         }
                       }}
                       onStopStreaming={stopStreaming}
                       isStreaming={isStreaming}
-                      activeBranch={isLeftPaneNestedBranch ? null : activeBranch}
+                      activeBranch={leftPaneBranchNodeId ? null : activeBranch}
                       onClearBranch={clearBranchContext}
                     />
                   </div>
@@ -999,7 +1004,10 @@ export function ChatContainer({
                     highlightedContext={sideBranchExcerpt || undefined}
                     isStreaming={isStreaming}
                     streamingNodeId={streamingNodeId}
-                    onClose={() => setSideBranchNodeId(null)}
+                    onClose={() => {
+                      setSideBranchNodeId(null);
+                      setLeftPaneBranchNodeId(null);
+                    }}
                     onSelectBranchLeaf={(leafId) => setSideBranchNodeId(leafId)}
                     onSendBranchMessage={(prompt, parentNodeId) => {
                       handleSendBranchStream(prompt, parentNodeId, "");
@@ -1011,14 +1019,14 @@ export function ChatContainer({
                     onRegenerate={regenerateResponse}
                     onEditUserMessage={handleEditUserMessage}
                     onSwitchBranch={switchBranch}
-                    onExploreBranch={handleExplainBranch}
-                    onOpenSideBranch={handleOpenSideBranch}
+                    onExploreBranch={handleExplainBranchFromRight}
+                    onOpenSideBranch={handleOpenSideBranchFromRight}
                   />
                 ) : null
               }
-
             />
           )}
+
 
         </div>
       </div>
