@@ -601,20 +601,139 @@ export function useChatStream() {
       const userNode = tree.nodes[userNodeId];
       if (!userNode) return;
 
-      sendMessage(
-        newContent.trim(),
-        userNode.provider || "gemini",
-        userNode.model || "gemini-2.5-flash",
-        {
-          branchOverride: {
-            parentNodeId: userNode.parentId || undefined,
-            highlightedText: userNode.highlightedContext || "",
-          },
+      const provider = userNode.provider || "gemini";
+      const model = userNode.model || "gemini-2.5-flash";
+
+      if (!userNode.parentId) {
+        // 1. Editing Root Prompt
+        let currentTree = updateNodeContent(tree, userNode.id, newContent.trim());
+
+        const { tree: treeWithAssistant, node: assistantNode } = addChildNode(
+          currentTree,
+          {
+            role: "assistant",
+            parentId: userNode.id,
+            content: "",
+            provider,
+            model,
+          }
+        );
+        currentTree = treeWithAssistant;
+        const assistantNodeId = assistantNode.id;
+
+        setTree(currentTree);
+        setIsStreaming(true);
+        setStreamingNodeId(assistantNodeId);
+
+        const abortController = new AbortController();
+        abortControllerRef.current = abortController;
+
+        let accumulatedContent = "";
+        try {
+          const payload = {
+            prompt: newContent.trim(),
+            messages: [{ role: "user", content: newContent.trim() }],
+            tree: currentTree,
+            parent_node_id: userNode.id,
+            provider,
+            model,
+          };
+
+          const response = await fetch(`${API_BASE_URL}/api/v1/chat/stream`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+            signal: abortController.signal,
+          });
+
+          if (!response.ok || !response.body) {
+            throw new Error(
+              `Server returned HTTP ${response.status}: ${response.statusText}`
+            );
+          }
+
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let lineBuffer = "";
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            lineBuffer += decoder.decode(value, { stream: true });
+            const lines = lineBuffer.split("\n");
+            lineBuffer = lines.pop() || "";
+
+            for (const line of lines) {
+              const trimmedLine = line.trim();
+              if (trimmedLine.startsWith("data: ")) {
+                const rawData = trimmedLine.slice(6).trim();
+                if (rawData === "[DONE]") break;
+
+                try {
+                  const parsed = JSON.parse(rawData);
+                  if (parsed.error) throw new Error(parsed.error);
+                  if (parsed.content) {
+                    accumulatedContent += parsed.content;
+                    setTree((prev) => {
+                      if (!prev) return prev;
+                      return updateNodeContent(prev, assistantNodeId, accumulatedContent);
+                    });
+                  }
+                } catch (parseError: any) {
+                  if (parseError.message && !parseError.message.includes("JSON")) {
+                    throw parseError;
+                  }
+                }
+              }
+            }
+          }
+        } catch (err: any) {
+          if (err.name === "AbortError") {
+            setTree((prev) => {
+              if (!prev) return prev;
+              const node = prev.nodes[assistantNodeId];
+              if (!node || !node.content) {
+                return updateNodeContent(prev, assistantNodeId, "*(Generation stopped by user)*");
+              }
+              return prev;
+            });
+          } else {
+            const errorMsg = err.message || "Failed to generate AI response";
+            setError(errorMsg);
+            setTree((prev) => {
+              if (!prev) return prev;
+              return updateNodeContent(
+                prev,
+                assistantNodeId,
+                `⚠️ **Error:** ${errorMsg}\n\nPlease verify that the backend API is running.`
+              );
+            });
+          }
+        } finally {
+          setIsStreaming(false);
+          setStreamingNodeId(null);
+          abortControllerRef.current = null;
         }
-      );
+      } else {
+        // 2. Editing Child Turn: Fork from parent and switch active lineage immediately
+        sendMessage(
+          newContent.trim(),
+          provider,
+          model,
+          {
+            branchOverride: {
+              parentNodeId: userNode.parentId,
+              highlightedText: userNode.highlightedContext || "",
+            },
+            preserveActiveNodeId: false,
+          }
+        );
+      }
     },
     [tree, isStreaming, sendMessage]
   );
+
 
   return {
 
