@@ -29,13 +29,17 @@ export default function WorkspaceLayout({
   const chatId = chatIdMatch ? chatIdMatch[1] : undefined;
   const viewMode = pathname.endsWith("/canvas") ? "canvas" : "chat";
   const nodeId = searchParams.get("node") ?? undefined;
+  const branchId = searchParams.get("branch") ?? undefined;
+
 
   return (
     <ChatContainer
       initialWorkspaceId={params.workspaceId}
       initialChatId={chatId}
       initialNodeId={nodeId}
+      initialBranchId={branchId}
       initialViewMode={viewMode}
     />
   );
 }
+

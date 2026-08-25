@@ -1,13 +1,10 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { GitBranch, ArrowDown } from "lucide-react";
 
 import { getNodeChildren, getBranchLinearLeafNode, getAncestorPath, TreeNode } from "@graphmind/shared";
-
-
-
 
 import { ChatMessage } from "./ChatMessage";
 import { ChatInput } from "./ChatInput";
@@ -34,6 +31,8 @@ import {
   buildWorkspaceUrl,
   buildChatUrl,
   buildCanvasUrl,
+  buildNodeUrl,
+  buildBranchUrl,
 } from "@/lib/urls";
 import {
   WorkspaceItem,
@@ -48,18 +47,17 @@ import {
   updateWorkspaceNodeContent,
   fetchGraphSnapshot,
   addNodeToWorkspace,
-
   snapshotToTree,
   seedDemoWorkspace,
 } from "@/lib/workspaceApi";
-
-
 
 interface ChatContainerProps {
   initialWorkspaceId?: string;
   initialChatId?: string;
   /** Optional node ID from ?node= query param — scrolls to that message on load. */
   initialNodeId?: string;
+  /** Optional branch leaf ID from ?branch= query param — opens split-pane on load. */
+  initialBranchId?: string;
   initialViewMode?: ViewMode;
 }
 
@@ -67,9 +65,13 @@ export function ChatContainer({
   initialWorkspaceId,
   initialChatId,
   initialNodeId,
+  initialBranchId,
   initialViewMode = "chat",
 }: ChatContainerProps = {}) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
   const {
     tree,
     activeMessages,
@@ -143,6 +145,8 @@ export function ChatContainer({
   // Capture initial values in refs so they never change across re-renders
   const initialWorkspaceIdRef = useRef(initialWorkspaceId);
   const initialChatIdRef = useRef(initialChatId);
+  const initialBranchIdRef = useRef(initialBranchId);
+  const initialNodeIdRef = useRef(initialNodeId);
   const initialViewModeRef = useRef(initialViewMode);
 
   // Refresh chats for current workspace
@@ -156,15 +160,27 @@ export function ChatContainer({
     }
   }, []);
 
+  // Jump smoothly to a specific message card in the active feed
+  const handleJumpToMessage = useCallback((messageId: string) => {
+    const el = document.getElementById(`msg-${messageId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.classList.add("ring-2", "ring-zinc-900/40", "bg-zinc-100/60");
+      setTimeout(() => {
+        el.classList.remove("ring-2", "ring-zinc-900/40", "bg-zinc-100/60");
+      }, 1200);
+    }
+  }, []);
+
   // Initialize workspace & load initial chat — runs EXACTLY ONCE on mount.
-  // We intentionally read from frozen refs (not reactive props) so that
-  // router.replace() URL updates never cause this effect to re-fire.
   useEffect(() => {
     if (initializedWorkspaceIdRef.current) return; // already ran
 
     async function initWorkspace() {
       const wsId = initialWorkspaceIdRef.current;
       const chatId = initialChatIdRef.current;
+      const branchId = initialBranchIdRef.current;
+      const nodeId = initialNodeIdRef.current;
       const viewMode = initialViewModeRef.current;
 
       try {
@@ -218,7 +234,21 @@ export function ChatContainer({
               const loadedTree = snapshotToTree(snapshot);
               if (loadedTree) {
                 loadTree(loadedTree);
+                if (branchId && loadedTree.nodes[branchId]) {
+                  setSideBranchNodeId(branchId);
+                  const node = loadedTree.nodes[branchId];
+                  if (node.highlightedContext) {
+                    setSideBranchExcerpt(node.highlightedContext);
+                  }
+                }
               }
+            }
+          }
+
+          if (nodeId) {
+            if (viewMode === "canvas") {
+              setDrawerNodeId(nodeId);
+              setIsDrawerOpen(true);
             }
           }
 
@@ -227,8 +257,8 @@ export function ChatContainer({
             router.replace(buildWorkspaceUrl(ws.id), { scroll: false });
           } else if (typeof window !== "undefined" && targetChatId && ws) {
             const url = viewMode === "canvas"
-              ? buildCanvasUrl(ws.id, targetChatId)
-              : buildChatUrl(ws.id, targetChatId);
+              ? buildCanvasUrl(ws.id, targetChatId, nodeId ? { node: nodeId } : undefined)
+              : buildChatUrl(ws.id, targetChatId, branchId ? { branch: branchId } : nodeId ? { node: nodeId } : undefined);
             router.replace(url, { scroll: false });
           }
         }
@@ -239,6 +269,56 @@ export function ChatContainer({
     initWorkspace();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Empty deps = run once on mount only
+
+  // Reactive URL listener for browser Back/Forward navigation and external route changes
+  useEffect(() => {
+    if (!currentWorkspace) return;
+
+    // 1. Sync viewMode from path: /canvas vs standard chat
+    const targetViewMode: ViewMode = pathname.endsWith("/canvas") ? "canvas" : "chat";
+    setViewMode((prev) => (prev !== targetViewMode ? targetViewMode : prev));
+
+    // 2. Sync chatId from path: /w/{workspaceId}/chat/{chatId}
+    const chatIdMatch = pathname.match(/\/chat\/([^/]+)/);
+    const targetChatId = chatIdMatch ? chatIdMatch[1] : null;
+
+    if (targetChatId && targetChatId !== loadedChatIdRef.current) {
+      loadedChatIdRef.current = targetChatId;
+      setActiveChatId(targetChatId);
+      fetchGraphSnapshot(currentWorkspace.id, targetChatId).then((snapshot) => {
+        if (snapshot) {
+          const loadedTree = snapshotToTree(snapshot);
+          if (loadedTree) {
+            loadTree(loadedTree);
+          }
+        }
+      });
+    } else if (!targetChatId && loadedChatIdRef.current && pathname === buildWorkspaceUrl(currentWorkspace.id)) {
+      loadedChatIdRef.current = null;
+      setActiveChatId(null);
+      clearMessages();
+      setSideBranchNodeId(null);
+      setLeftPaneBranchNodeId(null);
+    }
+
+    // 3. Sync ?branch= query parameter
+    const branchParam = searchParams.get("branch");
+    if (branchParam && branchParam !== sideBranchNodeId) {
+      setSideBranchNodeId(branchParam);
+    }
+
+    // 4. Sync ?node= query parameter
+    const nodeParam = searchParams.get("node");
+    if (nodeParam) {
+      if (targetViewMode === "canvas") {
+        setDrawerNodeId(nodeParam);
+        setIsDrawerOpen(true);
+      } else {
+        handleJumpToMessage(nodeParam);
+      }
+    }
+  }, [pathname, searchParams, currentWorkspace, sideBranchNodeId, loadTree, clearMessages, handleJumpToMessage]);
+
 
   // Start a completely fresh chat tree inside the current workspace
   const handleNewChat = useCallback(() => {
@@ -414,6 +494,8 @@ export function ChatContainer({
 
           if (isFirstMessageInNewChat) {
             setActiveChatId(userNodeId);
+            loadedChatIdRef.current = userNodeId;
+            router.replace(buildChatUrl(currentWorkspace.id, userNodeId), { scroll: false });
           }
 
           // Persist user node immediately to backend
@@ -446,16 +528,11 @@ export function ChatContainer({
             model,
           });
           await refreshChats(currentWorkspace.id);
-          
-          if (isFirstMessageInNewChat && targetUserId) {
-            router.replace(buildChatUrl(currentWorkspace.id, targetUserId));
-          }
         }, 1000);
       }
     },
     [currentWorkspace, activeChatId, tree, llmConfig, getEffectiveApiKey, sendMessage, scrollToBottom, refreshChats, router]
   );
-
 
   // Synchronize sync status
   useEffect(() => {
@@ -463,41 +540,32 @@ export function ChatContainer({
     setSyncStatus("saved");
   }, [currentWorkspace, tree]);
 
-  // Jump smoothly to a specific message card in the active feed
-  const handleJumpToMessage = useCallback((messageId: string) => {
-    const el = document.getElementById(`msg-${messageId}`);
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "center" });
-      el.classList.add("ring-2", "ring-zinc-900/40", "bg-zinc-100/60");
-      setTimeout(() => {
-        el.classList.remove("ring-2", "ring-zinc-900/40", "bg-zinc-100/60");
-      }, 1200);
-    }
-  }, []);
-
-  // Scroll to deep-linked target node if provided via URL
-  useEffect(() => {
-    if (initialNodeId && activeMessages.length > 0) {
-      setTimeout(() => {
-        handleJumpToMessage(initialNodeId);
-      }, 200);
-    }
-  }, [initialNodeId, activeMessages.length, handleJumpToMessage]);
-
   // Handle opening of parallel split pane from inline Obsidian-style blue links
-  const handleOpenSideBranchFromLeft = useCallback((leafId: string, excerpt: string) => {
+  const handleOpenSideBranchFromLeft = useCallback(
+    (leafId: string, excerpt: string) => {
+      setSideBranchExcerpt(excerpt);
+      setSideBranchNodeId(leafId);
+      if (currentWorkspace && activeChatId) {
+        router.replace(buildBranchUrl(currentWorkspace.id, activeChatId, leafId), { scroll: false });
+      }
+    },
+    [currentWorkspace, activeChatId, router]
+  );
 
-    setSideBranchExcerpt(excerpt);
-    setSideBranchNodeId(leafId);
-  }, []);
+  const handleOpenSideBranchFromRight = useCallback(
+    (leafId: string, excerpt: string) => {
+      if (sideBranchNodeId) {
+        setLeftPaneBranchNodeId(sideBranchNodeId);
+      }
+      setSideBranchExcerpt(excerpt);
+      setSideBranchNodeId(leafId);
+      if (currentWorkspace && activeChatId) {
+        router.replace(buildBranchUrl(currentWorkspace.id, activeChatId, leafId), { scroll: false });
+      }
+    },
+    [sideBranchNodeId, currentWorkspace, activeChatId, router]
+  );
 
-  const handleOpenSideBranchFromRight = useCallback((leafId: string, excerpt: string) => {
-    if (sideBranchNodeId) {
-      setLeftPaneBranchNodeId(sideBranchNodeId);
-    }
-    setSideBranchExcerpt(excerpt);
-    setSideBranchNodeId(leafId);
-  }, [sideBranchNodeId]);
 
   // Send branch message and persist both user and assistant nodes to PostgreSQL
   const handleSendBranchStream = useCallback(
@@ -685,7 +753,10 @@ export function ChatContainer({
     switchBranch(nodeId);
     setDrawerNodeId(nodeId);
     setIsDrawerOpen(true);
-  }, [switchBranch]);
+    if (currentWorkspace && activeChatId) {
+      router.replace(buildCanvasUrl(currentWorkspace.id, activeChatId, { node: nodeId }), { scroll: false });
+    }
+  }, [switchBranch, currentWorkspace, activeChatId, router]);
 
   // Transition smoothly from Canvas view to Chat view focusing on a specific node
   const handleSwitchToChat = useCallback(
@@ -693,7 +764,7 @@ export function ChatContainer({
       switchBranch(nodeId);
       setViewMode("chat");
       if (currentWorkspace && activeChatId) {
-        router.push(buildChatUrl(currentWorkspace.id, activeChatId));
+        router.push(buildNodeUrl(currentWorkspace.id, activeChatId, nodeId), { scroll: false });
       }
       setTimeout(() => {
         handleJumpToMessage(nodeId);
@@ -751,18 +822,27 @@ export function ChatContainer({
   const handleEscape = useCallback(() => {
     if (sideBranchNodeId) {
       setSideBranchNodeId(null);
+      if (currentWorkspace && activeChatId) {
+        router.replace(buildChatUrl(currentWorkspace.id, activeChatId), { scroll: false });
+      }
+    } else if (isDrawerOpen) {
+      setIsDrawerOpen(false);
+      setDrawerNodeId(null);
+      if (currentWorkspace && activeChatId && viewMode === "canvas") {
+        router.replace(buildCanvasUrl(currentWorkspace.id, activeChatId), { scroll: false });
+      }
     } else if (isWorkspaceModalOpen) {
       setIsWorkspaceModalOpen(false);
     } else if (isPaletteOpen) {
       setIsPaletteOpen(false);
-    } else if (isDrawerOpen) {
-      setIsDrawerOpen(false);
     } else if (activeBranch) {
       clearBranchContext();
     }
-  }, [sideBranchNodeId, isWorkspaceModalOpen, isPaletteOpen, isDrawerOpen, activeBranch, clearBranchContext]);
+  }, [sideBranchNodeId, isWorkspaceModalOpen, isPaletteOpen, isDrawerOpen, activeBranch, clearBranchContext, currentWorkspace, activeChatId, viewMode, router]);
+
 
   useKeyboardShortcuts({
+
     onPrevBranch: handlePrevBranch,
     onNextBranch: handleNextBranch,
     onJumpToRoot: handleJumpToRoot,
@@ -898,7 +978,14 @@ export function ChatContainer({
                 isOpen={isDrawerOpen}
                 isStreaming={isStreaming}
                 streamingNodeId={streamingNodeId}
-                onClose={() => setIsDrawerOpen(false)}
+                onClose={() => {
+
+                  setIsDrawerOpen(false);
+                  setDrawerNodeId(null);
+                  if (currentWorkspace && activeChatId) {
+                    router.replace(buildCanvasUrl(currentWorkspace.id, activeChatId), { scroll: false });
+                  }
+                }}
                 onSelectBranch={(childId) => {
                   switchBranch(childId);
                   setDrawerNodeId(childId);
@@ -925,12 +1012,15 @@ export function ChatContainer({
           ) : (
             /* Resizable Parallel Split-Pane Chat View */
             <ResizableSplitPane
-
               isOpen={Boolean(sideBranchNodeId)}
               onClose={() => {
                 setSideBranchNodeId(null);
                 setLeftPaneBranchNodeId(null);
+                if (currentWorkspace && activeChatId) {
+                  router.replace(buildChatUrl(currentWorkspace.id, activeChatId), { scroll: false });
+                }
               }}
+
               leftPane={
                 <div className="h-full flex flex-col min-w-0 relative">
                   <main
@@ -1058,8 +1148,17 @@ export function ChatContainer({
                     onClose={() => {
                       setSideBranchNodeId(null);
                       setLeftPaneBranchNodeId(null);
+                      if (currentWorkspace && activeChatId) {
+                        router.replace(buildChatUrl(currentWorkspace.id, activeChatId), { scroll: false });
+                      }
                     }}
-                    onSelectBranchLeaf={(leafId) => setSideBranchNodeId(leafId)}
+                    onSelectBranchLeaf={(leafId) => {
+                      setSideBranchNodeId(leafId);
+                      if (currentWorkspace && activeChatId) {
+                        router.replace(buildBranchUrl(currentWorkspace.id, activeChatId, leafId), { scroll: false });
+                      }
+                    }}
+
                     onSendBranchMessage={(prompt, parentNodeId) => {
                       handleSendBranchStream(prompt, parentNodeId, "");
                     }}

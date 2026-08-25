@@ -1,36 +1,22 @@
-import React from "react";
-import { ChatContainer } from "@/components/chat/ChatContainer";
-
-interface CanvasPageProps {
-  params: Promise<{ workspaceId: string; chatId: string }>;
-  searchParams: Promise<{ node?: string }>;
-}
-
 /**
  * /w/{workspaceId}/chat/{chatId}/canvas — Canvas (graph) view.
  *
  * Same chat as /w/{workspaceId}/chat/{chatId}, rendered in the 2D spatial
  * canvas mode. View mode is a path segment — not a query param — so this URL
  * is independently bookmarkable and shareable.
+ *
+ * ChatContainer is rendered once by the parent layout.tsx and persists across navigations.
+ * This page returns null to satisfy the Next.js App Router without re-mounting.
  */
-export default async function CanvasPage({
-  params,
-  searchParams,
-}: CanvasPageProps) {
-  const { workspaceId, chatId } = await params;
-  const { node } = await searchParams;
-
-  return (
-    <ChatContainer
-      initialWorkspaceId={workspaceId}
-      initialChatId={chatId}
-      initialNodeId={node}
-      initialViewMode="canvas"
-    />
-  );
+export default function CanvasPage() {
+  return null;
 }
 
-export async function generateMetadata({ params }: CanvasPageProps) {
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ workspaceId: string; chatId: string }>;
+}) {
   const { workspaceId, chatId } = await params;
   return {
     title: `Canvas — GraphMind`,
