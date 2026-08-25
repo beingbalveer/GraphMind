@@ -459,13 +459,12 @@ export function ChatMessage({
       {/* Floating Exploration Tooltip on Text Selection */}
       {selection && (
         <SelectionTooltip
-          position={selection.position}
-          selectedText={selection.text}
+          selection={selection}
           onExplore={handleExplore}
           onSearch={handleSearch}
-          onClose={clearSelection}
         />
       )}
+
 
       <div className="max-w-3xl mx-auto flex space-x-3.5">
         {/* Assistant Avatar */}

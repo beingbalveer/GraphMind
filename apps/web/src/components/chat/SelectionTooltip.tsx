@@ -1,6 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
+
 import { GitBranch, Search } from "lucide-react";
 import { SelectionState } from "@/hooks/useTextSelection";
 
@@ -15,9 +17,15 @@ export function SelectionTooltip({
   onExplore,
   onSearch,
 }: SelectionTooltipProps) {
-  if (!selection) return null;
+  const [mounted, setMounted] = useState(false);
 
-  return (
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!selection || !mounted) return null;
+
+  return createPortal(
     <div
       style={{
         position: "fixed",
@@ -25,6 +33,7 @@ export function SelectionTooltip({
         top: `${selection.y}px`,
         transform: "translate(-50%, calc(-100% - 6px))",
       }}
+
       onMouseDown={(e) => {
         // Prevent clearing browser selection on container click/drag
         e.preventDefault();
@@ -81,6 +90,8 @@ export function SelectionTooltip({
         {/* Bottom Caret pointing down toward the selection */}
         <div className="w-2.5 h-2.5 bg-white border-r border-b border-zinc-200 rotate-45 -mt-[5px] shadow-sm" />
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
+
