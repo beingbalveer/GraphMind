@@ -37,8 +37,10 @@ import {
   renameWorkspaceChat,
   togglePinWorkspaceChat,
   updateWorkspaceNodeMetadata,
+  updateWorkspaceNodeContent,
   fetchGraphSnapshot,
   addNodeToWorkspace,
+
   snapshotToTree,
   seedDemoWorkspace,
 } from "@/lib/workspaceApi";
@@ -458,27 +460,72 @@ export function ChatContainer({
     setSideBranchExcerpt(excerpt);
   }, []);
 
-  // Handle "🌿 Explain this" action from text selection tooltip
-  const handleExplainBranch = useCallback(
-    async (parentNodeId: string, highlightedText: string) => {
-      setSideBranchExcerpt(highlightedText);
+  // Send branch message and persist both user and assistant nodes to PostgreSQL
+  const handleSendBranchStream = useCallback(
+    async (prompt: string, parentNodeId: string, highlightedText = "") => {
+      if (!currentWorkspace) return;
+      if (highlightedText) {
+        setSideBranchExcerpt(highlightedText);
+      }
 
-      const branchPrompt = `Explain "${highlightedText}" in concise, direct detail with key takeaways.`;
+      let createdUserNodeId: string | null = null;
+      let createdAssistantNodeId: string | null = null;
 
-      await sendMessage(
-        branchPrompt,
+      const result = await sendMessage(
+        prompt,
         "gemini",
         "gemini-2.5-flash",
         {
           branchOverride: { parentNodeId, highlightedText },
           preserveActiveNodeId: true,
-          onNodeCreated: ({ assistantNodeId }) => {
+          onNodeCreated: ({ userNodeId, assistantNodeId }) => {
+            createdUserNodeId = userNodeId;
+            createdAssistantNodeId = assistantNodeId;
             setSideBranchNodeId(assistantNodeId);
+
+            // Persist user branch node immediately to backend
+            addNodeToWorkspace(currentWorkspace.id, {
+              id: userNodeId,
+              parentId: parentNodeId,
+              role: "user",
+              content: prompt.trim(),
+              highlightedContext: highlightedText || null,
+              provider: "gemini",
+              model: "gemini-2.5-flash",
+            }).then(() => refreshChats(currentWorkspace.id));
           },
         }
       );
+
+      const targetAssistantId = result?.assistantNodeId || createdAssistantNodeId;
+      const targetUserId = result?.userNodeId || createdUserNodeId;
+      const assistantContent = result?.content || "";
+
+      // When streaming finishes, persist final assistant response node
+      if (targetAssistantId && targetUserId) {
+        setTimeout(async () => {
+          await addNodeToWorkspace(currentWorkspace.id, {
+            id: targetAssistantId,
+            parentId: targetUserId,
+            role: "assistant",
+            content: assistantContent,
+            provider: "gemini",
+            model: "gemini-2.5-flash",
+          });
+          await refreshChats(currentWorkspace.id);
+        }, 500);
+      }
     },
-    [sendMessage]
+    [currentWorkspace, sendMessage, refreshChats]
+  );
+
+  // Handle "🌿 Explain this" action from text selection tooltip
+  const handleExplainBranch = useCallback(
+    async (parentNodeId: string, highlightedText: string) => {
+      const branchPrompt = `Explain "${highlightedText}" in concise, direct detail with key takeaways.`;
+      await handleSendBranchStream(branchPrompt, parentNodeId, highlightedText);
+    },
+    [handleSendBranchStream]
   );
 
   // Track all branch points along the active sideBranchNodeId lineage for sliding 2-pane display
@@ -524,23 +571,21 @@ export function ChatContainer({
   // Handle starting a new sibling sub-branch query from the BranchChatPane tab bar
   const handleSendNewSiblingBranch = useCallback(
     async (prompt: string, parentNodeId: string, highlightedText: string) => {
-      setSideBranchExcerpt(highlightedText);
-
-      await sendMessage(
-        prompt,
-        "gemini",
-        "gemini-2.5-flash",
-        {
-          branchOverride: { parentNodeId, highlightedText },
-          preserveActiveNodeId: true,
-          onNodeCreated: ({ assistantNodeId }) => {
-            setSideBranchNodeId(assistantNodeId);
-          },
-        }
-      );
+      await handleSendBranchStream(prompt, parentNodeId, highlightedText);
     },
-    [sendMessage]
+    [handleSendBranchStream]
   );
+
+  const handleEditUserMessage = useCallback(
+    async (userNodeId: string, newContent: string) => {
+      await editUserMessage(userNodeId, newContent);
+      if (currentWorkspace) {
+        await updateWorkspaceNodeContent(currentWorkspace.id, userNodeId, newContent);
+      }
+    },
+    [currentWorkspace, editUserMessage]
+  );
+
 
 
   // Switch to canvas and focus drawer when selecting a node in the graph
@@ -865,7 +910,7 @@ export function ChatContainer({
                                 isLastAssistantMessage={index === lastAssistantIndex}
                                 onRetry={retryLastMessage}
                                 onRegenerate={regenerateResponse}
-                                onEditUserMessage={editUserMessage}
+                                onEditUserMessage={handleEditUserMessage}
                                 onSwitchBranch={switchBranch}
                                 onExploreBranch={handleExplainBranch}
                                 onOpenSideBranch={handleOpenSideBranch}
@@ -894,10 +939,7 @@ export function ChatContainer({
                     <ChatInput
                       onSendMessage={(prompt, provider, model) => {
                         if (isLeftPaneNestedBranch && parentBranchPoint) {
-                          sendMessage(prompt, provider, model, {
-                            branchOverride: { parentNodeId: parentBranchPoint.leafId, highlightedText: "" },
-                            preserveActiveNodeId: true,
-                          });
+                          handleSendBranchStream(prompt, parentBranchPoint.leafId, "");
                         } else {
                           handleSendMessage(prompt, provider, model);
                         }
@@ -921,26 +963,21 @@ export function ChatContainer({
                     onClose={() => setSideBranchNodeId(null)}
                     onSelectBranchLeaf={(leafId) => setSideBranchNodeId(leafId)}
                     onSendBranchMessage={(prompt, parentNodeId) => {
-                      sendMessage(prompt, "gemini", "gemini-2.5-flash", {
-                        branchOverride: { parentNodeId, highlightedText: "" },
-                        preserveActiveNodeId: true,
-                        onNodeCreated: ({ assistantNodeId }) => {
-                          setSideBranchNodeId(assistantNodeId);
-                        },
-                      });
+                      handleSendBranchStream(prompt, parentNodeId, "");
                     }}
                     onSendNewSiblingBranch={handleSendNewSiblingBranch}
                     onDeleteBranch={(nodeId) => currentWorkspace && deleteBranch(nodeId, currentWorkspace.id)}
                     onRenameBranch={handleRenameBranch}
                     onTogglePinBranch={handleTogglePinBranch}
                     onRegenerate={regenerateResponse}
-                    onEditUserMessage={editUserMessage}
+                    onEditUserMessage={handleEditUserMessage}
                     onSwitchBranch={switchBranch}
                     onExploreBranch={handleExplainBranch}
                     onOpenSideBranch={handleOpenSideBranch}
                   />
                 ) : null
               }
+
             />
           )}
 

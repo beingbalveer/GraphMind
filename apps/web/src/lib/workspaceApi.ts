@@ -287,6 +287,27 @@ export async function updateWorkspaceNodeMetadata(
   }
 }
 
+export async function updateWorkspaceNodeContent(
+  workspaceId: string,
+  nodeId: string,
+  content: string
+): Promise<boolean> {
+  try {
+    const res = await fetch(
+      `${API_BASE_URL}/api/v1/workspaces/${workspaceId}/nodes/${nodeId}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content }),
+      }
+    );
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+
 
 export async function deleteWorkspaceChat(
   workspaceId: string,
