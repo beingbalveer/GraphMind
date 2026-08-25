@@ -54,6 +54,8 @@ interface BranchChatPaneProps {
   onRegenerate?: (nodeId: string) => void;
   onEditUserMessage?: (userNodeId: string, newContent: string) => void;
   onSwitchBranch?: (nodeId: string) => void;
+  onExploreBranch?: (parentNodeId: string, highlightedText: string) => void;
+  onOpenSideBranch?: (childNodeId: string, excerpt: string) => void;
 }
 
 export function BranchChatPane({
@@ -72,7 +74,10 @@ export function BranchChatPane({
   onRegenerate,
   onEditUserMessage,
   onSwitchBranch,
+  onExploreBranch,
+  onOpenSideBranch,
 }: BranchChatPaneProps) {
+
 
 
   const [inputPrompt, setInputPrompt] = useState("");
@@ -96,16 +101,35 @@ export function BranchChatPane({
     return getAncestorPath(tree, branchLeafNodeId);
   }, [tree, branchLeafNodeId]);
 
-  // Find the branch root node (the node containing the highlighted context or prompt start)
+  // Find all nested branch points along the active lineage
+  const branchPoints = useMemo(() => {
+    if (!activeLineage || activeLineage.length === 0) return [];
+    const points: { node: TreeNode; title: string; leafId: string }[] = [];
+    activeLineage.forEach((n) => {
+      if (n.highlightedContext) {
+        points.push({
+          node: n,
+          title: n.highlightedContext,
+          leafId: tree ? getBranchLeafNode(tree, n.id).id : n.id,
+        });
+      }
+    });
+    return points;
+  }, [activeLineage, tree]);
+
+  // Find the active sub-branch root node (the last node containing highlighted context)
   const branchRootIndex = useMemo(() => {
-    const idx = activeLineage.findIndex((n) => Boolean(n.highlightedContext));
-    return idx !== -1 ? idx : Math.max(0, activeLineage.length - 2);
+    for (let i = activeLineage.length - 1; i >= 0; i--) {
+      if (activeLineage[i].highlightedContext) return i;
+    }
+    return 0;
   }, [activeLineage]);
 
   const activeBranchRoot = activeLineage[branchRootIndex];
   const parentNodeId =
     activeBranchRoot?.parentId ||
     (branchRootIndex > 0 ? activeLineage[branchRootIndex - 1].id : null);
+
 
   const displayContext =
     highlightedContext ||
@@ -332,8 +356,39 @@ export function BranchChatPane({
 
   return (
     <div className="w-full h-full flex flex-col bg-white font-sans select-text">
+      {/* Nested Branch Breadcrumbs (When depth > 1) */}
+      {branchPoints.length > 1 && (
+        <div className="h-8 px-3 sm:px-5 bg-zinc-50 border-b border-zinc-200/70 flex items-center space-x-1.5 text-xs text-zinc-500 shrink-0 overflow-x-auto no-scrollbar">
+          <span className="text-[10.5px] font-semibold text-zinc-400 uppercase tracking-wider shrink-0 mr-1">
+            Path:
+          </span>
+          {branchPoints.map((bp, idx) => {
+            const isCurrent = idx === branchPoints.length - 1;
+            return (
+              <React.Fragment key={bp.node.id}>
+                {idx > 0 && <span className="text-zinc-300 select-none">/</span>}
+                <button
+                  type="button"
+                  disabled={isCurrent}
+                  onClick={() => onSelectBranchLeaf(bp.leafId)}
+                  className={`truncate max-w-[140px] px-2 py-0.5 rounded text-xs transition-colors ${
+                    isCurrent
+                      ? "bg-zinc-200 text-zinc-900 font-semibold cursor-default"
+                      : "hover:bg-zinc-200/70 text-zinc-600 hover:text-zinc-950 cursor-pointer font-medium"
+                  }`}
+                  title={bp.title}
+                >
+                  {bp.title}
+                </button>
+              </React.Fragment>
+            );
+          })}
+        </div>
+      )}
+
       {/* Tabbed Header with Sibling Sub-Branches */}
       <div className="h-13 px-3 sm:px-5 border-b border-zinc-200 flex items-end justify-between shrink-0 bg-white z-10">
+
         <div className="flex items-end space-x-2 min-w-0 pr-2 overflow-x-auto no-scrollbar">
           {/* Main Excerpt Identifier Badge */}
           <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded-md bg-zinc-100 text-zinc-800 text-xs font-medium shrink-0 mb-2 mr-2">
@@ -536,7 +591,10 @@ export function BranchChatPane({
                     onRegenerate={onRegenerate}
                     onEditUserMessage={onEditUserMessage}
                     onSwitchBranch={onSwitchBranch}
+                    onExploreBranch={onExploreBranch}
+                    onOpenSideBranch={onOpenSideBranch}
                   />
+
                 );
               });
             })()}

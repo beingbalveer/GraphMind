@@ -1,9 +1,11 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { GitBranch, ArrowDown } from "lucide-react";
-import { getNodeChildren } from "@graphmind/shared";
+import { GitBranch, ArrowDown, ArrowLeft } from "lucide-react";
+import { getNodeChildren, getBranchLeafNode, getAncestorPath, TreeNode } from "@graphmind/shared";
+
+
 import { ChatMessage } from "./ChatMessage";
 import { ChatInput } from "./ChatInput";
 import { BranchBreadcrumbs } from "./BranchBreadcrumbs";
@@ -479,6 +481,46 @@ export function ChatContainer({
     [sendMessage]
   );
 
+  // Track all branch points along the active sideBranchNodeId lineage for sliding 2-pane display
+  const activeBranchLineage = useMemo(() => {
+    if (!tree || !sideBranchNodeId) return [];
+    return getAncestorPath(tree, sideBranchNodeId);
+  }, [tree, sideBranchNodeId]);
+
+  const activeBranchPoints = useMemo(() => {
+    if (!activeBranchLineage || activeBranchLineage.length === 0) return [];
+    const points: { node: TreeNode; title: string; leafId: string }[] = [];
+    activeBranchLineage.forEach((n) => {
+      if (n.highlightedContext) {
+        points.push({
+          node: n,
+          title: n.highlightedContext,
+          leafId: tree ? getBranchLeafNode(tree, n.id).id : n.id,
+        });
+      }
+    });
+    return points;
+  }, [activeBranchLineage, tree]);
+
+  // When branch depth >= 2 (Level 2 or deeper), the left pane slides to display the parent branch (Level N-1)
+  const isLeftPaneNestedBranch = activeBranchPoints.length >= 2;
+  const parentBranchPoint = isLeftPaneNestedBranch
+    ? activeBranchPoints[activeBranchPoints.length - 2]
+    : null;
+  const grandParentTitle =
+    activeBranchPoints.length >= 3
+      ? activeBranchPoints[activeBranchPoints.length - 3].title
+      : "Main Chat";
+
+  const leftPaneMessages: TreeNode[] = useMemo(() => {
+    if (!isLeftPaneNestedBranch || !parentBranchPoint || !tree) {
+      return activeMessages;
+    }
+    const path = getAncestorPath(tree, parentBranchPoint.leafId);
+    const rootIdx = path.findIndex((n) => n.id === parentBranchPoint.node.id);
+    return rootIdx !== -1 ? path.slice(rootIdx) : path;
+  }, [isLeftPaneNestedBranch, parentBranchPoint, tree, activeMessages]);
+
   // Handle starting a new sibling sub-branch query from the BranchChatPane tab bar
   const handleSendNewSiblingBranch = useCallback(
     async (prompt: string, parentNodeId: string, highlightedText: string) => {
@@ -499,6 +541,7 @@ export function ChatContainer({
     },
     [sendMessage]
   );
+
 
   // Switch to canvas and focus drawer when selecting a node in the graph
   const handleSelectTreeNode = useCallback((nodeId: string) => {
@@ -730,11 +773,33 @@ export function ChatContainer({
               onClose={() => setSideBranchNodeId(null)}
               leftPane={
                 <div className="h-full flex flex-col min-w-0 relative">
+                  {/* Sliding Parent Branch Navigation Header */}
+                  {isLeftPaneNestedBranch && (
+                    <div className="h-10 px-4 bg-zinc-50 border-b border-zinc-200/80 flex items-center justify-between shrink-0 select-none z-10">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (parentBranchPoint) {
+                            setSideBranchNodeId(parentBranchPoint.leafId);
+                          }
+                        }}
+                        className="inline-flex items-center space-x-1.5 text-xs font-medium text-zinc-600 hover:text-zinc-950 transition-colors cursor-pointer group"
+                      >
+                        <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
+                        <span>Back to {grandParentTitle}</span>
+                      </button>
+                      <div className="inline-flex items-center space-x-1.5 text-xs font-semibold text-zinc-800 bg-white px-2 py-0.5 rounded-md border border-zinc-200 shadow-2xs">
+                        <GitBranch className="w-3 h-3 text-zinc-600 shrink-0" />
+                        <span className="truncate max-w-[140px]">{parentBranchPoint?.title}</span>
+                      </div>
+                    </div>
+                  )}
+
                   <main
                     ref={scrollRef}
                     className="flex-1 overflow-y-auto min-h-0 flex flex-col bg-white"
                   >
-                    {activeMessages.length === 0 ? (
+                    {leftPaneMessages.length === 0 ? (
                       /* Clean Empty State */
                       <div className="flex-1 flex flex-col items-center justify-center max-w-2xl mx-auto px-4 py-8 text-center space-y-8 my-auto">
                         <div className="space-y-3">
@@ -775,18 +840,18 @@ export function ChatContainer({
                         </div>
                       </div>
                     ) : (
-                      /* Main Active Lineage Branch Message Stream */
+                      /* Active Lineage Branch Message Stream */
                       <div className="w-full pb-4">
                         {(() => {
-                          const lastUserIndex = activeMessages.map((m) => m.role).lastIndexOf("user");
-                          const lastAssistantIndex = activeMessages.map((m) => m.role).lastIndexOf("assistant");
+                          const lastUserIndex = leftPaneMessages.map((m) => m.role).lastIndexOf("user");
+                          const lastAssistantIndex = leftPaneMessages.map((m) => m.role).lastIndexOf("assistant");
 
-                          return activeMessages.map((node, index) => {
+                          return leftPaneMessages.map((node, index) => {
                             const isLastAssistant =
-                              index === activeMessages.length - 1 &&
+                              index === leftPaneMessages.length - 1 &&
                               node.role === "assistant" &&
                               isStreaming &&
-                              !sideBranchNodeId;
+                              (!sideBranchNodeId || (isLeftPaneNestedBranch && streamingNodeId === node.id));
 
                             return (
                               <ChatMessage
@@ -810,13 +875,12 @@ export function ChatContainer({
                         })()}
                         <div ref={bottomRef} />
                       </div>
-
                     )}
                   </main>
 
-                  {/* Left Main Chat Input Bar */}
+                  {/* Left Chat Input Bar */}
                   <div className="relative shrink-0 bg-gradient-to-t from-white via-white to-transparent pt-2 z-20">
-                    {showScrollButton && activeMessages.length > 0 && (
+                    {showScrollButton && leftPaneMessages.length > 0 && (
                       <button
                         type="button"
                         onClick={() => scrollToBottom(true)}
@@ -829,11 +893,18 @@ export function ChatContainer({
 
                     <ChatInput
                       onSendMessage={(prompt, provider, model) => {
-                        handleSendMessage(prompt, provider, model);
+                        if (isLeftPaneNestedBranch && parentBranchPoint) {
+                          sendMessage(prompt, provider, model, {
+                            branchOverride: { parentNodeId: parentBranchPoint.leafId, highlightedText: "" },
+                            preserveActiveNodeId: true,
+                          });
+                        } else {
+                          handleSendMessage(prompt, provider, model);
+                        }
                       }}
                       onStopStreaming={stopStreaming}
                       isStreaming={isStreaming}
-                      activeBranch={activeBranch}
+                      activeBranch={isLeftPaneNestedBranch ? null : activeBranch}
                       onClearBranch={clearBranchContext}
                     />
                   </div>
@@ -865,15 +936,14 @@ export function ChatContainer({
                     onRegenerate={regenerateResponse}
                     onEditUserMessage={editUserMessage}
                     onSwitchBranch={switchBranch}
+                    onExploreBranch={handleExplainBranch}
+                    onOpenSideBranch={handleOpenSideBranch}
                   />
                 ) : null
-
-
-
               }
             />
-
           )}
+
         </div>
       </div>
 
