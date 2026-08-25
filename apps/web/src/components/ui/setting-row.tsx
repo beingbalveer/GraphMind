@@ -5,28 +5,41 @@ import React from "react";
 interface SettingRowProps {
   label: string;
   description?: string;
+  badge?: string;
   children: React.ReactNode;
   align?: "center" | "top";
+  disabled?: boolean;
   className?: string;
 }
 
 export function SettingRow({
   label,
   description,
+  badge,
   children,
   align = "center",
+  disabled = false,
   className = "",
 }: SettingRowProps) {
   return (
     <div
       className={`flex flex-col sm:flex-row sm:items-${
         align === "top" ? "start" : "center"
-      } justify-between gap-3 py-3 border-b border-zinc-100 last:border-0 ${className}`}
+      } justify-between gap-3 py-3 border-b border-zinc-100 last:border-0 ${
+        disabled ? "opacity-75" : ""
+      } ${className}`}
     >
       <div className="space-y-0.5 max-w-sm sm:pr-4">
-        <label className="text-xs font-semibold text-zinc-900 leading-tight block">
-          {label}
-        </label>
+        <div className="flex items-center space-x-2">
+          <label className="text-xs font-semibold text-zinc-900 leading-tight block">
+            {label}
+          </label>
+          {badge && (
+            <span className="text-[10px] font-medium text-amber-700 bg-amber-50/90 border border-amber-200/70 px-1.5 py-0.2 rounded-md">
+              {badge}
+            </span>
+          )}
+        </div>
         {description && (
           <p className="text-[11.5px] text-zinc-500 leading-relaxed">
             {description}
@@ -39,6 +52,7 @@ export function SettingRow({
     </div>
   );
 }
+
 
 interface SettingSectionProps {
   title: string;

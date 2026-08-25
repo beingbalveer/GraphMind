@@ -149,24 +149,37 @@ export function SettingsModal({
     setSystemPrompt(DEFAULT_LLM_CONFIG.systemPrompt);
   };
 
-  const navSections = [
+  interface NavItem {
+    id: SettingsTabId;
+    label: string;
+    icon: React.ComponentType<{ className?: string }>;
+    badge?: string;
+  }
+
+  interface NavSection {
+    title: string;
+    items: NavItem[];
+  }
+
+  const navSections: NavSection[] = [
     {
       title: "Settings",
       items: [
-        { id: "models" as const, label: "Models & AI", icon: Sparkles },
-        { id: "general" as const, label: "General", icon: Sliders },
-        { id: "appearance" as const, label: "Appearance", icon: Palette },
-        { id: "workspaces" as const, label: "Workspaces", icon: FolderGit2 },
+        { id: "models", label: "Models & AI", icon: Sparkles },
+        { id: "general", label: "General", icon: Sliders, badge: "Roadmap" },
+        { id: "appearance", label: "Appearance", icon: Palette, badge: "Roadmap" },
+        { id: "workspaces", label: "Workspaces", icon: FolderGit2 },
       ],
     },
     {
       title: "Shortcuts & Info",
       items: [
-        { id: "shortcuts" as const, label: "Keyboard Shortcuts", icon: Keyboard },
-        { id: "about" as const, label: "About GraphMind", icon: Info },
+        { id: "shortcuts", label: "Keyboard Shortcuts", icon: Keyboard },
+        { id: "about", label: "About GraphMind", icon: Info },
       ],
     },
   ];
+
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-zinc-950/30 backdrop-blur-xs animate-in fade-in duration-150">
@@ -194,18 +207,25 @@ export function SettingsModal({
                         key={item.id}
                         type="button"
                         onClick={() => setActiveTab(item.id)}
-                        className={`w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-all text-left cursor-pointer ${
+                        className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all text-left cursor-pointer ${
                           isSelected
                             ? "bg-zinc-200/70 text-zinc-950 font-semibold"
                             : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
                         }`}
                       >
-                        <Icon
-                          className={`w-4 h-4 ${
-                            isSelected ? "text-zinc-900" : "text-zinc-500"
-                          }`}
-                        />
-                        <span>{item.label}</span>
+                        <div className="flex items-center space-x-2.5 min-w-0">
+                          <Icon
+                            className={`w-4 h-4 shrink-0 ${
+                              isSelected ? "text-zinc-900" : "text-zinc-500"
+                            }`}
+                          />
+                          <span className="truncate">{item.label}</span>
+                        </div>
+                        {item.badge && (
+                          <span className="text-[9.5px] font-medium text-amber-700 bg-amber-50 border border-amber-200/60 px-1.5 py-0.2 rounded-md shrink-0">
+                            {item.badge}
+                          </span>
+                        )}
                       </button>
                     );
                   })}
@@ -213,6 +233,7 @@ export function SettingsModal({
               </div>
             ))}
           </div>
+
 
           {/* Footer User / Version Badge */}
           <div className="pt-2 border-t border-zinc-200/60 px-3 py-1 flex items-center justify-between text-[11px] text-zinc-400">
@@ -389,7 +410,9 @@ export function SettingsModal({
                 <SettingSection title="Streaming & Execution">
                   <SettingRow
                     label="Stream Token Speed"
+                    badge="Coming soon"
                     description="Controls token pacing during live streaming."
+                    disabled
                   >
                     <SegmentedTabs
                       items={[
@@ -404,16 +427,20 @@ export function SettingsModal({
 
                   <SettingRow
                     label="Auto-scroll to Bottom"
+                    badge="Coming soon"
                     description="Automatically scroll view during response generation."
+                    disabled
                   >
-                    <Switch checked={autoScroll} onCheckedChange={setAutoScroll} />
+                    <Switch checked={autoScroll} onCheckedChange={setAutoScroll} disabled />
                   </SettingRow>
 
                   <SettingRow
                     label="LaTeX & Math Formula Rendering"
+                    badge="Coming soon"
                     description="Render KaTeX mathematical equations and symbols."
+                    disabled
                   >
-                    <Switch checked={enableLatex} onCheckedChange={setEnableLatex} />
+                    <Switch checked={enableLatex} onCheckedChange={setEnableLatex} disabled />
                   </SettingRow>
                 </SettingSection>
               </div>
@@ -425,12 +452,14 @@ export function SettingsModal({
                 <SettingSection title="Theme & Display">
                   <SettingRow
                     label="Interface Theme"
+                    badge="Coming soon"
                     description="Select application color appearance."
+                    disabled
                   >
                     <SegmentedTabs
                       items={[
                         { id: "light", label: "Light (Default)" },
-                        { id: "dark", label: "Dark (Soon)" },
+                        { id: "dark", label: "Dark" },
                       ]}
                       value="light"
                       onChange={() => {}}
@@ -440,13 +469,16 @@ export function SettingsModal({
 
                   <SettingRow
                     label="Compact Message Density"
+                    badge="Coming soon"
                     description="Reduce padding and spacing between chat message bubbles."
+                    disabled
                   >
-                    <Switch checked={compactDensity} onCheckedChange={setCompactDensity} />
+                    <Switch checked={compactDensity} onCheckedChange={setCompactDensity} disabled />
                   </SettingRow>
                 </SettingSection>
               </div>
             )}
+
 
             {/* 4. WORKSPACES TAB */}
             {activeTab === "workspaces" && (
