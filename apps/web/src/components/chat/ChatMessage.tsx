@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, memo, useCallback, useMemo } from "react";
+import React, { useRef, memo, useCallback, useMemo, useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
