@@ -101,24 +101,9 @@ export function BranchChatPane({
     return getAncestorPath(tree, branchLeafNodeId);
   }, [tree, branchLeafNodeId]);
 
-  // Find all nested branch points along the active lineage
-  const branchPoints = useMemo(() => {
-    if (!activeLineage || activeLineage.length === 0) return [];
-    const points: { node: TreeNode; title: string; leafId: string }[] = [];
-    activeLineage.forEach((n) => {
-      if (n.highlightedContext) {
-        points.push({
-          node: n,
-          title: n.highlightedContext,
-          leafId: tree ? getBranchLeafNode(tree, n.id).id : n.id,
-        });
-      }
-    });
-    return points;
-  }, [activeLineage, tree]);
-
   // Find the active sub-branch root node (the last node containing highlighted context)
   const branchRootIndex = useMemo(() => {
+
     for (let i = activeLineage.length - 1; i >= 0; i--) {
       if (activeLineage[i].highlightedContext) return i;
     }
@@ -356,38 +341,9 @@ export function BranchChatPane({
 
   return (
     <div className="w-full h-full flex flex-col bg-white font-sans select-text">
-      {/* Nested Branch Breadcrumbs (When depth > 1) */}
-      {branchPoints.length > 1 && (
-        <div className="h-8 px-3 sm:px-5 bg-zinc-50 border-b border-zinc-200/70 flex items-center space-x-1.5 text-xs text-zinc-500 shrink-0 overflow-x-auto no-scrollbar">
-          <span className="text-[10.5px] font-semibold text-zinc-400 uppercase tracking-wider shrink-0 mr-1">
-            Path:
-          </span>
-          {branchPoints.map((bp, idx) => {
-            const isCurrent = idx === branchPoints.length - 1;
-            return (
-              <React.Fragment key={bp.node.id}>
-                {idx > 0 && <span className="text-zinc-300 select-none">/</span>}
-                <button
-                  type="button"
-                  disabled={isCurrent}
-                  onClick={() => onSelectBranchLeaf(bp.leafId)}
-                  className={`truncate max-w-[140px] px-2 py-0.5 rounded text-xs transition-colors ${
-                    isCurrent
-                      ? "bg-zinc-200 text-zinc-900 font-semibold cursor-default"
-                      : "hover:bg-zinc-200/70 text-zinc-600 hover:text-zinc-950 cursor-pointer font-medium"
-                  }`}
-                  title={bp.title}
-                >
-                  {bp.title}
-                </button>
-              </React.Fragment>
-            );
-          })}
-        </div>
-      )}
-
       {/* Tabbed Header with Sibling Sub-Branches */}
       <div className="h-13 px-3 sm:px-5 border-b border-zinc-200 flex items-end justify-between shrink-0 bg-white z-10">
+
 
         <div className="flex items-end space-x-2 min-w-0 pr-2 overflow-x-auto no-scrollbar">
           {/* Main Excerpt Identifier Badge */}

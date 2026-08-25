@@ -3,12 +3,15 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { GitBranch, ArrowDown, ArrowLeft } from "lucide-react";
-import { getNodeChildren, getBranchLeafNode, getAncestorPath, TreeNode } from "@graphmind/shared";
+import { getNodeChildren, getBranchLinearLeafNode, getAncestorPath, TreeNode } from "@graphmind/shared";
+
+
 
 
 import { ChatMessage } from "./ChatMessage";
 import { ChatInput } from "./ChatInput";
-import { BranchBreadcrumbs } from "./BranchBreadcrumbs";
+import { BranchBreadcrumbs, BreadcrumbStep } from "./BranchBreadcrumbs";
+
 import { ChatSidebar } from "./ChatSidebar";
 import { GraphCanvas } from "../canvas/GraphCanvas";
 import { FocusDrawer } from "../canvas/FocusDrawer";
@@ -542,12 +545,40 @@ export function ChatContainer({
         points.push({
           node: n,
           title: n.highlightedContext,
-          leafId: tree ? getBranchLeafNode(tree, n.id).id : n.id,
+          leafId: tree ? getBranchLinearLeafNode(tree, n.id).id : n.id,
         });
       }
     });
     return points;
   }, [activeBranchLineage, tree]);
+
+  // Unified top navigation breadcrumbs
+  const breadcrumbSteps = useMemo(() => {
+    if (!tree || activeMessages.length === 0) return [];
+    const rootMessage = activeMessages[0];
+    const rawPrompt = rootMessage?.content || "New Chat";
+    const rootTitle = rawPrompt.length > 20 ? rawPrompt.slice(0, 18) + "…" : rawPrompt;
+
+    const steps: BreadcrumbStep[] = [
+      {
+        id: tree.rootNodeId,
+        leafId: tree.activeNodeId,
+        title: rootTitle,
+        isRoot: true,
+      },
+    ];
+
+
+    activeBranchPoints.forEach((bp) => {
+      steps.push({
+        id: bp.node.id,
+        leafId: bp.leafId,
+        title: bp.title,
+      });
+    });
+
+    return steps;
+  }, [tree, activeMessages, activeBranchPoints]);
 
   // When branch depth >= 2 (Level 2 or deeper), the left pane slides to display the parent branch (Level N-1)
   const isLeftPaneNestedBranch = activeBranchPoints.length >= 2;
@@ -567,6 +598,7 @@ export function ChatContainer({
     const rootIdx = path.findIndex((n) => n.id === parentBranchPoint.node.id);
     return rootIdx !== -1 ? path.slice(rootIdx) : path;
   }, [isLeftPaneNestedBranch, parentBranchPoint, tree, activeMessages]);
+
 
   // Handle starting a new sibling sub-branch query from the BranchChatPane tab bar
   const handleSendNewSiblingBranch = useCallback(
@@ -736,11 +768,18 @@ export function ChatContainer({
         }}
         breadcrumbs={
           <BranchBreadcrumbs
-            messages={activeMessages}
-            onJumpToMessage={handleJumpToMessage}
+            steps={breadcrumbSteps}
+            onSelectStep={(step) => {
+              if (step.isRoot) {
+                setSideBranchNodeId(null);
+              } else {
+                setSideBranchNodeId(step.leafId);
+              }
+            }}
           />
         }
       />
+
 
       {/* Main App Layout: Workspace Chats Sidebar + Canvas / Split-Pane Chat */}
       <div className="flex-1 min-h-0 flex relative overflow-hidden bg-white">

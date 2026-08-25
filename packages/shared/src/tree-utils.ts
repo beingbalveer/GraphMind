@@ -280,6 +280,25 @@ export function getBranchLeafNode(tree: ConversationTree, startNodeId: string): 
 }
 
 /**
+ * Return the linear leaf descendant for a given branch node
+ * (following direct responses without traversing into nested child sub-branches with new highlightedContext).
+ */
+export function getBranchLinearLeafNode(tree: ConversationTree, startNodeId: string): TreeNode {
+  let current = tree.nodes[startNodeId];
+  if (!current) return current;
+
+  while (current.childrenIds.length > 0) {
+    const linearChildId = current.childrenIds.find(
+      (id) => !tree.nodes[id]?.highlightedContext
+    );
+    if (!linearChildId || !tree.nodes[linearChildId]) break;
+    current = tree.nodes[linearChildId];
+  }
+  return current;
+}
+
+
+/**
  * Return all nodes along the mainline conversation trunk (starting from root,
  * following linear replies where highlightedContext is null).
  * Guarantees sub-branch nodes are excluded from the main chat feed.

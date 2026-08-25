@@ -135,9 +135,10 @@ export function Navbar({
       </div>
 
       {/* Center: Branch Breadcrumbs */}
-      <div className="hidden lg:flex items-center justify-center flex-1 mx-4 min-w-0">
+      <div className="hidden sm:flex items-center justify-center flex-1 mx-2 sm:mx-4 min-w-0">
         {breadcrumbs}
       </div>
+
 
       {/* Right: View Mode Toggle + New Chat Button */}
       <div className="flex items-center space-x-2 shrink-0">
