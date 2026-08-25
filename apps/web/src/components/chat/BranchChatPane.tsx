@@ -22,8 +22,9 @@ import {
   TreeNode,
   getAncestorPath,
   getSiblingSubBranches,
-  getBranchLeafNode,
+  getBranchLinearLeafNode,
 } from "@graphmind/shared";
+
 import { Button } from "@/components/ui/button";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -155,7 +156,8 @@ export function BranchChatPane({
     }
 
     const tabs = siblingRoots.map((root, idx) => {
-      const leaf = getBranchLeafNode(tree, root.id);
+      const leaf = getBranchLinearLeafNode(tree, root.id);
+
 
       // Clean semantic title from user prompt or saved metadata
       let title = (root.metadata?.title as string | undefined) || "";

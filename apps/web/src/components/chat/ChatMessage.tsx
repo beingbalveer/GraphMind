@@ -13,7 +13,8 @@ import {
   Pencil,
 } from "lucide-react";
 
-import { TreeNode, ConversationTree, getNodeChildren } from "@graphmind/shared";
+import { TreeNode, ConversationTree, getNodeChildren, getBranchLinearLeafNode } from "@graphmind/shared";
+
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
 import { useTextSelection } from "@/hooks/useTextSelection";
@@ -305,27 +306,15 @@ export function ChatMessage({
     );
   }, [tree, message.id]);
 
-  // Helper to get the deepest leaf of a specific branch
+  // Helper to get the linear leaf of a specific branch
   const getBranchLeafId = useCallback(
     (userChild: TreeNode): string => {
       if (!tree) return userChild.id;
-      const assistantChildren = getNodeChildren(tree, userChild.id);
-      if (assistantChildren.length > 0) {
-        let curr = assistantChildren[0];
-        while (true) {
-          const nextChildren = getNodeChildren(tree, curr.id);
-          if (nextChildren.length > 0) {
-            curr = nextChildren[0];
-          } else {
-            break;
-          }
-        }
-        return curr.id;
-      }
-      return userChild.id;
+      return getBranchLinearLeafNode(tree, userChild.id).id;
     },
     [tree]
   );
+
 
   // Build inline branch link mappings for the markdown renderer
   const branchLinks: BranchLinkInfo[] = useMemo(() => {
