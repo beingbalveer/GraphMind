@@ -1,4 +1,4 @@
-from typing import List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import structlog
 from models.workspace import EdgeModel, NodeModel, Workspace
@@ -421,9 +421,66 @@ class WorkspaceService:
             session, workspace_id, chat_root_id, title=new_title
         )
 
+    @staticmethod
+    async def update_node(
+
+        session: AsyncSession,
+        workspace_id: str,
+        node_id: str,
+        updates: Dict[str, Any],
+    ) -> Optional[NodeResponse]:
+        """
+        Update a conversation node's content and/or metadata.
+        """
+        stmt = select(NodeModel).where(
+            NodeModel.id == node_id, NodeModel.workspace_id == workspace_id
+        )
+        res = await session.execute(stmt)
+        node = res.scalar_one_or_none()
+        if not node:
+            return None
+
+        if "content" in updates and isinstance(updates["content"], str):
+            node.content = updates["content"]
+        if "metadata" in updates and isinstance(updates["metadata"], dict):
+            current_meta = dict(node.metadata_payload or {})
+            current_meta.update(updates["metadata"])
+            node.metadata_payload = current_meta
+        if "title" in updates:
+            current_meta = dict(node.metadata_payload or {})
+            current_meta["title"] = updates["title"]
+            node.metadata_payload = current_meta
+        if "pinned" in updates:
+            current_meta = dict(node.metadata_payload or {})
+            current_meta["pinned"] = updates["pinned"]
+            node.metadata_payload = current_meta
+
+        await session.flush()
+        logger.info(
+            "Node updated",
+            workspace_id=workspace_id,
+            node_id=node_id,
+            updates=updates,
+        )
+        return NodeResponse(
+            id=node.id,
+            workspace_id=node.workspace_id,
+            parent_id=node.parent_id,
+            role=node.role,
+            content=node.content,
+            highlighted_context=node.highlighted_context,
+            provider=node.provider,
+            model=node.model,
+            position_x=node.position_x,
+            position_y=node.position_y,
+            metadata=node.metadata_payload or {},
+            created_at=node.created_at,
+            updated_at=node.updated_at,
+        )
 
     @staticmethod
     async def add_node_and_edge(
+
         session: AsyncSession, workspace_id: str, data: NodeCreate
     ) -> NodeResponse:
         """

@@ -11,6 +11,11 @@ import {
   Scale,
   AlertTriangle,
   Lightbulb,
+  MoreVertical,
+  Pin,
+  PinOff,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import {
   ConversationTree,
@@ -20,7 +25,18 @@ import {
   getBranchLeafNode,
 } from "@graphmind/shared";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu } from "@/components/ui/dropdown-menu";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ChatMessage } from "./ChatMessage";
+
+export interface SiblingTab {
+  id: string;
+  rootId: string;
+  leafId: string;
+  title: string;
+  prompt: string;
+  pinned?: boolean;
+}
 
 interface BranchChatPaneProps {
   tree: ConversationTree | null;
@@ -32,6 +48,9 @@ interface BranchChatPaneProps {
   onSelectBranchLeaf: (leafId: string) => void;
   onSendBranchMessage: (prompt: string, parentNodeId: string) => void;
   onSendNewSiblingBranch: (prompt: string, parentNodeId: string, highlightedContext: string) => void;
+  onDeleteBranch?: (rootNodeId: string) => void;
+  onRenameBranch?: (rootNodeId: string, newTitle: string) => void;
+  onTogglePinBranch?: (rootNodeId: string, pinned: boolean) => void;
 }
 
 export function BranchChatPane({
@@ -44,9 +63,18 @@ export function BranchChatPane({
   onSelectBranchLeaf,
   onSendBranchMessage,
   onSendNewSiblingBranch,
+  onDeleteBranch,
+  onRenameBranch,
+  onTogglePinBranch,
 }: BranchChatPaneProps) {
   const [inputPrompt, setInputPrompt] = useState("");
   const [isDraftingNewTab, setIsDraftingNewTab] = useState(false);
+  const [openMenuTabId, setOpenMenuTabId] = useState<string | null>(null);
+  const [renamingTabId, setRenamingTabId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [deletingTab, setDeletingTab] = useState<SiblingTab | null>(null);
+  const renameInputRef = useRef<HTMLInputElement>(null);
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -77,50 +105,61 @@ export function BranchChatPane({
     (activeBranchRoot ? activeBranchRoot.content.slice(0, 45) : "Topic");
 
   // Discover all sibling sub-branches stemming from the same parent context
-  const siblingTabs = useMemo(() => {
+  const siblingTabs: SiblingTab[] = useMemo(() => {
     if (!tree || !parentNodeId) {
+      const isPinned = Boolean(activeBranchRoot?.metadata?.pinned);
+      const customTitle = activeBranchRoot?.metadata?.title as string | undefined;
       return [
         {
           id: branchLeafNodeId,
           rootId: activeBranchRoot?.id || branchLeafNodeId,
           leafId: branchLeafNodeId,
-          title: "Branch 1",
+          title: customTitle || "Branch 1",
           prompt: activeBranchRoot?.content || "Branch 1",
+          pinned: isPinned,
         },
       ];
     }
 
     const siblingRoots = getSiblingSubBranches(tree, parentNodeId, displayContext);
     if (siblingRoots.length === 0) {
+      const isPinned = Boolean(activeBranchRoot?.metadata?.pinned);
+      const customTitle = activeBranchRoot?.metadata?.title as string | undefined;
       return [
         {
           id: branchLeafNodeId,
           rootId: activeBranchRoot?.id || branchLeafNodeId,
           leafId: branchLeafNodeId,
-          title: "Branch 1",
+          title: customTitle || "Branch 1",
           prompt: activeBranchRoot?.content || "Branch 1",
+          pinned: isPinned,
         },
       ];
     }
 
-    return siblingRoots.map((root, idx) => {
+    const tabs = siblingRoots.map((root, idx) => {
       const leaf = getBranchLeafNode(tree, root.id);
 
-      // Clean semantic title from user prompt
-      let title = `Tab ${idx + 1}`;
-      const content = root.content.trim().toLowerCase();
-      if (content.startsWith("explain")) {
-        title = "Explain";
-      } else if (content.includes("code") || content.includes("example")) {
-        title = "Code";
-      } else if (content.includes("pros") || content.includes("tradeoff") || content.includes("compare")) {
-        title = "Tradeoffs";
-      } else if (content.includes("pitfall") || content.includes("edge case") || content.includes("mistake")) {
-        title = "Pitfalls";
-      } else if (root.content.trim().length > 0) {
-        const raw = root.content.trim();
-        title = raw.length > 16 ? raw.slice(0, 14) + "…" : raw;
+      // Clean semantic title from user prompt or saved metadata
+      let title = (root.metadata?.title as string | undefined) || "";
+      if (!title) {
+        title = `Tab ${idx + 1}`;
+        const content = root.content.trim().toLowerCase();
+        if (content.startsWith("explain")) {
+          title = "Explain";
+        } else if (content.includes("code") || content.includes("example")) {
+          title = "Code";
+        } else if (content.includes("pros") || content.includes("tradeoff") || content.includes("compare")) {
+          title = "Tradeoffs";
+        } else if (content.includes("pitfall") || content.includes("edge case") || content.includes("mistake")) {
+          title = "Pitfalls";
+        } else if (root.content.trim().length > 0) {
+          const raw = root.content.trim();
+          title = raw.length > 16 ? raw.slice(0, 14) + "…" : raw;
+        }
       }
+
+      const pinned = Boolean(root.metadata?.pinned);
 
       return {
         id: root.id,
@@ -128,9 +167,14 @@ export function BranchChatPane({
         leafId: leaf.id,
         title,
         prompt: root.content,
+        pinned,
       };
     });
+
+    // Sort pinned tabs first
+    return tabs.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
   }, [tree, parentNodeId, displayContext, branchLeafNodeId, activeBranchRoot]);
+
 
   // Active branch messages
   const branchMessages: TreeNode[] = useMemo(() => {
@@ -179,6 +223,27 @@ export function BranchChatPane({
       inputRef.current?.focus();
     }
   }, [isDraftingNewTab]);
+
+  // Auto-focus rename input when it appears
+  useEffect(() => {
+    if (renamingTabId) {
+      setTimeout(() => renameInputRef.current?.focus(), 0);
+    }
+  }, [renamingTabId]);
+
+  const startRename = useCallback((tab: SiblingTab) => {
+    setRenamingTabId(tab.id);
+    setRenameValue(tab.title || "");
+  }, []);
+
+  const commitRename = useCallback(() => {
+    if (!renamingTabId || !renameValue.trim()) {
+      setRenamingTabId(null);
+      return;
+    }
+    onRenameBranch?.(renamingTabId, renameValue.trim());
+    setRenamingTabId(null);
+  }, [renamingTabId, renameValue, onRenameBranch]);
 
   const handleSelectTab = useCallback(
     (leafId: string) => {
@@ -271,23 +336,95 @@ export function BranchChatPane({
           {/* Sibling Sub-Branch Tabs */}
           {siblingTabs.map((tab) => {
             const isActive = !isDraftingNewTab && tab.leafId === branchLeafNodeId;
+            const isRenaming = renamingTabId === tab.id;
 
             return (
-              <button
+              <div
                 key={tab.id}
-                type="button"
-                onClick={() => handleSelectTab(tab.leafId)}
-                className={`flex items-center space-x-2 px-3 pb-2.5 pt-1 text-[13px] font-medium transition-colors cursor-pointer select-none shrink-0 border-b-2 -mb-px ${
+                onClick={() => !isRenaming && handleSelectTab(tab.leafId)}
+                className={`group relative flex items-center space-x-1.5 px-3 pb-2 pt-1.5 text-[13px] font-medium transition-colors cursor-pointer select-none shrink-0 border-b-2 -mb-px ${
                   isActive
                     ? "border-zinc-950 text-zinc-950 font-semibold"
                     : "border-transparent text-zinc-500 hover:text-zinc-900 hover:border-zinc-300"
                 }`}
                 title={tab.prompt || tab.title}
               >
-                <span className="truncate max-w-[120px]">{tab.title}</span>
-              </button>
+                {tab.pinned && (
+                  <Pin className="w-3 h-3 text-zinc-400 shrink-0 fill-zinc-400/30" />
+                )}
+
+                {isRenaming ? (
+                  <input
+                    ref={renameInputRef}
+                    type="text"
+                    value={renameValue}
+                    onChange={(e) => setRenameValue(e.target.value)}
+                    onBlur={commitRename}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        commitRename();
+                      }
+                      if (e.key === "Escape") {
+                        e.preventDefault();
+                        setRenamingTabId(null);
+                      }
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="bg-white border border-blue-400 rounded px-1.5 py-0.5 text-xs text-zinc-950 outline-none ring-1 ring-blue-100 max-w-[110px]"
+                  />
+                ) : (
+                  <span className="truncate max-w-[120px] leading-snug">{tab.title}</span>
+                )}
+
+                {/* 3-dot context menu for branch tab */}
+                {!isRenaming && (
+                  <div
+                    className={`flex items-center justify-center transition-opacity shrink-0 ${
+                      openMenuTabId === tab.id
+                        ? "opacity-100"
+                        : "opacity-0 group-hover:opacity-100"
+                    }`}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <DropdownMenu
+                      align="right"
+                      onOpenChange={(isOpen) => setOpenMenuTabId(isOpen ? tab.id : null)}
+                      trigger={
+                        <div className="p-1 rounded-md hover:bg-zinc-200/80 text-zinc-400 hover:text-zinc-800 transition-colors cursor-pointer flex items-center justify-center">
+                          <MoreVertical className="w-3.5 h-3.5" />
+                        </div>
+                      }
+                      items={[
+                        {
+                          label: tab.pinned ? "Unpin" : "Pin",
+                          icon: tab.pinned ? (
+                            <PinOff className="w-3.5 h-3.5" />
+                          ) : (
+                            <Pin className="w-3.5 h-3.5" />
+                          ),
+                          onClick: () => onTogglePinBranch?.(tab.rootId, !tab.pinned),
+                        },
+                        {
+                          label: "Rename",
+                          icon: <Pencil className="w-3.5 h-3.5" />,
+                          onClick: () => startRename(tab),
+                        },
+                        {
+                          label: "Delete",
+                          icon: <Trash2 className="w-3.5 h-3.5" />,
+                          variant: "destructive",
+                          onClick: () => setDeletingTab(tab),
+                        },
+                      ]}
+                    />
+                  </div>
+                )}
+              </div>
             );
           })}
+
+
 
           {/* Plus Button: Add New Sibling Sub-Branch Tab */}
           <button
@@ -420,6 +557,30 @@ export function BranchChatPane({
           </button>
         </form>
       </div>
+
+      {/* Delete Branch Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={Boolean(deletingTab)}
+        onClose={() => setDeletingTab(null)}
+        onConfirm={() => {
+          if (deletingTab) {
+            onDeleteBranch?.(deletingTab.rootId);
+            const remaining = siblingTabs.filter((t) => t.id !== deletingTab.id);
+            if (remaining.length > 0) {
+              onSelectBranchLeaf(remaining[0].leafId);
+            } else {
+              onClose();
+            }
+            setDeletingTab(null);
+          }
+        }}
+        title="Delete branch"
+        description="Are you sure you want to delete this branch and all its responses? This action cannot be undone."
+        confirmText="Delete"
+        variant="destructive"
+      />
     </div>
   );
 }
+
+

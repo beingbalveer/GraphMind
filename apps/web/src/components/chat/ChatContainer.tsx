@@ -34,11 +34,13 @@ import {
   deleteWorkspaceChat,
   renameWorkspaceChat,
   togglePinWorkspaceChat,
+  updateWorkspaceNodeMetadata,
   fetchGraphSnapshot,
   addNodeToWorkspace,
   snapshotToTree,
   seedDemoWorkspace,
 } from "@/lib/workspaceApi";
+
 
 
 interface ChatContainerProps {
@@ -72,8 +74,10 @@ export function ChatContainer({
     stopStreaming,
     clearMessages,
     deleteBranch,
+    updateNodeMetadata,
     loadTree,
   } = useChatStream();
+
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
@@ -284,6 +288,29 @@ export function ChatContainer({
     },
     [currentWorkspace, refreshChats]
   );
+
+  // Rename a branch tab — updates local state and persists to backend
+  const handleRenameBranch = useCallback(
+    async (rootNodeId: string, newTitle: string) => {
+      updateNodeMetadata(rootNodeId, { title: newTitle });
+      if (currentWorkspace) {
+        await updateWorkspaceNodeMetadata(currentWorkspace.id, rootNodeId, { title: newTitle });
+      }
+    },
+    [currentWorkspace, updateNodeMetadata]
+  );
+
+  // Pin or unpin a branch tab — updates local state and persists to backend
+  const handleTogglePinBranch = useCallback(
+    async (rootNodeId: string, pinned: boolean) => {
+      updateNodeMetadata(rootNodeId, { pinned });
+      if (currentWorkspace) {
+        await updateWorkspaceNodeMetadata(currentWorkspace.id, rootNodeId, { pinned });
+      }
+    },
+    [currentWorkspace, updateNodeMetadata]
+  );
+
 
 
   // Switch active workspace from Workspace Modal
@@ -809,10 +836,15 @@ export function ChatContainer({
                       });
                     }}
                     onSendNewSiblingBranch={handleSendNewSiblingBranch}
+                    onDeleteBranch={(nodeId) => currentWorkspace && deleteBranch(nodeId, currentWorkspace.id)}
+                    onRenameBranch={handleRenameBranch}
+                    onTogglePinBranch={handleTogglePinBranch}
                   />
                 ) : null
+
               }
             />
+
           )}
         </div>
       </div>

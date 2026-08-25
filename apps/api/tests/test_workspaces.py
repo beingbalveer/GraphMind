@@ -88,7 +88,18 @@ async def test_workspace_crud_lifecycle() -> None:
         assert updated_chat["title"] == "Raft Deep Dive"
         assert updated_chat["pinned"] is True
 
+        # 6b. Update Node Metadata (Branch tab rename & pin)
+        node_patch_resp = await client.patch(
+            f"/api/v1/workspaces/{ws_id}/nodes/{f'node_child_{ws_id}'}",
+            json={"metadata": {"title": "Leader Election Tab", "pinned": True}},
+        )
+        assert node_patch_resp.status_code == 200
+        node_patch_data = node_patch_resp.json()
+        assert node_patch_data["metadata"]["title"] == "Leader Election Tab"
+        assert node_patch_data["metadata"]["pinned"] is True
+
         # 7. Apply Delta Updates (auto-save moved nodes and viewport)
+
         delta_resp = await client.post(
             f"/api/v1/workspaces/{ws_id}/delta",
             json={

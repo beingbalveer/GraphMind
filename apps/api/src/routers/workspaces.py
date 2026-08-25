@@ -242,6 +242,28 @@ async def add_node_to_workspace(
     return await WorkspaceService.add_node_and_edge(db, workspace_id, data)
 
 
+@router.patch(
+    "/{workspace_id}/nodes/{node_id}", response_model=NodeResponse, status_code=status.HTTP_200_OK
+)
+async def update_node(
+    workspace_id: str,
+    node_id: str,
+    body: Dict[str, Any],
+    db: AsyncSession = Depends(get_db),
+) -> NodeResponse:
+    """
+    Update a conversation node's metadata (e.g. title, pinned) or content.
+    """
+    node = await WorkspaceService.update_node(db, workspace_id, node_id, body)
+    if not node:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Node '{node_id}' not found in workspace '{workspace_id}'",
+        )
+    return node
+
+
+
 @router.post("/{workspace_id}/delta")
 async def save_graph_delta(
     workspace_id: str,

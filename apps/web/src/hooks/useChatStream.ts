@@ -156,6 +156,31 @@ export function useChatStream() {
     [setTree]
   );
 
+  const updateNodeMetadata = useCallback(
+    (nodeId: string, metadata: Record<string, unknown>) => {
+      setTree((prev) => {
+        if (!prev || !prev.nodes[nodeId]) return prev;
+        const target = prev.nodes[nodeId];
+        return {
+          ...prev,
+          nodes: {
+            ...prev.nodes,
+            [nodeId]: {
+              ...target,
+              metadata: {
+                ...(target.metadata || {}),
+                ...metadata,
+              },
+            },
+          },
+          updatedAt: new Date().toISOString(),
+        };
+      });
+    },
+    []
+  );
+
+
   const clearMessages = useCallback(() => {
     stopStreaming();
     setTree(null);
@@ -437,6 +462,8 @@ export function useChatStream() {
     stopStreaming,
     clearMessages,
     deleteBranch,
+    updateNodeMetadata,
     loadTree,
   };
 }
+
