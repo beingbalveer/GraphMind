@@ -10,6 +10,8 @@ import {
   Sparkles,
   RotateCcw,
   GitBranch,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { TreeNode, ConversationTree, getNodeChildren } from "@graphmind/shared";
 import { Button } from "@/components/ui/button";
@@ -26,9 +28,12 @@ interface ChatMessageProps {
   message: TreeNode & { isStreaming?: boolean; isError?: boolean };
   tree?: ConversationTree | null;
   onRetry?: () => void;
+  onRegenerate?: (nodeId: string) => void;
+  onSwitchBranch?: (nodeId: string) => void;
   onExploreBranch?: (messageId: string, highlightedText: string) => void;
   onOpenSideBranch?: (childNodeId: string, excerpt: string) => void;
 }
+
 
 function escapeRegExp(string: string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -255,11 +260,12 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
     </ReactMarkdown>
   );
 });
-
 export function ChatMessage({
   message,
   tree,
   onRetry,
+  onRegenerate,
+  onSwitchBranch,
   onExploreBranch,
   onOpenSideBranch,
 }: ChatMessageProps) {
@@ -270,6 +276,23 @@ export function ChatMessage({
   const { selection, clearSelection } = useTextSelection(
     isUser ? { current: null } : contentRef
   );
+
+  // Find sibling versions under the same parent turn (e.g. regenerated answers)
+  const siblingNodes = useMemo(() => {
+    if (!tree || !message.parentId) return [];
+    const parent = tree.nodes[message.parentId];
+    if (!parent) return [];
+    return parent.childrenIds
+      .map((id) => tree.nodes[id])
+      .filter(
+        (n): n is TreeNode =>
+          Boolean(n && n.role === message.role && !n.highlightedContext)
+      );
+  }, [tree, message.parentId, message.role]);
+
+  const siblingIndex = useMemo(() => {
+    return siblingNodes.findIndex((n) => n.id === message.id);
+  }, [siblingNodes, message.id]);
 
   // Find all child branches created from this message that have highlighted context
   const branchedChildren = useMemo(() => {
@@ -353,29 +376,22 @@ export function ChatMessage({
   }
 
   return (
-    <div
-      id={message.id}
-      className="py-5 px-4 sm:px-6 bg-white group transition-colors relative"
-    >
-      {/* Floating Selection Context Menu */}
-      {!isUser && selection && (
+    <div id={message.id} className="py-3 px-4 sm:px-6 bg-white group">
+      {/* Floating Exploration Tooltip on Text Selection */}
+      {selection && (
         <SelectionTooltip
-          selection={selection}
+          position={selection.position}
+          selectedText={selection.text}
           onExplore={handleExplore}
           onSearch={handleSearch}
+          onClose={clearSelection}
         />
       )}
 
-      <div className="max-w-3xl mx-auto flex gap-3.5 sm:gap-4 animate-in fade-in duration-200">
-        {/* Role Avatar */}
-        <div className="shrink-0 pt-0.5">
-          <div
-            className={`w-6 h-6 rounded-lg ${
-              message.isError ? "bg-rose-600" : "bg-zinc-900"
-            } text-white flex items-center justify-center font-bold text-xs shadow-2xs`}
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-          </div>
+      <div className="max-w-3xl mx-auto flex space-x-3.5">
+        {/* Assistant Avatar */}
+        <div className="w-7 h-7 rounded-full bg-zinc-100 border border-zinc-200/80 flex items-center justify-center shrink-0 mt-0.5 text-zinc-800 shadow-2xs">
+          <Sparkles className="w-3.5 h-3.5 text-zinc-700" />
         </div>
 
         {/* Message Content Container */}
@@ -414,13 +430,54 @@ export function ChatMessage({
           {/* Action Row & Branch Switcher */}
           <div className="pt-1 flex flex-wrap items-center justify-between gap-2">
             {!isUser && message.content ? (
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-1.5">
+                {/* Sibling Version Switcher (< 1/2 >) */}
+                {siblingNodes.length > 1 && siblingIndex !== -1 && (
+                  <div className="flex items-center space-x-0.5 mr-1 text-xs text-zinc-500 font-medium">
+                    <button
+                      type="button"
+                      disabled={siblingIndex <= 0}
+                      onClick={() => onSwitchBranch?.(siblingNodes[siblingIndex - 1].id)}
+                      className="p-0.5 rounded hover:bg-zinc-100 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer text-zinc-600 transition-colors"
+                      title="Previous version"
+                    >
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                    </button>
+                    <span className="text-[11px] select-none text-zinc-500 px-0.5">
+                      {siblingIndex + 1}/{siblingNodes.length}
+                    </span>
+                    <button
+                      type="button"
+                      disabled={siblingIndex >= siblingNodes.length - 1}
+                      onClick={() => onSwitchBranch?.(siblingNodes[siblingIndex + 1].id)}
+                      className="p-0.5 rounded hover:bg-zinc-100 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer text-zinc-600 transition-colors"
+                      title="Next version"
+                    >
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+
+                {/* Copy Button */}
                 <CopyButton
                   text={message.content}
                   className="opacity-0 group-hover:opacity-100 transition-opacity"
                   title="Copy response"
                 />
 
+                {/* Regenerate Button */}
+                {onRegenerate && !message.isStreaming && (
+                  <button
+                    type="button"
+                    onClick={() => onRegenerate(message.id)}
+                    className="p-1 rounded-md text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-all opacity-0 group-hover:opacity-100 cursor-pointer flex items-center justify-center"
+                    title="Regenerate response"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                  </button>
+                )}
+
+                {/* Retry Error Button */}
                 {message.isError && onRetry && (
                   <Button
                     variant="outline"
@@ -429,7 +486,7 @@ export function ChatMessage({
                     className="h-6 px-2 text-[11px] text-zinc-700 hover:text-zinc-950 border-zinc-200 flex items-center space-x-1 shadow-2xs cursor-pointer"
                     title="Retry generation"
                   >
-                    <RotateCcw className="w-3 h-3" />
+                    <RotateCcw className="w-3.5 h-3.5" />
                     <span>Retry</span>
                   </Button>
                 )}

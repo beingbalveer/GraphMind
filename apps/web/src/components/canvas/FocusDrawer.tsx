@@ -23,6 +23,8 @@ interface FocusDrawerProps {
   onSelectBranch: (childNodeId: string) => void;
   onExploreBranch: (parentNodeId: string, highlightedText: string) => void;
   onSendFollowUp: (prompt: string, parentNodeId: string, highlightedText?: string) => void;
+  onRegenerate?: (nodeId: string) => void;
+  onSwitchBranch?: (nodeId: string) => void;
 }
 
 export function FocusDrawer({
@@ -35,7 +37,10 @@ export function FocusDrawer({
   onSelectBranch,
   onExploreBranch,
   onSendFollowUp,
+  onRegenerate,
+  onSwitchBranch,
 }: FocusDrawerProps) {
+
   const [drawerPrompt, setDrawerPrompt] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
   const prevNodeIdRef = useRef<string | null>(null);
@@ -131,9 +136,12 @@ export function FocusDrawer({
                 isStreaming: isLastAssistant,
               }}
               tree={tree}
+              onRegenerate={onRegenerate}
+              onSwitchBranch={onSwitchBranch}
               onExploreBranch={onExploreBranch}
               onOpenSideBranch={onSelectBranch}
             />
+
           );
         })}
         <div ref={bottomRef} />

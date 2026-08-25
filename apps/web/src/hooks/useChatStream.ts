@@ -446,6 +446,155 @@ export function useChatStream() {
     }
   }, [tree, sendMessage]);
 
+  const regenerateResponse = useCallback(
+    async (assistantNodeId: string) => {
+      if (!tree || isStreaming) return;
+      const assistantNode = tree.nodes[assistantNodeId];
+      if (!assistantNode || !assistantNode.parentId) return;
+
+      const userNode = tree.nodes[assistantNode.parentId];
+      if (!userNode) return;
+
+      let currentTree = tree;
+      const provider = assistantNode.provider || userNode.provider || "gemini";
+      const model = assistantNode.model || userNode.model || "gemini-2.5-flash";
+
+      // Add a new alternative assistant child node under the same user node
+      const { tree: treeWithAssistant, node: newAssistantNode } = addChildNode(
+        currentTree,
+        {
+          role: "assistant",
+          parentId: userNode.id,
+          content: "",
+          provider,
+          model,
+        }
+      );
+      currentTree = treeWithAssistant;
+      const newAssistantNodeId = newAssistantNode.id;
+
+      setTree(currentTree);
+      setIsStreaming(true);
+      setStreamingNodeId(newAssistantNodeId);
+
+      const abortController = new AbortController();
+      abortControllerRef.current = abortController;
+
+      let accumulatedContent = "";
+      try {
+        const ancestorPath = getAncestorPath(currentTree, userNode.id);
+        const messagesPayload = ancestorPath.map((node) => {
+          let content = node.content;
+          if (node.id === userNode.id && node.highlightedContext) {
+            content = `[Focusing on excerpt: "${node.highlightedContext.trim()}"]\n\n${node.content}`;
+          }
+          return {
+            role: node.role,
+            content,
+          };
+        });
+
+        const formattedPrompt = userNode.highlightedContext
+          ? `[Focusing on excerpt: "${userNode.highlightedContext.trim()}"]\n\n${userNode.content.trim()}`
+          : userNode.content.trim();
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const payload: Record<string, any> = {
+          prompt: formattedPrompt,
+          messages: messagesPayload,
+          tree: currentTree,
+          parent_node_id: userNode.id,
+          highlighted_context: userNode.highlightedContext,
+          provider,
+          model,
+        };
+
+        const response = await fetch(`${API_BASE_URL}/api/v1/chat/stream`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+          signal: abortController.signal,
+        });
+
+        if (!response.ok || !response.body) {
+          throw new Error(
+            `Server returned HTTP ${response.status}: ${response.statusText}`
+          );
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let lineBuffer = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          lineBuffer += decoder.decode(value, { stream: true });
+          const lines = lineBuffer.split("\n");
+          lineBuffer = lines.pop() || "";
+
+          for (const line of lines) {
+            const trimmedLine = line.trim();
+            if (trimmedLine.startsWith("data: ")) {
+              const rawData = trimmedLine.slice(6).trim();
+              if (rawData === "[DONE]") break;
+
+              try {
+                const parsed = JSON.parse(rawData);
+                if (parsed.error) {
+                  throw new Error(parsed.error);
+                }
+                if (parsed.content) {
+                  accumulatedContent += parsed.content;
+                  setTree((prev) => {
+                    if (!prev) return prev;
+                    return updateNodeContent(prev, newAssistantNodeId, accumulatedContent);
+                  });
+                }
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              } catch (parseError: any) {
+                if (parseError.message && !parseError.message.includes("JSON")) {
+                  throw parseError;
+                }
+              }
+            }
+          }
+        }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } catch (err: any) {
+        if (err.name === "AbortError") {
+          setTree((prev) => {
+            if (!prev) return prev;
+            const node = prev.nodes[newAssistantNodeId];
+            if (!node || !node.content) {
+              return updateNodeContent(prev, newAssistantNodeId, "*(Generation stopped by user)*");
+            }
+            return prev;
+          });
+        } else {
+          const errorMsg = err.message || "Failed to regenerate AI response";
+          setError(errorMsg);
+          setTree((prev) => {
+            if (!prev) return prev;
+            return updateNodeContent(
+              prev,
+              newAssistantNodeId,
+              `⚠️ **Error:** ${errorMsg}\n\nPlease verify that the backend API is running.`
+            );
+          });
+        }
+      } finally {
+        setIsStreaming(false);
+        setStreamingNodeId(null);
+        abortControllerRef.current = null;
+      }
+    },
+    [tree, isStreaming]
+  );
+
   return {
     tree,
     activeMessages,
@@ -459,11 +608,13 @@ export function useChatStream() {
     clearError,
     sendMessage,
     retryLastMessage,
+    regenerateResponse,
     stopStreaming,
     clearMessages,
     deleteBranch,
     updateNodeMetadata,
     loadTree,
   };
+
 }
 

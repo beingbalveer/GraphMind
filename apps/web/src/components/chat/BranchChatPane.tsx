@@ -51,7 +51,10 @@ interface BranchChatPaneProps {
   onDeleteBranch?: (rootNodeId: string) => void;
   onRenameBranch?: (rootNodeId: string, newTitle: string) => void;
   onTogglePinBranch?: (rootNodeId: string, pinned: boolean) => void;
+  onRegenerate?: (nodeId: string) => void;
+  onSwitchBranch?: (nodeId: string) => void;
 }
+
 
 export function BranchChatPane({
   tree,
@@ -66,7 +69,10 @@ export function BranchChatPane({
   onDeleteBranch,
   onRenameBranch,
   onTogglePinBranch,
+  onRegenerate,
+  onSwitchBranch,
 }: BranchChatPaneProps) {
+
   const [inputPrompt, setInputPrompt] = useState("");
   const [isDraftingNewTab, setIsDraftingNewTab] = useState(false);
   const [openMenuTabId, setOpenMenuTabId] = useState<string | null>(null);
@@ -519,7 +525,10 @@ export function BranchChatPane({
                     isStreaming: isLastAssistant,
                   }}
                   tree={tree}
+                  onRegenerate={onRegenerate}
+                  onSwitchBranch={onSwitchBranch}
                 />
+
               );
             })}
           </div>

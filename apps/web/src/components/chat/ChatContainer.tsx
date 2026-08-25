@@ -71,12 +71,14 @@ export function ChatContainer({
     clearError,
     sendMessage,
     retryLastMessage,
+    regenerateResponse,
     stopStreaming,
     clearMessages,
     deleteBranch,
     updateNodeMetadata,
     loadTree,
   } = useChatStream();
+
 
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -709,8 +711,14 @@ export function ChatContainer({
                     highlightedText: highlightedText || "",
                   });
                 }}
+                onRegenerate={regenerateResponse}
+                onSwitchBranch={(nodeId) => {
+                  switchBranch(nodeId);
+                  setDrawerNodeId(nodeId);
+                }}
               />
             </div>
+
           ) : (
             /* Resizable Parallel Split-Pane Chat View */
             <ResizableSplitPane
@@ -781,9 +789,12 @@ export function ChatContainer({
                               }}
                               tree={tree}
                               onRetry={retryLastMessage}
+                              onRegenerate={regenerateResponse}
+                              onSwitchBranch={switchBranch}
                               onExploreBranch={handleExplainBranch}
                               onOpenSideBranch={handleOpenSideBranch}
                             />
+
                           );
                         })}
                         <div ref={bottomRef} />
@@ -839,8 +850,11 @@ export function ChatContainer({
                     onDeleteBranch={(nodeId) => currentWorkspace && deleteBranch(nodeId, currentWorkspace.id)}
                     onRenameBranch={handleRenameBranch}
                     onTogglePinBranch={handleTogglePinBranch}
+                    onRegenerate={regenerateResponse}
+                    onSwitchBranch={switchBranch}
                   />
                 ) : null
+
 
               }
             />
