@@ -10,10 +10,9 @@ import {
   Sparkles,
   RotateCcw,
   GitBranch,
-  ChevronLeft,
-  ChevronRight,
   Pencil,
 } from "lucide-react";
+
 import { TreeNode, ConversationTree, getNodeChildren } from "@graphmind/shared";
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
@@ -273,8 +272,9 @@ export function ChatMessage({
   onRetry,
   onRegenerate,
   onEditUserMessage,
-  onSwitchBranch,
+  onSwitchBranch: _onSwitchBranch,
   onExploreBranch,
+
   onOpenSideBranch,
 }: ChatMessageProps) {
   const isUser = message.role === "user";
@@ -296,27 +296,6 @@ export function ChatMessage({
   const { selection, clearSelection } = useTextSelection(
     isUser ? { current: null } : contentRef
   );
-
-  // Find sibling versions under the same parent turn (e.g. regenerated answers or edited user prompts)
-  const siblingNodes = useMemo(() => {
-    if (!tree || !message.parentId) return [];
-    const parent = tree.nodes[message.parentId];
-    if (!parent) return [];
-    return parent.childrenIds
-      .map((id) => tree.nodes[id])
-      .filter(
-        (n): n is TreeNode =>
-          Boolean(
-            n &&
-              n.role === message.role &&
-              (n.highlightedContext || null) === (message.highlightedContext || null)
-          )
-      );
-  }, [tree, message.parentId, message.role, message.highlightedContext]);
-
-  const siblingIndex = useMemo(() => {
-    return siblingNodes.findIndex((n) => n.id === message.id);
-  }, [siblingNodes, message.id]);
 
   // Find all child branches created from this message that have highlighted context
   const branchedChildren = useMemo(() => {
@@ -434,33 +413,6 @@ export function ChatMessage({
     return (
       <div id={message.id} className="py-3 px-4 sm:px-6 bg-transparent group/user">
         <div className="max-w-3xl mx-auto flex items-center justify-end gap-1.5">
-          {/* User message version switcher if edited versions exist (< 1/2 >) */}
-          {siblingNodes.length > 1 && siblingIndex !== -1 && (
-            <div className="flex items-center space-x-0.5 text-xs text-zinc-500 font-medium opacity-0 group-hover/user:opacity-100 transition-opacity mr-1">
-              <button
-                type="button"
-                disabled={siblingIndex <= 0}
-                onClick={() => onSwitchBranch?.(siblingNodes[siblingIndex - 1].id)}
-                className="p-0.5 rounded hover:bg-zinc-100 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer text-zinc-600 transition-colors"
-                title="Previous version"
-              >
-                <ChevronLeft className="w-3.5 h-3.5" />
-              </button>
-              <span className="text-[11px] select-none text-zinc-500 px-0.5">
-                {siblingIndex + 1}/{siblingNodes.length}
-              </span>
-              <button
-                type="button"
-                disabled={siblingIndex >= siblingNodes.length - 1}
-                onClick={() => onSwitchBranch?.(siblingNodes[siblingIndex + 1].id)}
-                className="p-0.5 rounded hover:bg-zinc-100 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer text-zinc-600 transition-colors"
-                title="Next version"
-              >
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          )}
-
           {/* Edit Prompt Button (Only on the last user message) */}
           {isLastUserMessage && onEditUserMessage && (
             <button
@@ -554,37 +506,10 @@ export function ChatMessage({
             )}
           </div>
 
-          {/* Action Row & Branch Switcher */}
+          {/* Action Row */}
           <div className="pt-1 flex flex-wrap items-center justify-between gap-2">
             {!isUser && message.content ? (
               <div className="flex items-center space-x-1.5">
-                {/* Sibling Version Switcher (< 1/2 >) */}
-                {siblingNodes.length > 1 && siblingIndex !== -1 && (
-                  <div className="flex items-center space-x-0.5 mr-1 text-xs text-zinc-500 font-medium">
-                    <button
-                      type="button"
-                      disabled={siblingIndex <= 0}
-                      onClick={() => onSwitchBranch?.(siblingNodes[siblingIndex - 1].id)}
-                      className="p-0.5 rounded hover:bg-zinc-100 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer text-zinc-600 transition-colors"
-                      title="Previous version"
-                    >
-                      <ChevronLeft className="w-3.5 h-3.5" />
-                    </button>
-                    <span className="text-[11px] select-none text-zinc-500 px-0.5">
-                      {siblingIndex + 1}/{siblingNodes.length}
-                    </span>
-                    <button
-                      type="button"
-                      disabled={siblingIndex >= siblingNodes.length - 1}
-                      onClick={() => onSwitchBranch?.(siblingNodes[siblingIndex + 1].id)}
-                      className="p-0.5 rounded hover:bg-zinc-100 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer text-zinc-600 transition-colors"
-                      title="Next version"
-                    >
-                      <ChevronRight className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                )}
-
                 {/* Copy Button */}
                 <CopyButton
                   text={message.content}
@@ -603,6 +528,7 @@ export function ChatMessage({
                     <RotateCcw className="w-3.5 h-3.5" />
                   </button>
                 )}
+
 
                 {/* Retry Error Button */}
                 {message.isError && onRetry && (

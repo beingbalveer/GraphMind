@@ -26,17 +26,19 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = Field(default="development", description="Application runtime environment")
     LOG_LEVEL: str = Field(default="info", description="Logging verbosity level")
     HOST: str = Field(default="0.0.0.0", description="API bind host")
-    PORT: int = Field(default=8008, description="API bind port")
-    FRONTEND_URL: str = Field(default="http://localhost:3000", description="Next.js frontend URL")
+    PORT: int = Field(default=8300, description="API bind port")
+    FRONTEND_URL: str = Field(default="http://localhost:3300", description="Next.js frontend URL")
     CORS_ORIGINS: List[str] = Field(
         default_factory=lambda: [
+            "http://localhost:3300",
+            "http://127.0.0.1:3300",
             "http://localhost:3000",
             "http://127.0.0.1:3000",
-            "http://localhost:3001",
             "*",
         ],
         description="Allowed CORS origins",
     )
+
 
     # AI Provider configuration
     DEFAULT_PROVIDER: str = Field(default="gemini", description="Default AI provider")

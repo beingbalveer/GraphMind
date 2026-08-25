@@ -1,7 +1,8 @@
 import { ConversationTree, TreeNode } from "@graphmind/shared";
 
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8008";
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8300";
+
 
 export interface WorkspaceItem {
   id: string;

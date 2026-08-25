@@ -69,7 +69,8 @@ pnpm install
 # 2. Start PostgreSQL & Redis in the background, plus local Next.js & FastAPI dev servers
 pnpm dev
 ```
-Access the frontend at `http://localhost:3000` and backend API docs at `http://localhost:8008/docs`.
+Access the frontend at `http://localhost:3300` and backend API docs at `http://localhost:8300/docs`.
+
 
 ### Running via Full Docker Compose (Production Build)
 If you want to run the entire stack inside Docker (Note: this creates a production build without hot-reloading):

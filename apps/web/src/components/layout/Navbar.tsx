@@ -48,7 +48,8 @@ export function Navbar({
   useEffect(() => {
     const checkHealth = async () => {
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8008";
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8300";
+
         const res = await fetch(`${apiUrl}/healthz`, { method: "GET" });
         setApiOnline(res.ok);
       } catch {

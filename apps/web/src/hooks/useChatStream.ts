@@ -21,7 +21,8 @@ export interface SendMessageOptions {
   onNodeCreated?: (nodes: { userNodeId: string; assistantNodeId: string }) => void;
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8008";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8300";
+
 const STORAGE_KEY = "graphmind_active_tree_v1";
 
 export function useChatStream() {
@@ -457,27 +458,18 @@ export function useChatStream() {
       const userNode = tree.nodes[assistantNode.parentId];
       if (!userNode) return;
 
-      let currentTree = tree;
       const provider = assistantNode.provider || userNode.provider || "gemini";
       const model = assistantNode.model || userNode.model || "gemini-2.5-flash";
 
-      // Add a new alternative assistant child node under the same user node
-      const { tree: treeWithAssistant, node: newAssistantNode } = addChildNode(
-        currentTree,
-        {
-          role: "assistant",
-          parentId: userNode.id,
-          content: "",
-          provider,
-          model,
-        }
-      );
-      currentTree = treeWithAssistant;
-      const newAssistantNodeId = newAssistantNode.id;
+      // Clear assistant content in-place and set active
+      const currentTree = {
+        ...updateNodeContent(tree, assistantNodeId, ""),
+        activeNodeId: assistantNodeId,
+      };
 
       setTree(currentTree);
       setIsStreaming(true);
-      setStreamingNodeId(newAssistantNodeId);
+      setStreamingNodeId(assistantNodeId);
 
       const abortController = new AbortController();
       abortControllerRef.current = abortController;
@@ -553,7 +545,7 @@ export function useChatStream() {
                   accumulatedContent += parsed.content;
                   setTree((prev) => {
                     if (!prev) return prev;
-                    return updateNodeContent(prev, newAssistantNodeId, accumulatedContent);
+                    return updateNodeContent(prev, assistantNodeId, accumulatedContent);
                   });
                 }
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -570,9 +562,9 @@ export function useChatStream() {
         if (err.name === "AbortError") {
           setTree((prev) => {
             if (!prev) return prev;
-            const node = prev.nodes[newAssistantNodeId];
+            const node = prev.nodes[assistantNodeId];
             if (!node || !node.content) {
-              return updateNodeContent(prev, newAssistantNodeId, "*(Generation stopped by user)*");
+              return updateNodeContent(prev, assistantNodeId, "*(Generation stopped by user)*");
             }
             return prev;
           });
@@ -583,7 +575,7 @@ export function useChatStream() {
             if (!prev) return prev;
             return updateNodeContent(
               prev,
-              newAssistantNodeId,
+              assistantNodeId,
               `⚠️ **Error:** ${errorMsg}\n\nPlease verify that the backend API is running.`
             );
           });
@@ -606,10 +598,18 @@ export function useChatStream() {
       const provider = userNode.provider || "gemini";
       const model = userNode.model || "gemini-2.5-flash";
 
-      if (!userNode.parentId) {
-        // 1. Editing Root Prompt
-        let currentTree = updateNodeContent(tree, userNode.id, newContent.trim());
+      // 1. Update user message content in-place
+      let currentTree = updateNodeContent(tree, userNode.id, newContent.trim());
 
+      // 2. Find or create assistant child under userNode
+      let assistantNodeId = userNode.childrenIds.find(
+        (id) => currentTree.nodes[id]?.role === "assistant"
+      );
+
+      if (assistantNodeId) {
+        // Clear previous assistant response in-place
+        currentTree = updateNodeContent(currentTree, assistantNodeId, "");
+      } else {
         const { tree: treeWithAssistant, node: assistantNode } = addChildNode(
           currentTree,
           {
@@ -621,120 +621,136 @@ export function useChatStream() {
           }
         );
         currentTree = treeWithAssistant;
-        const assistantNodeId = assistantNode.id;
+        assistantNodeId = assistantNode.id;
+      }
 
-        setTree(currentTree);
-        setIsStreaming(true);
-        setStreamingNodeId(assistantNodeId);
+      currentTree = {
+        ...currentTree,
+        activeNodeId: assistantNodeId,
+      };
 
-        const abortController = new AbortController();
-        abortControllerRef.current = abortController;
+      setTree(currentTree);
+      setIsStreaming(true);
+      setStreamingNodeId(assistantNodeId);
 
-        let accumulatedContent = "";
-        try {
-          const payload = {
-            prompt: newContent.trim(),
-            messages: [{ role: "user", content: newContent.trim() }],
-            tree: currentTree,
-            parent_node_id: userNode.id,
-            provider,
-            model,
-          };
+      const abortController = new AbortController();
+      abortControllerRef.current = abortController;
 
-          const response = await fetch(`${API_BASE_URL}/api/v1/chat/stream`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-            signal: abortController.signal,
-          });
-
-          if (!response.ok || !response.body) {
-            throw new Error(
-              `Server returned HTTP ${response.status}: ${response.statusText}`
-            );
+      let accumulatedContent = "";
+      try {
+        const ancestorPath = getAncestorPath(currentTree, userNode.id);
+        const messagesPayload = ancestorPath.map((node) => {
+          let content = node.content;
+          if (node.id === userNode.id && node.highlightedContext) {
+            content = `[Focusing on excerpt: "${node.highlightedContext.trim()}"]\n\n${node.content}`;
           }
+          return {
+            role: node.role,
+            content,
+          };
+        });
 
-          const reader = response.body.getReader();
-          const decoder = new TextDecoder();
-          let lineBuffer = "";
+        const formattedPrompt = userNode.highlightedContext
+          ? `[Focusing on excerpt: "${userNode.highlightedContext.trim()}"]\n\n${newContent.trim()}`
+          : newContent.trim();
 
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const payload: Record<string, any> = {
+          prompt: formattedPrompt,
+          messages: messagesPayload,
+          tree: currentTree,
+          parent_node_id: userNode.id,
+          highlighted_context: userNode.highlightedContext,
+          provider,
+          model,
+        };
 
-            lineBuffer += decoder.decode(value, { stream: true });
-            const lines = lineBuffer.split("\n");
-            lineBuffer = lines.pop() || "";
+        const response = await fetch(`${API_BASE_URL}/api/v1/chat/stream`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+          signal: abortController.signal,
+        });
 
-            for (const line of lines) {
-              const trimmedLine = line.trim();
-              if (trimmedLine.startsWith("data: ")) {
-                const rawData = trimmedLine.slice(6).trim();
-                if (rawData === "[DONE]") break;
+        if (!response.ok || !response.body) {
+          throw new Error(
+            `Server returned HTTP ${response.status}: ${response.statusText}`
+          );
+        }
 
-                try {
-                  const parsed = JSON.parse(rawData);
-                  if (parsed.error) throw new Error(parsed.error);
-                  if (parsed.content) {
-                    accumulatedContent += parsed.content;
-                    setTree((prev) => {
-                      if (!prev) return prev;
-                      return updateNodeContent(prev, assistantNodeId, accumulatedContent);
-                    });
-                  }
-                } catch (parseError: any) {
-                  if (parseError.message && !parseError.message.includes("JSON")) {
-                    throw parseError;
-                  }
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let lineBuffer = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          lineBuffer += decoder.decode(value, { stream: true });
+          const lines = lineBuffer.split("\n");
+          lineBuffer = lines.pop() || "";
+
+          for (const line of lines) {
+            const trimmedLine = line.trim();
+            if (trimmedLine.startsWith("data: ")) {
+              const rawData = trimmedLine.slice(6).trim();
+              if (rawData === "[DONE]") break;
+
+              try {
+                const parsed = JSON.parse(rawData);
+                if (parsed.error) {
+                  throw new Error(parsed.error);
+                }
+                if (parsed.content) {
+                  accumulatedContent += parsed.content;
+                  setTree((prev) => {
+                    if (!prev) return prev;
+                    return updateNodeContent(prev, assistantNodeId, accumulatedContent);
+                  });
+                }
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              } catch (parseError: any) {
+                if (parseError.message && !parseError.message.includes("JSON")) {
+                  throw parseError;
                 }
               }
             }
           }
-        } catch (err: any) {
-          if (err.name === "AbortError") {
-            setTree((prev) => {
-              if (!prev) return prev;
-              const node = prev.nodes[assistantNodeId];
-              if (!node || !node.content) {
-                return updateNodeContent(prev, assistantNodeId, "*(Generation stopped by user)*");
-              }
-              return prev;
-            });
-          } else {
-            const errorMsg = err.message || "Failed to generate AI response";
-            setError(errorMsg);
-            setTree((prev) => {
-              if (!prev) return prev;
-              return updateNodeContent(
-                prev,
-                assistantNodeId,
-                `⚠️ **Error:** ${errorMsg}\n\nPlease verify that the backend API is running.`
-              );
-            });
-          }
-        } finally {
-          setIsStreaming(false);
-          setStreamingNodeId(null);
-          abortControllerRef.current = null;
         }
-      } else {
-        // 2. Editing Child Turn: Fork from parent and switch active lineage immediately
-        sendMessage(
-          newContent.trim(),
-          provider,
-          model,
-          {
-            branchOverride: {
-              parentNodeId: userNode.parentId,
-              highlightedText: userNode.highlightedContext || "",
-            },
-            preserveActiveNodeId: false,
-          }
-        );
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } catch (err: any) {
+        if (err.name === "AbortError") {
+          setTree((prev) => {
+            if (!prev) return prev;
+            const node = prev.nodes[assistantNodeId];
+            if (!node || !node.content) {
+              return updateNodeContent(prev, assistantNodeId, "*(Generation stopped by user)*");
+            }
+            return prev;
+          });
+        } else {
+          const errorMsg = err.message || "Failed to generate AI response";
+          setError(errorMsg);
+          setTree((prev) => {
+            if (!prev) return prev;
+            return updateNodeContent(
+              prev,
+              assistantNodeId,
+              `⚠️ **Error:** ${errorMsg}\n\nPlease verify that the backend API is running.`
+            );
+          });
+        }
+      } finally {
+        setIsStreaming(false);
+        setStreamingNodeId(null);
+        abortControllerRef.current = null;
       }
     },
-    [tree, isStreaming, sendMessage]
+    [tree, isStreaming]
   );
+
 
 
   return {
