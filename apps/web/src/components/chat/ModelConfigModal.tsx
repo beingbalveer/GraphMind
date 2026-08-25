@@ -176,34 +176,7 @@ export function ModelConfigModal({
             </div>
           </div>
 
-          {/* 2. Model Selection */}
-          <div className="space-y-1.5">
-            <span className="text-[11px] font-medium text-zinc-500 uppercase tracking-wider">
-              Model
-            </span>
-            <div className="space-y-1.5">
-              {currentProviderObj.models.map((m) => {
-                const isSelected = selectedModel === m.id;
-                return (
-                  <button
-                    key={m.id}
-                    type="button"
-                    onClick={() => setSelectedModel(m.id)}
-                    className={`w-full px-3.5 py-2.5 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer ${
-                      isSelected
-                        ? "border-blue-300 bg-blue-50/40 text-zinc-950 font-medium ring-1 ring-blue-400/20"
-                        : "border-zinc-200/70 bg-zinc-50/30 hover:bg-zinc-50 hover:border-zinc-300 text-zinc-700"
-                    }`}
-                  >
-                    <span className="text-xs font-medium">{m.name}</span>
-                    {isSelected && <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* 3. API Key (BYOK) */}
+          {/* 2. API Key (BYOK) - Positioned at top under Provider */}
           {selectedProvider === "gemini" && (
             <div className="space-y-1.5 pt-1">
               <label className="text-[11px] font-medium text-zinc-500 uppercase tracking-wider">
@@ -251,6 +224,34 @@ export function ModelConfigModal({
               </div>
             </div>
           )}
+
+          {/* 3. Model Selection */}
+          <div className="space-y-1.5">
+            <span className="text-[11px] font-medium text-zinc-500 uppercase tracking-wider">
+              Model
+            </span>
+            <div className="space-y-1.5">
+              {currentProviderObj.models.map((m) => {
+                const isSelected = selectedModel === m.id;
+                return (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => setSelectedModel(m.id)}
+                    className={`w-full px-3.5 py-2.5 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer ${
+                      isSelected
+                        ? "border-blue-300 bg-blue-50/40 text-zinc-950 font-medium ring-1 ring-blue-400/20"
+                        : "border-zinc-200/70 bg-zinc-50/30 hover:bg-zinc-50 hover:border-zinc-300 text-zinc-700"
+                    }`}
+                  >
+                    <span className="text-xs font-medium">{m.name}</span>
+                    {isSelected && <Check className="w-3.5 h-3.5 text-blue-600 shrink-0" />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
 
           {/* 4. Temperature Slider */}
           <div className="space-y-1.5 pt-1">
