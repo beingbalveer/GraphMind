@@ -1,13 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import {
   Plus,
   MessageSquare,
   LayoutGrid,
-  FolderGit2,
-  Check,
-  RotateCw,
   PanelLeft,
   Sliders,
 } from "lucide-react";
@@ -19,7 +16,7 @@ export type ViewMode = "chat" | "canvas";
 
 interface NavbarProps {
   onClearChat?: () => void;
-  messageCount: number;
+  messageCount?: number;
   breadcrumbs?: React.ReactNode;
   viewMode?: ViewMode;
   onViewModeChange?: (mode: ViewMode) => void;
@@ -39,105 +36,40 @@ export function Navbar({
   breadcrumbs,
   viewMode = "chat",
   onViewModeChange,
-  workspaceName = "Main Workspace",
-  onOpenWorkspaceModal,
+  workspaceName: _workspaceName = "Main Workspace",
+  onOpenWorkspaceModal: _onOpenWorkspaceModal,
   onOpenModelConfig,
   activeModelName = "gemini-2.5-flash",
-  syncStatus = "saved",
+  syncStatus: _syncStatus = "saved",
   isSidebarOpen: _isSidebarOpen = false,
   onToggleSidebar,
   onNewChat,
 }: NavbarProps) {
-
-  const [apiOnline, setApiOnline] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    const checkHealth = async () => {
-      try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8300";
-
-        const res = await fetch(`${apiUrl}/healthz`, { method: "GET" });
-        setApiOnline(res.ok);
-      } catch {
-        setApiOnline(false);
-      }
-    };
-    checkHealth();
-    const interval = setInterval(checkHealth, 15000);
-    return () => clearInterval(interval);
-  }, []);
-
   return (
     <header className="h-13 border-b border-zinc-200/80 bg-white/80 backdrop-blur-md px-3 sm:px-5 flex items-center justify-between z-30 shrink-0 select-none">
-      {/* Top Extreme Left: Constant Static Sidebar Toggle + Brand + Workspace Selector */}
+      {/* Top Left: Sidebar Toggle + Minimalist Brand Logo */}
       <div className="flex items-center space-x-2 shrink-0">
         {onToggleSidebar && (
           <Button
             variant="ghost"
             size="iconSm"
             onClick={onToggleSidebar}
-            className="h-8 w-8 text-zinc-600 hover:text-zinc-950 cursor-pointer -ml-1 mr-0.5"
+            className="h-8 w-8 text-zinc-600 hover:text-zinc-950 cursor-pointer -ml-1"
             title="Toggle sidebar (⌘B)"
           >
             <PanelLeft className="w-4 h-4" />
           </Button>
         )}
 
-        <div className="flex items-center space-x-1">
-          <Link href="/" className="flex items-center space-x-1 hover:opacity-80 transition-opacity mr-1">
-            <LogoBadge size="sm" />
-            <span className="font-semibold text-zinc-950 text-[13px] tracking-tight hidden sm:inline ml-1">
-              GraphMind
-            </span>
-          </Link>
-          <div
-            className={`w-1.5 h-1.5 rounded-full ${
-              apiOnline === true
-                ? "bg-emerald-500"
-                : apiOnline === false
-                ? "bg-rose-500"
-                : "bg-zinc-400 animate-pulse"
-            }`}
-            title={apiOnline ? "PostgreSQL & FastAPI Connected" : "Connecting to backend..."}
-          />
-        </div>
-
-        {/* Workspace Selector Pill */}
-        {onOpenWorkspaceModal && (
-          <button
-            type="button"
-            onClick={onOpenWorkspaceModal}
-            className="flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-zinc-100/90 border border-zinc-200/80 text-xs font-medium text-zinc-800 hover:bg-zinc-200/80 hover:text-zinc-950 transition-colors cursor-pointer ml-1"
-            title="Switch or manage workspaces"
-          >
-            <FolderGit2 className="w-3.5 h-3.5 text-zinc-500" />
-            <span className="max-w-[140px] truncate">{workspaceName}</span>
-          </button>
-        )}
-
-        {/* Sync Status Badge */}
-        <div
-          className="hidden md:flex items-center space-x-1 text-[11px] text-zinc-400 pl-1"
-          title={
-            syncStatus === "syncing"
-              ? "Syncing graph changes to PostgreSQL database..."
-              : "All graph nodes persisted to PostgreSQL"
-          }
+        <Link
+          href="/"
+          className="flex items-center space-x-1.5 hover:opacity-80 transition-opacity"
         >
-          {syncStatus === "syncing" ? (
-            <>
-              <RotateCw className="w-3 h-3 animate-spin text-zinc-500" />
-              <span>Syncing...</span>
-            </>
-          ) : syncStatus === "offline" ? (
-            <span className="text-amber-500">Offline</span>
-          ) : (
-            <>
-              <Check className="w-3 h-3 text-emerald-500" />
-              <span>Saved</span>
-            </>
-          )}
-        </div>
+          <LogoBadge size="sm" />
+          <span className="font-semibold text-zinc-950 text-[13.5px] tracking-tight hidden sm:inline">
+            GraphMind
+          </span>
+        </Link>
       </div>
 
       {/* Center: Branch Breadcrumbs */}
