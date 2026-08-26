@@ -313,14 +313,18 @@ export function getMainlineTrunkPath(tree: ConversationTree | null): TreeNode[] 
     path.push(current);
     if (current.childrenIds.length === 0) break;
 
-    // Find direct mainline child (no highlightedContext)
-    const mainlineChildId: string | undefined = current.childrenIds.find(
-      (id: string) => !tree.nodes[id]?.highlightedContext
-    );
+    // Filter children that are mainline (no highlightedContext)
+    const mainlineChildren: TreeNode[] = current.childrenIds
+      .map((id: string) => tree.nodes[id])
+      .filter((n): n is TreeNode => Boolean(n && !n.highlightedContext));
 
-    if (!mainlineChildId) break;
-    current = tree.nodes[mainlineChildId];
+
+    if (mainlineChildren.length === 0) break;
+
+    // If multiple mainline children (e.g. user edited message or regenerated), pick latest
+    current = mainlineChildren[mainlineChildren.length - 1];
   }
 
   return path;
 }
+

@@ -353,4 +353,37 @@ describe("ConversationTree Utilities", () => {
     expect(mainline).toHaveLength(4);
     expect(mainline.map((n) => n.id)).toEqual([rootId, reply1.id, followUpUser.id, followUpReply.id]);
   });
+
+  it("stops at mainline leaf when only side branches exist as children", () => {
+    const tree0 = createConversationTree({
+      role: "user",
+      content: "Main query",
+    });
+    const rootId = tree0.rootNodeId;
+
+    const { tree: tree1, node: reply1 } = addChildNode(tree0, {
+      parentId: rootId,
+      role: "assistant",
+      content: "Main response with terms",
+    });
+
+    // Side branch 1
+    const { tree: tree2, node: branchUser } = addChildNode(tree1, {
+      parentId: reply1.id,
+      role: "user",
+      content: "Explain term",
+      highlightedContext: "term",
+    });
+
+    const { tree: tree3 } = addChildNode(tree2, {
+      parentId: branchUser.id,
+      role: "assistant",
+      content: "Term explanation",
+    });
+
+    const mainline = getMainlineTrunkPath(tree3);
+    expect(mainline).toHaveLength(2);
+    expect(mainline.map((n) => n.id)).toEqual([rootId, reply1.id]);
+  });
 });
+

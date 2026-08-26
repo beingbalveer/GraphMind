@@ -233,15 +233,18 @@ class WorkspaceService:
                 mainline_c = next(
                     (
                         cid
-                        for cid in c_ids
+                        for cid in reversed(c_ids)
                         if not getattr(filtered_node_map.get(cid), "highlighted_context", None)
                     ),
-                    c_ids[0],
+                    None,
                 )
+                if not mainline_c:
+                    break
                 curr_id = mainline_c
             active_id = curr_id
         elif nodes:
             active_id = nodes[-1].id
+
 
         ws_response = WorkspaceResponse(
             id=ws.id,
@@ -303,7 +306,24 @@ class WorkspaceService:
                         queue.append(child_id)
 
             latest_updated = max(n.updated_at for n in subtree_nodes)
-            active_node = subtree_nodes[-1]
+            
+            # Resolve mainline leaf node
+            curr_id = root.id
+            while curr_id in children_map and children_map[curr_id]:
+                c_ids = children_map[curr_id]
+                mainline_c = next(
+                    (
+                        cid
+                        for cid in reversed(c_ids)
+                        if not getattr(node_map.get(cid), "highlighted_context", None)
+                    ),
+                    None,
+                )
+                if not mainline_c:
+                    break
+                curr_id = mainline_c
+            active_node_id = curr_id
+
             title = root.metadata_payload.get("title") if root.metadata_payload else None
             if not title:
                 title = root.content[:40].strip() + ("..." if len(root.content) > 40 else "")
@@ -319,10 +339,11 @@ class WorkspaceService:
                     node_count=len(subtree_nodes),
                     created_at=root.created_at,
                     updated_at=latest_updated,
-                    active_node_id=active_node.id,
+                    active_node_id=active_node_id,
                     pinned=is_pinned,
                 )
             )
+
 
         # Sort pinned chats to the top, then by updated_at descending
         chats.sort(key=lambda c: (1 if c.pinned else 0, c.updated_at), reverse=True)

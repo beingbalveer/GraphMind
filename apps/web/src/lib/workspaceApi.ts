@@ -118,28 +118,23 @@ export function snapshotToTree(snapshot: GraphSnapshotResponse): ConversationTre
 
   const rootId = snapshot.rootNodeId || snapshot.nodes[0].id;
 
-  // Resolve activeId by following the mainline conversation trunk (nodes without highlightedContext)
-  let activeId = snapshot.activeNodeId;
-  if (!activeId || !nodesRecord[activeId]) {
-    let currentTrunkNode = nodesRecord[rootId];
-    if (currentTrunkNode) {
-      while (currentTrunkNode.childrenIds.length > 0) {
-        // Prefer mainline children (no highlightedContext) over side-branch explorations
-        const mainlineChildId =
-          currentTrunkNode.childrenIds.find(
-            (id) => !nodesRecord[id]?.highlightedContext
-          );
+  // Resolve activeId by strictly following the mainline conversation trunk (nodes without highlightedContext)
+  let currentTrunkNode = nodesRecord[rootId];
+  let mainlineLeafId = rootId;
+  if (currentTrunkNode) {
+    while (currentTrunkNode.childrenIds.length > 0) {
+      const mainlineChildren = currentTrunkNode.childrenIds
+        .map((id) => nodesRecord[id])
+        .filter((n): n is typeof currentTrunkNode => Boolean(n && !n.highlightedContext));
 
-        if (!mainlineChildId) break;
-        const nextNode = nodesRecord[mainlineChildId];
-        if (!nextNode) break;
-        currentTrunkNode = nextNode;
-      }
-      activeId = currentTrunkNode.id;
-    } else {
-      activeId = rootId;
+      if (mainlineChildren.length === 0) break;
+      const nextNode = mainlineChildren[mainlineChildren.length - 1];
+      currentTrunkNode = nextNode;
+      mainlineLeafId = nextNode.id;
     }
   }
+  const activeId = mainlineLeafId;
+
 
   return {
     id: snapshot.workspace.id,

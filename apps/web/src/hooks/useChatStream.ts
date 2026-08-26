@@ -7,6 +7,7 @@ import {
   addChildNode,
   updateNodeContent,
   getAncestorPath,
+  getMainlineTrunkPath,
 } from "@graphmind/shared";
 
 
@@ -28,7 +29,7 @@ export interface SendMessageOptions {
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8300";
 
-const STORAGE_KEY = "graphmind_active_tree_v1";
+const STORAGE_KEY = "graphmind_tree_state";
 
 export function useChatStream() {
   const [tree, setTree] = useState<ConversationTree | null>(null);
@@ -39,13 +40,13 @@ export function useChatStream() {
   const [isHydrated, setIsHydrated] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // 1. Initial LocalStorage Rehydration
+  // 1. Initial rehydration from LocalStorage on client mount
   useEffect(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved) as ConversationTree;
-        if (parsed && parsed.rootNodeId && parsed.nodes) {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored) as ConversationTree;
+        if (parsed && parsed.nodes && parsed.rootNodeId) {
           setTree(parsed);
         }
       }
@@ -70,10 +71,10 @@ export function useChatStream() {
     }
   }, [tree, isHydrated]);
 
-  // Active messages path leading to activeNodeId
+  // Mainline messages path (strictly excludes side-branches with highlightedContext)
   const activeMessages = useMemo(() => {
-    if (!tree || !tree.activeNodeId) return [];
-    return getAncestorPath(tree, tree.activeNodeId);
+    if (!tree) return [];
+    return getMainlineTrunkPath(tree);
   }, [tree]);
 
 
