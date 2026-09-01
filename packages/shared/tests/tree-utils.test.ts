@@ -10,6 +10,7 @@ import {
   getAllLeafNodes,
   getSiblingSubBranches,
   getBranchLeafNode,
+  getBranchLinearLeafNode,
   getMainlineTrunkPath,
 } from "../src/tree-utils";
 
@@ -384,6 +385,146 @@ describe("ConversationTree Utilities", () => {
     const mainline = getMainlineTrunkPath(tree3);
     expect(mainline).toHaveLength(2);
     expect(mainline.map((n) => n.id)).toEqual([rootId, reply1.id]);
+  });
+
+  it("accurately isolates sibling sub-branches at parent level vs nested sub-branch level", () => {
+    // 1. Root and Mainline response
+    const tree0 = createConversationTree({ role: "user", content: "What is vector search?" });
+    const { tree: tree1, node: mainReply } = addChildNode(tree0, {
+      parentId: tree0.rootNodeId,
+      role: "assistant",
+      content: "Vector search uses HNSW for search speed.",
+    });
+
+    // 2. Parent Level: HNSW branches (Explain and Code)
+    const { tree: tree2, node: hnswExplainUser } = addChildNode(tree1, {
+      parentId: mainReply.id,
+      role: "user",
+      content: "Explain HNSW",
+      highlightedContext: "HNSW",
+    });
+    const { tree: tree3, node: hnswExplainReply } = addChildNode(tree2, {
+      parentId: hnswExplainUser.id,
+      role: "assistant",
+      content: "HNSW offers Unparalleled Recall & Search Speed.",
+    });
+
+    const { tree: tree4, node: hnswCodeUser } = addChildNode(tree3, {
+      parentId: mainReply.id,
+      role: "user",
+      content: "Code for HNSW",
+      highlightedContext: "HNSW",
+    });
+    const { tree: tree5, node: hnswCodeReply } = addChildNode(tree4, {
+      parentId: hnswCodeUser.id,
+      role: "assistant",
+      content: "import hnswlib...",
+    });
+
+    // 3. Child Level: Nested sub-branch under HNSW Explain ("Unparalleled Recall & Search Speed")
+    const { tree: tree6, node: speedUser } = addChildNode(tree5, {
+      parentId: hnswExplainReply.id,
+      role: "user",
+      content: "Explain search speed",
+      highlightedContext: "Unparalleled Recall & Search Speed",
+    });
+    const { tree: tree7, node: speedReply } = addChildNode(tree6, {
+      parentId: speedUser.id,
+      role: "assistant",
+      content: "Speed is achieved through skip-list inspired graphs.",
+    });
+
+    // Sibling discovery for HNSW topic at parent level
+    const hnswSiblings = getSiblingSubBranches(tree7, mainReply.id, "HNSW");
+    expect(hnswSiblings).toHaveLength(2);
+    expect(hnswSiblings.map((n) => n.id)).toEqual([hnswExplainUser.id, hnswCodeUser.id]);
+
+    // Sibling discovery for nested sub-branch under hnswExplainReply
+    const speedSiblings = getSiblingSubBranches(tree7, hnswExplainReply.id, "Unparalleled Recall & Search Speed");
+    expect(speedSiblings).toHaveLength(1);
+    expect(speedSiblings[0].id).toBe(speedUser.id);
+
+    // Linear leaf verification
+    expect(getBranchLinearLeafNode(tree7, hnswExplainUser.id).id).toBe(hnswExplainReply.id);
+    expect(getBranchLinearLeafNode(tree7, hnswCodeUser.id).id).toBe(hnswCodeReply.id);
+    expect(getBranchLinearLeafNode(tree7, speedUser.id).id).toBe(speedReply.id);
+  });
+
+  it("correctly isolates sub-branch boundaries when navigating across history entries", () => {
+    // 1. Root and Mainline response
+    const tree0 = createConversationTree({ role: "user", content: "What is vector search?" });
+    const { tree: tree1, node: mainReply } = addChildNode(tree0, {
+      parentId: tree0.rootNodeId,
+      role: "assistant",
+      content: "Vector search uses HNSW for search speed.",
+    });
+
+    // 2. Parent Level: HNSW branches (Explain and Code)
+    const { tree: tree2, node: hnswExplainUser } = addChildNode(tree1, {
+      parentId: mainReply.id,
+      role: "user",
+      content: "Explain HNSW",
+      highlightedContext: "HNSW",
+    });
+    const { tree: tree3, node: hnswExplainReply } = addChildNode(tree2, {
+      parentId: hnswExplainUser.id,
+      role: "assistant",
+      content: "HNSW offers Unparalleled Recall & Search Speed.",
+    });
+
+    const { tree: tree4, node: hnswCodeUser } = addChildNode(tree3, {
+      parentId: mainReply.id,
+      role: "user",
+      content: "Code for HNSW",
+      highlightedContext: "HNSW",
+    });
+    const { tree: tree5, node: hnswCodeReply } = addChildNode(tree4, {
+      parentId: hnswCodeUser.id,
+      role: "assistant",
+      content: "import hnswlib...",
+    });
+
+    // 3. Child Level: Nested sub-branch under HNSW Explain ("Unparalleled Recall & Search Speed")
+    const { tree: tree6, node: speedUser } = addChildNode(tree5, {
+      parentId: hnswExplainReply.id,
+      role: "user",
+      content: "Explain search speed",
+      highlightedContext: "Unparalleled Recall & Search Speed",
+    });
+    const { tree: tree7, node: speedReply } = addChildNode(tree6, {
+      parentId: speedUser.id,
+      role: "assistant",
+      content: "Speed is achieved through skip-list inspired graphs.",
+    });
+
+    // Full ancestor path to the nested sub-branch leaf
+    const activeLineage = getAncestorPath(tree7, speedReply.id);
+    expect(activeLineage.map((n) => n.id)).toEqual([
+      tree0.rootNodeId,
+      mainReply.id,
+      hnswExplainUser.id,
+      hnswExplainReply.id,
+      speedUser.id,
+      speedReply.id,
+    ]);
+
+    // When viewing nested sub-branch (historyIndex: 1, parentEntry: hnswExplainReply.id)
+    const parentHistoryNodeId = hnswExplainReply.id;
+    const parentIdx = activeLineage.findIndex((n) => n.id === parentHistoryNodeId);
+    expect(parentIdx).toBe(3);
+
+    // Sub-branch is strictly isolated to indices > parentIdx (indices 4 and 5)
+    const subBranchMessages = activeLineage.slice(parentIdx + 1);
+    expect(subBranchMessages.map((n) => n.id)).toEqual([speedUser.id, speedReply.id]);
+
+    // Sub-branch root is speedUser with its own single tab
+    const subBranchRoot = subBranchMessages[0];
+    expect(subBranchRoot.id).toBe(speedUser.id);
+    expect(subBranchRoot.highlightedContext).toBe("Unparalleled Recall & Search Speed");
+
+    const isolatedSiblings = getSiblingSubBranches(tree7, hnswExplainReply.id, subBranchRoot.highlightedContext);
+    expect(isolatedSiblings).toHaveLength(1);
+    expect(isolatedSiblings[0].id).toBe(speedUser.id);
   });
 });
 

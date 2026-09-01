@@ -547,10 +547,14 @@ export function ChatContainer({
       lastProcessedBranchRef.current = nodeId;
       setSidePeekState({ stack: [{ nodeId, excerpt }], index: 0 });
       if (currentWorkspace && activeChatId) {
-        router.replace(buildBranchUrl(currentWorkspace.id, activeChatId, nodeId), { scroll: false });
+        if (viewMode === "canvas") {
+          router.replace(buildCanvasUrl(currentWorkspace.id, activeChatId, { node: nodeId }), { scroll: false });
+        } else {
+          router.replace(buildBranchUrl(currentWorkspace.id, activeChatId, nodeId), { scroll: false });
+        }
       }
     },
-    [currentWorkspace, activeChatId, router]
+    [currentWorkspace, activeChatId, router, viewMode]
   );
 
   const handlePushSidePeekBranch = useCallback(
@@ -584,27 +588,40 @@ export function ChatContainer({
     [currentWorkspace, activeChatId, router]
   );
 
+  // Sync URL after back/forward navigation via a separate effect-driven approach
+  // by reading the current state after the update settles
   const handleNavigateSidePeekBack = useCallback(() => {
+    let targetNodeId: string | undefined;
     setSidePeekState((prev) => {
       const nextIndex = Math.max(0, prev.index - 1);
-      const targetNodeId = prev.stack[nextIndex]?.nodeId;
-      if (targetNodeId && currentWorkspace && activeChatId) {
+      targetNodeId = prev.stack[nextIndex]?.nodeId;
+      if (targetNodeId) {
         lastProcessedBranchRef.current = targetNodeId;
-        router.replace(buildBranchUrl(currentWorkspace.id, activeChatId, targetNodeId), { scroll: false });
       }
       return { ...prev, index: nextIndex };
+    });
+    // Schedule URL update outside the updater / render cycle
+    queueMicrotask(() => {
+      if (targetNodeId && currentWorkspace && activeChatId) {
+        router.replace(buildBranchUrl(currentWorkspace.id, activeChatId, targetNodeId), { scroll: false });
+      }
     });
   }, [currentWorkspace, activeChatId, router]);
 
   const handleNavigateSidePeekForward = useCallback(() => {
+    let targetNodeId: string | undefined;
     setSidePeekState((prev) => {
       const nextIndex = Math.min(prev.stack.length - 1, prev.index + 1);
-      const targetNodeId = prev.stack[nextIndex]?.nodeId;
-      if (targetNodeId && currentWorkspace && activeChatId) {
+      targetNodeId = prev.stack[nextIndex]?.nodeId;
+      if (targetNodeId) {
         lastProcessedBranchRef.current = targetNodeId;
-        router.replace(buildBranchUrl(currentWorkspace.id, activeChatId, targetNodeId), { scroll: false });
       }
       return { ...prev, index: nextIndex };
+    });
+    queueMicrotask(() => {
+      if (targetNodeId && currentWorkspace && activeChatId) {
+        router.replace(buildBranchUrl(currentWorkspace.id, activeChatId, targetNodeId), { scroll: false });
+      }
     });
   }, [currentWorkspace, activeChatId, router]);
 
@@ -1112,6 +1129,7 @@ export function ChatContainer({
             onNavigateBack={handleNavigateSidePeekBack}
             onNavigateForward={handleNavigateSidePeekForward}
             onPushBranch={handlePushSidePeekBranch}
+            onOpenBranch={handleOpenSidePeek}
             onPromoteToPrimary={handlePromoteSidePeekToPrimary}
             onSendMessage={(prompt, parentNodeId) => {
               handleSendBranchStream(prompt, parentNodeId, "", { mode: "none" });

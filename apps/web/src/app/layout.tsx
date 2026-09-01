@@ -7,6 +7,14 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "GraphMind — AI-Native Knowledge Workspace",
   description: "Graph-first workspace where conversations branch into structured knowledge maps.",
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/favicon.ico", sizes: "any" },
+    ],
+    shortcut: "/icon.svg",
+    apple: "/icon.svg",
+  },
 };
 
 export default function RootLayout({

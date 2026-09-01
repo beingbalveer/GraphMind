@@ -59,6 +59,7 @@ interface SidePeekBranchSheetProps {
   onNavigateBack: () => void;
   onNavigateForward: () => void;
   onPushBranch: (nodeId: string, excerpt?: string) => void;
+  onOpenBranch?: (nodeId: string, excerpt?: string) => void;
   onPromoteToPrimary: (nodeId: string) => void;
   onSendMessage: (prompt: string, parentNodeId: string) => void;
   onSendNewSiblingBranch?: (prompt: string, parentNodeId: string, highlightedContext: string) => void;
@@ -84,6 +85,7 @@ export function SidePeekBranchSheet({
   onNavigateBack,
   onNavigateForward,
   onPushBranch,
+  onOpenBranch: _onOpenBranch,
   onPromoteToPrimary,
   onSendMessage,
   onSendNewSiblingBranch,
@@ -163,13 +165,94 @@ export function SidePeekBranchSheet({
     return getAncestorPath(tree, activeLeafNodeId);
   }, [tree, activeLeafNodeId]);
 
-  // Extract branch root index where this sub-branch diverged
-  const branchRootIndex = useMemo(() => {
-    for (let i = activeLineage.length - 1; i >= 0; i--) {
-      if (activeLineage[i].highlightedContext) return i;
+  // Isolate branch root index and context based on active history level
+  const { branchRootIndex, activeBranchRoot, parentNodeId, siblingMatchContext, displayContext } = useMemo(() => {
+    if (!tree || activeLineage.length === 0) {
+      return {
+        branchRootIndex: 0,
+        activeBranchRoot: null,
+        parentNodeId: null,
+        siblingMatchContext: null,
+        displayContext: currentEntry?.excerpt || "Topic",
+      };
     }
-    return 0;
-  }, [activeLineage]);
+
+    // Determine the minimum lineage index for the current branch:
+    // If we navigated here from a parent history entry, this branch must start AFTER that parent.
+    let minSearchIndex = 0;
+    if (historyIndex > 0 && historyStack[historyIndex - 1]) {
+      const parentHistoryNodeId = historyStack[historyIndex - 1].nodeId;
+      const parentIdx = activeLineage.findIndex((n) => n.id === parentHistoryNodeId);
+      if (parentIdx !== -1) {
+        minSearchIndex = parentIdx + 1;
+      } else {
+        // If the exact leaf ID wasn't directly in activeLineage, find ancestor intersection
+        const parentAncestors = getAncestorPath(tree, parentHistoryNodeId);
+        const parentAncestorIds = new Set(parentAncestors.map((n) => n.id));
+        for (let i = activeLineage.length - 1; i >= 0; i--) {
+          if (parentAncestorIds.has(activeLineage[i].id)) {
+            minSearchIndex = i + 1;
+            break;
+          }
+        }
+      }
+    }
+
+    let rootIndex = 0;
+    let rootNode: TreeNode | null = null;
+    let pNodeId: string | null = null;
+    let matchCtx: string | null = null;
+
+    // 1. Search backwards in [minSearchIndex, activeLineage.length - 1] for highlightedContext
+    for (let i = activeLineage.length - 1; i >= minSearchIndex; i--) {
+      if (activeLineage[i].highlightedContext) {
+        rootIndex = i;
+        rootNode = activeLineage[i];
+        pNodeId = rootNode.parentId || (i > 0 ? activeLineage[i - 1].id : null);
+        matchCtx = rootNode.highlightedContext || null;
+        break;
+      }
+    }
+
+    // 2. If no highlightedContext in range, but minSearchIndex > 0
+    if (!matchCtx && minSearchIndex > 0 && minSearchIndex < activeLineage.length) {
+      rootIndex = minSearchIndex;
+      rootNode = activeLineage[minSearchIndex];
+      pNodeId = rootNode.parentId || activeLineage[minSearchIndex - 1].id;
+      matchCtx = rootNode.highlightedContext || currentEntry?.excerpt || null;
+    }
+
+    // 3. Fallback when minSearchIndex === 0: scan whole lineage backwards
+    if (!matchCtx && minSearchIndex === 0) {
+      for (let i = activeLineage.length - 1; i >= 0; i--) {
+        if (activeLineage[i].highlightedContext) {
+          rootIndex = i;
+          rootNode = activeLineage[i];
+          pNodeId = rootNode.parentId || (i > 0 ? activeLineage[i - 1].id : null);
+          matchCtx = rootNode.highlightedContext || null;
+          break;
+        }
+      }
+    }
+
+    if (!rootNode) {
+      rootNode = activeLineage[0];
+      pNodeId = null;
+    }
+
+    const dispCtx =
+      matchCtx ||
+      currentEntry?.excerpt ||
+      (rootNode ? rootNode.content.slice(0, 32) + "…" : "Topic");
+
+    return {
+      branchRootIndex: rootIndex,
+      activeBranchRoot: rootNode,
+      parentNodeId: pNodeId,
+      siblingMatchContext: matchCtx,
+      displayContext: dispCtx,
+    };
+  }, [tree, activeLineage, historyStack, historyIndex, currentEntry]);
 
   // Display only the messages belonging to this branch
   const branchMessages: TreeNode[] = useMemo(() => {
@@ -177,32 +260,27 @@ export function SidePeekBranchSheet({
     return activeLineage.slice(branchRootIndex);
   }, [activeLineage, branchRootIndex]);
 
-  const activeBranchRoot = activeLineage[branchRootIndex];
-  const parentNodeId =
-    activeBranchRoot?.parentId ||
-    (branchRootIndex > 0 ? activeLineage[branchRootIndex - 1].id : null);
-
-  // The canonical context used for sibling tab discovery — must match exactly
-  // what was stored as highlightedContext on the branch root nodes.
-  const siblingMatchContext = activeBranchRoot?.highlightedContext || null;
-
-  const displayContext =
-    activeBranchRoot?.highlightedContext ||
-    currentEntry?.excerpt ||
-    (activeBranchRoot ? activeBranchRoot.content.slice(0, 32) + "…" : "Topic");
-
   // Discover all sibling sub-branches stemming from the same parent context
   const siblingTabs: SiblingTab[] = useMemo(() => {
+    const customActiveTitle =
+      typeof activeBranchRoot?.metadata?.title === "string"
+        ? (activeBranchRoot.metadata.title as string)
+        : undefined;
+    const singleTabTitle: string =
+      customActiveTitle ||
+      activeBranchRoot?.highlightedContext ||
+      currentEntry?.excerpt ||
+      "Branch 1";
+    const isPinned = Boolean(activeBranchRoot?.metadata?.pinned);
+
     if (!tree || !parentNodeId) {
-      const isPinned = Boolean(activeBranchRoot?.metadata?.pinned);
-      const customTitle = activeBranchRoot?.metadata?.title as string | undefined;
       return [
         {
           id: activeLeafNodeId || currentNodeId || "tab-1",
           rootId: activeBranchRoot?.id || currentNodeId || "root-1",
           leafId: activeLeafNodeId || currentNodeId || "leaf-1",
-          title: customTitle || "Branch 1",
-          prompt: activeBranchRoot?.content || "Branch 1",
+          title: singleTabTitle,
+          prompt: activeBranchRoot?.content || singleTabTitle,
           pinned: isPinned,
         },
       ];
@@ -210,15 +288,13 @@ export function SidePeekBranchSheet({
 
     const siblingRoots = getSiblingSubBranches(tree, parentNodeId, siblingMatchContext);
     if (siblingRoots.length === 0) {
-      const isPinned = Boolean(activeBranchRoot?.metadata?.pinned);
-      const customTitle = activeBranchRoot?.metadata?.title as string | undefined;
       return [
         {
           id: activeLeafNodeId || currentNodeId || "tab-1",
           rootId: activeBranchRoot?.id || currentNodeId || "root-1",
           leafId: activeLeafNodeId || currentNodeId || "leaf-1",
-          title: customTitle || "Branch 1",
-          prompt: activeBranchRoot?.content || "Branch 1",
+          title: singleTabTitle,
+          prompt: activeBranchRoot?.content || singleTabTitle,
           pinned: isPinned,
         },
       ];
@@ -226,9 +302,11 @@ export function SidePeekBranchSheet({
 
     return siblingRoots.map((rootNode, index) => {
       const linearLeaf = getBranchLinearLeafNode(tree, rootNode.id);
-      const isPinned = Boolean(rootNode.metadata?.pinned);
+      const isTabPinned = Boolean(rootNode.metadata?.pinned);
       const customTitle = rootNode.metadata?.title as string | undefined;
-      const defaultTitle = siblingRoots.length === 1 ? "Branch 1" : `Branch ${index + 1}`;
+      const defaultTitle =
+        rootNode.highlightedContext ||
+        (siblingRoots.length === 1 ? singleTabTitle : `Branch ${index + 1}`);
 
       return {
         id: rootNode.id,
@@ -236,10 +314,10 @@ export function SidePeekBranchSheet({
         leafId: linearLeaf.id,
         title: customTitle || defaultTitle,
         prompt: rootNode.content,
-        pinned: isPinned,
+        pinned: isTabPinned,
       };
     });
-  }, [tree, parentNodeId, siblingMatchContext, activeBranchRoot, activeLeafNodeId, currentNodeId]);
+  }, [tree, parentNodeId, siblingMatchContext, activeBranchRoot, activeLeafNodeId, currentNodeId, currentEntry]);
 
   // Tab Rename Handlers
   const startRename = useCallback((tab: SiblingTab) => {
