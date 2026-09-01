@@ -190,11 +190,11 @@ export function SidePeekBranchSheet({
 
   return (
     <>
-      {/* Background Click-Catcher Backdrop: smoothly fades in/out and dismisses sheet on click */}
+      {/* Invisible Click-Catcher Backdrop: allows clicking anywhere outside on the main chat/canvas to dismiss the sheet without any dimming or fading */}
       <div
         onClick={onClose}
-        className={`fixed inset-0 z-30 transition-opacity duration-300 ease-out ${
-          isVisible ? "opacity-100 bg-black/10 backdrop-blur-[0.5px]" : "opacity-0 pointer-events-none"
+        className={`fixed inset-0 z-30 ${
+          isVisible ? "block bg-transparent" : "hidden pointer-events-none"
         }`}
         title="Click outside to close (Esc)"
       />

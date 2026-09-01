@@ -71,10 +71,11 @@ export function useChatStream() {
     }
   }, [tree, isHydrated]);
 
-  // Mainline messages path (strictly excludes side-branches with highlightedContext)
+  // Active messages path from root down to the currently active conversation node/leaf
   const activeMessages = useMemo(() => {
-    if (!tree) return [];
-    return getMainlineTrunkPath(tree);
+    if (!tree || !tree.rootNodeId) return [];
+    const targetId = tree.activeNodeId || tree.rootNodeId;
+    return getAncestorPath(tree, targetId);
   }, [tree]);
 
 
