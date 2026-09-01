@@ -74,6 +74,86 @@ interface SidePeekBranchSheetProps {
   onRateResponse?: (nodeId: string, rating: "up" | "down" | null) => void;
 }
 
+/**
+ * Derive clean context/intent tab titles (e.g., "Explain", "Code", "Compare")
+ * from the branch root's prompt, custom metadata title, or highlighted context.
+ */
+function deriveTabTitle(
+  rootNode: TreeNode | null | undefined,
+  siblingCount: number,
+  fallbackContext?: string | null
+): string {
+  if (!rootNode) return fallbackContext || "Branch";
+
+  // 1. Explicit user rename or metadata title
+  if (typeof rootNode.metadata?.title === "string" && rootNode.metadata.title.trim()) {
+    return rootNode.metadata.title.trim();
+  }
+
+  // 2. If it is a single isolated branch and has a distinct highlightedContext
+  if (siblingCount === 1) {
+    if (rootNode.highlightedContext?.trim()) {
+      return rootNode.highlightedContext.trim();
+    }
+    if (fallbackContext?.trim()) {
+      return fallbackContext.trim();
+    }
+  }
+
+  // 3. For sibling branches or when content is available, derive from user prompt intent
+  const content = rootNode.content?.trim() || "";
+  if (content) {
+    // "Explain ..." pattern
+    if (/^Explain\s+"[^"]+"\s+in\s+concise/i.test(content) || /^explain\b/i.test(content)) {
+      return "Explain";
+    }
+    // "Code ..." pattern
+    if (/^(show\s+)?code\b/i.test(content) || /^write\s+(the\s+)?code\b/i.test(content)) {
+      return "Code";
+    }
+    // "Compare ..." pattern
+    if (/^(compare|comparison)\b/i.test(content)) {
+      return "Compare";
+    }
+    // "Benchmark / Performance" pattern
+    if (/^(benchmark|benchmarks|performance)\b/i.test(content)) {
+      return "Benchmarks";
+    }
+    // "Summary" pattern
+    if (/^(summarize|summary)\b/i.test(content)) {
+      return "Summary";
+    }
+
+    // Direct short prompt or first key phrase (clean quotes/markdown)
+    const firstLine = content.split("\n")[0].replace(/^[#>\s*-]+/, "").trim();
+    const clean = firstLine.replace(/^["'`]+|["'`]+$/g, "").trim();
+
+    if (clean.length <= 18) {
+      return clean.charAt(0).toUpperCase() + clean.slice(1);
+    }
+
+    const words = clean.split(/\s+/);
+    let title = "";
+    for (const w of words) {
+      if ((title + " " + w).trim().length > 18) break;
+      title = (title + " " + w).trim();
+    }
+    if (title) {
+      return title.charAt(0).toUpperCase() + title.slice(1);
+    }
+  }
+
+  // 4. Fallback to highlighted context or fallbackContext
+  if (rootNode.highlightedContext?.trim()) {
+    return rootNode.highlightedContext.trim();
+  }
+  if (fallbackContext?.trim()) {
+    return fallbackContext.trim();
+  }
+
+  return "Branch";
+}
+
 export function SidePeekBranchSheet({
   tree,
   isOpen,
@@ -262,15 +342,7 @@ export function SidePeekBranchSheet({
 
   // Discover all sibling sub-branches stemming from the same parent context
   const siblingTabs: SiblingTab[] = useMemo(() => {
-    const customActiveTitle =
-      typeof activeBranchRoot?.metadata?.title === "string"
-        ? (activeBranchRoot.metadata.title as string)
-        : undefined;
-    const singleTabTitle: string =
-      customActiveTitle ||
-      activeBranchRoot?.highlightedContext ||
-      currentEntry?.excerpt ||
-      "Branch 1";
+    const singleTabTitle = deriveTabTitle(activeBranchRoot, 1, currentEntry?.excerpt);
     const isPinned = Boolean(activeBranchRoot?.metadata?.pinned);
 
     if (!tree || !parentNodeId) {
@@ -300,19 +372,16 @@ export function SidePeekBranchSheet({
       ];
     }
 
-    return siblingRoots.map((rootNode, index) => {
+    return siblingRoots.map((rootNode) => {
       const linearLeaf = getBranchLinearLeafNode(tree, rootNode.id);
       const isTabPinned = Boolean(rootNode.metadata?.pinned);
-      const customTitle = rootNode.metadata?.title as string | undefined;
-      const defaultTitle =
-        rootNode.highlightedContext ||
-        (siblingRoots.length === 1 ? singleTabTitle : `Branch ${index + 1}`);
+      const tabTitle = deriveTabTitle(rootNode, siblingRoots.length, currentEntry?.excerpt);
 
       return {
         id: rootNode.id,
         rootId: rootNode.id,
         leafId: linearLeaf.id,
-        title: customTitle || defaultTitle,
+        title: tabTitle,
         prompt: rootNode.content,
         pinned: isTabPinned,
       };
@@ -545,9 +614,9 @@ export function SidePeekBranchSheet({
           </div>
         </div>
 
-        {/* Sub-Header Sibling Sub-Branch Tabs Bar */}
-        <div className="h-10 px-3 sm:px-4 border-b border-zinc-200/80 flex items-center justify-between shrink-0 bg-zinc-50/70 select-none overflow-x-auto no-scrollbar">
-          <div className="flex items-center space-x-1.5 min-w-0 pr-2">
+        {/* Sub-Header Sibling Sub-Branch Tabs Bar (Material Design M3) */}
+        <div className="h-10 px-2 sm:px-3 border-b border-zinc-200 flex items-center justify-between shrink-0 bg-white select-none overflow-x-auto no-scrollbar">
+          <div className="flex items-center h-full space-x-0.5 min-w-0 pr-2">
             {siblingTabs.map((tab) => {
               const isActive = !isDraftingNewTab && (tab.leafId === activeLeafNodeId || tab.rootId === currentNodeId);
               const isRenaming = renamingTabId === tab.id;
@@ -556,10 +625,10 @@ export function SidePeekBranchSheet({
                 <div
                   key={tab.id}
                   onClick={() => !isRenaming && handleSelectTab(tab.leafId)}
-                  className={`group relative flex items-center space-x-1 px-2.5 py-1 rounded-md text-xs font-medium transition-all cursor-pointer select-none shrink-0 ${
+                  className={`group relative flex items-center space-x-1.5 px-3 h-full text-xs transition-colors cursor-pointer select-none shrink-0 rounded-t-md ${
                     isActive
-                      ? "bg-white text-zinc-950 shadow-2xs border border-zinc-200 font-semibold"
-                      : "text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200/60"
+                      ? "text-zinc-950 font-semibold"
+                      : "text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100/60 font-medium"
                   }`}
                   title={tab.prompt || tab.title}
                 >
@@ -585,10 +654,10 @@ export function SidePeekBranchSheet({
                         }
                       }}
                       onClick={(e) => e.stopPropagation()}
-                      className="bg-white border border-zinc-400 rounded px-1 py-0.5 text-xs text-zinc-950 outline-none max-w-[100px]"
+                      className="bg-white border border-zinc-400 rounded px-1.5 py-0.5 text-xs text-zinc-950 outline-none max-w-[100px]"
                     />
                   ) : (
-                    <span className="truncate max-w-[110px]">{tab.title}</span>
+                    <span className="truncate max-w-[120px]">{tab.title}</span>
                   )}
 
                   {/* Context menu for tab actions */}
@@ -605,7 +674,7 @@ export function SidePeekBranchSheet({
                         align="right"
                         onOpenChange={(isOpen) => setOpenMenuTabId(isOpen ? tab.id : null)}
                         trigger={
-                          <div className="p-0.5 rounded hover:bg-zinc-200 text-zinc-400 hover:text-zinc-800 transition-colors cursor-pointer flex items-center justify-center">
+                          <div className="p-0.5 rounded-full hover:bg-zinc-200/80 text-zinc-400 hover:text-zinc-800 transition-colors cursor-pointer flex items-center justify-center">
                             <MoreVertical className="w-3 h-3" />
                           </div>
                         }
@@ -634,18 +703,32 @@ export function SidePeekBranchSheet({
                       />
                     </div>
                   )}
+
+                  {/* Material Active Indicator Bar */}
+                  {isActive && (
+                    <span className="absolute bottom-0 inset-x-1 h-[2.5px] bg-zinc-900 rounded-t-full transition-all duration-200" />
+                  )}
                 </div>
               );
             })}
+
+            {/* Active Draft Tab Indicator */}
+            {isDraftingNewTab && (
+              <div className="group relative flex items-center space-x-1.5 px-3 h-full text-xs font-semibold text-zinc-950 select-none shrink-0 rounded-t-md">
+                <Plus className="w-3 h-3 text-zinc-500 shrink-0" />
+                <span className="truncate max-w-[120px]">New tab</span>
+                <span className="absolute bottom-0 inset-x-1 h-[2.5px] bg-zinc-900 rounded-t-full transition-all duration-200" />
+              </div>
+            )}
 
             {/* Plus Button: Add New Sibling Sub-Branch Tab */}
             <button
               type="button"
               onClick={handleStartNewTab}
-              className={`flex items-center justify-center p-1 rounded-md transition-colors cursor-pointer select-none shrink-0 ${
+              className={`flex items-center justify-center w-7 h-7 rounded-full transition-colors cursor-pointer select-none shrink-0 ml-1 ${
                 isDraftingNewTab
-                  ? "bg-zinc-900 text-white shadow-2xs"
-                  : "text-zinc-400 hover:text-zinc-900 hover:bg-zinc-200/60"
+                  ? "bg-zinc-900 text-white shadow-xs"
+                  : "text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100"
               }`}
               title="Create new sub-branch exploration on this topic"
             >
