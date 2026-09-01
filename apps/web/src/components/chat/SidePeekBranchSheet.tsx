@@ -182,9 +182,13 @@ export function SidePeekBranchSheet({
     activeBranchRoot?.parentId ||
     (branchRootIndex > 0 ? activeLineage[branchRootIndex - 1].id : null);
 
+  // The canonical context used for sibling tab discovery — must match exactly
+  // what was stored as highlightedContext on the branch root nodes.
+  const siblingMatchContext = activeBranchRoot?.highlightedContext || null;
+
   const displayContext =
-    currentEntry?.excerpt ||
     activeBranchRoot?.highlightedContext ||
+    currentEntry?.excerpt ||
     (activeBranchRoot ? activeBranchRoot.content.slice(0, 32) + "…" : "Topic");
 
   // Discover all sibling sub-branches stemming from the same parent context
@@ -204,7 +208,7 @@ export function SidePeekBranchSheet({
       ];
     }
 
-    const siblingRoots = getSiblingSubBranches(tree, parentNodeId, displayContext);
+    const siblingRoots = getSiblingSubBranches(tree, parentNodeId, siblingMatchContext);
     if (siblingRoots.length === 0) {
       const isPinned = Boolean(activeBranchRoot?.metadata?.pinned);
       const customTitle = activeBranchRoot?.metadata?.title as string | undefined;
@@ -235,7 +239,7 @@ export function SidePeekBranchSheet({
         pinned: isPinned,
       };
     });
-  }, [tree, parentNodeId, displayContext, activeBranchRoot, activeLeafNodeId, currentNodeId]);
+  }, [tree, parentNodeId, siblingMatchContext, activeBranchRoot, activeLeafNodeId, currentNodeId]);
 
   // Tab Rename Handlers
   const startRename = useCallback((tab: SiblingTab) => {

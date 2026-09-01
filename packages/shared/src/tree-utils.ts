@@ -257,10 +257,10 @@ export function getSiblingSubBranches(
   const children = getNodeChildren(tree, parentNodeId);
   if (!highlightedContext) return children;
 
-  const exactMatches = children.filter(
-    (c) => c.highlightedContext?.trim() === highlightedContext.trim()
+  const target = highlightedContext.trim().toLowerCase();
+  return children.filter(
+    (c) => (c.highlightedContext?.trim().toLowerCase() || "") === target
   );
-  return exactMatches.length > 0 ? exactMatches : children;
 }
 
 /**
