@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useMemo } from "react";
+import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import {
   X,
   ChevronLeft,
@@ -9,21 +9,43 @@ import {
   GitBranch,
   CornerDownLeft,
   Loader2,
+  Plus,
+  Pin,
+  PinOff,
+  Pencil,
+  Trash2,
+  MoreVertical,
+  Lightbulb,
+  Code2,
+  Scale,
+  AlertTriangle,
 } from "lucide-react";
 import {
   ConversationTree,
   TreeNode,
   getAncestorPath,
   getBranchLinearLeafNode,
+  getSiblingSubBranches,
 } from "@graphmind/shared";
 
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
+import { DropdownMenu } from "@/components/ui/dropdown-menu";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ChatMessage } from "./ChatMessage";
 
 export interface SidePeekEntry {
   nodeId: string;
   excerpt?: string;
+}
+
+export interface SiblingTab {
+  id: string;
+  rootId: string;
+  leafId: string;
+  title: string;
+  prompt: string;
+  pinned?: boolean;
 }
 
 interface SidePeekBranchSheetProps {
@@ -39,6 +61,10 @@ interface SidePeekBranchSheetProps {
   onPushBranch: (nodeId: string, excerpt?: string) => void;
   onPromoteToPrimary: (nodeId: string) => void;
   onSendMessage: (prompt: string, parentNodeId: string) => void;
+  onSendNewSiblingBranch?: (prompt: string, parentNodeId: string, highlightedContext: string) => void;
+  onDeleteBranch?: (rootNodeId: string) => void;
+  onRenameBranch?: (rootNodeId: string, newTitle: string) => void;
+  onTogglePinBranch?: (rootNodeId: string, pinned: boolean) => void;
   onExploreBranch?: (parentNodeId: string, highlightedText: string) => void;
   onRegenerate?: (nodeId: string) => void;
   onEditUserMessage?: (userNodeId: string, newContent: string) => void;
@@ -59,6 +85,10 @@ export function SidePeekBranchSheet({
   onPushBranch,
   onPromoteToPrimary,
   onSendMessage,
+  onSendNewSiblingBranch,
+  onDeleteBranch,
+  onRenameBranch,
+  onTogglePinBranch,
   onExploreBranch,
   onRegenerate,
   onEditUserMessage,
@@ -66,10 +96,19 @@ export function SidePeekBranchSheet({
   onRateResponse,
 }: SidePeekBranchSheetProps) {
   const [inputPrompt, setInputPrompt] = useState("");
+  const [isDraftingNewTab, setIsDraftingNewTab] = useState(false);
+  const [selectedLeafId, setSelectedLeafId] = useState<string | null>(null);
+  const [openMenuTabId, setOpenMenuTabId] = useState<string | null>(null);
+  const [renamingTabId, setRenamingTabId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [deletingTab, setDeletingTab] = useState<SiblingTab | null>(null);
+  const renameInputRef = useRef<HTMLInputElement>(null);
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const prevNodeIdRef = useRef<string | null>(null);
+  const scrollPositionsRef = useRef<Record<string, number>>({});
 
   // Smooth mount/unmount animation lifecycle
   const [isMounted, setIsMounted] = useState(isOpen);
@@ -83,6 +122,8 @@ export function SidePeekBranchSheet({
   useEffect(() => {
     if (activeEntry) {
       setCachedEntry(activeEntry);
+      setSelectedLeafId(null);
+      setIsDraftingNewTab(false);
     }
   }, [activeEntry]);
 
@@ -90,7 +131,6 @@ export function SidePeekBranchSheet({
     let timeout: NodeJS.Timeout;
     if (isOpen) {
       setIsMounted(true);
-      // Double rAF / short timeout ensures the initial translate-x-full is painted before transitioning to 0
       timeout = setTimeout(() => {
         setIsVisible(true);
       }, 16);
@@ -104,7 +144,7 @@ export function SidePeekBranchSheet({
   }, [isOpen]);
 
   const currentEntry = activeEntry || cachedEntry;
-  const currentNodeId = currentEntry?.nodeId || null;
+  const currentNodeId = selectedLeafId || currentEntry?.nodeId || null;
 
   const canGoBack = historyIndex > 0;
   const canGoForward = historyIndex < historyStack.length - 1;
@@ -136,10 +176,137 @@ export function SidePeekBranchSheet({
   }, [activeLineage, branchRootIndex]);
 
   const activeBranchRoot = activeLineage[branchRootIndex];
-  const displayTitle =
+  const parentNodeId =
+    activeBranchRoot?.parentId ||
+    (branchRootIndex > 0 ? activeLineage[branchRootIndex - 1].id : null);
+
+  const displayContext =
     currentEntry?.excerpt ||
     activeBranchRoot?.highlightedContext ||
-    (activeBranchRoot ? activeBranchRoot.content.slice(0, 32) + "…" : "Sub-branch");
+    (activeBranchRoot ? activeBranchRoot.content.slice(0, 32) + "…" : "Topic");
+
+  // Discover all sibling sub-branches stemming from the same parent context
+  const siblingTabs: SiblingTab[] = useMemo(() => {
+    if (!tree || !parentNodeId) {
+      const isPinned = Boolean(activeBranchRoot?.metadata?.pinned);
+      const customTitle = activeBranchRoot?.metadata?.title as string | undefined;
+      return [
+        {
+          id: activeLeafNodeId || currentNodeId || "tab-1",
+          rootId: activeBranchRoot?.id || currentNodeId || "root-1",
+          leafId: activeLeafNodeId || currentNodeId || "leaf-1",
+          title: customTitle || "Branch 1",
+          prompt: activeBranchRoot?.content || "Branch 1",
+          pinned: isPinned,
+        },
+      ];
+    }
+
+    const siblingRoots = getSiblingSubBranches(tree, parentNodeId, displayContext);
+    if (siblingRoots.length === 0) {
+      const isPinned = Boolean(activeBranchRoot?.metadata?.pinned);
+      const customTitle = activeBranchRoot?.metadata?.title as string | undefined;
+      return [
+        {
+          id: activeLeafNodeId || currentNodeId || "tab-1",
+          rootId: activeBranchRoot?.id || currentNodeId || "root-1",
+          leafId: activeLeafNodeId || currentNodeId || "leaf-1",
+          title: customTitle || "Branch 1",
+          prompt: activeBranchRoot?.content || "Branch 1",
+          pinned: isPinned,
+        },
+      ];
+    }
+
+    return siblingRoots.map((rootNode, index) => {
+      const linearLeaf = getBranchLinearLeafNode(tree, rootNode.id);
+      const isPinned = Boolean(rootNode.metadata?.pinned);
+      const customTitle = rootNode.metadata?.title as string | undefined;
+      const defaultTitle = siblingRoots.length === 1 ? "Branch 1" : `Branch ${index + 1}`;
+
+      return {
+        id: rootNode.id,
+        rootId: rootNode.id,
+        leafId: linearLeaf.id,
+        title: customTitle || defaultTitle,
+        prompt: rootNode.content,
+        pinned: isPinned,
+      };
+    });
+  }, [tree, parentNodeId, displayContext, activeBranchRoot, activeLeafNodeId, currentNodeId]);
+
+  // Tab Rename Handlers
+  const startRename = useCallback((tab: SiblingTab) => {
+    setRenamingTabId(tab.id);
+    setRenameValue(tab.title);
+    setTimeout(() => renameInputRef.current?.focus(), 50);
+  }, []);
+
+  const commitRename = useCallback(() => {
+    if (!renamingTabId || !renameValue.trim()) {
+      setRenamingTabId(null);
+      return;
+    }
+    onRenameBranch?.(renamingTabId, renameValue.trim());
+    setRenamingTabId(null);
+  }, [renamingTabId, renameValue, onRenameBranch]);
+
+  // Tab Switching
+  const handleSelectTab = useCallback(
+    (leafId: string) => {
+      if (scrollRef.current && currentNodeId) {
+        scrollPositionsRef.current[currentNodeId] = scrollRef.current.scrollTop;
+      }
+      setIsDraftingNewTab(false);
+      setSelectedLeafId(leafId);
+    },
+    [currentNodeId]
+  );
+
+  const handleStartNewTab = useCallback(() => {
+    if (scrollRef.current && currentNodeId) {
+      scrollPositionsRef.current[currentNodeId] = scrollRef.current.scrollTop;
+    }
+    setIsDraftingNewTab(true);
+    setInputPrompt("");
+    setTimeout(() => inputRef.current?.focus(), 50);
+  }, [currentNodeId]);
+
+  // Quick Starter Prompts
+  const handleQuickPrompt = (template: string) => {
+    if (!parentNodeId || isStreaming) return;
+    const prompt = template.replace("{topic}", displayContext);
+    onSendNewSiblingBranch?.(prompt, parentNodeId, displayContext);
+    setIsDraftingNewTab(false);
+    setInputPrompt("");
+  };
+
+  const starterTemplates = [
+    {
+      icon: Lightbulb,
+      title: "Deep Dive",
+      desc: "Detailed explanation with core principles",
+      prompt: `Explain the deep architectural principles of "${displayContext}" in detail.`,
+    },
+    {
+      icon: Code2,
+      title: "Code Example",
+      desc: "Practical implementation with code snippets",
+      prompt: `Provide a clear, production-ready code example demonstrating "${displayContext}".`,
+    },
+    {
+      icon: Scale,
+      title: "Trade-offs & Alternatives",
+      desc: "Compare pros, cons, and alternatives",
+      prompt: `What are the key trade-offs, pros/cons, and alternatives for "${displayContext}"?`,
+    },
+    {
+      icon: AlertTriangle,
+      title: "Edge Cases & Pitfalls",
+      desc: "Common bugs and production gotchas",
+      prompt: `What are the common pitfalls, edge cases, and mistakes when dealing with "${displayContext}"?`,
+    },
+  ];
 
   // Auto-scroll on new tokens or branch switch
   useEffect(() => {
@@ -148,7 +315,11 @@ export function SidePeekBranchSheet({
     prevNodeIdRef.current = currentNodeId;
 
     if (isNewNode) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      if (currentNodeId && scrollPositionsRef.current[currentNodeId] !== undefined) {
+        scrollRef.current.scrollTop = scrollPositionsRef.current[currentNodeId];
+      } else {
+        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      }
     } else if (isStreaming && bottomRef.current) {
       bottomRef.current.scrollIntoView({ behavior: "smooth" });
     }
@@ -183,14 +354,22 @@ export function SidePeekBranchSheet({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputPrompt.trim() || isStreaming || !activeLeafNodeId) return;
-    onSendMessage(inputPrompt.trim(), activeLeafNodeId);
+    if (!inputPrompt.trim() || isStreaming) return;
+
+    if (isDraftingNewTab) {
+      if (parentNodeId) {
+        onSendNewSiblingBranch?.(inputPrompt.trim(), parentNodeId, displayContext);
+        setIsDraftingNewTab(false);
+      }
+    } else if (activeLeafNodeId) {
+      onSendMessage(inputPrompt.trim(), activeLeafNodeId);
+    }
     setInputPrompt("");
   };
 
   return (
     <>
-      {/* Invisible Click-Catcher Backdrop: allows clicking anywhere outside on the main chat/canvas to dismiss the sheet without any dimming or fading */}
+      {/* Invisible Click-Catcher Backdrop: allows clicking anywhere outside to dismiss */}
       <div
         onClick={onClose}
         className={`fixed inset-0 z-30 ${
@@ -205,8 +384,8 @@ export function SidePeekBranchSheet({
           isVisible ? "translate-x-0" : "translate-x-full pointer-events-none"
         }`}
       >
-        {/* Top Navigation Header: Stack History Controls + Title + Make Primary + Close */}
-        <div className="h-13 px-3 sm:px-4 border-b border-zinc-200/80 flex items-center justify-between shrink-0 bg-white/95 backdrop-blur-md select-none">
+        {/* Top Bar: History Navigation + Excerpt Title Badge + Actions */}
+        <div className="h-11 px-3 sm:px-4 border-b border-zinc-100 flex items-center justify-between shrink-0 bg-white/95 backdrop-blur-md select-none">
           {/* Left: Back / Forward History Navigation Buttons */}
           <div className="flex items-center space-x-1 shrink-0">
             <Button
@@ -242,8 +421,8 @@ export function SidePeekBranchSheet({
           {/* Center: Branch Context Badge */}
           <div className="flex items-center space-x-1.5 min-w-0 mx-2 px-2 py-0.5 rounded-lg bg-zinc-100/90 border border-zinc-200/80 text-zinc-800">
             <GitBranch className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-            <span className="text-xs font-semibold truncate max-w-[160px] sm:max-w-[220px]">
-              {displayTitle}
+            <span className="text-xs font-semibold truncate max-w-[140px] sm:max-w-[200px]">
+              {displayContext}
             </span>
           </div>
 
@@ -258,7 +437,7 @@ export function SidePeekBranchSheet({
             <Button
               variant="ghost"
               size="iconSm"
-              disabled={!activeLeafNodeId}
+              disabled={!activeLeafNodeId || isDraftingNewTab}
               onClick={() => {
                 if (activeLeafNodeId) onPromoteToPrimary(activeLeafNodeId);
               }}
@@ -282,47 +461,197 @@ export function SidePeekBranchSheet({
           </div>
         </div>
 
-        {/* Messages Scroll Area */}
+        {/* Sub-Header Sibling Sub-Branch Tabs Bar */}
+        <div className="h-10 px-3 sm:px-4 border-b border-zinc-200/80 flex items-center justify-between shrink-0 bg-zinc-50/70 select-none overflow-x-auto no-scrollbar">
+          <div className="flex items-center space-x-1.5 min-w-0 pr-2">
+            {siblingTabs.map((tab) => {
+              const isActive = !isDraftingNewTab && (tab.leafId === activeLeafNodeId || tab.rootId === currentNodeId);
+              const isRenaming = renamingTabId === tab.id;
+
+              return (
+                <div
+                  key={tab.id}
+                  onClick={() => !isRenaming && handleSelectTab(tab.leafId)}
+                  className={`group relative flex items-center space-x-1 px-2.5 py-1 rounded-md text-xs font-medium transition-all cursor-pointer select-none shrink-0 ${
+                    isActive
+                      ? "bg-white text-zinc-950 shadow-2xs border border-zinc-200 font-semibold"
+                      : "text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200/60"
+                  }`}
+                  title={tab.prompt || tab.title}
+                >
+                  {tab.pinned && (
+                    <Pin className="w-3 h-3 text-emerald-600 shrink-0 fill-emerald-600/20" />
+                  )}
+
+                  {isRenaming ? (
+                    <input
+                      ref={renameInputRef}
+                      type="text"
+                      value={renameValue}
+                      onChange={(e) => setRenameValue(e.target.value)}
+                      onBlur={commitRename}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          commitRename();
+                        }
+                        if (e.key === "Escape") {
+                          e.preventDefault();
+                          setRenamingTabId(null);
+                        }
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      className="bg-white border border-zinc-400 rounded px-1 py-0.5 text-xs text-zinc-950 outline-none max-w-[100px]"
+                    />
+                  ) : (
+                    <span className="truncate max-w-[110px]">{tab.title}</span>
+                  )}
+
+                  {/* Context menu for tab actions */}
+                  {!isRenaming && (
+                    <div
+                      className={`flex items-center justify-center transition-opacity shrink-0 ${
+                        openMenuTabId === tab.id
+                          ? "opacity-100"
+                          : "opacity-0 group-hover:opacity-100"
+                      }`}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <DropdownMenu
+                        align="right"
+                        onOpenChange={(isOpen) => setOpenMenuTabId(isOpen ? tab.id : null)}
+                        trigger={
+                          <div className="p-0.5 rounded hover:bg-zinc-200 text-zinc-400 hover:text-zinc-800 transition-colors cursor-pointer flex items-center justify-center">
+                            <MoreVertical className="w-3 h-3" />
+                          </div>
+                        }
+                        items={[
+                          {
+                            label: tab.pinned ? "Unpin" : "Pin",
+                            icon: tab.pinned ? (
+                              <PinOff className="w-3.5 h-3.5" />
+                            ) : (
+                              <Pin className="w-3.5 h-3.5" />
+                            ),
+                            onClick: () => onTogglePinBranch?.(tab.rootId, !tab.pinned),
+                          },
+                          {
+                            label: "Rename",
+                            icon: <Pencil className="w-3.5 h-3.5" />,
+                            onClick: () => startRename(tab),
+                          },
+                          {
+                            label: "Delete",
+                            icon: <Trash2 className="w-3.5 h-3.5" />,
+                            variant: "destructive",
+                            onClick: () => setDeletingTab(tab),
+                          },
+                        ]}
+                      />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+
+            {/* Plus Button: Add New Sibling Sub-Branch Tab */}
+            <button
+              type="button"
+              onClick={handleStartNewTab}
+              className={`flex items-center justify-center p-1 rounded-md transition-colors cursor-pointer select-none shrink-0 ${
+                isDraftingNewTab
+                  ? "bg-zinc-900 text-white shadow-2xs"
+                  : "text-zinc-400 hover:text-zinc-900 hover:bg-zinc-200/60"
+              }`}
+              title="Create new sub-branch exploration on this topic"
+            >
+              <Plus className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Messages Scroll Area or New Tab Starter View */}
         <div
           ref={scrollRef}
           className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-2 bg-white"
         >
-          <div className="space-y-1">
-            {(() => {
-              const lastUserIndex = branchMessages.map((m) => m.role).lastIndexOf("user");
-              const lastAssistantIndex = branchMessages.map((m) => m.role).lastIndexOf("assistant");
+          {isDraftingNewTab ? (
+            /* Blank Draft Tab Starter View */
+            <div className="flex-1 flex flex-col justify-center max-w-xl mx-auto py-6 space-y-4 animate-in fade-in duration-150">
+              <div className="rounded-2xl border border-zinc-200/90 bg-zinc-50/50 p-4 shadow-2xs space-y-3.5">
+                <div className="flex items-center justify-between border-b border-zinc-200/60 pb-2.5">
+                  <h3 className="text-xs font-semibold text-zinc-900">
+                    Explore &ldquo;{displayContext}&rdquo;
+                  </h3>
+                  <span className="text-[10px] text-zinc-400 font-medium">Quick Starters</span>
+                </div>
 
-              return branchMessages.map((msg, index) => {
-                const isLastAssistant =
-                  index === branchMessages.length - 1 &&
-                  msg.role === "assistant" &&
-                  isStreaming &&
-                  msg.id === streamingNodeId;
+                {/* 2-Column Quick Starter Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {starterTemplates.map((item, idx) => {
+                    const Icon = item.icon;
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => handleQuickPrompt(item.prompt)}
+                        className="p-2.5 rounded-xl border border-zinc-200/80 bg-white hover:bg-zinc-50 hover:border-zinc-300 text-left transition-all duration-150 group cursor-pointer shadow-2xs"
+                      >
+                        <div className="flex items-center space-x-2 mb-1">
+                          <div className="p-1 rounded bg-zinc-100 text-zinc-700 group-hover:text-zinc-950">
+                            <Icon className="w-3 h-3" />
+                          </div>
+                          <h4 className="text-xs font-semibold text-zinc-900 leading-snug">
+                            {item.title}
+                          </h4>
+                        </div>
+                        <p className="text-[11px] text-zinc-500 line-clamp-2 leading-relaxed">
+                          {item.desc}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-1">
+              {(() => {
+                const lastUserIndex = branchMessages.map((m) => m.role).lastIndexOf("user");
+                const lastAssistantIndex = branchMessages.map((m) => m.role).lastIndexOf("assistant");
 
-                return (
-                  <ChatMessage
-                    key={msg.id}
-                    message={{
-                      ...msg,
-                      isStreaming: isLastAssistant,
-                    }}
-                    tree={tree}
-                    isLastUserMessage={index === lastUserIndex}
-                    isLastAssistantMessage={index === lastAssistantIndex}
-                    onRegenerate={onRegenerate}
-                    onEditUserMessage={onEditUserMessage}
-                    onSwitchBranch={onSwitchBranch}
-                    onExploreBranch={onExploreBranch}
-                    onOpenSideBranch={(childLeafId, excerpt) => {
-                      onPushBranch(childLeafId, excerpt);
-                    }}
-                    onRateResponse={onRateResponse}
-                  />
-                );
-              });
-            })()}
-          </div>
-          <div ref={bottomRef} />
+                return branchMessages.map((msg, index) => {
+                  const isLastAssistant =
+                    index === branchMessages.length - 1 &&
+                    msg.role === "assistant" &&
+                    isStreaming &&
+                    msg.id === streamingNodeId;
+
+                  return (
+                    <ChatMessage
+                      key={msg.id}
+                      message={{
+                        ...msg,
+                        isStreaming: isLastAssistant,
+                      }}
+                      tree={tree}
+                      isLastUserMessage={index === lastUserIndex}
+                      isLastAssistantMessage={index === lastAssistantIndex}
+                      onRegenerate={onRegenerate}
+                      onEditUserMessage={onEditUserMessage}
+                      onSwitchBranch={onSwitchBranch}
+                      onExploreBranch={onExploreBranch}
+                      onOpenSideBranch={(childLeafId, excerpt) => {
+                        onPushBranch(childLeafId, excerpt);
+                      }}
+                      onRateResponse={onRateResponse}
+                    />
+                  );
+                });
+              })()}
+              <div ref={bottomRef} />
+            </div>
+          )}
         </div>
 
         {/* Interactive In-Sheet Chat Input Bar */}
@@ -333,7 +662,11 @@ export function SidePeekBranchSheet({
               type="text"
               value={inputPrompt}
               onChange={(e) => setInputPrompt(e.target.value)}
-              placeholder={`Reply to "${displayTitle}"...`}
+              placeholder={
+                isDraftingNewTab
+                  ? `Ask a new question about "${displayContext}"...`
+                  : `Reply to "${displayContext}"...`
+              }
               disabled={isStreaming}
               className="w-full pl-3.5 pr-10 py-2.5 rounded-xl border border-zinc-200 bg-white text-xs sm:text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-900 shadow-2xs disabled:bg-zinc-50 transition-all"
             />
@@ -341,7 +674,7 @@ export function SidePeekBranchSheet({
               type="submit"
               disabled={!inputPrompt.trim() || isStreaming}
               className="absolute right-1.5 p-1.5 rounded-lg bg-zinc-900 text-white hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer shadow-2xs"
-              title="Send follow-up in this branch"
+              title={isDraftingNewTab ? "Start new branch exploration" : "Send follow-up in this branch"}
             >
               {isStreaming ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -352,6 +685,24 @@ export function SidePeekBranchSheet({
           </form>
         </div>
       </aside>
+
+      {/* Confirm Delete Branch Dialog */}
+      {deletingTab && (
+        <ConfirmDialog
+          isOpen={Boolean(deletingTab)}
+          onClose={() => setDeletingTab(null)}
+          onConfirm={() => {
+            if (deletingTab) {
+              onDeleteBranch?.(deletingTab.rootId);
+              setDeletingTab(null);
+            }
+          }}
+          title="Delete Branch"
+          description={`Are you sure you want to delete "${deletingTab.title}"? All messages in this branch will be permanently removed.`}
+          confirmText="Delete"
+          variant="destructive"
+        />
+      )}
     </>
   );
 }

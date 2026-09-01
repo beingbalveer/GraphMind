@@ -757,6 +757,14 @@ export function ChatContainer({
     [currentWorkspace, editUserMessage]
   );
 
+
+  const handleSendNewSiblingBranch = useCallback(
+    async (prompt: string, parentNodeId: string, highlightedText: string) => {
+      await handleSendBranchStream(prompt, parentNodeId, highlightedText, { inSheet: false });
+    },
+    [handleSendBranchStream]
+  );
+
   // Switch to canvas node and open side peek
   const handleSelectTreeNode = useCallback((nodeId: string) => {
     switchBranch(nodeId);
@@ -1078,6 +1086,10 @@ export function ChatContainer({
             onSendMessage={(prompt, parentNodeId) => {
               handleSendBranchStream(prompt, parentNodeId, "", { inSheet: false });
             }}
+            onSendNewSiblingBranch={handleSendNewSiblingBranch}
+            onDeleteBranch={(nodeId) => currentWorkspace && deleteBranch(nodeId, currentWorkspace.id)}
+            onRenameBranch={handleRenameBranch}
+            onTogglePinBranch={handleTogglePinBranch}
             onExploreBranch={(parentNodeId, highlightedText) => {
               handleSendBranchStream(
                 `Explain "${highlightedText}" in concise, direct detail with key takeaways.`,
