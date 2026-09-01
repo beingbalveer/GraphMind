@@ -541,20 +541,27 @@ export function ChatContainer({
     setSyncStatus("saved");
   }, [currentWorkspace, tree]);
 
+  // Helper to synchronize the URL when navigating/switching side-peek branches without losing viewMode (chat vs canvas)
+  const syncSidePeekUrl = useCallback(
+    (nodeId: string) => {
+      if (!currentWorkspace || !activeChatId) return;
+      if (viewMode === "canvas") {
+        router.replace(buildCanvasUrl(currentWorkspace.id, activeChatId, { node: nodeId }), { scroll: false });
+      } else {
+        router.replace(buildBranchUrl(currentWorkspace.id, activeChatId, nodeId), { scroll: false });
+      }
+    },
+    [currentWorkspace, activeChatId, viewMode, router]
+  );
+
   // Open / Push into Notion-style Side-Peek History Stack
   const handleOpenSidePeek = useCallback(
     (nodeId: string, excerpt?: string) => {
       lastProcessedBranchRef.current = nodeId;
       setSidePeekState({ stack: [{ nodeId, excerpt }], index: 0 });
-      if (currentWorkspace && activeChatId) {
-        if (viewMode === "canvas") {
-          router.replace(buildCanvasUrl(currentWorkspace.id, activeChatId, { node: nodeId }), { scroll: false });
-        } else {
-          router.replace(buildBranchUrl(currentWorkspace.id, activeChatId, nodeId), { scroll: false });
-        }
-      }
+      syncSidePeekUrl(nodeId);
     },
-    [currentWorkspace, activeChatId, router, viewMode]
+    [syncSidePeekUrl]
   );
 
   const handlePushSidePeekBranch = useCallback(
@@ -564,11 +571,9 @@ export function ChatContainer({
         const nextStack = [...prev.stack.slice(0, prev.index + 1), { nodeId, excerpt }];
         return { stack: nextStack, index: nextStack.length - 1 };
       });
-      if (currentWorkspace && activeChatId) {
-        router.replace(buildBranchUrl(currentWorkspace.id, activeChatId, nodeId), { scroll: false });
-      }
+      syncSidePeekUrl(nodeId);
     },
-    [currentWorkspace, activeChatId, router]
+    [syncSidePeekUrl]
   );
 
   const handleSwitchSidePeekSiblingTab = useCallback(
@@ -581,11 +586,9 @@ export function ChatContainer({
         }
         return { stack: nextStack, index: prev.index };
       });
-      if (currentWorkspace && activeChatId) {
-        router.replace(buildBranchUrl(currentWorkspace.id, activeChatId, leafId), { scroll: false });
-      }
+      syncSidePeekUrl(leafId);
     },
-    [currentWorkspace, activeChatId, router]
+    [syncSidePeekUrl]
   );
 
   // Sync URL after back/forward navigation via a separate effect-driven approach
@@ -602,11 +605,11 @@ export function ChatContainer({
     });
     // Schedule URL update outside the updater / render cycle
     queueMicrotask(() => {
-      if (targetNodeId && currentWorkspace && activeChatId) {
-        router.replace(buildBranchUrl(currentWorkspace.id, activeChatId, targetNodeId), { scroll: false });
+      if (targetNodeId) {
+        syncSidePeekUrl(targetNodeId);
       }
     });
-  }, [currentWorkspace, activeChatId, router]);
+  }, [syncSidePeekUrl]);
 
   const handleNavigateSidePeekForward = useCallback(() => {
     let targetNodeId: string | undefined;
@@ -619,11 +622,11 @@ export function ChatContainer({
       return { ...prev, index: nextIndex };
     });
     queueMicrotask(() => {
-      if (targetNodeId && currentWorkspace && activeChatId) {
-        router.replace(buildBranchUrl(currentWorkspace.id, activeChatId, targetNodeId), { scroll: false });
+      if (targetNodeId) {
+        syncSidePeekUrl(targetNodeId);
       }
     });
-  }, [currentWorkspace, activeChatId, router]);
+  }, [syncSidePeekUrl]);
 
   const handleCloseSidePeek = useCallback(() => {
     lastProcessedBranchRef.current = null;

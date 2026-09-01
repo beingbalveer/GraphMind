@@ -149,6 +149,11 @@ export const ThreadGraphNode = memo(function ThreadGraphNode({
             >
               {thread.title}
             </span>
+            {thread.highlightedContext && thread.highlightedContext !== thread.title && (
+              <span className="text-[10px] text-zinc-400 font-medium truncate block leading-tight">
+                {thread.highlightedContext}
+              </span>
+            )}
           </div>
         </div>
 

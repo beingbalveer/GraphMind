@@ -42,15 +42,80 @@ export function extractConversationThreads(
   const edges: ThreadEdge[] = [];
   const visitedNodes = new Set<string>();
 
-  // Helper to get a clean title from a thread's initial message
+  // Helper to get a clean, contextual title from a thread's initial message
   function getThreadTitle(node: TreeNode, isRoot: boolean): string {
+    if (!node) return isRoot ? "Main Conversation" : "Branch";
+
+    // 1. User custom rename or metadata title
+    if (typeof node.metadata?.title === "string" && node.metadata.title.trim()) {
+      return node.metadata.title.trim();
+    }
+
     if (isRoot) return "Main Conversation";
-    if (node.highlightedContext) {
+
+    // Check siblings sharing this highlighted context to detect collisions
+    let hasSameContextSiblings = false;
+    if (node.parentId && node.highlightedContext) {
+      const siblings = getNodeChildren(tree!, node.parentId);
+      const sameCtx = siblings.filter((s) => s.highlightedContext === node.highlightedContext);
+      if (sameCtx.length > 1) {
+        hasSameContextSiblings = true;
+      }
+    }
+
+    // If unique highlightedContext with no sibling collisions, use highlightedContext
+    if (!hasSameContextSiblings && node.highlightedContext?.trim()) {
       return node.highlightedContext.trim();
     }
-    const firstLine = node.content.split("\n")[0] || "";
-    const clean = firstLine.replace(/^[#>\s*-]+/, "").trim();
-    return clean.slice(0, 40) || (node.role === "user" ? "User Question" : "Branch Exploration");
+
+    // Derive intent from user prompt
+    const content = node.content?.trim() || "";
+    if (content) {
+      // "Explain ..." pattern
+      if (/^Explain\s+"[^"]+"\s+in\s+concise/i.test(content) || /^explain\b/i.test(content)) {
+        return "Explain";
+      }
+      // "Code ..." pattern
+      if (/^(show\s+)?code\b/i.test(content) || /^write\s+(the\s+)?code\b/i.test(content)) {
+        return "Code";
+      }
+      // "Compare ..." pattern
+      if (/^(compare|comparison)\b/i.test(content)) {
+        return "Compare";
+      }
+      // "Benchmark / Performance" pattern
+      if (/^(benchmark|benchmarks|performance)\b/i.test(content)) {
+        return "Benchmarks";
+      }
+      // "Summary" pattern
+      if (/^(summarize|summary)\b/i.test(content)) {
+        return "Summary";
+      }
+
+      // Direct short prompt or first key phrase
+      const firstLine = content.split("\n")[0].replace(/^[#>\s*-]+/, "").trim();
+      const clean = firstLine.replace(/^["'`]+|["'`]+$/g, "").trim();
+
+      if (clean.length <= 18) {
+        return clean.charAt(0).toUpperCase() + clean.slice(1);
+      }
+
+      const words = clean.split(/\s+/);
+      let title = "";
+      for (const w of words) {
+        if ((title + " " + w).trim().length > 18) break;
+        title = (title + " " + w).trim();
+      }
+      if (title) {
+        return title.charAt(0).toUpperCase() + title.slice(1);
+      }
+    }
+
+    if (node.highlightedContext?.trim()) {
+      return node.highlightedContext.trim();
+    }
+
+    return node.role === "user" ? "User Question" : "Branch Exploration";
   }
 
   // Recursive walker that groups continuous chains into threads
