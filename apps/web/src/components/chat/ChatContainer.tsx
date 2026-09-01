@@ -715,10 +715,9 @@ export function ChatContainer({
     return getAncestorPath(tree, tree.activeNodeId);
   }, [tree]);
 
-  // Unified top navigation breadcrumbs
   const breadcrumbSteps = useMemo(() => {
-    if (!tree || activeMessages.length === 0) return [];
-    const rootMessage = activeMessages[0];
+    if (!tree || !tree.rootNodeId || !tree.nodes[tree.rootNodeId]) return [];
+    const rootMessage = tree.nodes[tree.rootNodeId];
     const rawPrompt = rootMessage?.content || "New Chat";
     const rootTitle = rawPrompt.length > 20 ? rawPrompt.slice(0, 18) + "…" : rawPrompt;
 

@@ -71,11 +71,29 @@ export function useChatStream() {
     }
   }, [tree, isHydrated]);
 
-  // Active messages path from root down to the currently active conversation node/leaf
+  // Active messages path for the current screen view:
+  // If activeNodeId is on a branch (an ancestor has highlightedContext), display only that branch's messages.
+  // If activeNodeId is on the root mainline, display the full mainline conversation.
   const activeMessages = useMemo(() => {
     if (!tree || !tree.rootNodeId) return [];
     const targetId = tree.activeNodeId || tree.rootNodeId;
-    return getAncestorPath(tree, targetId);
+    const fullPath = getAncestorPath(tree, targetId);
+
+    // Find the last branch divergence point in this lineage (if any)
+    let branchRootIndex = -1;
+    for (let i = fullPath.length - 1; i >= 0; i--) {
+      if (fullPath[i].highlightedContext) {
+        branchRootIndex = i;
+        break;
+      }
+    }
+
+    // If viewing a branch, replace main chat view with that branch's conversation
+    if (branchRootIndex !== -1) {
+      return fullPath.slice(branchRootIndex);
+    }
+
+    return fullPath;
   }, [tree]);
 
 
