@@ -143,7 +143,9 @@ export function SidePeekBranchSheet({
     return () => clearTimeout(timeout);
   }, [isOpen]);
 
-  const currentEntry = activeEntry || cachedEntry;
+  const currentEntry = (isOpen && historyStack.length > 0)
+    ? (historyStack[historyIndex] || historyStack[historyStack.length - 1] || null)
+    : cachedEntry;
   const currentNodeId = currentEntry?.nodeId || null;
 
   const canGoBack = historyIndex > 0;

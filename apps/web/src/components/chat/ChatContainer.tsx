@@ -116,12 +116,17 @@ export function ChatContainer({
   const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode);
 
   // Notion-Style Side-Peek History Stack State
-  const [sidePeekStack, setSidePeekStack] = useState<SidePeekEntry[]>(() =>
-    initialBranchId ? [{ nodeId: initialBranchId }] : []
-  );
-  const [sidePeekIndex, setSidePeekIndex] = useState<number>(0);
+  const [sidePeekState, setSidePeekState] = useState<{
+    stack: SidePeekEntry[];
+    index: number;
+  }>(() => ({
+    stack: initialBranchId ? [{ nodeId: initialBranchId }] : [],
+    index: 0,
+  }));
 
-  const isSidePeekOpen = sidePeekStack.length > 0 && sidePeekIndex >= 0 && sidePeekIndex < sidePeekStack.length;
+  const sidePeekStack = sidePeekState.stack;
+  const sidePeekIndex = sidePeekState.index;
+  const isSidePeekOpen = sidePeekStack.length > 0;
 
 
   const fitViewRef = useRef<(() => void) | null>(null);
@@ -234,10 +239,10 @@ export function ChatContainer({
                 if (branchId && loadedTree.nodes[branchId]) {
                   const node = loadedTree.nodes[branchId];
                   lastProcessedBranchRef.current = branchId;
-                  setSidePeekStack([
-                    { nodeId: branchId, excerpt: node.highlightedContext || undefined },
-                  ]);
-                  setSidePeekIndex(0);
+                  setSidePeekState({
+                    stack: [{ nodeId: branchId, excerpt: node.highlightedContext || undefined }],
+                    index: 0,
+                  });
                 }
               }
             }
@@ -245,8 +250,7 @@ export function ChatContainer({
 
           if (nodeId) {
             if (viewMode === "canvas") {
-              setSidePeekStack([{ nodeId }]);
-              setSidePeekIndex(0);
+              setSidePeekState({ stack: [{ nodeId }], index: 0 });
             }
           }
 
@@ -296,8 +300,7 @@ export function ChatContainer({
       setActiveChatId(null);
       clearMessages();
       lastProcessedBranchRef.current = null;
-      setSidePeekStack([]);
-      setSidePeekIndex(0);
+      setSidePeekState({ stack: [], index: 0 });
     }
 
     // 3. Sync ?branch= query parameter from URL changes
@@ -305,11 +308,9 @@ export function ChatContainer({
     if (branchParam !== lastProcessedBranchRef.current) {
       lastProcessedBranchRef.current = branchParam;
       if (branchParam) {
-        setSidePeekStack([{ nodeId: branchParam }]);
-        setSidePeekIndex(0);
+        setSidePeekState({ stack: [{ nodeId: branchParam }], index: 0 });
       } else {
-        setSidePeekStack([]);
-        setSidePeekIndex(0);
+        setSidePeekState({ stack: [], index: 0 });
       }
     }
 
@@ -317,11 +318,11 @@ export function ChatContainer({
     const nodeParam = searchParams.get("node");
     if (nodeParam) {
       if (targetViewMode === "canvas") {
-        setSidePeekStack([{ nodeId: nodeParam }]);
-        setSidePeekIndex(0);
-      } else {
-        handleJumpToMessage(nodeParam);
+        setSidePeekState({ stack: [{ nodeId: nodeParam }], index: 0 });
       }
+      setTimeout(() => {
+        handleJumpToMessage(nodeParam);
+      }, 150);
     }
   }, [pathname, searchParams, currentWorkspace, loadTree, clearMessages, handleJumpToMessage]);
 
@@ -331,8 +332,7 @@ export function ChatContainer({
     clearMessages();
     setActiveChatId(null);
     loadedChatIdRef.current = null;
-    setSidePeekStack([]);
-    setSidePeekIndex(0);
+    setSidePeekState({ stack: [], index: 0 });
     if (currentWorkspace) {
       router.push(buildWorkspaceUrl(currentWorkspace.id), { scroll: false });
     }
@@ -347,8 +347,7 @@ export function ChatContainer({
       // Update active state immediately so sidebar reflects selection
       setActiveChatId(chat.id);
       loadedChatIdRef.current = chat.id;
-      setSidePeekStack([]);
-      setSidePeekIndex(0);
+      setSidePeekState({ stack: [], index: 0 });
 
       // Use replace (not push) with scroll:false so Next.js syncs the URL
       // WITHOUT triggering a full RSC page re-fetch or unmounting ChatContainer.
@@ -431,8 +430,7 @@ export function ChatContainer({
   const handleSelectWorkspace = useCallback(
     async (ws: WorkspaceItem) => {
       setCurrentWorkspace(ws);
-      setSidePeekStack([]);
-      setSidePeekIndex(0);
+      setSidePeekState({ stack: [], index: 0 });
 
       const workspaceChats = await refreshChats(ws.id);
       const targetChat = workspaceChats.length > 0 ? workspaceChats[0] : null;
@@ -547,8 +545,7 @@ export function ChatContainer({
   const handleOpenSidePeek = useCallback(
     (nodeId: string, excerpt?: string) => {
       lastProcessedBranchRef.current = nodeId;
-      setSidePeekStack([{ nodeId, excerpt }]);
-      setSidePeekIndex(0);
+      setSidePeekState({ stack: [{ nodeId, excerpt }], index: 0 });
       if (currentWorkspace && activeChatId) {
         router.replace(buildBranchUrl(currentWorkspace.id, activeChatId, nodeId), { scroll: false });
       }
@@ -559,47 +556,61 @@ export function ChatContainer({
   const handlePushSidePeekBranch = useCallback(
     (nodeId: string, excerpt?: string) => {
       lastProcessedBranchRef.current = nodeId;
-      setSidePeekStack((prev) => {
-        const next = prev.slice(0, sidePeekIndex + 1);
-        return [...next, { nodeId, excerpt }];
+      setSidePeekState((prev) => {
+        const nextStack = [...prev.stack.slice(0, prev.index + 1), { nodeId, excerpt }];
+        return { stack: nextStack, index: nextStack.length - 1 };
       });
-      setSidePeekIndex((prev) => prev + 1);
       if (currentWorkspace && activeChatId) {
         router.replace(buildBranchUrl(currentWorkspace.id, activeChatId, nodeId), { scroll: false });
       }
     },
-    [sidePeekIndex, currentWorkspace, activeChatId, router]
+    [currentWorkspace, activeChatId, router]
   );
 
   const handleSwitchSidePeekSiblingTab = useCallback(
     (leafId: string) => {
       lastProcessedBranchRef.current = leafId;
-      setSidePeekStack((prev) => {
-        const next = [...prev];
-        if (next[sidePeekIndex]) {
-          next[sidePeekIndex] = { ...next[sidePeekIndex], nodeId: leafId };
+      setSidePeekState((prev) => {
+        const nextStack = [...prev.stack];
+        if (nextStack[prev.index]) {
+          nextStack[prev.index] = { ...nextStack[prev.index], nodeId: leafId };
         }
-        return next;
+        return { stack: nextStack, index: prev.index };
       });
       if (currentWorkspace && activeChatId) {
         router.replace(buildBranchUrl(currentWorkspace.id, activeChatId, leafId), { scroll: false });
       }
     },
-    [sidePeekIndex, currentWorkspace, activeChatId, router]
+    [currentWorkspace, activeChatId, router]
   );
 
   const handleNavigateSidePeekBack = useCallback(() => {
-    setSidePeekIndex((prev) => Math.max(0, prev - 1));
-  }, []);
+    setSidePeekState((prev) => {
+      const nextIndex = Math.max(0, prev.index - 1);
+      const targetNodeId = prev.stack[nextIndex]?.nodeId;
+      if (targetNodeId && currentWorkspace && activeChatId) {
+        lastProcessedBranchRef.current = targetNodeId;
+        router.replace(buildBranchUrl(currentWorkspace.id, activeChatId, targetNodeId), { scroll: false });
+      }
+      return { ...prev, index: nextIndex };
+    });
+  }, [currentWorkspace, activeChatId, router]);
 
   const handleNavigateSidePeekForward = useCallback(() => {
-    setSidePeekIndex((prev) => Math.min(sidePeekStack.length - 1, prev + 1));
-  }, [sidePeekStack.length]);
+    setSidePeekState((prev) => {
+      const nextIndex = Math.min(prev.stack.length - 1, prev.index + 1);
+      const targetNodeId = prev.stack[nextIndex]?.nodeId;
+      if (targetNodeId && currentWorkspace && activeChatId) {
+        lastProcessedBranchRef.current = targetNodeId;
+        router.replace(buildBranchUrl(currentWorkspace.id, activeChatId, targetNodeId), { scroll: false });
+      }
+      return { ...prev, index: nextIndex };
+    });
+  }, [currentWorkspace, activeChatId, router]);
 
   const handleCloseSidePeek = useCallback(() => {
     lastProcessedBranchRef.current = null;
-    setSidePeekStack([]);
-    setSidePeekIndex(0);
+    setSidePeekState({ stack: [], index: 0 });
     if (currentWorkspace && activeChatId) {
       router.replace(
         viewMode === "canvas"
@@ -615,8 +626,7 @@ export function ChatContainer({
     (leafNodeId: string) => {
       lastProcessedBranchRef.current = null;
       switchBranch(leafNodeId);
-      setSidePeekStack([]);
-      setSidePeekIndex(0);
+      setSidePeekState({ stack: [], index: 0 });
       if (viewMode === "canvas") {
         setViewMode("chat");
       }
@@ -636,7 +646,7 @@ export function ChatContainer({
       prompt: string,
       parentNodeId: string,
       highlightedText = "",
-      options?: { inSheet?: boolean }
+      options?: { mode?: "open" | "push" | "replace_current" | "none" }
     ) => {
       if (!currentWorkspace) return;
 
@@ -662,8 +672,12 @@ export function ChatContainer({
             createdUserNodeId = userNodeId;
             createdAssistantNodeId = assistantNodeId;
 
-            if (options?.inSheet) {
+            if (options?.mode === "push") {
               handlePushSidePeekBranch(assistantNodeId, highlightedText || undefined);
+            } else if (options?.mode === "replace_current") {
+              handleSwitchSidePeekSiblingTab(assistantNodeId);
+            } else if (options?.mode === "none") {
+              // in-branch follow-up: leave stack intact
             } else {
               handleOpenSidePeek(assistantNodeId, highlightedText || undefined);
             }
@@ -709,7 +723,7 @@ export function ChatContainer({
     async (parentNodeId: string, highlightedText: string) => {
       const branchPrompt = `Explain "${highlightedText}" in concise, direct detail with key takeaways.`;
       await handleSendBranchStream(branchPrompt, parentNodeId, highlightedText, {
-        inSheet: false,
+        mode: "open",
       });
     },
     [handleSendBranchStream]
@@ -777,7 +791,7 @@ export function ChatContainer({
 
   const handleSendNewSiblingBranch = useCallback(
     async (prompt: string, parentNodeId: string, highlightedText: string) => {
-      await handleSendBranchStream(prompt, parentNodeId, highlightedText, { inSheet: false });
+      await handleSendBranchStream(prompt, parentNodeId, highlightedText, { mode: "replace_current" });
     },
     [handleSendBranchStream]
   );
@@ -929,8 +943,7 @@ export function ChatContainer({
             onSelectStep={(step) => {
               lastProcessedBranchRef.current = null;
               switchBranch(step.leafId);
-              setSidePeekStack([]);
-              setSidePeekIndex(0);
+              setSidePeekState({ stack: [], index: 0 });
               if (currentWorkspace && activeChatId) {
                 router.replace(buildChatUrl(currentWorkspace.id, activeChatId), { scroll: false });
               }
@@ -1101,7 +1114,7 @@ export function ChatContainer({
             onPushBranch={handlePushSidePeekBranch}
             onPromoteToPrimary={handlePromoteSidePeekToPrimary}
             onSendMessage={(prompt, parentNodeId) => {
-              handleSendBranchStream(prompt, parentNodeId, "", { inSheet: false });
+              handleSendBranchStream(prompt, parentNodeId, "", { mode: "none" });
             }}
             onSendNewSiblingBranch={handleSendNewSiblingBranch}
             onSelectSiblingTab={handleSwitchSidePeekSiblingTab}
@@ -1113,7 +1126,7 @@ export function ChatContainer({
                 `Explain "${highlightedText}" in concise, direct detail with key takeaways.`,
                 parentNodeId,
                 highlightedText,
-                { inSheet: true }
+                { mode: "push" }
               );
             }}
             onRegenerate={regenerateResponse}
