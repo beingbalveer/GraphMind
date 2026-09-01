@@ -62,6 +62,7 @@ interface SidePeekBranchSheetProps {
   onPromoteToPrimary: (nodeId: string) => void;
   onSendMessage: (prompt: string, parentNodeId: string) => void;
   onSendNewSiblingBranch?: (prompt: string, parentNodeId: string, highlightedContext: string) => void;
+  onSelectSiblingTab?: (leafId: string) => void;
   onDeleteBranch?: (rootNodeId: string) => void;
   onRenameBranch?: (rootNodeId: string, newTitle: string) => void;
   onTogglePinBranch?: (rootNodeId: string, pinned: boolean) => void;
@@ -86,6 +87,7 @@ export function SidePeekBranchSheet({
   onPromoteToPrimary,
   onSendMessage,
   onSendNewSiblingBranch,
+  onSelectSiblingTab,
   onDeleteBranch,
   onRenameBranch,
   onTogglePinBranch,
@@ -97,7 +99,6 @@ export function SidePeekBranchSheet({
 }: SidePeekBranchSheetProps) {
   const [inputPrompt, setInputPrompt] = useState("");
   const [isDraftingNewTab, setIsDraftingNewTab] = useState(false);
-  const [selectedLeafId, setSelectedLeafId] = useState<string | null>(null);
   const [openMenuTabId, setOpenMenuTabId] = useState<string | null>(null);
   const [renamingTabId, setRenamingTabId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
@@ -122,7 +123,6 @@ export function SidePeekBranchSheet({
   useEffect(() => {
     if (activeEntry) {
       setCachedEntry(activeEntry);
-      setSelectedLeafId(null);
       setIsDraftingNewTab(false);
     }
   }, [activeEntry]);
@@ -144,7 +144,7 @@ export function SidePeekBranchSheet({
   }, [isOpen]);
 
   const currentEntry = activeEntry || cachedEntry;
-  const currentNodeId = selectedLeafId || currentEntry?.nodeId || null;
+  const currentNodeId = currentEntry?.nodeId || null;
 
   const canGoBack = historyIndex > 0;
   const canGoForward = historyIndex < historyStack.length - 1;
@@ -258,9 +258,9 @@ export function SidePeekBranchSheet({
         scrollPositionsRef.current[currentNodeId] = scrollRef.current.scrollTop;
       }
       setIsDraftingNewTab(false);
-      setSelectedLeafId(leafId);
+      onSelectSiblingTab?.(leafId);
     },
-    [currentNodeId]
+    [currentNodeId, onSelectSiblingTab]
   );
 
   const handleStartNewTab = useCallback(() => {

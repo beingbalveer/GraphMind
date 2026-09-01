@@ -571,6 +571,23 @@ export function ChatContainer({
     [sidePeekIndex, currentWorkspace, activeChatId, router]
   );
 
+  const handleSwitchSidePeekSiblingTab = useCallback(
+    (leafId: string) => {
+      lastProcessedBranchRef.current = leafId;
+      setSidePeekStack((prev) => {
+        const next = [...prev];
+        if (next[sidePeekIndex]) {
+          next[sidePeekIndex] = { ...next[sidePeekIndex], nodeId: leafId };
+        }
+        return next;
+      });
+      if (currentWorkspace && activeChatId) {
+        router.replace(buildBranchUrl(currentWorkspace.id, activeChatId, leafId), { scroll: false });
+      }
+    },
+    [sidePeekIndex, currentWorkspace, activeChatId, router]
+  );
+
   const handleNavigateSidePeekBack = useCallback(() => {
     setSidePeekIndex((prev) => Math.max(0, prev - 1));
   }, []);
@@ -1087,6 +1104,7 @@ export function ChatContainer({
               handleSendBranchStream(prompt, parentNodeId, "", { inSheet: false });
             }}
             onSendNewSiblingBranch={handleSendNewSiblingBranch}
+            onSelectSiblingTab={handleSwitchSidePeekSiblingTab}
             onDeleteBranch={(nodeId) => currentWorkspace && deleteBranch(nodeId, currentWorkspace.id)}
             onRenameBranch={handleRenameBranch}
             onTogglePinBranch={handleTogglePinBranch}
