@@ -145,6 +145,7 @@ export function ChatContainer({
   const initialBranchIdRef = useRef(initialBranchId);
   const initialNodeIdRef = useRef(initialNodeId);
   const initialViewModeRef = useRef(initialViewMode);
+  const lastProcessedBranchRef = useRef<string | null>(initialBranchId || null);
 
   // Refresh chats for current workspace
   const refreshChats = useCallback(async (wsId: string) => {
@@ -182,7 +183,6 @@ export function ChatContainer({
 
       try {
         let ws: WorkspaceItem | null = null;
-
         if (wsId) {
           const snapshot = await fetchGraphSnapshot(wsId);
           if (snapshot) {
@@ -233,6 +233,7 @@ export function ChatContainer({
                 loadTree(loadedTree);
                 if (branchId && loadedTree.nodes[branchId]) {
                   const node = loadedTree.nodes[branchId];
+                  lastProcessedBranchRef.current = branchId;
                   setSidePeekStack([
                     { nodeId: branchId, excerpt: node.highlightedContext || undefined },
                   ]);
@@ -294,15 +295,22 @@ export function ChatContainer({
       loadedChatIdRef.current = null;
       setActiveChatId(null);
       clearMessages();
+      lastProcessedBranchRef.current = null;
       setSidePeekStack([]);
       setSidePeekIndex(0);
     }
 
-    // 3. Sync ?branch= query parameter
+    // 3. Sync ?branch= query parameter from URL changes
     const branchParam = searchParams.get("branch");
-    if (branchParam && sidePeekStack[sidePeekIndex]?.nodeId !== branchParam) {
-      setSidePeekStack([{ nodeId: branchParam }]);
-      setSidePeekIndex(0);
+    if (branchParam !== lastProcessedBranchRef.current) {
+      lastProcessedBranchRef.current = branchParam;
+      if (branchParam) {
+        setSidePeekStack([{ nodeId: branchParam }]);
+        setSidePeekIndex(0);
+      } else {
+        setSidePeekStack([]);
+        setSidePeekIndex(0);
+      }
     }
 
     // 4. Sync ?node= query parameter
@@ -315,7 +323,7 @@ export function ChatContainer({
         handleJumpToMessage(nodeParam);
       }
     }
-  }, [pathname, searchParams, currentWorkspace, sidePeekStack, sidePeekIndex, loadTree, clearMessages, handleJumpToMessage]);
+  }, [pathname, searchParams, currentWorkspace, loadTree, clearMessages, handleJumpToMessage]);
 
 
   // Start a completely fresh chat tree inside the current workspace
@@ -538,6 +546,7 @@ export function ChatContainer({
   // Open / Push into Notion-style Side-Peek History Stack
   const handleOpenSidePeek = useCallback(
     (nodeId: string, excerpt?: string) => {
+      lastProcessedBranchRef.current = nodeId;
       setSidePeekStack([{ nodeId, excerpt }]);
       setSidePeekIndex(0);
       if (currentWorkspace && activeChatId) {
@@ -549,6 +558,7 @@ export function ChatContainer({
 
   const handlePushSidePeekBranch = useCallback(
     (nodeId: string, excerpt?: string) => {
+      lastProcessedBranchRef.current = nodeId;
       setSidePeekStack((prev) => {
         const next = prev.slice(0, sidePeekIndex + 1);
         return [...next, { nodeId, excerpt }];
@@ -570,6 +580,7 @@ export function ChatContainer({
   }, [sidePeekStack.length]);
 
   const handleCloseSidePeek = useCallback(() => {
+    lastProcessedBranchRef.current = null;
     setSidePeekStack([]);
     setSidePeekIndex(0);
     if (currentWorkspace && activeChatId) {
@@ -585,6 +596,7 @@ export function ChatContainer({
   // "Make Primary": Promotes active side-peek branch to replace the center primary chat
   const handlePromoteSidePeekToPrimary = useCallback(
     (leafNodeId: string) => {
+      lastProcessedBranchRef.current = null;
       switchBranch(leafNodeId);
       setSidePeekStack([]);
       setSidePeekIndex(0);
@@ -592,7 +604,7 @@ export function ChatContainer({
         setViewMode("chat");
       }
       if (currentWorkspace && activeChatId) {
-        router.push(buildNodeUrl(currentWorkspace.id, activeChatId, leafNodeId), { scroll: false });
+        router.replace(buildNodeUrl(currentWorkspace.id, activeChatId, leafNodeId), { scroll: false });
       }
       setTimeout(() => {
         handleJumpToMessage(leafNodeId);
@@ -710,10 +722,13 @@ export function ChatContainer({
     const rawPrompt = rootMessage?.content || "New Chat";
     const rootTitle = rawPrompt.length > 20 ? rawPrompt.slice(0, 18) + "…" : rawPrompt;
 
+    const rootLeaf = getBranchLinearLeafNode(tree, tree.rootNodeId);
+    const rootLeafId = rootLeaf ? rootLeaf.id : tree.rootNodeId;
+
     const steps: BreadcrumbStep[] = [
       {
         id: tree.rootNodeId,
-        leafId: tree.rootNodeId,
+        leafId: rootLeafId,
         title: rootTitle,
         isRoot: true,
       },
@@ -888,8 +903,13 @@ export function ChatContainer({
           <BranchBreadcrumbs
             steps={breadcrumbSteps}
             onSelectStep={(step) => {
+              lastProcessedBranchRef.current = null;
               switchBranch(step.leafId);
-              handleCloseSidePeek();
+              setSidePeekStack([]);
+              setSidePeekIndex(0);
+              if (currentWorkspace && activeChatId) {
+                router.replace(buildChatUrl(currentWorkspace.id, activeChatId), { scroll: false });
+              }
             }}
           />
         }
