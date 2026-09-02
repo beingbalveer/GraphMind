@@ -239,3 +239,109 @@ async def test_chat_stream_with_pdf_attachment() -> None:
         assert "content" in data
 
 
+@pytest.mark.asyncio
+async def test_workspace_tabular_file_uploads_and_extraction() -> None:
+    """Test CSV, TSV, JSONL, and Excel (XLSX) file upload, metadata, and markdown table extraction."""
+    import openpyxl
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        ws_resp = await client.post(
+            "/api/v1/workspaces",
+            json={"name": "Tabular Data Workspace"},
+        )
+        assert ws_resp.status_code == 201
+        ws_id = ws_resp.json()["id"]
+
+        # 1. Upload CSV
+        csv_bytes = b"id,name,role,salary\n1,Alice,Engineer,120000\n2,Bob,Designer,95000\n3,Carol,Manager,140000"
+        csv_resp = await client.post(
+            f"/api/v1/workspaces/{ws_id}/files/upload",
+            files={"file": ("employees.csv", io.BytesIO(csv_bytes), "text/csv")},
+        )
+        assert csv_resp.status_code == 201
+        csv_data = csv_resp.json()
+        assert csv_data["fileCategory"] == "tabular"
+        assert csv_data["metadata"]["row_count"] == 3
+        assert csv_data["metadata"]["columns"] == ["id", "name", "role", "salary"]
+        assert "| id | name | role | salary |" in csv_data["extractedText"]
+        assert "| 1 | Alice | Engineer | 120000 |" in csv_data["extractedText"]
+
+        # 2. Upload TSV
+        tsv_bytes = b"dept\theadcount\nSales\t45\nEngineering\t110"
+        tsv_resp = await client.post(
+            f"/api/v1/workspaces/{ws_id}/files/upload",
+            files={"file": ("departments.tsv", io.BytesIO(tsv_bytes), "text/tab-separated-values")},
+        )
+        assert tsv_resp.status_code == 201
+        tsv_data = tsv_resp.json()
+        assert tsv_data["fileCategory"] == "tabular"
+        assert tsv_data["metadata"]["format"] == "tsv"
+        assert tsv_data["metadata"]["row_count"] == 2
+        assert "| dept | headcount |" in tsv_data["extractedText"]
+
+        # 3. Upload JSONL
+        jsonl_bytes = b'{"sku": "A100", "price": 49.99}\n{"sku": "B200", "price": 19.95}'
+        jsonl_resp = await client.post(
+            f"/api/v1/workspaces/{ws_id}/files/upload",
+            files={"file": ("products.jsonl", io.BytesIO(jsonl_bytes), "application/x-ndjson")},
+        )
+        assert jsonl_resp.status_code == 201
+        jsonl_data = jsonl_resp.json()
+        assert jsonl_data["fileCategory"] == "tabular"
+        assert jsonl_data["metadata"]["format"] == "jsonl"
+        assert jsonl_data["metadata"]["row_count"] == 2
+        assert "| sku | price |" in jsonl_data["extractedText"]
+
+        # 4. Upload XLSX
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Q3_Metrics"
+        ws.append(["Region", "Revenue", "Units"])
+        ws.append(["North", 500000, 1250])
+        ws.append(["South", 340000, 890])
+        xlsx_buf = io.BytesIO()
+        wb.save(xlsx_buf)
+        xlsx_bytes = xlsx_buf.getvalue()
+
+        xlsx_resp = await client.post(
+            f"/api/v1/workspaces/{ws_id}/files/upload",
+            files={"file": ("metrics.xlsx", io.BytesIO(xlsx_bytes), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
+        )
+        assert xlsx_resp.status_code == 201
+        xlsx_data = xlsx_resp.json()
+        assert xlsx_data["fileCategory"] == "tabular"
+        assert xlsx_data["metadata"]["format"] == "xlsx"
+        assert xlsx_data["metadata"]["sheets"] == ["Q3_Metrics"]
+        assert xlsx_data["metadata"]["row_count"] == 2
+        assert "| Region | Revenue | Units |" in xlsx_data["extractedText"]
+
+        # 5. Verify ?category=tabular filter
+        tab_list_resp = await client.get(f"/api/v1/workspaces/{ws_id}/files?category=tabular")
+        assert tab_list_resp.status_code == 200
+        tab_files = tab_list_resp.json()
+        assert len(tab_files) == 4
+        file_names = {f["name"] for f in tab_files}
+        assert file_names == {"employees.csv", "departments.tsv", "products.jsonl", "metrics.xlsx"}
+
+        # 6. Verify chat completions prompt injection with tabular dataset
+        chat_resp = await client.post(
+            "/api/v1/chat/completions",
+            json={
+                "prompt": "Analyze our Q3 sales performance",
+                "provider": "mock",
+                "model": "mock-model",
+                "attachments": [
+                    {
+                        "id": xlsx_data["id"],
+                        "name": xlsx_data["name"],
+                        "mime_type": xlsx_data["mimeType"],
+                        "fileCategory": xlsx_data["fileCategory"],
+                        "extracted_text": xlsx_data["extractedText"],
+                    }
+                ],
+            },
+        )
+        assert chat_resp.status_code == 200
+        assert "content" in chat_resp.json()
+
+

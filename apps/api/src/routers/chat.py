@@ -19,6 +19,7 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from pydantic.alias_generators import to_camel
+from services.file_service import parse_tabular_bytes
 
 logger = structlog.get_logger()
 router = APIRouter(prefix="/api/v1/chat", tags=["Chat"])
@@ -118,8 +119,17 @@ def _extract_attachment_text(att: FileAttachment) -> Optional[str]:
             if len(parts) == 2:
                 header = parts[0]
                 raw_b64 = parts[1]
+                decoded_bytes = base64.b64decode(raw_b64)
+                # Check for tabular files
+                if att.file_category == "tabular" or any(
+                    att.name.lower().endswith(e) for e in (".csv", ".tsv", ".jsonl", ".ndjson", ".xlsx")
+                ):
+                    summary, _ = parse_tabular_bytes(att.name, decoded_bytes, att.mime_type or "")
+                    if summary:
+                        return summary
+
                 if any(t in header for t in ("text/", "json", "javascript", "yaml", "xml", "csv")):
-                    return base64.b64decode(raw_b64).decode("utf-8", errors="replace").strip()
+                    return decoded_bytes.decode("utf-8", errors="replace").strip()
         except Exception:
             pass
     return None
@@ -127,7 +137,7 @@ def _extract_attachment_text(att: FileAttachment) -> Optional[str]:
 
 def _format_message_with_attachments(msg: ChatMessage) -> ChatMessage:
     """
-    If the message contains code or text document attachments, format their
+    If the message contains code, text, or tabular document attachments, format their
     contents into the textual prompt context so that all LLMs receive the file body.
     """
     if not msg.attachments:
@@ -138,9 +148,16 @@ def _format_message_with_attachments(msg: ChatMessage) -> ChatMessage:
         text_content = _extract_attachment_text(att)
         if text_content is not None:
             is_pdf = att.mime_type == "application/pdf" or att.name.lower().endswith(".pdf")
+            is_tabular = att.file_category == "tabular" or any(
+                att.name.lower().endswith(e) for e in (".csv", ".tsv", ".jsonl", ".ndjson", ".xlsx")
+            )
             if is_pdf:
                 text_blocks.append(
                     f"[Attached PDF Document: `{att.name}`]\n```text\n{text_content}\n```"
+                )
+            elif is_tabular:
+                text_blocks.append(
+                    f"[Attached Tabular Dataset: `{att.name}`]\n{text_content}"
                 )
             else:
                 ext = os.path.splitext(att.name.lower())[1].lstrip(".")
