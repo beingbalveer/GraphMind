@@ -19,6 +19,7 @@ from ai_core.lineage import (
     resolve_conversation_lineage,
 )
 from ai_core.providers import (
+    AnthropicProvider,
     GeminiEmbeddingProvider,
     GeminiProvider,
     MockEmbeddingProvider,
@@ -46,6 +47,7 @@ __all__ = [
     "ModelConfig",
     "StreamChunk",
     "TokenUsage",
+    "AnthropicProvider",
     "GeminiProvider",
     "OpenAIProvider",
     "MockProvider",

@@ -2,6 +2,7 @@ import os
 from typing import Dict, Optional, Type
 
 from ai_core.base import BaseEmbeddingProvider, BaseLLMProvider
+from ai_core.providers.anthropic import AnthropicProvider
 from ai_core.providers.gemini import GeminiProvider
 from ai_core.providers.gemini_embedding import GeminiEmbeddingProvider
 from ai_core.providers.mock import MockProvider
@@ -14,6 +15,8 @@ _PROVIDER_REGISTRY: Dict[str, Type[BaseLLMProvider]] = {
     "gemini": GeminiProvider,
     "google": GeminiProvider,
     "openai": OpenAIProvider,
+    "anthropic": AnthropicProvider,
+    "claude": AnthropicProvider,
     "mock": MockProvider,
 }
 
@@ -63,6 +66,8 @@ def get_llm_provider(
         return GeminiProvider(api_key=api_key)
     if os.getenv("OPENAI_API_KEY"):
         return OpenAIProvider(api_key=api_key)
+    if os.getenv("ANTHROPIC_API_KEY"):
+        return AnthropicProvider(api_key=api_key)
 
     # Default to MockProvider for zero-cost offline operations
     return MockProvider()
@@ -99,6 +104,7 @@ def get_embedding_provider(
 get_provider = get_llm_provider
 
 __all__ = [
+    "AnthropicProvider",
     "GeminiProvider",
     "OpenAIProvider",
     "MockProvider",
