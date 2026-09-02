@@ -21,6 +21,7 @@ import { GraphCanvas } from "../canvas/GraphCanvas";
 import { CommandPalette } from "../canvas/CommandPalette";
 import { WorkspaceModal } from "../workspace/WorkspaceModal";
 import { SettingsModal } from "../settings/SettingsModal";
+import { FileLibraryModal } from "../library/FileLibraryModal";
 import { SidePeekBranchSheet, SidePeekEntry } from "./SidePeekBranchSheet";
 import { Toast } from "@/components/ui/toast";
 import { LogoBadge } from "@/components/ui/Logo";
@@ -103,6 +104,7 @@ export function ChatContainer({
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
   const [isWorkspaceModalOpen, setIsWorkspaceModalOpen] = useState(false);
   const [isModelConfigOpen, setIsModelConfigOpen] = useState(false);
+  const [isFileLibraryOpen, setIsFileLibraryOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   // Centralized Model & AI Generation Configuration (BYOK)
@@ -960,6 +962,7 @@ export function ChatContainer({
         workspaceName={currentWorkspace?.name || "Main Workspace"}
         onOpenWorkspaceModal={() => setIsWorkspaceModalOpen(true)}
         onOpenModelConfig={() => setIsModelConfigOpen(true)}
+        onOpenFileLibrary={() => setIsFileLibraryOpen(true)}
         activeModelName={llmConfig.model}
         messageCount={activeMessages.length}
 
@@ -1217,6 +1220,14 @@ export function ChatContainer({
         currentWorkspace={currentWorkspace}
       />
 
+      {/* Workspace File Library Modal */}
+      {currentWorkspace && (
+        <FileLibraryModal
+          isOpen={isFileLibraryOpen}
+          onClose={() => setIsFileLibraryOpen(false)}
+          workspaceId={currentWorkspace.id}
+        />
+      )}
 
       {/* Non-intrusive Floating Toast Notification */}
       <Toast message={error} onDismiss={clearError} />

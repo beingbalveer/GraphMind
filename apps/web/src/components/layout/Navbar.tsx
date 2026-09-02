@@ -7,6 +7,7 @@ import {
   LayoutGrid,
   PanelLeft,
   Sliders,
+  FolderOpen,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,7 @@ interface NavbarProps {
   workspaceName?: string;
   onOpenWorkspaceModal?: () => void;
   onOpenModelConfig?: () => void;
+  onOpenFileLibrary?: () => void;
   activeModelName?: string;
   syncStatus?: "saved" | "syncing" | "offline";
   isSidebarOpen?: boolean;
@@ -39,6 +41,7 @@ export function Navbar({
   workspaceName: _workspaceName = "Main Workspace",
   onOpenWorkspaceModal: _onOpenWorkspaceModal,
   onOpenModelConfig,
+  onOpenFileLibrary,
   activeModelName = "gemini-2.5-flash",
   syncStatus: _syncStatus = "saved",
   isSidebarOpen: _isSidebarOpen = false,
@@ -78,8 +81,23 @@ export function Navbar({
       </div>
 
 
-      {/* Right: Model Config + View Mode Toggle + New Chat Button */}
+      {/* Right: Model Config + Library + View Mode Toggle + New Chat Button */}
       <div className="flex items-center space-x-2 shrink-0">
+        {/* Workspace File Library Trigger */}
+        {onOpenFileLibrary && (
+          <button
+            type="button"
+            onClick={onOpenFileLibrary}
+            className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg border border-zinc-200/90 bg-white hover:bg-zinc-50 hover:border-zinc-300 text-zinc-700 hover:text-zinc-950 text-xs font-medium shadow-2xs transition-all cursor-pointer group"
+            title="Workspace File Library & Assets"
+          >
+            <FolderOpen className="w-3.5 h-3.5 text-zinc-500 group-hover:text-zinc-900 transition-colors" />
+            <span className="hidden md:inline text-zinc-600 group-hover:text-zinc-950">
+              Library
+            </span>
+          </button>
+        )}
+
         {/* Model & AI Configuration Trigger */}
         {onOpenModelConfig && (
           <button
