@@ -19,6 +19,7 @@ import {
   fetchWorkspaceFiles,
   uploadWorkspaceFile,
   deleteWorkspaceFile,
+  resolveFileUrl,
 } from "@/lib/workspaceApi";
 import { CodeViewerModal } from "../chat/CodeViewerModal";
 import { PdfViewerModal } from "../chat/PdfViewerModal";
@@ -277,7 +278,9 @@ export function FileLibraryModal({
                 const isPdf = file.mimeType === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
                 const isCode = file.fileCategory === "code";
                 const isDoc = file.fileCategory === "document" && !isPdf;
-                const downloadUrl = file.url || `/api/v1/workspaces/${workspaceId}/files/${file.id}/download`;
+                const downloadUrl = resolveFileUrl(
+                  file.url || `/api/v1/workspaces/${workspaceId}/files/${file.id}/download`
+                );
 
                 return (
                   <div
@@ -416,7 +419,7 @@ export function FileLibraryModal({
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={previewFile.url || `/api/v1/workspaces/${workspaceId}/files/${previewFile.id}/download`}
+              src={resolveFileUrl(previewFile.url || `/api/v1/workspaces/${workspaceId}/files/${previewFile.id}/download`)}
               alt={previewFile.name}
               className="max-h-[82vh] rounded-xl object-contain shadow-2xl border border-white/20"
             />
@@ -424,7 +427,7 @@ export function FileLibraryModal({
               <span className="font-medium truncate max-w-md">{previewFile.name}</span>
               <div className="flex items-center space-x-3">
                 <a
-                  href={previewFile.url || `/api/v1/workspaces/${workspaceId}/files/${previewFile.id}/download`}
+                  href={resolveFileUrl(previewFile.url || `/api/v1/workspaces/${workspaceId}/files/${previewFile.id}/download`)}
                   download={previewFile.name}
                   className="hover:text-white flex items-center space-x-1"
                 >
@@ -452,7 +455,7 @@ export function FileLibraryModal({
           filename={viewingCodeFile.name}
           content={viewingCodeFile.extractedText || "No content extracted for this file."}
           sizeBytes={viewingCodeFile.sizeBytes}
-          downloadUrl={viewingCodeFile.url}
+          downloadUrl={viewingCodeFile.url ? resolveFileUrl(viewingCodeFile.url) : undefined}
         />
       )}
 
@@ -462,7 +465,7 @@ export function FileLibraryModal({
           isOpen={Boolean(viewingPdfFile)}
           onClose={() => setViewingPdfFile(null)}
           filename={viewingPdfFile.name}
-          url={viewingPdfFile.url || `/api/v1/workspaces/${workspaceId}/files/${viewingPdfFile.id}/download`}
+          url={resolveFileUrl(viewingPdfFile.url || `/api/v1/workspaces/${workspaceId}/files/${viewingPdfFile.id}/download`)}
           data={viewingPdfFile.data}
           sizeBytes={viewingPdfFile.sizeBytes}
         />

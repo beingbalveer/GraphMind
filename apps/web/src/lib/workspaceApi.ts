@@ -434,18 +434,31 @@ export async function uploadWorkspaceFile(
       return null;
     }
     const data = await res.json();
+    const resolvedUrl = data.url
+      ? (data.url.startsWith("http") ? data.url : `${API_BASE_URL}${data.url}`)
+      : undefined;
+
     return {
       id: data.id,
       name: data.name,
       sizeBytes: data.sizeBytes,
       mimeType: data.mimeType,
       fileCategory: data.fileCategory,
-      url: data.url,
+      url: resolvedUrl,
+      extractedText: data.extractedText,
     };
   } catch (err) {
     console.warn("Error uploading file to workspace:", err);
     return null;
   }
+}
+
+export function resolveFileUrl(url?: string): string {
+  if (!url) return "";
+  if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("data:")) {
+    return url;
+  }
+  return `${API_BASE_URL}${url.startsWith("/") ? "" : "/"}${url}`;
 }
 
 export async function fetchWorkspaceFiles(
@@ -458,7 +471,11 @@ export async function fetchWorkspaceFiles(
       `${API_BASE_URL}/api/v1/workspaces/${workspaceId}/files${query}`
     );
     if (!res.ok) return [];
-    return await res.json();
+    const files: FileAttachment[] = await res.json();
+    return files.map((f) => ({
+      ...f,
+      url: f.url ? resolveFileUrl(f.url) : resolveFileUrl(`/api/v1/workspaces/${workspaceId}/files/${f.id}/download`),
+    }));
   } catch (err) {
     console.warn("Error fetching workspace files:", err);
     return [];

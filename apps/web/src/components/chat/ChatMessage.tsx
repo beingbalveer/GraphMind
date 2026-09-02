@@ -33,6 +33,7 @@ import { useTextSelection } from "@/hooks/useTextSelection";
 import { SelectionTooltip } from "./SelectionTooltip";
 import { CodeViewerModal } from "./CodeViewerModal";
 import { PdfViewerModal } from "./PdfViewerModal";
+import { resolveFileUrl } from "@/lib/workspaceApi";
 
 export interface BranchLinkInfo {
   excerpt: string;
@@ -492,7 +493,7 @@ export function ChatMessage({
                   {imageAttachments.length > 0 && (
                     <div className="flex flex-wrap gap-2">
                       {imageAttachments.map((att, idx) => {
-                        const src = att.data || att.url;
+                        const src = att.data || (att.url ? resolveFileUrl(att.url) : "");
                         if (!src) return null;
                         return (
                           <div
@@ -634,7 +635,7 @@ export function ChatMessage({
             filename={viewingCodeFile.name}
             content={viewingCodeFile.extractedText || "No content extracted for this file."}
             sizeBytes={viewingCodeFile.sizeBytes}
-            downloadUrl={viewingCodeFile.url}
+            downloadUrl={viewingCodeFile.url ? resolveFileUrl(viewingCodeFile.url) : undefined}
           />
         )}
 
@@ -644,7 +645,7 @@ export function ChatMessage({
             isOpen={Boolean(viewingPdfFile)}
             onClose={() => setViewingPdfFile(null)}
             filename={viewingPdfFile.name}
-            url={viewingPdfFile.url}
+            url={viewingPdfFile.url ? resolveFileUrl(viewingPdfFile.url) : undefined}
             data={viewingPdfFile.data}
             sizeBytes={viewingPdfFile.sizeBytes}
           />
