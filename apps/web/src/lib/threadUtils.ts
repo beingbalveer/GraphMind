@@ -145,21 +145,16 @@ export function extractConversationThreads(
 
       if (children.length === 0) {
         break;
-      } else if (children.length === 1 && !children[0].highlightedContext) {
-        // Continuous linear turn without a new branch excerpt
-        currentNode = children[0];
       } else {
-        // One or more branch points created from this message!
-        // The first child without highlightedContext (if any) continues this linear thread,
-        // while children WITH highlightedContext (or secondary siblings) spawn new child threads.
-        let continuedInCurrentThread = false;
+        // Find if there is a mainline child (without highlightedContext) to continue this thread
+        const mainlineChildIndex = children.findIndex((c) => !c.highlightedContext);
+        const mainlineChild = mainlineChildIndex !== -1 ? children[mainlineChildIndex] : null;
 
         for (let i = 0; i < children.length; i++) {
           const child = children[i];
-          if (!child.highlightedContext && !continuedInCurrentThread && i === 0) {
-            // Main continuation of this thread
+          if (child === mainlineChild) {
+            // Mainline continuation of this thread!
             currentNode = child;
-            continuedInCurrentThread = true;
           } else {
             // Child Thread branch!
             const childThreadId = buildThread(child.id, threadId, currentNode.id);
@@ -181,7 +176,7 @@ export function extractConversationThreads(
           }
         }
 
-        if (!continuedInCurrentThread) {
+        if (!mainlineChild) {
           currentNode = null;
         }
       }

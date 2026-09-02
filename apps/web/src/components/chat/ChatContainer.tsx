@@ -494,6 +494,14 @@ export function ChatContainer({
       const effectiveApiKey = getEffectiveApiKey(provider);
       const effectiveBaseUrl = getEffectiveBaseUrl(provider);
 
+      // Determine the target parent ID based on the currently active visible thread:
+      // If the user has an active highlighted branch context, use its parentNodeId.
+      // Otherwise, append strictly to the leaf of the active visible conversation messages.
+      const currentActiveLeaf = activeMessages.length > 0 ? activeMessages[activeMessages.length - 1].id : null;
+      const targetParentId = isFirstMessageInNewChat
+        ? null
+        : (activeBranch?.parentNodeId || currentActiveLeaf || tree?.activeNodeId || null);
+
       const result = await sendMessage(prompt, provider, model, {
         apiKey: effectiveApiKey,
         baseUrl: effectiveBaseUrl,
@@ -501,7 +509,8 @@ export function ChatContainer({
         maxTokens: llmConfig.maxTokens,
         systemPrompt: llmConfig.systemPrompt || undefined,
         attachments: attachments && attachments.length > 0 ? attachments : undefined,
-        onNodeCreated: ({ userNodeId, assistantNodeId }) => {
+        targetParentId,
+        onNodeCreated: ({ userNodeId, assistantNodeId, parentId }) => {
           createdUserNodeId = userNodeId;
           createdAssistantNodeId = assistantNodeId;
 
@@ -511,10 +520,10 @@ export function ChatContainer({
             router.replace(buildChatUrl(currentWorkspace.id, userNodeId), { scroll: false });
           }
 
-          // Persist user node immediately to backend
+          // Persist user node immediately to backend with exact parentId
           addNodeToWorkspace(currentWorkspace.id, {
             id: userNodeId,
-            parentId: isFirstMessageInNewChat ? null : (tree?.activeNodeId || null),
+            parentId: isFirstMessageInNewChat ? null : parentId,
             role: "user",
             content: prompt.trim(),
             provider,
@@ -545,7 +554,7 @@ export function ChatContainer({
         }, 1000);
       }
     },
-    [currentWorkspace, activeChatId, tree, llmConfig, getEffectiveApiKey, getEffectiveBaseUrl, sendMessage, scrollToBottom, refreshChats, router]
+    [currentWorkspace, activeChatId, tree, activeMessages, activeBranch, llmConfig, getEffectiveApiKey, getEffectiveBaseUrl, sendMessage, scrollToBottom, refreshChats, router]
   );
 
   // Synchronize sync status

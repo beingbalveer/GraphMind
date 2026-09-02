@@ -18,8 +18,9 @@ export interface BranchContext {
 
 export interface SendMessageOptions {
   branchOverride?: BranchContext | null;
+  targetParentId?: string | null;
   preserveActiveNodeId?: boolean;
-  onNodeCreated?: (nodes: { userNodeId: string; assistantNodeId: string }) => void;
+  onNodeCreated?: (nodes: { userNodeId: string; assistantNodeId: string; parentId: string | null }) => void;
   apiKey?: string;
   baseUrl?: string;
   temperature?: number;
@@ -240,7 +241,7 @@ export function useChatStream() {
 
       let branch: BranchContext | null = null;
       let preserveActiveNodeId = false;
-      let onNodeCreated: ((nodes: { userNodeId: string; assistantNodeId: string }) => void) | undefined = undefined;
+      let onNodeCreated: ((nodes: { userNodeId: string; assistantNodeId: string; parentId: string | null }) => void) | undefined = undefined;
 
       if (optionsOrBranch) {
         if ("parentNodeId" in optionsOrBranch) {
@@ -294,7 +295,10 @@ export function useChatStream() {
         assistantNodeId = assistantNode.id;
       } else {
         // 2. Subsequent Turn or Branch from Parent
-        targetParentId = branch?.parentNodeId || currentTree.activeNodeId;
+        targetParentId =
+          explicitOptions?.targetParentId !== undefined
+            ? explicitOptions.targetParentId
+            : (branch?.parentNodeId || currentTree.activeNodeId);
 
         // Add user child node
         const { tree: treeWithUser, node: userNode } = addChildNode(
@@ -335,8 +339,8 @@ export function useChatStream() {
         }
       }
 
-      // Synchronously notify caller immediately of created node IDs (e.g. to open side pane in 0ms)
-      onNodeCreated?.({ userNodeId, assistantNodeId });
+      // Synchronously notify caller immediately of created node IDs with exact parentId
+      onNodeCreated?.({ userNodeId, assistantNodeId, parentId: targetParentId });
 
       setTree(currentTree);
       setIsStreaming(true);
