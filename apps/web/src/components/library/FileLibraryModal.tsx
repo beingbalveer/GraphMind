@@ -11,6 +11,8 @@ import {
   ExternalLink,
   Loader2,
   FolderOpen,
+  Code,
+  FileText,
 } from "lucide-react";
 import { FileAttachment } from "@graphmind/shared";
 import {
@@ -18,6 +20,7 @@ import {
   uploadWorkspaceFile,
   deleteWorkspaceFile,
 } from "@/lib/workspaceApi";
+import { CodeViewerModal } from "../chat/CodeViewerModal";
 
 interface FileLibraryModalProps {
   isOpen: boolean;
@@ -47,6 +50,7 @@ export function FileLibraryModal({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [previewFile, setPreviewFile] = useState<FileAttachment | null>(null);
+  const [viewingCodeFile, setViewingCodeFile] = useState<FileAttachment | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -103,6 +107,9 @@ export function FileLibraryModal({
         if (previewFile?.id === fileId) {
           setPreviewFile(null);
         }
+        if (viewingCodeFile?.id === fileId) {
+          setViewingCodeFile(null);
+        }
       }
     } catch (err) {
       console.warn("Delete failed:", err);
@@ -133,7 +140,7 @@ export function FileLibraryModal({
                 </span>
               </div>
               <p className="text-xs text-zinc-500">
-                Persistent assets and images stored in this workspace.
+                Persistent assets, code files, and documents stored in this workspace.
               </p>
             </div>
           </div>
@@ -143,7 +150,7 @@ export function FileLibraryModal({
               type="file"
               ref={fileInputRef}
               multiple
-              accept="image/*"
+              accept="image/*,.txt,.md,.markdown,.py,.js,.jsx,.ts,.tsx,.json,.yaml,.yml,.toml,.sql,.html,.css,.scss,.sh,.bash,.zsh,.rs,.go,.c,.cpp,.h,.hpp,.java,.kt,.rb,.php,.cs,.swift,.dockerfile,.graphql,.proto,.vue,.svelte,.xml,.csv,.tsv,.env,.log"
               className="hidden"
               onChange={handleUpload}
             />
@@ -158,7 +165,7 @@ export function FileLibraryModal({
               ) : (
                 <Upload className="w-3.5 h-3.5" />
               )}
-              <span>Upload Asset</span>
+              <span>Upload Files</span>
             </button>
 
             <button
@@ -179,23 +186,47 @@ export function FileLibraryModal({
               onClick={() => setSelectedCategory("all")}
               className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                 selectedCategory === "all"
-                  ? "bg-white text-zinc-950 shadow-2xs border border-zinc-200"
+                  ? "bg-white text-zinc-950 shadow-2xs border border-zinc-200 font-semibold"
                   : "text-zinc-600 hover:text-zinc-950"
               }`}
             >
-              All Assets
+              All
             </button>
             <button
               type="button"
               onClick={() => setSelectedCategory("image")}
               className={`flex items-center space-x-1 px-3 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                 selectedCategory === "image"
-                  ? "bg-white text-zinc-950 shadow-2xs border border-zinc-200"
+                  ? "bg-white text-zinc-950 shadow-2xs border border-zinc-200 font-semibold"
                   : "text-zinc-600 hover:text-zinc-950"
               }`}
             >
               <ImageIcon className="w-3 h-3 text-zinc-500" />
               <span>Images</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedCategory("code")}
+              className={`flex items-center space-x-1 px-3 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                selectedCategory === "code"
+                  ? "bg-white text-zinc-950 shadow-2xs border border-zinc-200 font-semibold"
+                  : "text-zinc-600 hover:text-zinc-950"
+              }`}
+            >
+              <Code className="w-3 h-3 text-emerald-600" />
+              <span>Code</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedCategory("document")}
+              className={`flex items-center space-x-1 px-3 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                selectedCategory === "document"
+                  ? "bg-white text-zinc-950 shadow-2xs border border-zinc-200 font-semibold"
+                  : "text-zinc-600 hover:text-zinc-950"
+              }`}
+            >
+              <FileText className="w-3 h-3 text-blue-600" />
+              <span>Docs</span>
             </button>
           </div>
 
@@ -224,9 +255,9 @@ export function FileLibraryModal({
                 <FolderOpen className="w-8 h-8" />
               </div>
               <div className="max-w-sm">
-                <h3 className="text-sm font-semibold text-zinc-900">No files uploaded yet</h3>
+                <h3 className="text-sm font-semibold text-zinc-900">No files in this category</h3>
                 <p className="text-xs text-zinc-500 mt-1">
-                  Upload images or drag and drop files into the chat bar to save them to this workspace vault.
+                  Upload code files, images, or drag and drop attachments into chat to save them here.
                 </p>
               </div>
               <button
@@ -234,13 +265,15 @@ export function FileLibraryModal({
                 onClick={() => fileInputRef.current?.click()}
                 className="px-3.5 py-1.5 rounded-xl border border-zinc-200 hover:border-zinc-300 bg-white hover:bg-zinc-50 text-xs font-medium text-zinc-800 shadow-2xs transition-colors cursor-pointer"
               >
-                Upload your first asset
+                Upload files
               </button>
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
               {filteredFiles.map((file) => {
-                const isImage = file.mimeType.startsWith("image/");
+                const isImage = file.fileCategory === "image" || file.mimeType.startsWith("image/");
+                const isCode = file.fileCategory === "code";
+                const isDoc = file.fileCategory === "document";
                 const downloadUrl = file.url || `/api/v1/workspaces/${workspaceId}/files/${file.id}/download`;
 
                 return (
@@ -252,11 +285,13 @@ export function FileLibraryModal({
                         onClose();
                       } else if (isImage) {
                         setPreviewFile(file);
+                      } else if (isCode || isDoc || file.extractedText) {
+                        setViewingCodeFile(file);
                       }
                     }}
                     className="group relative flex flex-col rounded-xl border border-zinc-200/90 bg-white hover:border-zinc-300 hover:shadow-sm transition-all overflow-hidden cursor-pointer"
                   >
-                    {/* Thumbnail Viewport */}
+                    {/* Viewport: Image or Code Preview */}
                     <div className="h-36 bg-zinc-100/70 relative flex items-center justify-center overflow-hidden border-b border-zinc-100">
                       {isImage ? (
                         /* eslint-disable-next-line @next/next/no-img-element */
@@ -266,8 +301,25 @@ export function FileLibraryModal({
                           className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-150"
                         />
                       ) : (
-                        <div className="flex flex-col items-center justify-center text-zinc-400">
-                          <ImageIcon className="w-8 h-8 stroke-[1.5]" />
+                        <div className="w-full h-full p-3 bg-zinc-900 text-zinc-300 flex flex-col justify-between select-none">
+                          <div className="flex items-center justify-between text-[11px] text-zinc-400">
+                            <span className="font-mono uppercase font-semibold text-emerald-400">
+                              {file.name.split(".").pop() || "txt"}
+                            </span>
+                            {isCode ? (
+                              <Code className="w-3.5 h-3.5 text-zinc-500" />
+                            ) : (
+                              <FileText className="w-3.5 h-3.5 text-zinc-500" />
+                            )}
+                          </div>
+                          <div className="font-mono text-[10.5px] leading-tight text-zinc-400 overflow-hidden line-clamp-4 select-none opacity-80">
+                            {file.extractedText
+                              ? file.extractedText.slice(0, 150)
+                              : "// File uploaded to library"}
+                          </div>
+                          <div className="text-[10px] text-zinc-500 font-mono">
+                            Click to view code
+                          </div>
                         </div>
                       )}
 
@@ -277,10 +329,14 @@ export function FileLibraryModal({
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            window.open(downloadUrl, "_blank");
+                            if (isImage) {
+                              setPreviewFile(file);
+                            } else {
+                              setViewingCodeFile(file);
+                            }
                           }}
                           className="p-1.5 rounded-lg bg-white/90 text-zinc-800 hover:bg-white transition-colors cursor-pointer shadow-xs"
-                          title="Open original"
+                          title="Open preview"
                         >
                           <ExternalLink className="w-3.5 h-3.5" />
                         </button>
@@ -311,8 +367,8 @@ export function FileLibraryModal({
                       </p>
                       <div className="flex items-center justify-between text-[11px] text-zinc-400 mt-1">
                         <span>{formatBytes(file.sizeBytes)}</span>
-                        <span className="uppercase text-[10px] font-mono tracking-wider">
-                          {file.mimeType.split("/")[1] || "file"}
+                        <span className="uppercase text-[10px] font-mono tracking-wider text-zinc-500">
+                          {file.fileCategory || "file"}
                         </span>
                       </div>
                     </div>
@@ -324,7 +380,7 @@ export function FileLibraryModal({
         </div>
       </div>
 
-      {/* Full Resolution Lightbox Preview */}
+      {/* Full Resolution Image Lightbox */}
       {previewFile && (
         <div
           className="fixed inset-0 z-60 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
@@ -354,7 +410,7 @@ export function FileLibraryModal({
                 <button
                   type="button"
                   onClick={() => setPreviewFile(null)}
-                  className="hover:text-white"
+                  className="hover:text-white cursor-pointer"
                 >
                   Close (Esc)
                 </button>
@@ -362,6 +418,18 @@ export function FileLibraryModal({
             </div>
           </div>
         </div>
+      )}
+
+      {/* In-Page Code Viewer Modal */}
+      {viewingCodeFile && (
+        <CodeViewerModal
+          isOpen={Boolean(viewingCodeFile)}
+          onClose={() => setViewingCodeFile(null)}
+          filename={viewingCodeFile.name}
+          content={viewingCodeFile.extractedText || "No content extracted for this file."}
+          sizeBytes={viewingCodeFile.sizeBytes}
+          downloadUrl={viewingCodeFile.url}
+        />
       )}
     </div>
   );

@@ -15,6 +15,8 @@ import {
   ThumbsDown,
   X,
   Download,
+  Code,
+  FileText,
 } from "lucide-react";
 
 import {
@@ -29,6 +31,7 @@ import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
 import { useTextSelection } from "@/hooks/useTextSelection";
 import { SelectionTooltip } from "./SelectionTooltip";
+import { CodeViewerModal } from "./CodeViewerModal";
 
 export interface BranchLinkInfo {
   excerpt: string;
@@ -296,6 +299,7 @@ export function ChatMessage({
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
   const [lightboxImage, setLightboxImage] = useState<{ src: string; name: string } | null>(null);
+  const [viewingCodeFile, setViewingCodeFile] = useState<FileAttachment | null>(null);
   const editTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Auto-focus and auto-resize textarea when entering edit mode
@@ -461,7 +465,7 @@ export function ChatMessage({
               </div>
             )}
 
-            {/* Attached Images */}
+            {/* Attached Assets (Images & Code/Documents) */}
             {(() => {
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               const rawAttachments = message.attachments || (message.metadata as any)?.attachments;
@@ -470,27 +474,72 @@ export function ChatMessage({
                 : [];
               if (attachmentsList.length === 0) return null;
 
+              const imageAttachments = attachmentsList.filter(
+                (a) => a.fileCategory === "image" || a.data?.startsWith("data:image/") || a.mimeType?.startsWith("image/")
+              );
+              const codeAttachments = attachmentsList.filter(
+                (a) => a.fileCategory !== "image" && !a.data?.startsWith("data:image/") && !a.mimeType?.startsWith("image/")
+              );
+
               return (
-                <div className="flex flex-wrap gap-2 mb-2.5">
-                  {attachmentsList.map((att, idx) => {
-                    const src = att.data || att.url;
-                    if (!src) return null;
-                    return (
-                      <div
-                        key={att.id || idx}
-                        className="relative rounded-xl overflow-hidden border border-zinc-200/90 bg-white max-w-xs shadow-2xs hover:border-zinc-300 transition-all cursor-pointer group/img"
-                        onClick={() => setLightboxImage({ src, name: att.name || "Attachment" })}
-                        title="Click to view full screen"
-                      >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={src}
-                          alt={att.name || "Attachment"}
-                          className="max-h-60 rounded-xl object-contain group-hover/img:scale-[1.01] transition-transform duration-150"
-                        />
-                      </div>
-                    );
-                  })}
+                <div className="flex flex-col space-y-2 mb-2.5">
+                  {/* Image Thumbnails */}
+                  {imageAttachments.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {imageAttachments.map((att, idx) => {
+                        const src = att.data || att.url;
+                        if (!src) return null;
+                        return (
+                          <div
+                            key={att.id || idx}
+                            className="relative rounded-xl overflow-hidden border border-zinc-200/90 bg-white max-w-xs shadow-2xs hover:border-zinc-300 transition-all cursor-pointer group/img"
+                            onClick={() => setLightboxImage({ src, name: att.name || "Attachment" })}
+                            title="Click to view full screen"
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={src}
+                              alt={att.name || "Attachment"}
+                              className="max-h-60 rounded-xl object-contain group-hover/img:scale-[1.01] transition-transform duration-150"
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Code & Document File Cards */}
+                  {codeAttachments.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {codeAttachments.map((att, idx) => {
+                        const isCode = att.fileCategory === "code";
+                        return (
+                          <div
+                            key={att.id || idx}
+                            onClick={() => setViewingCodeFile(att)}
+                            className="flex items-center space-x-2.5 px-3 py-2 rounded-xl border border-zinc-200/90 bg-white hover:border-zinc-300 hover:shadow-xs transition-all cursor-pointer group/card max-w-[260px]"
+                            title="Click to view file content"
+                          >
+                            <div className="p-1.5 rounded-lg bg-zinc-100 border border-zinc-200/80 text-zinc-700 shrink-0 group-hover/card:bg-zinc-200 transition-colors">
+                              {isCode ? (
+                                <Code className="w-4 h-4 text-emerald-600" />
+                              ) : (
+                                <FileText className="w-4 h-4 text-blue-600" />
+                              )}
+                            </div>
+                            <div className="flex flex-col min-w-0 pr-1">
+                              <span className="text-xs font-medium text-zinc-900 truncate font-mono">
+                                {att.name}
+                              </span>
+                              <span className="text-[10px] text-zinc-400 font-mono">
+                                {att.fileCategory?.toUpperCase() || "FILE"} · View
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               );
             })()}
@@ -544,6 +593,18 @@ export function ChatMessage({
               />
             </div>
           </div>
+        )}
+
+        {/* In-Page Full Screen Code Viewer Modal */}
+        {viewingCodeFile && (
+          <CodeViewerModal
+            isOpen={Boolean(viewingCodeFile)}
+            onClose={() => setViewingCodeFile(null)}
+            filename={viewingCodeFile.name}
+            content={viewingCodeFile.extractedText || "No content extracted for this file."}
+            sizeBytes={viewingCodeFile.sizeBytes}
+            downloadUrl={viewingCodeFile.url}
+          />
         )}
       </div>
     );
