@@ -13,16 +13,12 @@ import {
   RotateCcw,
   Eye,
   EyeOff,
-  Bot,
-  Laptop,
-  Cpu,
-  Zap,
-  Server,
+  ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { SegmentedTabs, SegmentedTabItem } from "@/components/ui/segmented-tabs";
+import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { SettingRow, SettingSection } from "@/components/ui/setting-row";
 import { LLMConfig, LLMProvider, DEFAULT_LLM_CONFIG } from "@/hooks/useModelConfig";
 import { WorkspaceItem } from "@/lib/workspaceApi";
@@ -45,13 +41,13 @@ interface SettingsModalProps {
   initialTab?: SettingsTabId;
 }
 
-const PROVIDER_OPTIONS: SegmentedTabItem<LLMProvider>[] = [
-  { id: "gemini", label: "Gemini", icon: Sparkles },
-  { id: "openai", label: "OpenAI", icon: Bot },
-  { id: "anthropic", label: "Anthropic", icon: Cpu },
-  { id: "deepseek", label: "DeepSeek", icon: Zap },
-  { id: "ollama", label: "Ollama", icon: Server },
-  { id: "mock", label: "Mock Mode", icon: Laptop },
+const PROVIDER_OPTIONS: Array<{ id: LLMProvider; label: string }> = [
+  { id: "gemini", label: "Google Gemini" },
+  { id: "anthropic", label: "Anthropic Claude" },
+  { id: "openai", label: "OpenAI" },
+  { id: "deepseek", label: "DeepSeek" },
+  { id: "ollama", label: "Ollama (Local)" },
+  { id: "mock", label: "Mock Mode" },
 ];
 
 const MODELS_BY_PROVIDER: Record<LLMProvider, Array<{ id: string; name: string }>> = {
@@ -323,12 +319,22 @@ export function SettingsModal({
                     label="Provider"
                     description="Select which AI ecosystem powers inference."
                   >
-                    <SegmentedTabs
-                      items={PROVIDER_OPTIONS}
-                      value={selectedProvider}
-                      onChange={handleProviderSelect}
-                      size="sm"
-                    />
+                    <div className="relative w-full sm:w-64">
+                      <select
+                        value={selectedProvider}
+                        onChange={(e) => handleProviderSelect(e.target.value as LLMProvider)}
+                        className="w-full px-3 py-1.5 rounded-lg border border-zinc-200/90 bg-white text-xs font-medium text-zinc-800 shadow-2xs hover:border-zinc-300 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 cursor-pointer appearance-none pr-8 transition-colors"
+                      >
+                        {PROVIDER_OPTIONS.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.label}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-zinc-400">
+                        <ChevronDown className="w-3.5 h-3.5" />
+                      </div>
+                    </div>
                   </SettingRow>
 
                   {selectedProvider === "gemini" && (
@@ -439,6 +445,17 @@ export function SettingsModal({
                         placeholder="http://localhost:11434/v1"
                         className="font-mono text-[11px]"
                       />
+                    </SettingRow>
+                  )}
+
+                  {selectedProvider === "mock" && (
+                    <SettingRow
+                      label="Mock Mode"
+                      description="Offline zero-latency test mode."
+                    >
+                      <span className="text-xs text-zinc-500 italic">
+                        No API key or network connection required.
+                      </span>
                     </SettingRow>
                   )}
                 </SettingSection>
