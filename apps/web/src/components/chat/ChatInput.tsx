@@ -6,7 +6,9 @@ import {
   Square,
   GitBranch,
   X,
-  Paperclip,
+  Plus,
+  Upload,
+  FolderOpen,
   Loader2,
   FileText,
   Code,
@@ -15,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { BranchContext } from "@/hooks/useChatStream";
 import { FileAttachment } from "@graphmind/shared";
 import { uploadWorkspaceFile } from "@/lib/workspaceApi";
+import { FileLibraryModal } from "../library/FileLibraryModal";
 
 interface ChatInputProps {
   onSendMessage: (prompt: string, attachments?: FileAttachment[]) => void;
@@ -57,9 +60,33 @@ export function ChatInput({
   const [attachments, setAttachments] = useState<FileAttachment[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [isAttachMenuOpen, setIsAttachMenuOpen] = useState(false);
+  const [isLibraryPickerOpen, setIsLibraryPickerOpen] = useState(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const attachMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close attach menu on click outside or Escape
+  useEffect(() => {
+    if (!isAttachMenuOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (attachMenuRef.current && !attachMenuRef.current.contains(e.target as Node)) {
+        setIsAttachMenuOpen(false);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsAttachMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isAttachMenuOpen]);
 
   // Auto-focus and scroll to bottom when branching is triggered
   useEffect(() => {
@@ -372,8 +399,8 @@ export function ChatInput({
 
         {/* Action Bar */}
         <div className="flex items-center justify-between pt-1 px-1">
-          {/* Left tools: Paperclip attachment button */}
-          <div className="flex items-center space-x-1.5">
+          {/* Left tools: Plus (+) attachment button and popup menu */}
+          <div className="relative flex items-center space-x-1.5" ref={attachMenuRef}>
             <input
               type="file"
               ref={fileInputRef}
@@ -387,15 +414,62 @@ export function ChatInput({
                 }
               }}
             />
+
             <button
               type="button"
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => setIsAttachMenuOpen((prev) => !prev)}
               disabled={isStreaming || isUploading}
-              className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              title="Attach files (Images, Code, Documents)"
+              className={`p-1.5 rounded-lg transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+                isAttachMenuOpen
+                  ? "bg-zinc-200 text-zinc-900"
+                  : "text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100"
+              }`}
+              title="Add attachment"
             >
-              <Paperclip className="w-4 h-4" />
+              <Plus className={`w-4 h-4 transition-transform duration-150 ${isAttachMenuOpen ? "rotate-45" : ""}`} />
             </button>
+
+            {/* Floating Attachment Menu */}
+            {isAttachMenuOpen && (
+              <div className="absolute bottom-full left-0 mb-2 w-56 bg-white rounded-xl shadow-lg border border-zinc-200/90 py-1.5 z-30 animate-in fade-in-50 zoom-in-95 duration-100">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsAttachMenuOpen(false);
+                    fileInputRef.current?.click();
+                  }}
+                  className="w-full flex items-center space-x-2.5 px-3 py-2 text-left text-xs text-zinc-700 hover:bg-zinc-50 hover:text-zinc-950 transition-colors cursor-pointer"
+                >
+                  <div className="p-1.5 rounded-lg bg-zinc-100 border border-zinc-200/60 text-zinc-700">
+                    <Upload className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <span className="font-medium">Upload from computer</span>
+                    <span className="text-[10px] text-zinc-400">PDF, images, code, docs</span>
+                  </div>
+                </button>
+
+                {workspaceId && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsAttachMenuOpen(false);
+                      setIsLibraryPickerOpen(true);
+                    }}
+                    className="w-full flex items-center space-x-2.5 px-3 py-2 text-left text-xs text-zinc-700 hover:bg-zinc-50 hover:text-zinc-950 transition-colors cursor-pointer"
+                  >
+                    <div className="p-1.5 rounded-lg bg-zinc-100 border border-zinc-200/60 text-zinc-700">
+                      <FolderOpen className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="flex flex-col min-w-0">
+                      <span className="font-medium">Attach from Library</span>
+                      <span className="text-[10px] text-zinc-400">Saved workspace assets</span>
+                    </div>
+                  </button>
+                )}
+              </div>
+            )}
+
             <span className="text-[11px] text-zinc-400 select-none pl-1 hidden sm:inline">
               Press <kbd className="font-sans px-1 py-0.5 rounded bg-zinc-100 border border-zinc-200 text-zinc-500 text-[10px]">Enter</kbd> to send
             </span>
@@ -431,6 +505,22 @@ export function ChatInput({
           </div>
         </div>
       </form>
+
+      {/* Attach from Workspace File Library Modal */}
+      {workspaceId && isLibraryPickerOpen && (
+        <FileLibraryModal
+          isOpen={isLibraryPickerOpen}
+          onClose={() => setIsLibraryPickerOpen(false)}
+          workspaceId={workspaceId}
+          onSelectFile={(selectedFile) => {
+            setAttachments((prev) => {
+              if (prev.some((a) => a.id === selectedFile.id)) return prev;
+              return [...prev, selectedFile];
+            });
+            setIsLibraryPickerOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 }
