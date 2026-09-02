@@ -33,7 +33,7 @@ const CODE_EXTENSIONS = new Set([
 ]);
 
 const DOC_EXTENSIONS = new Set([
-  "txt", "md", "markdown", "csv", "tsv", "log", "env", "ini", "cfg", "conf", "xml",
+  "pdf", "txt", "md", "markdown", "csv", "tsv", "log", "env", "ini", "cfg", "conf", "xml",
 ]);
 
 function formatBytes(bytes: number, decimals = 1): string {
@@ -377,7 +377,7 @@ export function ChatInput({
             <input
               type="file"
               ref={fileInputRef}
-              accept="image/*,.txt,.md,.markdown,.py,.js,.jsx,.ts,.tsx,.json,.yaml,.yml,.toml,.sql,.html,.css,.scss,.sh,.bash,.zsh,.rs,.go,.c,.cpp,.h,.hpp,.java,.kt,.rb,.php,.cs,.swift,.dockerfile,.graphql,.proto,.vue,.svelte,.xml,.csv,.tsv,.env,.log"
+              accept="image/*,application/pdf,.pdf,.txt,.md,.markdown,.py,.js,.jsx,.ts,.tsx,.json,.yaml,.yml,.toml,.sql,.html,.css,.scss,.sh,.bash,.zsh,.rs,.go,.c,.cpp,.h,.hpp,.java,.kt,.rb,.php,.cs,.swift,.dockerfile,.graphql,.proto,.vue,.svelte,.xml,.csv,.tsv,.env,.log"
               multiple
               className="hidden"
               onChange={(e) => {
