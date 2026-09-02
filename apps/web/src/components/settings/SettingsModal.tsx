@@ -15,13 +15,16 @@ import {
   EyeOff,
   Bot,
   Laptop,
+  Cpu,
+  Zap,
+  Server,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { SegmentedTabs } from "@/components/ui/segmented-tabs";
+import { SegmentedTabs, SegmentedTabItem } from "@/components/ui/segmented-tabs";
 import { SettingRow, SettingSection } from "@/components/ui/setting-row";
-import { LLMConfig, DEFAULT_LLM_CONFIG } from "@/hooks/useModelConfig";
+import { LLMConfig, LLMProvider, DEFAULT_LLM_CONFIG } from "@/hooks/useModelConfig";
 import { WorkspaceItem } from "@/lib/workspaceApi";
 
 export type SettingsTabId =
@@ -42,20 +45,40 @@ interface SettingsModalProps {
   initialTab?: SettingsTabId;
 }
 
-const PROVIDER_OPTIONS = [
-  { id: "gemini" as const, label: "Gemini", icon: Sparkles },
-  { id: "openai" as const, label: "OpenAI", icon: Bot },
-  { id: "mock" as const, label: "Mock Mode", icon: Laptop },
+const PROVIDER_OPTIONS: SegmentedTabItem<LLMProvider>[] = [
+  { id: "gemini", label: "Gemini", icon: Sparkles },
+  { id: "openai", label: "OpenAI", icon: Bot },
+  { id: "anthropic", label: "Anthropic", icon: Cpu },
+  { id: "deepseek", label: "DeepSeek", icon: Zap },
+  { id: "ollama", label: "Ollama", icon: Server },
+  { id: "mock", label: "Mock Mode", icon: Laptop },
 ];
 
-const MODELS_BY_PROVIDER = {
+const MODELS_BY_PROVIDER: Record<LLMProvider, Array<{ id: string; name: string }>> = {
   gemini: [
     { id: "gemini-2.5-flash", name: "Gemini 2.5 Flash" },
     { id: "gemini-2.5-pro", name: "Gemini 2.5 Pro" },
+    { id: "gemini-2.0-flash", name: "Gemini 2.0 Flash" },
   ],
   openai: [
     { id: "gpt-4o", name: "GPT-4o" },
     { id: "gpt-4o-mini", name: "GPT-4o Mini" },
+    { id: "o3-mini", name: "o3-mini" },
+  ],
+  anthropic: [
+    { id: "claude-3-7-sonnet", name: "Claude 3.7 Sonnet" },
+    { id: "claude-3-5-sonnet", name: "Claude 3.5 Sonnet" },
+    { id: "claude-3-5-haiku", name: "Claude 3.5 Haiku" },
+  ],
+  deepseek: [
+    { id: "deepseek-reasoner", name: "DeepSeek R1" },
+    { id: "deepseek-chat", name: "DeepSeek V3" },
+  ],
+  ollama: [
+    { id: "deepseek-r1", name: "DeepSeek R1 (Local)" },
+    { id: "llama3.3", name: "Llama 3.3" },
+    { id: "qwen2.5-coder", name: "Qwen 2.5 Coder" },
+    { id: "mistral", name: "Mistral" },
   ],
   mock: [{ id: "mock-stream", name: "Mock Stream Engine" }],
 };
@@ -72,14 +95,19 @@ export function SettingsModal({
   const [activeTab, setActiveTab] = useState<SettingsTabId>(initialTab);
 
   // Model & LLM Settings
-  const [selectedProvider, setSelectedProvider] = useState(config.provider);
+  const [selectedProvider, setSelectedProvider] = useState<LLMProvider>(config.provider);
   const [selectedModel, setSelectedModel] = useState(config.model);
   const [temperature, setTemperature] = useState(config.temperature);
   const [systemPrompt, setSystemPrompt] = useState(config.systemPrompt);
-  const [geminiApiKey, setGeminiApiKey] = useState(config.geminiApiKey);
-  const [openaiApiKey, setOpenaiApiKey] = useState(config.openaiApiKey);
+  const [geminiApiKey, setGeminiApiKey] = useState(config.geminiApiKey || "");
+  const [openaiApiKey, setOpenaiApiKey] = useState(config.openaiApiKey || "");
+  const [anthropicApiKey, setAnthropicApiKey] = useState(config.anthropicApiKey || "");
+  const [deepseekApiKey, setDeepseekApiKey] = useState(config.deepseekApiKey || "");
+  const [ollamaBaseUrl, setOllamaBaseUrl] = useState(config.ollamaBaseUrl || "http://localhost:11434/v1");
   const [showGeminiKey, setShowGeminiKey] = useState(false);
   const [showOpenAiKey, setShowOpenAiKey] = useState(false);
+  const [showAnthropicKey, setShowAnthropicKey] = useState(false);
+  const [showDeepseekKey, setShowDeepseekKey] = useState(false);
 
   // General Settings
   const [autoScroll, setAutoScroll] = useState(true);
@@ -98,8 +126,11 @@ export function SettingsModal({
       setSelectedModel(config.model);
       setTemperature(config.temperature);
       setSystemPrompt(config.systemPrompt);
-      setGeminiApiKey(config.geminiApiKey);
-      setOpenaiApiKey(config.openaiApiKey);
+      setGeminiApiKey(config.geminiApiKey || "");
+      setOpenaiApiKey(config.openaiApiKey || "");
+      setAnthropicApiKey(config.anthropicApiKey || "");
+      setDeepseekApiKey(config.deepseekApiKey || "");
+      setOllamaBaseUrl(config.ollamaBaseUrl || "http://localhost:11434/v1");
       setSavedFeedback(false);
     }
   }, [isOpen, config]);
@@ -117,7 +148,7 @@ export function SettingsModal({
 
   if (!isOpen) return null;
 
-  const handleProviderSelect = (providerId: "gemini" | "openai" | "mock") => {
+  const handleProviderSelect = (providerId: LLMProvider) => {
     setSelectedProvider(providerId);
     const available = MODELS_BY_PROVIDER[providerId];
     if (available && available.length > 0) {
@@ -133,6 +164,9 @@ export function SettingsModal({
       systemPrompt,
       geminiApiKey: geminiApiKey.trim(),
       openaiApiKey: openaiApiKey.trim(),
+      anthropicApiKey: anthropicApiKey.trim(),
+      deepseekApiKey: deepseekApiKey.trim(),
+      ollamaBaseUrl: ollamaBaseUrl.trim() || "http://localhost:11434/v1",
     });
     setSavedFeedback(true);
     setTimeout(() => {
@@ -147,6 +181,11 @@ export function SettingsModal({
     setSelectedModel(DEFAULT_LLM_CONFIG.model);
     setTemperature(DEFAULT_LLM_CONFIG.temperature);
     setSystemPrompt(DEFAULT_LLM_CONFIG.systemPrompt);
+    setGeminiApiKey(DEFAULT_LLM_CONFIG.geminiApiKey);
+    setOpenaiApiKey(DEFAULT_LLM_CONFIG.openaiApiKey);
+    setAnthropicApiKey(DEFAULT_LLM_CONFIG.anthropicApiKey);
+    setDeepseekApiKey(DEFAULT_LLM_CONFIG.deepseekApiKey);
+    setOllamaBaseUrl(DEFAULT_LLM_CONFIG.ollamaBaseUrl);
   };
 
   interface NavItem {
@@ -339,31 +378,107 @@ export function SettingsModal({
                       />
                     </SettingRow>
                   )}
+
+                  {selectedProvider === "anthropic" && (
+                    <SettingRow
+                      label="Anthropic API Key"
+                      description="Required for Claude 3.7 / 3.5 Sonnet. Stored locally in your browser."
+                    >
+                      <Input
+                        type={showAnthropicKey ? "text" : "password"}
+                        value={anthropicApiKey}
+                        onChange={(e) => setAnthropicApiKey(e.target.value)}
+                        placeholder="sk-ant-api03-..."
+                        className="font-mono text-[11px]"
+                        endIcon={
+                          <button
+                            type="button"
+                            onClick={() => setShowAnthropicKey((prev) => !prev)}
+                            className="p-1 hover:text-zinc-700 cursor-pointer"
+                          >
+                            {showAnthropicKey ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          </button>
+                        }
+                      />
+                    </SettingRow>
+                  )}
+
+                  {selectedProvider === "deepseek" && (
+                    <SettingRow
+                      label="DeepSeek API Key"
+                      description="Required for DeepSeek R1 & V3. Stored locally in your browser."
+                    >
+                      <Input
+                        type={showDeepseekKey ? "text" : "password"}
+                        value={deepseekApiKey}
+                        onChange={(e) => setDeepseekApiKey(e.target.value)}
+                        placeholder="sk-..."
+                        className="font-mono text-[11px]"
+                        endIcon={
+                          <button
+                            type="button"
+                            onClick={() => setShowDeepseekKey((prev) => !prev)}
+                            className="p-1 hover:text-zinc-700 cursor-pointer"
+                          >
+                            {showDeepseekKey ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          </button>
+                        }
+                      />
+                    </SettingRow>
+                  )}
+
+                  {selectedProvider === "ollama" && (
+                    <SettingRow
+                      label="Ollama Server URL"
+                      description="Local or remote Ollama HTTP endpoint. No cloud key needed."
+                    >
+                      <Input
+                        type="text"
+                        value={ollamaBaseUrl}
+                        onChange={(e) => setOllamaBaseUrl(e.target.value)}
+                        placeholder="http://localhost:11434/v1"
+                        className="font-mono text-[11px]"
+                      />
+                    </SettingRow>
+                  )}
                 </SettingSection>
 
                 <SettingSection title="Inference & Model Parameters">
                   <SettingRow
                     label="Active Model"
                     description={`Foundation model for ${selectedProvider.toUpperCase()}`}
+                    align="top"
                   >
-                    <div className="flex space-x-1.5">
-                      {MODELS_BY_PROVIDER[selectedProvider].map((m) => {
-                        const isSelected = selectedModel === m.id;
-                        return (
-                          <button
-                            key={m.id}
-                            type="button"
-                            onClick={() => setSelectedModel(m.id)}
-                            className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-all cursor-pointer ${
-                              isSelected
-                                ? "border-blue-300 bg-blue-50/50 text-blue-950 font-semibold ring-1 ring-blue-400/20"
-                                : "border-zinc-200 bg-zinc-50/50 hover:bg-zinc-100/70 text-zinc-700"
-                            }`}
-                          >
-                            {m.name}
-                          </button>
-                        );
-                      })}
+                    <div className="space-y-2 w-full sm:w-80">
+                      <div className="flex flex-wrap gap-1.5">
+                        {MODELS_BY_PROVIDER[selectedProvider].map((m) => {
+                          const isSelected = selectedModel === m.id;
+                          return (
+                            <button
+                              key={m.id}
+                              type="button"
+                              onClick={() => setSelectedModel(m.id)}
+                              className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-all cursor-pointer ${
+                                isSelected
+                                  ? "border-blue-300 bg-blue-50/50 text-blue-950 font-semibold ring-1 ring-blue-400/20"
+                                  : "border-zinc-200 bg-zinc-50/50 hover:bg-zinc-100/70 text-zinc-700"
+                              }`}
+                            >
+                              {m.name}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {selectedProvider === "ollama" && (
+                        <div className="pt-1">
+                          <Input
+                            value={selectedModel}
+                            onChange={(e) => setSelectedModel(e.target.value)}
+                            placeholder="Or enter custom tag (e.g. deepseek-r1:14b)"
+                            className="font-mono text-[11px]"
+                          />
+                        </div>
+                      )}
                     </div>
                   </SettingRow>
 

@@ -21,6 +21,7 @@ export interface SendMessageOptions {
   preserveActiveNodeId?: boolean;
   onNodeCreated?: (nodes: { userNodeId: string; assistantNodeId: string }) => void;
   apiKey?: string;
+  baseUrl?: string;
   temperature?: number;
   maxTokens?: number;
   systemPrompt?: string;
@@ -365,6 +366,7 @@ export function useChatStream() {
           provider,
           model,
           api_key: explicitOptions?.apiKey,
+          base_url: explicitOptions?.baseUrl,
           temperature: explicitOptions?.temperature,
           max_tokens: explicitOptions?.maxTokens,
           system_prompt: explicitOptions?.systemPrompt,

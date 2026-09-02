@@ -2,14 +2,25 @@
 
 import { useState, useEffect, useCallback } from "react";
 
+export type LLMProvider =
+  | "gemini"
+  | "openai"
+  | "anthropic"
+  | "deepseek"
+  | "ollama"
+  | "mock";
+
 export interface LLMConfig {
-  provider: "gemini" | "openai" | "mock";
+  provider: LLMProvider;
   model: string;
   temperature: number;
   maxTokens: number;
   systemPrompt: string;
   geminiApiKey: string;
   openaiApiKey: string;
+  anthropicApiKey: string;
+  deepseekApiKey: string;
+  ollamaBaseUrl: string;
 }
 
 export const DEFAULT_LLM_CONFIG: LLMConfig = {
@@ -20,6 +31,9 @@ export const DEFAULT_LLM_CONFIG: LLMConfig = {
   systemPrompt: "",
   geminiApiKey: "",
   openaiApiKey: "",
+  anthropicApiKey: "",
+  deepseekApiKey: "",
+  ollamaBaseUrl: "http://localhost:11434/v1",
 };
 
 const STORAGE_KEY = "graphmind:llm-config";
@@ -66,6 +80,9 @@ export function useModelConfig() {
         ...DEFAULT_LLM_CONFIG,
         geminiApiKey: preserveKeys ? prev.geminiApiKey : "",
         openaiApiKey: preserveKeys ? prev.openaiApiKey : "",
+        anthropicApiKey: preserveKeys ? prev.anthropicApiKey : "",
+        deepseekApiKey: preserveKeys ? prev.deepseekApiKey : "",
+        ollamaBaseUrl: preserveKeys ? prev.ollamaBaseUrl : "http://localhost:11434/v1",
       };
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
@@ -84,9 +101,25 @@ export function useModelConfig() {
       if (providerName === "openai") {
         return config.openaiApiKey.trim() || undefined;
       }
+      if (providerName === "anthropic" || providerName === "claude") {
+        return config.anthropicApiKey.trim() || undefined;
+      }
+      if (providerName === "deepseek") {
+        return config.deepseekApiKey.trim() || undefined;
+      }
       return undefined;
     },
-    [config.geminiApiKey, config.openaiApiKey]
+    [config.geminiApiKey, config.openaiApiKey, config.anthropicApiKey, config.deepseekApiKey]
+  );
+
+  const getEffectiveBaseUrl = useCallback(
+    (providerName: string): string | undefined => {
+      if (providerName === "ollama") {
+        return config.ollamaBaseUrl.trim() || undefined;
+      }
+      return undefined;
+    },
+    [config.ollamaBaseUrl]
   );
 
   return {
@@ -95,5 +128,6 @@ export function useModelConfig() {
     updateConfig,
     resetDefaults,
     getEffectiveApiKey,
+    getEffectiveBaseUrl,
   };
 }

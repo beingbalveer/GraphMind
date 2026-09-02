@@ -105,6 +105,7 @@ export function ChatContainer({
     updateConfig: updateLLMConfig,
     resetDefaults: resetLLMDefaults,
     getEffectiveApiKey,
+    getEffectiveBaseUrl,
   } = useModelConfig();
 
   // Two-Tier State: Workspaces (Outer Vault) and Chats (Inner Trees)
@@ -483,9 +484,11 @@ export function ChatContainer({
       const provider = llmConfig.provider;
       const model = llmConfig.model;
       const effectiveApiKey = getEffectiveApiKey(provider);
+      const effectiveBaseUrl = getEffectiveBaseUrl(provider);
 
       const result = await sendMessage(prompt, provider, model, {
         apiKey: effectiveApiKey,
+        baseUrl: effectiveBaseUrl,
         temperature: llmConfig.temperature,
         maxTokens: llmConfig.maxTokens,
         systemPrompt: llmConfig.systemPrompt || undefined,
@@ -532,7 +535,7 @@ export function ChatContainer({
         }, 1000);
       }
     },
-    [currentWorkspace, activeChatId, tree, llmConfig, getEffectiveApiKey, sendMessage, scrollToBottom, refreshChats, router]
+    [currentWorkspace, activeChatId, tree, llmConfig, getEffectiveApiKey, getEffectiveBaseUrl, sendMessage, scrollToBottom, refreshChats, router]
   );
 
   // Synchronize sync status
@@ -676,6 +679,7 @@ export function ChatContainer({
       const provider = llmConfig.provider;
       const model = llmConfig.model;
       const effectiveApiKey = getEffectiveApiKey(provider);
+      const effectiveBaseUrl = getEffectiveBaseUrl(provider);
 
       const result = await sendMessage(
         prompt,
@@ -685,6 +689,7 @@ export function ChatContainer({
           branchOverride: { parentNodeId, highlightedText },
           preserveActiveNodeId: true,
           apiKey: effectiveApiKey,
+          baseUrl: effectiveBaseUrl,
           temperature: llmConfig.temperature,
           maxTokens: llmConfig.maxTokens,
           systemPrompt: llmConfig.systemPrompt || undefined,
@@ -735,7 +740,7 @@ export function ChatContainer({
         }, 500);
       }
     },
-    [currentWorkspace, handleOpenSidePeek, handlePushSidePeekBranch, llmConfig, getEffectiveApiKey, sendMessage, refreshChats]
+    [currentWorkspace, handleOpenSidePeek, handlePushSidePeekBranch, handleSwitchSidePeekSiblingTab, llmConfig, getEffectiveApiKey, getEffectiveBaseUrl, sendMessage, refreshChats]
   );
 
   // Handle "🌿 Explain this" action from text selection tooltip in Main Chat
