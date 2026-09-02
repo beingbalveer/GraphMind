@@ -86,3 +86,53 @@ def test_openai_multimodal_image_attachment() -> None:
     assert content_parts[0] == {"type": "text", "text": "Inspect UI mockup"}
     assert content_parts[1]["type"] == "image_url"
     assert content_parts[1]["image_url"]["url"] == f"data:image/png;base64,{SAMPLE_B64}"
+
+
+def test_gemini_multimodal_pdf_attachment() -> None:
+    with patch.dict("os.environ", {"GEMINI_API_KEY": "fake-gemini-key"}):
+        provider = GeminiProvider()
+
+    dummy_pdf = b"%PDF-1.4 sample pdf binary"
+    pdf_b64 = base64.b64encode(dummy_pdf).decode("utf-8")
+    attachment = FileAttachment(
+        id="file_pdf_1",
+        name="specification.pdf",
+        mime_type="application/pdf",
+        data=pdf_b64,
+    )
+    message = ChatMessage.user(content="Read this spec", attachments=[attachment])
+
+    _, contents = provider._to_genai_contents([message])
+
+    assert len(contents) == 1
+    content = contents[0]
+    assert len(content.parts) == 2
+    assert content.parts[1].inline_data is not None
+    assert content.parts[1].inline_data.mime_type == "application/pdf"
+    assert content.parts[1].inline_data.data == dummy_pdf
+
+
+def test_anthropic_multimodal_pdf_attachment() -> None:
+    with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "fake-anthropic-key"}):
+        provider = AnthropicProvider()
+
+    dummy_pdf = b"%PDF-1.4 sample pdf binary"
+    pdf_b64 = base64.b64encode(dummy_pdf).decode("utf-8")
+    attachment = FileAttachment(
+        id="file_pdf_2",
+        name="contract.pdf",
+        mime_type="application/pdf",
+        data=pdf_b64,
+    )
+    message = ChatMessage.user(content="Review this contract", attachments=[attachment])
+
+    _, anthropic_messages = provider._to_anthropic_messages([message])
+
+    assert len(anthropic_messages) == 1
+    blocks = anthropic_messages[0]["content"]
+    assert len(blocks) == 2
+    assert blocks[1]["type"] == "document"
+    assert blocks[1]["source"]["type"] == "base64"
+    assert blocks[1]["source"]["media_type"] == "application/pdf"
+    assert blocks[1]["source"]["data"] == pdf_b64
+

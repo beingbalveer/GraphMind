@@ -173,3 +173,61 @@ async def test_chat_stream_with_code_attachment() -> None:
         assert "content" in data
         assert len(data["content"]) > 0
 
+
+@pytest.mark.asyncio
+async def test_workspace_pdf_upload_and_extraction() -> None:
+    import pypdf
+
+    # Generate small valid PDF with pypdf
+    writer = pypdf.PdfWriter()
+    writer.add_blank_page(width=72, height=72)
+    buf = io.BytesIO()
+    writer.write(buf)
+    pdf_bytes = buf.getvalue()
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        ws_resp = await client.post(
+            "/api/v1/workspaces",
+            json={"name": "PDF Test Workspace"},
+        )
+        assert ws_resp.status_code == 201
+        ws_id = ws_resp.json()["id"]
+
+        files = {
+            "file": ("sample_report.pdf", io.BytesIO(pdf_bytes), "application/pdf"),
+        }
+        upload_resp = await client.post(
+            f"/api/v1/workspaces/{ws_id}/files/upload",
+            files=files,
+        )
+        assert upload_resp.status_code == 201
+        data = upload_resp.json()
+        assert data["name"] == "sample_report.pdf"
+        assert data["mimeType"] == "application/pdf"
+        assert data["fileCategory"] == "document"
+        assert data["metadata"]["page_count"] == 1
+
+
+@pytest.mark.asyncio
+async def test_chat_stream_with_pdf_attachment() -> None:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        payload = {
+            "prompt": "Summarize this PDF",
+            "provider": "mock",
+            "model": "mock-model",
+            "attachments": [
+                {
+                    "id": "file_pdf_99",
+                    "name": "financial_report.pdf",
+                    "mime_type": "application/pdf",
+                    "fileCategory": "document",
+                    "extracted_text": "Q3 Revenue was $42M with 35% YoY growth.",
+                }
+            ],
+        }
+        resp = await client.post("/api/v1/chat/completions", json=payload)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "content" in data
+
+

@@ -80,16 +80,36 @@ class AnthropicProvider(BaseLLMProvider):
 
                 if msg.attachments:
                     for att in msg.attachments:
-                        if att.data and att.mime_type.startswith("image/"):
-                            raw_b64 = att.data
-                            if "," in raw_b64:
-                                raw_b64 = raw_b64.split(",", 1)[1]
+                        if not att.data:
+                            continue
+                        raw_b64 = att.data
+                        if "," in raw_b64:
+                            raw_b64 = raw_b64.split(",", 1)[1]
+
+                        is_image = att.mime_type.startswith("image/")
+                        is_pdf = (
+                            att.mime_type == "application/pdf"
+                            or att.name.lower().endswith(".pdf")
+                        )
+
+                        if is_image:
                             content_blocks.append(
                                 {
                                     "type": "image",
                                     "source": {
                                         "type": "base64",
                                         "media_type": att.mime_type,
+                                        "data": raw_b64,
+                                    },
+                                }
+                            )
+                        elif is_pdf:
+                            content_blocks.append(
+                                {
+                                    "type": "document",
+                                    "source": {
+                                        "type": "base64",
+                                        "media_type": "application/pdf",
                                         "data": raw_b64,
                                     },
                                 }

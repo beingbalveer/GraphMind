@@ -71,18 +71,22 @@ class GeminiProvider(BaseLLMProvider):
 
                 if msg.attachments:
                     for att in msg.attachments:
-                        if att.data and att.mime_type.startswith("image/"):
+                        is_image = att.mime_type.startswith("image/")
+                        is_pdf = (
+                            att.mime_type == "application/pdf"
+                            or att.name.lower().endswith(".pdf")
+                        )
+                        if att.data and (is_image or is_pdf):
                             raw_b64 = att.data
                             if "," in raw_b64:
                                 raw_b64 = raw_b64.split(",", 1)[1]
                             try:
-                                img_bytes = base64.b64decode(raw_b64)
-                                parts.append(
-                                    types.Part.from_bytes(data=img_bytes, mime_type=att.mime_type)
-                                )
+                                file_bytes = base64.b64decode(raw_b64)
+                                mime = "application/pdf" if is_pdf else att.mime_type
+                                parts.append(types.Part.from_bytes(data=file_bytes, mime_type=mime))
                             except Exception as e:
                                 logger.warning(
-                                    "Failed to decode base64 image attachment",
+                                    "Failed to decode base64 attachment",
                                     filename=att.name,
                                     error=str(e),
                                 )

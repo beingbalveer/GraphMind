@@ -1,9 +1,11 @@
+import io
 import os
 import re
 import uuid
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
+import pypdf
 import structlog
 from anyio import Path as AsyncPath
 from models.workspace import Workspace, WorkspaceFile
@@ -128,8 +130,23 @@ class FileService:
         normalized_mime = mime_type.lower().split(";")[0].strip()
         ext = os.path.splitext(filename.lower())[1]
         extracted_text: Optional[str] = None
+        extra_meta: Dict[str, Any] = {}
 
-        if ext in CODE_EXTENSIONS or normalized_mime in {
+        if ext == ".pdf" or normalized_mime == "application/pdf":
+            category = "document"
+            try:
+                reader = pypdf.PdfReader(io.BytesIO(content))
+                pages_text: List[str] = []
+                for i, page in enumerate(reader.pages):
+                    pt = page.extract_text() or ""
+                    if pt.strip():
+                        pages_text.append(f"--- Page {i + 1} ---\n{pt.strip()}")
+                extracted_text = "\n\n".join(pages_text)
+                extra_meta["page_count"] = len(reader.pages)
+                extra_meta["is_encrypted"] = reader.is_encrypted
+            except Exception as e:
+                logger.warning("Failed to extract PDF text", filename=filename, error=str(e))
+        elif ext in CODE_EXTENSIONS or normalized_mime in {
             "application/json",
             "application/javascript",
             "text/javascript",
@@ -183,6 +200,7 @@ class FileService:
             metadata_payload={
                 "original_filename": filename,
                 "sanitized_filename": safe_name,
+                **extra_meta,
             },
         )
 

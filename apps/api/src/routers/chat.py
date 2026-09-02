@@ -137,11 +137,17 @@ def _format_message_with_attachments(msg: ChatMessage) -> ChatMessage:
     for att in msg.attachments:
         text_content = _extract_attachment_text(att)
         if text_content is not None:
-            ext = os.path.splitext(att.name.lower())[1].lstrip(".")
-            lang = ext if ext else "text"
-            text_blocks.append(
-                f"[Attached File: `{att.name}`]\n```{lang}\n{text_content}\n```"
-            )
+            is_pdf = att.mime_type == "application/pdf" or att.name.lower().endswith(".pdf")
+            if is_pdf:
+                text_blocks.append(
+                    f"[Attached PDF Document: `{att.name}`]\n```text\n{text_content}\n```"
+                )
+            else:
+                ext = os.path.splitext(att.name.lower())[1].lstrip(".")
+                lang = ext if ext else "text"
+                text_blocks.append(
+                    f"[Attached File: `{att.name}`]\n```{lang}\n{text_content}\n```"
+                )
 
     if not text_blocks:
         return msg
