@@ -33,6 +33,12 @@ class FileAttachment(BaseModel):
     url: Optional[str] = Field(
         default=None, description="Optional download or view URL for referencing"
     )
+    extracted_text: Optional[str] = Field(
+        default=None, description="Optional extracted text or source code content"
+    )
+    file_category: Optional[str] = Field(
+        default=None, description="Category: image, code, document, tabular, other"
+    )
 
 
 class ChatMessage(BaseModel):

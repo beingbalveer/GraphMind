@@ -90,3 +90,86 @@ async def test_workspace_file_upload_nonexistent_workspace() -> None:
         )
         assert resp.status_code == 400
         assert "not found" in resp.json()["error"]["message"].lower()
+
+
+@pytest.mark.asyncio
+async def test_workspace_code_and_document_upload_and_extraction() -> None:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        # 1. Create workspace
+        ws_resp = await client.post(
+            "/api/v1/workspaces",
+            json={"name": "Code Extraction Workspace"},
+        )
+        assert ws_resp.status_code == 201
+        ws_id = ws_resp.json()["id"]
+
+        # 2. Upload Python code file
+        python_code = b"def calculate_total(items):\n    return sum(item.price for item in items)\n"
+        files = {
+            "file": ("calculator.py", io.BytesIO(python_code), "text/x-python"),
+        }
+        py_resp = await client.post(
+            f"/api/v1/workspaces/{ws_id}/files/upload",
+            files=files,
+        )
+        assert py_resp.status_code == 201
+        py_data = py_resp.json()
+        assert py_data["fileCategory"] == "code"
+        assert py_data["extractedText"] == python_code.decode("utf-8")
+
+        # 3. Upload Markdown document
+        markdown_text = b"# Architecture Overview\nGraphMind uses async PostgreSQL and Next.js.\n"
+        files = {
+            "file": ("README.md", io.BytesIO(markdown_text), "text/markdown"),
+        }
+        md_resp = await client.post(
+            f"/api/v1/workspaces/{ws_id}/files/upload",
+            files=files,
+        )
+        assert md_resp.status_code == 201
+        md_data = md_resp.json()
+        assert md_data["fileCategory"] == "document"
+        assert md_data["extractedText"] == markdown_text.decode("utf-8")
+
+        # 4. List code files filter
+        code_filter_resp = await client.get(
+            f"/api/v1/workspaces/{ws_id}/files?category=code"
+        )
+        assert code_filter_resp.status_code == 200
+        code_ids = [f["id"] for f in code_filter_resp.json()]
+        assert py_data["id"] in code_ids
+        assert md_data["id"] not in code_ids
+
+        # 5. List document files filter
+        doc_filter_resp = await client.get(
+            f"/api/v1/workspaces/{ws_id}/files?category=document"
+        )
+        assert doc_filter_resp.status_code == 200
+        doc_ids = [f["id"] for f in doc_filter_resp.json()]
+        assert md_data["id"] in doc_ids
+        assert py_data["id"] not in doc_ids
+
+
+@pytest.mark.asyncio
+async def test_chat_stream_with_code_attachment() -> None:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        payload = {
+            "prompt": "Review this implementation",
+            "provider": "mock",
+            "model": "mock-model",
+            "attachments": [
+                {
+                    "id": "file_code_123",
+                    "name": "utils.py",
+                    "mime_type": "text/x-python",
+                    "fileCategory": "code",
+                    "extracted_text": "def add(a, b):\n    return a + b\n",
+                }
+            ],
+        }
+        resp = await client.post("/api/v1/chat/completions", json=payload)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "content" in data
+        assert len(data["content"]) > 0
+

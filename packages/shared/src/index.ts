@@ -55,6 +55,7 @@ export interface FileAttachment {
   fileCategory?: string;
   url?: string;
   data?: string;
+  extractedText?: string;
 }
 
 export interface TreeNode {

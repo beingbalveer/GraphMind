@@ -22,6 +22,57 @@ ALLOWED_IMAGE_MIMES = {
     "image/svg+xml",
 }
 
+CODE_EXTENSIONS = {
+    ".py",
+    ".js",
+    ".ts",
+    ".tsx",
+    ".jsx",
+    ".json",
+    ".yaml",
+    ".yml",
+    ".toml",
+    ".sql",
+    ".html",
+    ".css",
+    ".scss",
+    ".sass",
+    ".sh",
+    ".bash",
+    ".zsh",
+    ".rs",
+    ".go",
+    ".c",
+    ".cpp",
+    ".h",
+    ".hpp",
+    ".java",
+    ".kt",
+    ".rb",
+    ".php",
+    ".cs",
+    ".swift",
+    ".dockerfile",
+    ".graphql",
+    ".proto",
+    ".vue",
+    ".svelte",
+}
+
+TEXT_DOC_EXTENSIONS = {
+    ".txt",
+    ".md",
+    ".markdown",
+    ".csv",
+    ".tsv",
+    ".log",
+    ".env",
+    ".ini",
+    ".cfg",
+    ".conf",
+    ".xml",
+}
+
 MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024  # 20 Megabytes
 
 # Storage root: data/storage/workspaces
@@ -73,12 +124,41 @@ class FileService:
                 f"File size ({len(content)} bytes) exceeds maximum limit of 20MB."
             )
 
-        # 3. Categorize file
+        # 3. Categorize file & extract text
         normalized_mime = mime_type.lower().split(";")[0].strip()
-        if normalized_mime in ALLOWED_IMAGE_MIMES or normalized_mime.startswith("image/"):
+        ext = os.path.splitext(filename.lower())[1]
+        extracted_text: Optional[str] = None
+
+        if ext in CODE_EXTENSIONS or normalized_mime in {
+            "application/json",
+            "application/javascript",
+            "text/javascript",
+            "application/x-yaml",
+            "text/yaml",
+            "text/x-python",
+        }:
+            category = "code"
+            try:
+                extracted_text = content.decode("utf-8", errors="replace")
+            except Exception:
+                pass
+        elif ext in TEXT_DOC_EXTENSIONS or normalized_mime.startswith("text/"):
+            category = "document"
+            try:
+                extracted_text = content.decode("utf-8", errors="replace")
+            except Exception:
+                pass
+        elif normalized_mime in ALLOWED_IMAGE_MIMES or normalized_mime.startswith("image/"):
             category = "image"
         else:
             category = "other"
+            try:
+                decoded = content.decode("utf-8")
+                if "\x00" not in decoded:
+                    category = "document"
+                    extracted_text = decoded
+            except Exception:
+                pass
 
         # 4. Write to workspace storage
         file_id = f"file_{uuid.uuid4().hex[:12]}"
@@ -99,6 +179,7 @@ class FileService:
             mime_type=normalized_mime,
             file_category=category,
             storage_path=str(dest_path),
+            extracted_text=extracted_text,
             metadata_payload={
                 "original_filename": filename,
                 "sanitized_filename": safe_name,

@@ -1,4 +1,6 @@
+import base64
 import json
+import os
 from typing import Any, AsyncIterator, Dict, List, Optional
 
 import structlog
@@ -106,6 +108,59 @@ def _resolve_api_key(provider_name: str, custom_key: Optional[str] = None) -> Op
     return None
 
 
+def _extract_attachment_text(att: FileAttachment) -> Optional[str]:
+    """Retrieve extracted text from the attachment or decode base64 text payload."""
+    if att.extracted_text and att.extracted_text.strip():
+        return att.extracted_text.strip()
+    if att.data and att.data.startswith("data:"):
+        try:
+            parts = att.data.split(",", 1)
+            if len(parts) == 2:
+                header = parts[0]
+                raw_b64 = parts[1]
+                if any(t in header for t in ("text/", "json", "javascript", "yaml", "xml", "csv")):
+                    return base64.b64decode(raw_b64).decode("utf-8", errors="replace").strip()
+        except Exception:
+            pass
+    return None
+
+
+def _format_message_with_attachments(msg: ChatMessage) -> ChatMessage:
+    """
+    If the message contains code or text document attachments, format their
+    contents into the textual prompt context so that all LLMs receive the file body.
+    """
+    if not msg.attachments:
+        return msg
+
+    text_blocks: List[str] = []
+    for att in msg.attachments:
+        text_content = _extract_attachment_text(att)
+        if text_content is not None:
+            ext = os.path.splitext(att.name.lower())[1].lstrip(".")
+            lang = ext if ext else "text"
+            text_blocks.append(
+                f"[Attached File: `{att.name}`]\n```{lang}\n{text_content}\n```"
+            )
+
+    if not text_blocks:
+        return msg
+
+    joined_files = "\n\n".join(text_blocks)
+    if msg.content.strip():
+        new_content = f"{joined_files}\n\n{msg.content.strip()}"
+    else:
+        new_content = joined_files
+
+    return ChatMessage(
+        role=msg.role,
+        content=new_content,
+        name=msg.name,
+        metadata=msg.metadata,
+        attachments=msg.attachments,
+    )
+
+
 def _build_conversation_input(body: ChatStreamRequest) -> List[ChatMessage]:
     """
     Construct input messages from tree lineage, explicit message list, or raw prompt,
@@ -120,6 +175,8 @@ def _build_conversation_input(body: ChatStreamRequest) -> List[ChatMessage]:
         )
         if lineage and body.attachments:
             lineage[-1].attachments = body.attachments
+        if lineage:
+            lineage[-1] = _format_message_with_attachments(lineage[-1])
         return lineage
 
     if body.messages:
@@ -137,6 +194,8 @@ def _build_conversation_input(body: ChatStreamRequest) -> List[ChatMessage]:
                 )
         if messages and body.attachments and not messages[-1].attachments:
             messages[-1].attachments = body.attachments
+        if messages:
+            messages[-1] = _format_message_with_attachments(messages[-1])
         return messages
 
     raw_prompt = (body.prompt or "").strip()
@@ -144,7 +203,9 @@ def _build_conversation_input(body: ChatStreamRequest) -> List[ChatMessage]:
         content = f'[Focusing on excerpt: "{body.highlighted_context.strip()}"]\n\n{raw_prompt}'
     else:
         content = raw_prompt
-    return [ChatMessage(role=ChatRole.USER, content=content, attachments=body.attachments)]
+
+    msg = ChatMessage(role=ChatRole.USER, content=content, attachments=body.attachments)
+    return [_format_message_with_attachments(msg)]
 
 
 @router.post("/completions", response_model=GenerationResult)

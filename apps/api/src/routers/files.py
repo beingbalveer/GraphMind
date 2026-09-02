@@ -30,6 +30,7 @@ class WorkspaceFileResponse(BaseModel):
     size_bytes: int
     mime_type: str
     file_category: str
+    extracted_text: Optional[str] = None
     created_at: datetime
     metadata: Dict[str, Any] = {}
     url: str
@@ -43,6 +44,7 @@ def _to_file_response(file_rec: Any) -> WorkspaceFileResponse:
         size_bytes=file_rec.size_bytes,
         mime_type=file_rec.mime_type,
         file_category=file_rec.file_category,
+        extracted_text=file_rec.extracted_text,
         created_at=file_rec.created_at,
         metadata=file_rec.metadata_payload or {},
         url=f"/api/v1/workspaces/{file_rec.workspace_id}/files/{file_rec.id}/download",
