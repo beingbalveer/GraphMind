@@ -21,6 +21,7 @@ import {
   deleteWorkspaceFile,
 } from "@/lib/workspaceApi";
 import { CodeViewerModal } from "../chat/CodeViewerModal";
+import { PdfViewerModal } from "../chat/PdfViewerModal";
 
 interface FileLibraryModalProps {
   isOpen: boolean;
@@ -51,6 +52,7 @@ export function FileLibraryModal({
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [previewFile, setPreviewFile] = useState<FileAttachment | null>(null);
   const [viewingCodeFile, setViewingCodeFile] = useState<FileAttachment | null>(null);
+  const [viewingPdfFile, setViewingPdfFile] = useState<FileAttachment | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -272,8 +274,9 @@ export function FileLibraryModal({
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
               {filteredFiles.map((file) => {
                 const isImage = file.fileCategory === "image" || file.mimeType.startsWith("image/");
+                const isPdf = file.mimeType === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
                 const isCode = file.fileCategory === "code";
-                const isDoc = file.fileCategory === "document";
+                const isDoc = file.fileCategory === "document" && !isPdf;
                 const downloadUrl = file.url || `/api/v1/workspaces/${workspaceId}/files/${file.id}/download`;
 
                 return (
@@ -285,13 +288,15 @@ export function FileLibraryModal({
                         onClose();
                       } else if (isImage) {
                         setPreviewFile(file);
+                      } else if (isPdf) {
+                        setViewingPdfFile(file);
                       } else if (isCode || isDoc || file.extractedText) {
                         setViewingCodeFile(file);
                       }
                     }}
                     className="group relative flex flex-col rounded-xl border border-zinc-200/90 bg-white hover:border-zinc-300 hover:shadow-sm transition-all overflow-hidden cursor-pointer"
                   >
-                    {/* Viewport: Image or Code Preview */}
+                    {/* Viewport: Image, PDF, or Code Preview */}
                     <div className="h-36 bg-zinc-100/70 relative flex items-center justify-center overflow-hidden border-b border-zinc-100">
                       {isImage ? (
                         /* eslint-disable-next-line @next/next/no-img-element */
@@ -300,6 +305,23 @@ export function FileLibraryModal({
                           alt={file.name}
                           className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-150"
                         />
+                      ) : isPdf ? (
+                        <div className="w-full h-full p-3 bg-red-50/60 text-zinc-700 flex flex-col justify-between select-none border-b border-red-100">
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className="font-bold text-red-600 bg-red-100/80 border border-red-200/60 px-1.5 py-0.5 rounded text-[10px]">
+                              PDF
+                            </span>
+                            <FileText className="w-4 h-4 text-red-600" />
+                          </div>
+                          <div className="text-[11px] text-zinc-600 line-clamp-3 leading-snug font-sans">
+                            {file.extractedText
+                              ? file.extractedText.slice(0, 120)
+                              : "PDF document stored in workspace library."}
+                          </div>
+                          <div className="text-[10px] text-red-600 font-medium">
+                            Click to view PDF
+                          </div>
+                        </div>
                       ) : (
                         <div className="w-full h-full p-3 bg-zinc-900 text-zinc-300 flex flex-col justify-between select-none">
                           <div className="flex items-center justify-between text-[11px] text-zinc-400">
@@ -331,6 +353,8 @@ export function FileLibraryModal({
                             e.stopPropagation();
                             if (isImage) {
                               setPreviewFile(file);
+                            } else if (isPdf) {
+                              setViewingPdfFile(file);
                             } else {
                               setViewingCodeFile(file);
                             }
@@ -429,6 +453,18 @@ export function FileLibraryModal({
           content={viewingCodeFile.extractedText || "No content extracted for this file."}
           sizeBytes={viewingCodeFile.sizeBytes}
           downloadUrl={viewingCodeFile.url}
+        />
+      )}
+
+      {/* In-Page PDF Viewer Modal */}
+      {viewingPdfFile && (
+        <PdfViewerModal
+          isOpen={Boolean(viewingPdfFile)}
+          onClose={() => setViewingPdfFile(null)}
+          filename={viewingPdfFile.name}
+          url={viewingPdfFile.url || `/api/v1/workspaces/${workspaceId}/files/${viewingPdfFile.id}/download`}
+          data={viewingPdfFile.data}
+          sizeBytes={viewingPdfFile.sizeBytes}
         />
       )}
     </div>

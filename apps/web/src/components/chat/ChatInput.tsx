@@ -90,12 +90,15 @@ export function ChatInput({
         for (const file of fileList) {
           const ext = file.name.split(".").pop()?.toLowerCase() || "";
           const isImage = file.type.startsWith("image/");
+          const isPdf = ext === "pdf" || file.type === "application/pdf";
           const isCode = CODE_EXTENSIONS.has(ext);
           const isDoc = DOC_EXTENSIONS.has(ext) || file.type.startsWith("text/");
 
           let category = "other";
           if (isImage) {
             category = "image";
+          } else if (isPdf) {
+            category = "document";
           } else if (isCode) {
             category = "code";
           } else if (isDoc) {
@@ -105,7 +108,7 @@ export function ChatInput({
           let dataUrl: string | undefined = undefined;
           let textContent: string | undefined = undefined;
 
-          if (isImage) {
+          if (isImage || isPdf) {
             dataUrl = await new Promise<string>((resolve, reject) => {
               const reader = new FileReader();
               reader.onload = () => resolve(reader.result as string);
@@ -131,7 +134,7 @@ export function ChatInput({
             if (res) {
               uploadedId = res.id;
               uploadedUrl = res.url;
-              if (res.extractedText && !textContent) {
+              if (res.extractedText) {
                 textContent = res.extractedText;
               }
             }
@@ -141,7 +144,7 @@ export function ChatInput({
             id: uploadedId,
             name: file.name,
             sizeBytes: file.size,
-            mimeType: file.type || (isCode ? "text/plain" : "application/octet-stream"),
+            mimeType: file.type || (isPdf ? "application/pdf" : isCode ? "text/plain" : "application/octet-stream"),
             fileCategory: category,
             url: uploadedUrl,
             data: dataUrl,
@@ -296,13 +299,21 @@ export function ChatInput({
                 );
               }
 
+              const isPdf = att.mimeType === "application/pdf" || att.name.toLowerCase().endsWith(".pdf");
+
               return (
                 <div
                   key={att.id}
                   className="relative group flex items-center space-x-2.5 px-3 py-2 rounded-xl border border-zinc-200/90 bg-zinc-50 hover:bg-zinc-100/80 shadow-2xs transition-all max-w-[240px]"
                 >
-                  <div className="p-1.5 rounded-lg bg-white border border-zinc-200/80 text-zinc-700 shrink-0">
-                    {isCode ? (
+                  <div
+                    className={`p-1.5 rounded-lg bg-white border border-zinc-200/80 shrink-0 ${
+                      isPdf ? "text-red-600 bg-red-50/50" : isCode ? "text-emerald-600" : "text-blue-600"
+                    }`}
+                  >
+                    {isPdf ? (
+                      <FileText className="w-4 h-4 text-red-600" />
+                    ) : isCode ? (
                       <Code className="w-4 h-4 text-emerald-600" />
                     ) : (
                       <FileText className="w-4 h-4 text-blue-600" />
@@ -312,9 +323,14 @@ export function ChatInput({
                     <span className="text-xs font-medium text-zinc-900 truncate" title={att.name}>
                       {att.name}
                     </span>
-                    <span className="text-[10px] text-zinc-500 font-mono">
-                      {formatBytes(att.sizeBytes)}
-                    </span>
+                    <div className="flex items-center space-x-1.5 text-[10px] text-zinc-500 font-mono">
+                      {isPdf && (
+                        <span className="font-bold text-red-600 bg-red-50 px-1 rounded text-[9px]">
+                          PDF
+                        </span>
+                      )}
+                      <span>{formatBytes(att.sizeBytes)}</span>
+                    </div>
                   </div>
                   <button
                     type="button"

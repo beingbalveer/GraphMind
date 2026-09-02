@@ -32,6 +32,7 @@ import { CopyButton } from "@/components/ui/copy-button";
 import { useTextSelection } from "@/hooks/useTextSelection";
 import { SelectionTooltip } from "./SelectionTooltip";
 import { CodeViewerModal } from "./CodeViewerModal";
+import { PdfViewerModal } from "./PdfViewerModal";
 
 export interface BranchLinkInfo {
   excerpt: string;
@@ -300,6 +301,7 @@ export function ChatMessage({
   const [editContent, setEditContent] = useState(message.content);
   const [lightboxImage, setLightboxImage] = useState<{ src: string; name: string } | null>(null);
   const [viewingCodeFile, setViewingCodeFile] = useState<FileAttachment | null>(null);
+  const [viewingPdfFile, setViewingPdfFile] = useState<FileAttachment | null>(null);
   const editTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Auto-focus and auto-resize textarea when entering edit mode
@@ -477,8 +479,11 @@ export function ChatMessage({
               const imageAttachments = attachmentsList.filter(
                 (a) => a.fileCategory === "image" || a.data?.startsWith("data:image/") || a.mimeType?.startsWith("image/")
               );
+              const pdfAttachments = attachmentsList.filter(
+                (a) => a.mimeType === "application/pdf" || a.name.toLowerCase().endsWith(".pdf")
+              );
               const codeAttachments = attachmentsList.filter(
-                (a) => a.fileCategory !== "image" && !a.data?.startsWith("data:image/") && !a.mimeType?.startsWith("image/")
+                (a) => !imageAttachments.includes(a) && !pdfAttachments.includes(a)
               );
 
               return (
@@ -505,6 +510,32 @@ export function ChatMessage({
                           </div>
                         );
                       })}
+                    </div>
+                  )}
+
+                  {/* PDF Document Cards */}
+                  {pdfAttachments.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {pdfAttachments.map((att, idx) => (
+                        <div
+                          key={att.id || idx}
+                          onClick={() => setViewingPdfFile(att)}
+                          className="flex items-center space-x-2.5 px-3 py-2 rounded-xl border border-red-200/90 bg-red-50/40 hover:bg-red-50/80 hover:border-red-300 hover:shadow-xs transition-all cursor-pointer group/pdf max-w-[260px]"
+                          title="Click to view PDF in full screen"
+                        >
+                          <div className="p-1.5 rounded-lg bg-white border border-red-200 text-red-600 shrink-0 group-hover/pdf:scale-105 transition-transform">
+                            <FileText className="w-4 h-4 text-red-600" />
+                          </div>
+                          <div className="flex flex-col min-w-0 pr-1">
+                            <span className="text-xs font-semibold text-zinc-900 truncate">
+                              {att.name}
+                            </span>
+                            <span className="text-[10px] text-red-600/80 font-medium">
+                              PDF Document · Click to view
+                            </span>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   )}
 
@@ -604,6 +635,18 @@ export function ChatMessage({
             content={viewingCodeFile.extractedText || "No content extracted for this file."}
             sizeBytes={viewingCodeFile.sizeBytes}
             downloadUrl={viewingCodeFile.url}
+          />
+        )}
+
+        {/* In-Page Full Screen PDF Viewer Modal */}
+        {viewingPdfFile && (
+          <PdfViewerModal
+            isOpen={Boolean(viewingPdfFile)}
+            onClose={() => setViewingPdfFile(null)}
+            filename={viewingPdfFile.name}
+            url={viewingPdfFile.url}
+            data={viewingPdfFile.data}
+            sizeBytes={viewingPdfFile.sizeBytes}
           />
         )}
       </div>
