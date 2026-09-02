@@ -14,6 +14,7 @@ import {
 import { ChatItem } from "@/lib/workspaceApi";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
+import { safeGetItem, safeSetItem } from "@/lib/storage";
 
 interface ChatSidebarProps {
   isOpen: boolean;
@@ -59,17 +60,11 @@ export function ChatSidebar({
 
   // Resizable sidebar width with local storage persistence
   const [width, setWidth] = useState<number>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const saved = localStorage.getItem("graphmind_sidebar_width_v1");
-        if (saved) {
-          const parsed = parseInt(saved, 10);
-          if (!isNaN(parsed) && parsed >= MIN_WIDTH && parsed <= MAX_WIDTH) {
-            return parsed;
-          }
-        }
-      } catch {
-        // ignore
+    const saved = safeGetItem("graphmind_sidebar_width_v1");
+    if (saved) {
+      const parsed = parseInt(saved, 10);
+      if (!isNaN(parsed) && parsed >= MIN_WIDTH && parsed <= MAX_WIDTH) {
+        return parsed;
       }
     }
     return DEFAULT_WIDTH;
@@ -99,7 +94,7 @@ export function ChatSidebar({
         setIsResizing(false);
         document.body.style.cursor = "";
         document.body.style.userSelect = "";
-        localStorage.setItem("graphmind_sidebar_width_v1", width.toString());
+        safeSetItem("graphmind_sidebar_width_v1", width.toString());
       }
     };
 
@@ -322,7 +317,7 @@ export function ChatSidebar({
             onMouseDown={startResizing}
             onDoubleClick={() => {
               setWidth(DEFAULT_WIDTH);
-              localStorage.setItem("graphmind_sidebar_width_v1", DEFAULT_WIDTH.toString());
+              safeSetItem("graphmind_sidebar_width_v1", DEFAULT_WIDTH.toString());
             }}
             className="absolute top-0 -right-1 w-2 h-full cursor-col-resize z-50 bg-transparent"
             title="Drag to resize sidebar (double-click to reset)"

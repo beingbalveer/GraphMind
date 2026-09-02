@@ -30,6 +30,8 @@ export interface SendMessageOptions {
 }
 
 
+import { safeGetItem, safeSetItem, safeRemoveItem } from "@/lib/storage";
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8300";
 
 const STORAGE_KEY = "graphmind_tree_state";
@@ -46,7 +48,7 @@ export function useChatStream() {
   // 1. Initial rehydration from LocalStorage on client mount
   useEffect(() => {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
+      const stored = safeGetItem(STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored) as ConversationTree;
         if (parsed && parsed.nodes && parsed.rootNodeId) {
@@ -60,17 +62,13 @@ export function useChatStream() {
     }
   }, []);
 
-  // 2. Auto-persist tree state changes to LocalStorage
+  // 2. Auto-persist tree state changes to LocalStorage with QuotaExceededError protection
   useEffect(() => {
     if (!isHydrated) return;
-    try {
-      if (tree) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(tree));
-      } else {
-        localStorage.removeItem(STORAGE_KEY);
-      }
-    } catch (e) {
-      console.warn("Failed to persist conversation tree to localStorage:", e);
+    if (tree) {
+      safeSetItem(STORAGE_KEY, JSON.stringify(tree));
+    } else {
+      safeRemoveItem(STORAGE_KEY);
     }
   }, [tree, isHydrated]);
 
@@ -134,9 +132,6 @@ export function useChatStream() {
 
   const loadTree = useCallback((newTree: ConversationTree | null) => {
     setTree(newTree);
-    if (newTree && typeof window !== "undefined") {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(newTree));
-    }
   }, []);
 
   const deleteBranch = useCallback(
@@ -217,9 +212,7 @@ export function useChatStream() {
     setTree(null);
     setActiveBranch(null);
     setError(null);
-    if (typeof window !== "undefined") {
-      localStorage.removeItem(STORAGE_KEY);
-    }
+    safeRemoveItem(STORAGE_KEY);
   }, [stopStreaming]);
 
   const sendMessage = useCallback(

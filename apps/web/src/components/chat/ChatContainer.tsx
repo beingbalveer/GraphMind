@@ -29,6 +29,7 @@ import { useChatStream } from "@/hooks/useChatStream";
 import { useModelConfig } from "@/hooks/useModelConfig";
 import { useScrollAnchor } from "@/hooks/useScrollAnchor";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { safeGetItem, safeSetItem } from "@/lib/storage";
 
 import { Navbar, ViewMode } from "../layout/Navbar";
 import {
@@ -160,6 +161,7 @@ export function ChatContainer({
   const initialNodeIdRef = useRef(initialNodeId);
   const initialViewModeRef = useRef(initialViewMode);
   const lastProcessedBranchRef = useRef<string | null>(initialBranchId || null);
+  const lastProcessedNodeRef = useRef<string | null>(initialNodeId || null);
 
   // Refresh chats for current workspace
   const refreshChats = useCallback(async (wsId: string) => {
@@ -209,11 +211,11 @@ export function ChatContainer({
           if (list && list.length > 0) {
             ws = list[0];
           } else {
-            const hasSeeded = localStorage.getItem("graphmind_demo_seeded") === "true";
+            const hasSeeded = safeGetItem("graphmind_demo_seeded") === "true";
             if (!hasSeeded) {
               try {
                 const seedResult = await seedDemoWorkspace();
-                localStorage.setItem("graphmind_demo_seeded", "true");
+                safeSetItem("graphmind_demo_seeded", "true");
                 const snapshot = await fetchGraphSnapshot(seedResult.workspaceId);
                 if (snapshot) {
                   ws = snapshot.workspace;
@@ -258,6 +260,7 @@ export function ChatContainer({
           }
 
           if (nodeId) {
+            lastProcessedNodeRef.current = nodeId;
             if (viewMode === "canvas") {
               setSidePeekState({ stack: [{ nodeId }], index: 0 });
             }
@@ -309,29 +312,41 @@ export function ChatContainer({
       setActiveChatId(null);
       clearMessages();
       lastProcessedBranchRef.current = null;
+      lastProcessedNodeRef.current = null;
       setSidePeekState({ stack: [], index: 0 });
     }
 
-    // 3. Sync ?branch= query parameter from URL changes
-    const branchParam = searchParams.get("branch");
-    if (branchParam !== lastProcessedBranchRef.current) {
-      lastProcessedBranchRef.current = branchParam;
-      if (branchParam) {
-        setSidePeekState({ stack: [{ nodeId: branchParam }], index: 0 });
-      } else {
-        setSidePeekState({ stack: [], index: 0 });
+    if (targetViewMode === "canvas") {
+      // 3. Sync ?node= query parameter from URL changes in canvas mode
+      const nodeParam = searchParams.get("node");
+      if (nodeParam !== lastProcessedNodeRef.current) {
+        lastProcessedNodeRef.current = nodeParam;
+        if (nodeParam) {
+          setSidePeekState({ stack: [{ nodeId: nodeParam }], index: 0 });
+        } else {
+          setSidePeekState({ stack: [], index: 0 });
+        }
       }
-    }
+    } else {
+      // 3. Sync ?branch= query parameter from URL changes in chat mode
+      const branchParam = searchParams.get("branch");
+      if (branchParam !== lastProcessedBranchRef.current) {
+        lastProcessedBranchRef.current = branchParam;
+        if (branchParam) {
+          setSidePeekState({ stack: [{ nodeId: branchParam }], index: 0 });
+        } else {
+          setSidePeekState({ stack: [], index: 0 });
+        }
+      }
 
-    // 4. Sync ?node= query parameter
-    const nodeParam = searchParams.get("node");
-    if (nodeParam) {
-      if (targetViewMode === "canvas") {
-        setSidePeekState({ stack: [{ nodeId: nodeParam }], index: 0 });
+      // 4. Sync ?node= query parameter (scroll-to + highlight) in chat mode
+      const nodeParam = searchParams.get("node");
+      if (nodeParam && nodeParam !== lastProcessedNodeRef.current) {
+        lastProcessedNodeRef.current = nodeParam;
+        setTimeout(() => {
+          handleJumpToMessage(nodeParam);
+        }, 150);
       }
-      setTimeout(() => {
-        handleJumpToMessage(nodeParam);
-      }, 150);
     }
   }, [pathname, searchParams, currentWorkspace, loadTree, clearMessages, handleJumpToMessage]);
 
@@ -341,6 +356,8 @@ export function ChatContainer({
     clearMessages();
     setActiveChatId(null);
     loadedChatIdRef.current = null;
+    lastProcessedBranchRef.current = null;
+    lastProcessedNodeRef.current = null;
     setSidePeekState({ stack: [], index: 0 });
     if (currentWorkspace) {
       router.push(buildWorkspaceUrl(currentWorkspace.id), { scroll: false });
@@ -356,6 +373,8 @@ export function ChatContainer({
       // Update active state immediately so sidebar reflects selection
       setActiveChatId(chat.id);
       loadedChatIdRef.current = chat.id;
+      lastProcessedBranchRef.current = null;
+      lastProcessedNodeRef.current = null;
       setSidePeekState({ stack: [], index: 0 });
 
       // Use replace (not push) with scroll:false so Next.js syncs the URL
@@ -439,6 +458,8 @@ export function ChatContainer({
   const handleSelectWorkspace = useCallback(
     async (ws: WorkspaceItem) => {
       setCurrentWorkspace(ws);
+      lastProcessedBranchRef.current = null;
+      lastProcessedNodeRef.current = null;
       setSidePeekState({ stack: [], index: 0 });
 
       const workspaceChats = await refreshChats(ws.id);
@@ -580,6 +601,7 @@ export function ChatContainer({
   const handleOpenSidePeek = useCallback(
     (nodeId: string, excerpt?: string) => {
       lastProcessedBranchRef.current = nodeId;
+      lastProcessedNodeRef.current = nodeId;
       setSidePeekState({ stack: [{ nodeId, excerpt }], index: 0 });
       syncSidePeekUrl(nodeId);
     },
@@ -589,6 +611,7 @@ export function ChatContainer({
   const handlePushSidePeekBranch = useCallback(
     (nodeId: string, excerpt?: string) => {
       lastProcessedBranchRef.current = nodeId;
+      lastProcessedNodeRef.current = nodeId;
       setSidePeekState((prev) => {
         const nextStack = [...prev.stack.slice(0, prev.index + 1), { nodeId, excerpt }];
         return { stack: nextStack, index: nextStack.length - 1 };
@@ -601,6 +624,7 @@ export function ChatContainer({
   const handleSwitchSidePeekSiblingTab = useCallback(
     (leafId: string) => {
       lastProcessedBranchRef.current = leafId;
+      lastProcessedNodeRef.current = leafId;
       setSidePeekState((prev) => {
         const nextStack = [...prev.stack];
         if (nextStack[prev.index]) {
@@ -622,6 +646,7 @@ export function ChatContainer({
       targetNodeId = prev.stack[nextIndex]?.nodeId;
       if (targetNodeId) {
         lastProcessedBranchRef.current = targetNodeId;
+        lastProcessedNodeRef.current = targetNodeId;
       }
       return { ...prev, index: nextIndex };
     });
@@ -640,6 +665,7 @@ export function ChatContainer({
       targetNodeId = prev.stack[nextIndex]?.nodeId;
       if (targetNodeId) {
         lastProcessedBranchRef.current = targetNodeId;
+        lastProcessedNodeRef.current = targetNodeId;
       }
       return { ...prev, index: nextIndex };
     });
@@ -652,6 +678,7 @@ export function ChatContainer({
 
   const handleCloseSidePeek = useCallback(() => {
     lastProcessedBranchRef.current = null;
+    lastProcessedNodeRef.current = null;
     setSidePeekState({ stack: [], index: 0 });
     if (currentWorkspace && activeChatId) {
       router.replace(
@@ -667,6 +694,7 @@ export function ChatContainer({
   const handlePromoteSidePeekToPrimary = useCallback(
     (leafNodeId: string) => {
       lastProcessedBranchRef.current = null;
+      lastProcessedNodeRef.current = null;
       switchBranch(leafNodeId);
       setSidePeekState({ stack: [], index: 0 });
       if (viewMode === "canvas") {
@@ -987,6 +1015,7 @@ export function ChatContainer({
             steps={breadcrumbSteps}
             onSelectStep={(step) => {
               lastProcessedBranchRef.current = null;
+              lastProcessedNodeRef.current = null;
               switchBranch(step.leafId);
               setSidePeekState({ stack: [], index: 0 });
               if (currentWorkspace && activeChatId) {
@@ -1032,6 +1061,8 @@ export function ChatContainer({
                 onFitViewRef={fitViewRef}
                 onCenterActiveRef={centerActiveRef}
                 onAutoLayoutRef={autoLayoutRef}
+                onPaneClick={handleCloseSidePeek}
+                isSidePeekOpen={isSidePeekOpen}
               />
             </div>
           ) : (
@@ -1149,6 +1180,7 @@ export function ChatContainer({
           {/* Interactive Notion-Style Side-Peek Branch Sheet */}
           <SidePeekBranchSheet
             isOpen={isSidePeekOpen}
+            hasBackdrop={viewMode !== "canvas"}
             tree={tree}
             historyStack={sidePeekStack}
             historyIndex={sidePeekIndex}

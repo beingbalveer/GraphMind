@@ -51,6 +51,8 @@ export interface SiblingTab {
 interface SidePeekBranchSheetProps {
   tree: ConversationTree | null;
   isOpen: boolean;
+  /** Whether to render the invisible full-screen dismiss backdrop (defaults to true in linear chat, false in canvas). */
+  hasBackdrop?: boolean;
   historyStack: SidePeekEntry[];
   historyIndex: number;
   isStreaming?: boolean;
@@ -157,6 +159,7 @@ function deriveTabTitle(
 export function SidePeekBranchSheet({
   tree,
   isOpen,
+  hasBackdrop = true,
   historyStack,
   historyIndex,
   isStreaming = false,
@@ -522,14 +525,16 @@ export function SidePeekBranchSheet({
 
   return (
     <>
-      {/* Invisible Click-Catcher Backdrop: allows clicking anywhere outside to dismiss */}
-      <div
-        onClick={onClose}
-        className={`fixed inset-0 z-30 ${
-          isVisible ? "block bg-transparent" : "hidden pointer-events-none"
-        }`}
-        title="Click outside to close (Esc)"
-      />
+      {/* Invisible Click-Catcher Backdrop: allows clicking anywhere outside to dismiss in chat view */}
+      {hasBackdrop && (
+        <div
+          onClick={onClose}
+          className={`fixed inset-0 z-30 ${
+            isVisible ? "block bg-transparent" : "hidden pointer-events-none"
+          }`}
+          title="Click outside to close (Esc)"
+        />
+      )}
 
       {/* Sliding Sheet Container */}
       <aside

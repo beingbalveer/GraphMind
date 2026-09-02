@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { safeGetItem, safeSetItem } from "@/lib/storage";
 
 interface ResizableSplitPaneProps {
   leftPane: React.ReactNode;
@@ -17,17 +18,11 @@ export function ResizableSplitPane({
   defaultLeftPercent = 50,
 }: ResizableSplitPaneProps) {
   const [leftPercent, setLeftPercent] = useState<number>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const saved = localStorage.getItem("graphmind_split_width_v1");
-        if (saved) {
-          const parsed = parseFloat(saved);
-          if (!isNaN(parsed) && parsed >= 25 && parsed <= 75) {
-            return parsed;
-          }
-        }
-      } catch {
-        // ignore
+    const saved = safeGetItem("graphmind_split_width_v1");
+    if (saved) {
+      const parsed = parseFloat(saved);
+      if (!isNaN(parsed) && parsed >= 25 && parsed <= 75) {
+        return parsed;
       }
     }
     return defaultLeftPercent;
@@ -55,7 +50,7 @@ export function ResizableSplitPane({
 
     const handleMouseUp = () => {
       setIsDragging(false);
-      localStorage.setItem("graphmind_split_width_v1", leftPercent.toString());
+      safeSetItem("graphmind_split_width_v1", leftPercent.toString());
     };
 
     document.addEventListener("mousemove", handleMouseMove);

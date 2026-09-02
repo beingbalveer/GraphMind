@@ -41,6 +41,8 @@ interface GraphCanvasProps {
   onFitViewRef?: React.MutableRefObject<(() => void) | null>;
   onCenterActiveRef?: React.MutableRefObject<(() => void) | null>;
   onAutoLayoutRef?: React.MutableRefObject<(() => void) | null>;
+  onPaneClick?: () => void;
+  isSidePeekOpen?: boolean;
 }
 
 const nodeTypes = {
@@ -59,6 +61,8 @@ function FlowCanvas({
   onFitViewRef,
   onCenterActiveRef,
   onAutoLayoutRef,
+  onPaneClick,
+  isSidePeekOpen = false,
 }: GraphCanvasProps) {
   const [zoomMode, setZoomMode] = useState<ZoomMode>("capsule");
   const [direction, setDirection] = useState<LayoutDirection>("LR");
@@ -185,6 +189,8 @@ function FlowCanvas({
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onNodeClick={handleNodeClick}
+        onPaneClick={onPaneClick}
+        onEdgeClick={onPaneClick}
         onlyRenderVisibleElements={true}
         elevateNodesOnSelect={true}
         selectNodesOnDrag={false}
@@ -216,7 +222,13 @@ function FlowCanvas({
       </ReactFlow>
 
       {/* Floating Canvas Camera & Layout Toolbar */}
-      <div className="absolute top-4 right-4 z-20 flex items-center space-x-1.5 p-1 bg-white/90 backdrop-blur-md border border-zinc-200/90 rounded-xl shadow-md select-none">
+      <div
+        className={`absolute top-4 z-20 flex items-center space-x-1.5 p-1 bg-white/90 backdrop-blur-md border border-zinc-200/90 rounded-xl shadow-md select-none transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+          isSidePeekOpen
+            ? "right-4 sm:right-[496px] md:right-[556px] lg:right-[596px]"
+            : "right-4"
+        }`}
+      >
         {/* LOD Mode Indicator Badge */}
         <div className="px-2 py-0.5 rounded-lg bg-zinc-100 border border-zinc-200 text-[10px] font-semibold text-zinc-700 capitalize">
           {zoomMode === "orb" ? "🌌 Galaxy View" : zoomMode === "detailed" ? "🔍 Focus View" : "📄 Thread Tree"}
