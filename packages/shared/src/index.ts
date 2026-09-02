@@ -47,6 +47,16 @@ export interface HealthCheckResponse {
  * Phase 2 Tree-Structured Branching Domain Models
  */
 
+export interface FileAttachment {
+  id: string;
+  name: string;
+  sizeBytes: number;
+  mimeType: string;
+  fileCategory?: string;
+  url?: string;
+  data?: string;
+}
+
 export interface TreeNode {
   id: string;
   parentId: string | null;
@@ -56,6 +66,7 @@ export interface TreeNode {
   highlightedContext?: string | null;
   provider?: string | null;
   model?: string | null;
+  attachments?: FileAttachment[];
   createdAt: string;
   metadata?: Record<string, unknown>;
 }
@@ -68,6 +79,7 @@ export interface CreateNodeParams {
   highlightedContext?: string | null;
   provider?: string | null;
   model?: string | null;
+  attachments?: FileAttachment[];
   metadata?: Record<string, unknown>;
 }
 

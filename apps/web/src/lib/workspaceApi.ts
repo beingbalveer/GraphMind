@@ -1,4 +1,4 @@
-import { ConversationTree, TreeNode } from "@graphmind/shared";
+import { ConversationTree, FileAttachment, TreeNode } from "@graphmind/shared";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8300";
@@ -404,6 +404,74 @@ export async function deleteWorkspace(workspaceId: string): Promise<boolean> {
   try {
     const res = await fetch(
       `${API_BASE_URL}/api/v1/workspaces/${workspaceId}`,
+      {
+        method: "DELETE",
+      }
+    );
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+export async function uploadWorkspaceFile(
+  workspaceId: string,
+  file: File
+): Promise<FileAttachment | null> {
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const res = await fetch(
+      `${API_BASE_URL}/api/v1/workspaces/${workspaceId}/files/upload`,
+      {
+        method: "POST",
+        body: formData,
+      }
+    );
+    if (!res.ok) {
+      console.warn("File upload failed:", res.statusText);
+      return null;
+    }
+    const data = await res.json();
+    return {
+      id: data.id,
+      name: data.name,
+      sizeBytes: data.sizeBytes,
+      mimeType: data.mimeType,
+      fileCategory: data.fileCategory,
+      url: data.url,
+    };
+  } catch (err) {
+    console.warn("Error uploading file to workspace:", err);
+    return null;
+  }
+}
+
+export async function fetchWorkspaceFiles(
+  workspaceId: string,
+  category?: string
+): Promise<FileAttachment[]> {
+  try {
+    const query = category ? `?category=${encodeURIComponent(category)}` : "";
+    const res = await fetch(
+      `${API_BASE_URL}/api/v1/workspaces/${workspaceId}/files${query}`
+    );
+    if (!res.ok) return [];
+    return await res.json();
+  } catch (err) {
+    console.warn("Error fetching workspace files:", err);
+    return [];
+  }
+}
+
+export async function deleteWorkspaceFile(
+  workspaceId: string,
+  fileId: string
+): Promise<boolean> {
+  try {
+    const res = await fetch(
+      `${API_BASE_URL}/api/v1/workspaces/${workspaceId}/files/${fileId}`,
       {
         method: "DELETE",
       }

@@ -15,7 +15,13 @@ import {
   ThumbsDown,
 } from "lucide-react";
 
-import { TreeNode, ConversationTree, getNodeChildren, getBranchLinearLeafNode } from "@graphmind/shared";
+import {
+  TreeNode,
+  ConversationTree,
+  FileAttachment,
+  getNodeChildren,
+  getBranchLinearLeafNode,
+} from "@graphmind/shared";
 
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
@@ -439,6 +445,41 @@ export function ChatMessage({
                 <span className="truncate">Sub-topic: &ldquo;{message.highlightedContext}&rdquo;</span>
               </div>
             )}
+
+            {/* Attached Images */}
+            {(() => {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const rawAttachments = message.attachments || (message.metadata as any)?.attachments;
+              const attachmentsList = Array.isArray(rawAttachments)
+                ? (rawAttachments as FileAttachment[])
+                : [];
+              if (attachmentsList.length === 0) return null;
+
+              return (
+                <div className="flex flex-wrap gap-2 mb-2.5">
+                  {attachmentsList.map((att, idx) => {
+                    const src = att.data || att.url;
+                    if (!src) return null;
+                    return (
+                      <div
+                        key={att.id || idx}
+                        className="relative rounded-xl overflow-hidden border border-zinc-200/90 bg-white max-w-xs shadow-2xs hover:border-zinc-300 transition-all cursor-pointer group/img"
+                        onClick={() => window.open(src, "_blank")}
+                        title="Click to view full resolution"
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={src}
+                          alt={att.name || "Attachment"}
+                          className="max-h-60 rounded-xl object-contain group-hover/img:scale-[1.01] transition-transform duration-150"
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+
             <div className="text-[14.5px] leading-relaxed select-text font-normal whitespace-pre-wrap">
               {message.content}
             </div>

@@ -33,6 +33,7 @@ export function createConversationTree(
     highlightedContext: rootParams.highlightedContext ?? null,
     provider: rootParams.provider ?? null,
     model: rootParams.model ?? null,
+    attachments: rootParams.attachments,
     createdAt: now,
     metadata: rootParams.metadata ?? {},
   };
@@ -75,6 +76,7 @@ export function addChildNode(
     highlightedContext: params.highlightedContext ?? null,
     provider: params.provider ?? null,
     model: params.model ?? null,
+    attachments: params.attachments,
     createdAt: now,
     metadata: params.metadata ?? {},
   };

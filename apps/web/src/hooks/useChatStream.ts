@@ -7,7 +7,7 @@ import {
   addChildNode,
   updateNodeContent,
   getAncestorPath,
-  getMainlineTrunkPath,
+  FileAttachment,
 } from "@graphmind/shared";
 
 
@@ -25,6 +25,7 @@ export interface SendMessageOptions {
   temperature?: number;
   maxTokens?: number;
   systemPrompt?: string;
+  attachments?: FileAttachment[];
 }
 
 
@@ -232,6 +233,11 @@ export function useChatStream() {
       setError(null);
 
       // Normalize options
+      const explicitOptions =
+        optionsOrBranch && !("parentNodeId" in optionsOrBranch)
+          ? optionsOrBranch
+          : undefined;
+
       let branch: BranchContext | null = null;
       let preserveActiveNodeId = false;
       let onNodeCreated: ((nodes: { userNodeId: string; assistantNodeId: string }) => void) | undefined = undefined;
@@ -268,6 +274,8 @@ export function useChatStream() {
           content: prompt.trim(),
           provider,
           model,
+          attachments: explicitOptions?.attachments,
+          metadata: explicitOptions?.attachments ? { attachments: explicitOptions.attachments } : {},
         });
         userNodeId = currentTree.rootNodeId;
 
@@ -298,6 +306,8 @@ export function useChatStream() {
             highlightedContext: branch?.highlightedText || null,
             provider,
             model,
+            attachments: explicitOptions?.attachments,
+            metadata: explicitOptions?.attachments ? { attachments: explicitOptions.attachments } : {},
           }
         );
         userNodeId = userNode.id;
@@ -354,8 +364,6 @@ export function useChatStream() {
           ? `[Focusing on excerpt: "${branch.highlightedText.trim()}"]\n\n${prompt.trim()}`
           : prompt.trim();
 
-        const explicitOptions = optionsOrBranch && !("parentNodeId" in optionsOrBranch) ? optionsOrBranch : undefined;
-
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const payload: Record<string, any> = {
           prompt: formattedPrompt,
@@ -370,6 +378,7 @@ export function useChatStream() {
           temperature: explicitOptions?.temperature,
           max_tokens: explicitOptions?.maxTokens,
           system_prompt: explicitOptions?.systemPrompt,
+          attachments: explicitOptions?.attachments,
         };
 
 

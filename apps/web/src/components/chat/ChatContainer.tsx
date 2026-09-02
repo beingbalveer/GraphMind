@@ -4,7 +4,13 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from "react"
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { GitBranch, ArrowDown } from "lucide-react";
 
-import { getNodeChildren, getBranchLinearLeafNode, getAncestorPath, TreeNode } from "@graphmind/shared";
+import {
+  getNodeChildren,
+  getBranchLinearLeafNode,
+  getAncestorPath,
+  TreeNode,
+  FileAttachment,
+} from "@graphmind/shared";
 
 import { ChatMessage } from "./ChatMessage";
 import { ChatInput } from "./ChatInput";
@@ -473,7 +479,7 @@ export function ChatContainer({
 
   // Send message, persist nodes to PostgreSQL, and update chat list
   const handleSendMessage = useCallback(
-    async (prompt: string) => {
+    async (prompt: string, attachments?: FileAttachment[]) => {
       if (!currentWorkspace) return;
 
       const isFirstMessageInNewChat = !activeChatId || !tree || Object.keys(tree.nodes).length === 0;
@@ -492,6 +498,7 @@ export function ChatContainer({
         temperature: llmConfig.temperature,
         maxTokens: llmConfig.maxTokens,
         systemPrompt: llmConfig.systemPrompt || undefined,
+        attachments: attachments && attachments.length > 0 ? attachments : undefined,
         onNodeCreated: ({ userNodeId, assistantNodeId }) => {
           createdUserNodeId = userNodeId;
           createdAssistantNodeId = assistantNodeId;
@@ -510,6 +517,7 @@ export function ChatContainer({
             content: prompt.trim(),
             provider,
             model,
+            metadata: attachments && attachments.length > 0 ? { attachments } : {},
           }).then(() => refreshChats(currentWorkspace.id));
         },
       });
@@ -1115,6 +1123,7 @@ export function ChatContainer({
                 )}
 
                 <ChatInput
+                  workspaceId={currentWorkspace?.id}
                   onSendMessage={handleSendMessage}
                   onStopStreaming={stopStreaming}
                   isStreaming={isStreaming}
