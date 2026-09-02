@@ -59,13 +59,21 @@ async def test_workspace_file_upload_lifecycle() -> None:
         assert meta_resp.status_code == 200
         assert meta_resp.json()["id"] == file_id
 
-        # 6. Download raw file
+        # 6. Download raw file (inline by default)
         down_resp = await client.get(
             f"/api/v1/workspaces/{ws_id}/files/{file_id}/download"
         )
         assert down_resp.status_code == 200
         assert down_resp.headers["content-type"] == "image/png"
+        assert "inline" in down_resp.headers["content-disposition"]
         assert down_resp.content == dummy_png
+
+        # 6b. Explicit download parameter forces attachment
+        forced_resp = await client.get(
+            f"/api/v1/workspaces/{ws_id}/files/{file_id}/download?download=true"
+        )
+        assert forced_resp.status_code == 200
+        assert "attachment" in forced_resp.headers["content-disposition"]
 
         # 7. Delete file
         del_resp = await client.delete(f"/api/v1/workspaces/{ws_id}/files/{file_id}")

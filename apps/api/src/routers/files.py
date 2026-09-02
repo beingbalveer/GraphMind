@@ -152,10 +152,14 @@ async def get_file_metadata(
 async def download_file(
     workspace_id: str,
     file_id: str,
+    download: bool = Query(
+        default=False,
+        description="Whether to force attachment download vs inline display",
+    ),
     db: AsyncSession = Depends(get_db),
 ) -> FileResponse:
     """
-    Serve raw file content directly with appropriate Content-Type.
+    Serve raw file content directly with appropriate Content-Type and Disposition.
     """
     file_rec = await file_service.get_file(db, workspace_id, file_id)
     if not file_rec:
@@ -171,10 +175,12 @@ async def download_file(
             detail="File content not found on server storage.",
         )
 
+    disposition = "attachment" if download else "inline"
     return FileResponse(
         path=file_rec.storage_path,
         media_type=file_rec.mime_type,
         filename=file_rec.name,
+        content_disposition_type=disposition,
     )
 
 

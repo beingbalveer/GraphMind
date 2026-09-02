@@ -43,7 +43,8 @@ export function PdfViewerModal({
 
   const handleDownload = () => {
     if (url) {
-      window.open(url, "_blank");
+      const downloadUrl = url.includes("?") ? `${url}&download=true` : `${url}?download=true`;
+      window.open(downloadUrl, "_blank");
       return;
     }
     if (data) {
