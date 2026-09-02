@@ -20,10 +20,12 @@ from ai_core.lineage import (
 )
 from ai_core.providers import (
     AnthropicProvider,
+    DeepSeekProvider,
     GeminiEmbeddingProvider,
     GeminiProvider,
     MockEmbeddingProvider,
     MockProvider,
+    OllamaProvider,
     OpenAIEmbeddingProvider,
     OpenAIProvider,
     get_embedding_provider,
@@ -48,7 +50,9 @@ __all__ = [
     "StreamChunk",
     "TokenUsage",
     "AnthropicProvider",
+    "DeepSeekProvider",
     "GeminiProvider",
+    "OllamaProvider",
     "OpenAIProvider",
     "MockProvider",
     "GeminiEmbeddingProvider",

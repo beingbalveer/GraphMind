@@ -48,11 +48,18 @@ class OpenAIProvider(BaseLLMProvider):
     OpenAI foundation model provider implementation with production resilience and retry logic.
     """
 
-    def __init__(self, api_key: Optional[str] = None):
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        base_url: Optional[str] = None,
+        default_model: str = "gpt-4o-mini",
+    ):
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
         if not self.api_key:
             raise ValueError("OPENAI_API_KEY environment variable is not set.")
-        self.client = AsyncOpenAI(api_key=self.api_key)
+        self.base_url = base_url
+        self.default_model = default_model
+        self.client = AsyncOpenAI(api_key=self.api_key, base_url=self.base_url)
 
     def _to_openai_messages(
         self, messages: MessageInput, system_prompt: Optional[str] = None
@@ -88,12 +95,13 @@ class OpenAIProvider(BaseLLMProvider):
         messages: MessageInput,
         config: Optional[ModelConfig] = None,
     ) -> GenerationResult:
-        cfg = config or ModelConfig(model_name="gpt-4o-mini")
+        cfg = config or ModelConfig(model_name=self.default_model)
+        target_model = cfg.model_name or self.default_model
         openai_messages = self._to_openai_messages(messages, cfg.system_prompt)
 
         try:
             response = await self.client.chat.completions.create(
-                model=cfg.model_name,
+                model=target_model,
                 messages=openai_messages,
                 temperature=cfg.temperature,
                 max_tokens=cfg.max_tokens,
@@ -108,12 +116,12 @@ class OpenAIProvider(BaseLLMProvider):
             return GenerationResult(
                 content=content,
                 role=ChatRole.ASSISTANT,
-                model_name=cfg.model_name,
+                model_name=target_model,
                 usage=usage,
                 finish_reason=response.choices[0].finish_reason,
             )
         except Exception as e:
-            logger.error("OpenAI generation failed", error=str(e), model=cfg.model_name)
+            logger.error("OpenAI generation failed", error=str(e), model=target_model)
             raise
 
     async def stream(
@@ -121,12 +129,13 @@ class OpenAIProvider(BaseLLMProvider):
         messages: MessageInput,
         config: Optional[ModelConfig] = None,
     ) -> AsyncIterator[StreamChunk]:
-        cfg = config or ModelConfig(model_name="gpt-4o-mini")
+        cfg = config or ModelConfig(model_name=self.default_model)
+        target_model = cfg.model_name or self.default_model
         openai_messages = self._to_openai_messages(messages, cfg.system_prompt)
 
         try:
             response_stream = await self.client.chat.completions.create(
-                model=cfg.model_name,
+                model=target_model,
                 messages=openai_messages,
                 temperature=cfg.temperature,
                 max_tokens=cfg.max_tokens,

@@ -1,12 +1,14 @@
 import os
-from typing import Dict, Optional, Type
+from typing import Any, Dict, Optional, Type
 
 from ai_core.base import BaseEmbeddingProvider, BaseLLMProvider
 from ai_core.providers.anthropic import AnthropicProvider
+from ai_core.providers.deepseek import DeepSeekProvider
 from ai_core.providers.gemini import GeminiProvider
 from ai_core.providers.gemini_embedding import GeminiEmbeddingProvider
 from ai_core.providers.mock import MockProvider
 from ai_core.providers.mock_embedding import MockEmbeddingProvider
+from ai_core.providers.ollama import OllamaProvider
 from ai_core.providers.openai import OpenAIProvider
 from ai_core.providers.openai_embedding import OpenAIEmbeddingProvider
 
@@ -17,6 +19,8 @@ _PROVIDER_REGISTRY: Dict[str, Type[BaseLLMProvider]] = {
     "openai": OpenAIProvider,
     "anthropic": AnthropicProvider,
     "claude": AnthropicProvider,
+    "deepseek": DeepSeekProvider,
+    "ollama": OllamaProvider,
     "mock": MockProvider,
 }
 
@@ -45,6 +49,7 @@ def register_embedding_provider(name: str, provider_cls: Type[BaseEmbeddingProvi
 def get_llm_provider(
     provider_name: Optional[str] = None,
     api_key: Optional[str] = None,
+    base_url: Optional[str] = None,
 ) -> BaseLLMProvider:
     """
     Provider factory resolving requested provider name or defaulting to available API key.
@@ -56,8 +61,13 @@ def get_llm_provider(
     if name in _PROVIDER_REGISTRY:
         provider_cls = _PROVIDER_REGISTRY[name]
         try:
-            return provider_cls(api_key=api_key) if api_key else provider_cls()
-        except ValueError:
+            kwargs: Dict[str, Any] = {}
+            if api_key:
+                kwargs["api_key"] = api_key
+            if base_url:
+                kwargs["base_url"] = base_url
+            return provider_cls(**kwargs)
+        except (ValueError, TypeError):
             # If explicit provider initialization failed (e.g. Missing key), fallback gracefully
             pass
 
@@ -65,9 +75,11 @@ def get_llm_provider(
     if os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"):
         return GeminiProvider(api_key=api_key)
     if os.getenv("OPENAI_API_KEY"):
-        return OpenAIProvider(api_key=api_key)
+        return OpenAIProvider(api_key=api_key, base_url=base_url)
     if os.getenv("ANTHROPIC_API_KEY"):
         return AnthropicProvider(api_key=api_key)
+    if os.getenv("DEEPSEEK_API_KEY"):
+        return DeepSeekProvider(api_key=api_key, base_url=base_url)
 
     # Default to MockProvider for zero-cost offline operations
     return MockProvider()
@@ -105,9 +117,11 @@ get_provider = get_llm_provider
 
 __all__ = [
     "AnthropicProvider",
+    "DeepSeekProvider",
     "GeminiProvider",
-    "OpenAIProvider",
     "MockProvider",
+    "OllamaProvider",
+    "OpenAIProvider",
     "GeminiEmbeddingProvider",
     "OpenAIEmbeddingProvider",
     "MockEmbeddingProvider",
