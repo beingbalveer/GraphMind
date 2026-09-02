@@ -13,6 +13,7 @@ import {
   FolderOpen,
   Code,
   FileText,
+  FileSpreadsheet,
 } from "lucide-react";
 import { FileAttachment } from "@graphmind/shared";
 import {
@@ -23,6 +24,7 @@ import {
 } from "@/lib/workspaceApi";
 import { CodeViewerModal } from "../chat/CodeViewerModal";
 import { PdfViewerModal } from "../chat/PdfViewerModal";
+import { TableViewerModal } from "../chat/TableViewerModal";
 
 interface FileLibraryModalProps {
   isOpen: boolean;
@@ -54,6 +56,7 @@ export function FileLibraryModal({
   const [previewFile, setPreviewFile] = useState<FileAttachment | null>(null);
   const [viewingCodeFile, setViewingCodeFile] = useState<FileAttachment | null>(null);
   const [viewingPdfFile, setViewingPdfFile] = useState<FileAttachment | null>(null);
+  const [viewingTabularFile, setViewingTabularFile] = useState<FileAttachment | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -153,7 +156,7 @@ export function FileLibraryModal({
               type="file"
               ref={fileInputRef}
               multiple
-              accept="image/*,application/pdf,.pdf,.txt,.md,.markdown,.py,.js,.jsx,.ts,.tsx,.json,.yaml,.yml,.toml,.sql,.html,.css,.scss,.sh,.bash,.zsh,.rs,.go,.c,.cpp,.h,.hpp,.java,.kt,.rb,.php,.cs,.swift,.dockerfile,.graphql,.proto,.vue,.svelte,.xml,.csv,.tsv,.env,.log"
+              accept="image/*,application/pdf,.pdf,.csv,.tsv,.xlsx,.jsonl,.ndjson,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,text/tab-separated-values,.txt,.md,.markdown,.py,.js,.jsx,.ts,.tsx,.json,.yaml,.yml,.toml,.sql,.html,.css,.scss,.sh,.bash,.zsh,.rs,.go,.c,.cpp,.h,.hpp,.java,.kt,.rb,.php,.cs,.swift,.dockerfile,.graphql,.proto,.vue,.svelte,.xml,.env,.log"
               className="hidden"
               onChange={handleUpload}
             />
@@ -206,6 +209,18 @@ export function FileLibraryModal({
             >
               <ImageIcon className="w-3 h-3 text-zinc-500" />
               <span>Images</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedCategory("tabular")}
+              className={`flex items-center space-x-1 px-3 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+                selectedCategory === "tabular"
+                  ? "bg-white text-zinc-950 shadow-2xs border border-zinc-200 font-semibold"
+                  : "text-zinc-600 hover:text-zinc-950"
+              }`}
+            >
+              <FileSpreadsheet className="w-3 h-3 text-emerald-600" />
+              <span>Tabular</span>
             </button>
             <button
               type="button"
@@ -276,8 +291,13 @@ export function FileLibraryModal({
               {filteredFiles.map((file) => {
                 const isImage = file.fileCategory === "image" || file.mimeType.startsWith("image/");
                 const isPdf = file.mimeType === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+                const isTabular =
+                  file.fileCategory === "tabular" ||
+                  [".csv", ".tsv", ".jsonl", ".ndjson", ".xlsx"].some((ext) =>
+                    file.name.toLowerCase().endsWith(ext)
+                  );
                 const isCode = file.fileCategory === "code";
-                const isDoc = file.fileCategory === "document" && !isPdf;
+                const isDoc = file.fileCategory === "document" && !isPdf && !isTabular;
                 const downloadUrl = resolveFileUrl(
                   file.url || `/api/v1/workspaces/${workspaceId}/files/${file.id}/download`
                 );
@@ -293,13 +313,15 @@ export function FileLibraryModal({
                         setPreviewFile(file);
                       } else if (isPdf) {
                         setViewingPdfFile(file);
+                      } else if (isTabular) {
+                        setViewingTabularFile(file);
                       } else if (isCode || isDoc || file.extractedText) {
                         setViewingCodeFile(file);
                       }
                     }}
                     className="group relative flex flex-col rounded-xl border border-zinc-200/90 bg-white hover:border-zinc-300 hover:shadow-sm transition-all overflow-hidden cursor-pointer"
                   >
-                    {/* Viewport: Image, PDF, or Code Preview */}
+                    {/* Viewport: Image, PDF, Tabular, or Code Preview */}
                     <div className="h-36 bg-zinc-100/70 relative flex items-center justify-center overflow-hidden border-b border-zinc-100">
                       {isImage ? (
                         /* eslint-disable-next-line @next/next/no-img-element */
@@ -323,6 +345,25 @@ export function FileLibraryModal({
                           </div>
                           <div className="text-[10px] text-red-600 font-medium">
                             Click to view PDF
+                          </div>
+                        </div>
+                      ) : isTabular ? (
+                        <div className="w-full h-full p-3 bg-emerald-50/70 text-zinc-700 flex flex-col justify-between select-none border-b border-emerald-100">
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className="font-bold text-emerald-700 bg-emerald-100/90 border border-emerald-200/80 px-1.5 py-0.5 rounded text-[10px] uppercase">
+                              {(file.metadata?.format as string) || file.name.split(".").pop() || "TABLE"}
+                            </span>
+                            <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                          </div>
+                          <div className="text-[11px] text-zinc-600 font-mono line-clamp-3 leading-snug">
+                            {file.extractedText
+                              ? file.extractedText.slice(0, 120)
+                              : "Tabular spreadsheet dataset stored in workspace library."}
+                          </div>
+                          <div className="text-[10px] text-emerald-700 font-medium">
+                            {file.metadata?.row_count !== undefined
+                              ? `${(file.metadata.row_count as number).toLocaleString()} rows · Explore`
+                              : "Click to explore table"}
                           </div>
                         </div>
                       ) : (
@@ -358,6 +399,8 @@ export function FileLibraryModal({
                               setPreviewFile(file);
                             } else if (isPdf) {
                               setViewingPdfFile(file);
+                            } else if (isTabular) {
+                              setViewingTabularFile(file);
                             } else {
                               setViewingCodeFile(file);
                             }
@@ -468,6 +511,20 @@ export function FileLibraryModal({
           url={resolveFileUrl(viewingPdfFile.url || `/api/v1/workspaces/${workspaceId}/files/${viewingPdfFile.id}/download`)}
           data={viewingPdfFile.data}
           sizeBytes={viewingPdfFile.sizeBytes}
+        />
+      )}
+
+      {/* In-Page Table Viewer Modal */}
+      {viewingTabularFile && (
+        <TableViewerModal
+          isOpen={Boolean(viewingTabularFile)}
+          onClose={() => setViewingTabularFile(null)}
+          filename={viewingTabularFile.name}
+          url={resolveFileUrl(viewingTabularFile.url || `/api/v1/workspaces/${workspaceId}/files/${viewingTabularFile.id}/download`)}
+          data={viewingTabularFile.data}
+          extractedText={viewingTabularFile.extractedText}
+          metadata={viewingTabularFile.metadata as Record<string, unknown>}
+          sizeBytes={viewingTabularFile.sizeBytes}
         />
       )}
     </div>

@@ -404,7 +404,7 @@ export function ChatInput({
             <input
               type="file"
               ref={fileInputRef}
-              accept="image/*,application/pdf,.pdf,.txt,.md,.markdown,.py,.js,.jsx,.ts,.tsx,.json,.yaml,.yml,.toml,.sql,.html,.css,.scss,.sh,.bash,.zsh,.rs,.go,.c,.cpp,.h,.hpp,.java,.kt,.rb,.php,.cs,.swift,.dockerfile,.graphql,.proto,.vue,.svelte,.xml,.csv,.tsv,.env,.log"
+              accept="image/*,application/pdf,.pdf,.csv,.tsv,.xlsx,.jsonl,.ndjson,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,text/tab-separated-values,.txt,.md,.markdown,.py,.js,.jsx,.ts,.tsx,.json,.yaml,.yml,.toml,.sql,.html,.css,.scss,.sh,.bash,.zsh,.rs,.go,.c,.cpp,.h,.hpp,.java,.kt,.rb,.php,.cs,.swift,.dockerfile,.graphql,.proto,.vue,.svelte,.xml,.env,.log"
               multiple
               className="hidden"
               onChange={(e) => {
@@ -424,14 +424,14 @@ export function ChatInput({
                   ? "bg-zinc-200 text-zinc-900"
                   : "text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100"
               }`}
-              title="Add attachment"
+              title="Add attachment (image, PDF, spreadsheet, code, doc)"
             >
-              <Plus className={`w-4 h-4 transition-transform duration-150 ${isAttachMenuOpen ? "rotate-45" : ""}`} />
+              <Plus className={`w-4 h-4 transition-transform duration-200 ${isAttachMenuOpen ? "rotate-45 text-zinc-950" : ""}`} />
             </button>
 
-            {/* Floating Attachment Menu */}
+            {/* Floating Dropdown Attachment Menu */}
             {isAttachMenuOpen && (
-              <div className="absolute bottom-full left-0 mb-2 w-56 bg-white rounded-xl shadow-lg border border-zinc-200/90 py-1.5 z-30 animate-in fade-in-50 zoom-in-95 duration-100">
+              <div className="absolute bottom-full left-0 mb-2 w-56 rounded-xl bg-white border border-zinc-200/90 shadow-lg py-1.5 z-50 animate-in fade-in-50 zoom-in-95 duration-150">
                 <button
                   type="button"
                   onClick={() => {
@@ -445,7 +445,7 @@ export function ChatInput({
                   </div>
                   <div className="flex flex-col min-w-0">
                     <span className="font-medium">Upload from computer</span>
-                    <span className="text-[10px] text-zinc-400">PDF, images, code, docs</span>
+                    <span className="text-[10px] text-zinc-400">PDF, images, sheets, code, docs</span>
                   </div>
                 </button>
 

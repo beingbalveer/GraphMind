@@ -56,6 +56,7 @@ export interface FileAttachment {
   url?: string;
   data?: string;
   extractedText?: string;
+  metadata?: Record<string, unknown>;
 }
 
 export interface TreeNode {

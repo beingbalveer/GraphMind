@@ -17,6 +17,7 @@ import {
   Download,
   Code,
   FileText,
+  FileSpreadsheet,
 } from "lucide-react";
 
 import {
@@ -33,6 +34,7 @@ import { useTextSelection } from "@/hooks/useTextSelection";
 import { SelectionTooltip } from "./SelectionTooltip";
 import { CodeViewerModal } from "./CodeViewerModal";
 import { PdfViewerModal } from "./PdfViewerModal";
+import { TableViewerModal } from "./TableViewerModal";
 import { resolveFileUrl } from "@/lib/workspaceApi";
 
 export interface BranchLinkInfo {
@@ -303,6 +305,7 @@ export function ChatMessage({
   const [lightboxImage, setLightboxImage] = useState<{ src: string; name: string } | null>(null);
   const [viewingCodeFile, setViewingCodeFile] = useState<FileAttachment | null>(null);
   const [viewingPdfFile, setViewingPdfFile] = useState<FileAttachment | null>(null);
+  const [viewingTabularFile, setViewingTabularFile] = useState<FileAttachment | null>(null);
   const editTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Auto-focus and auto-resize textarea when entering edit mode
@@ -483,8 +486,18 @@ export function ChatMessage({
               const pdfAttachments = attachmentsList.filter(
                 (a) => a.mimeType === "application/pdf" || a.name.toLowerCase().endsWith(".pdf")
               );
+              const tabularAttachments = attachmentsList.filter(
+                (a) =>
+                  a.fileCategory === "tabular" ||
+                  [".csv", ".tsv", ".jsonl", ".ndjson", ".xlsx"].some((ext) =>
+                    a.name.toLowerCase().endsWith(ext)
+                  )
+              );
               const codeAttachments = attachmentsList.filter(
-                (a) => !imageAttachments.includes(a) && !pdfAttachments.includes(a)
+                (a) =>
+                  !imageAttachments.includes(a) &&
+                  !pdfAttachments.includes(a) &&
+                  !tabularAttachments.includes(a)
               );
 
               return (
@@ -540,7 +553,37 @@ export function ChatMessage({
                     </div>
                   )}
 
-                  {/* Code & Document File Cards */}
+                  {/* Tabular Dataset Cards */}
+                  {tabularAttachments.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {tabularAttachments.map((att, idx) => {
+                        const rowCount = (att.metadata as Record<string, unknown>)?.row_count as number | undefined;
+                        const ext = att.name.split(".").pop()?.toUpperCase() || "TABLE";
+                        return (
+                          <div
+                            key={att.id || idx}
+                            onClick={() => setViewingTabularFile(att)}
+                            className="flex items-center space-x-2.5 px-3 py-2 rounded-xl border border-emerald-200/90 bg-emerald-50/40 hover:bg-emerald-50/80 hover:border-emerald-300 hover:shadow-xs transition-all cursor-pointer group/table max-w-[260px]"
+                            title="Click to explore table data"
+                          >
+                            <div className="p-1.5 rounded-lg bg-white border border-emerald-200 text-emerald-700 shrink-0 group-hover/table:scale-105 transition-transform">
+                              <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                            </div>
+                            <div className="flex flex-col min-w-0 pr-1">
+                              <span className="text-xs font-semibold text-zinc-900 truncate font-mono">
+                                {att.name}
+                              </span>
+                              <span className="text-[10px] text-emerald-700/90 font-medium">
+                                {ext} {rowCount !== undefined ? `· ${rowCount.toLocaleString()} rows` : "· Click to explore"}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Code & Plain Text Document Cards */}
                   {codeAttachments.length > 0 && (
                     <div className="flex flex-wrap gap-2">
                       {codeAttachments.map((att, idx) => {
@@ -648,6 +691,20 @@ export function ChatMessage({
             url={viewingPdfFile.url ? resolveFileUrl(viewingPdfFile.url) : undefined}
             data={viewingPdfFile.data}
             sizeBytes={viewingPdfFile.sizeBytes}
+          />
+        )}
+
+        {/* In-Page Full Screen Table Viewer Modal */}
+        {viewingTabularFile && (
+          <TableViewerModal
+            isOpen={Boolean(viewingTabularFile)}
+            onClose={() => setViewingTabularFile(null)}
+            filename={viewingTabularFile.name}
+            url={viewingTabularFile.url ? resolveFileUrl(viewingTabularFile.url) : undefined}
+            data={viewingTabularFile.data}
+            extractedText={viewingTabularFile.extractedText}
+            metadata={viewingTabularFile.metadata as Record<string, unknown>}
+            sizeBytes={viewingTabularFile.sizeBytes}
           />
         )}
       </div>
