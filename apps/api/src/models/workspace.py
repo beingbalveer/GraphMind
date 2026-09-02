@@ -9,6 +9,7 @@ from sqlalchemy import (
     DateTime,
     Float,
     ForeignKey,
+    Integer,
     String,
     Text,
 )
@@ -62,6 +63,13 @@ class Workspace(Base):
         back_populates="workspace",
         cascade="all, delete-orphan",
         passive_deletes=True,
+    )
+    files: Mapped[List["WorkspaceFile"]] = relationship(
+        "WorkspaceFile",
+        back_populates="workspace",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        order_by="WorkspaceFile.created_at.desc()",
     )
 
 
@@ -170,3 +178,43 @@ class EdgeModel(Base):
 
     # Relationships
     workspace: Mapped["Workspace"] = relationship("Workspace", back_populates="edges")
+
+
+class WorkspaceFile(Base):
+    """
+    Persistent file asset belonging to a workspace library.
+    """
+
+    __tablename__ = "workspace_files"
+
+    id: Mapped[str] = mapped_column(
+        String(64),
+        primary_key=True,
+        default=lambda: f"file_{uuid.uuid4().hex[:12]}",
+    )
+    workspace_id: Mapped[str] = mapped_column(
+        String(64),
+        ForeignKey("workspaces.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    size_bytes: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    mime_type: Mapped[str] = mapped_column(String(128), nullable=False)
+    file_category: Mapped[str] = mapped_column(String(32), nullable=False, default="image")
+    storage_path: Mapped[str] = mapped_column(String(512), nullable=False)
+    extracted_text: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    metadata_payload: Mapped[Dict[str, Any]] = mapped_column(
+        "metadata",
+        JSON,
+        default=dict,
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=_utc_now,
+    )
+
+    # Relationships
+    workspace: Mapped["Workspace"] = relationship("Workspace", back_populates="files")
+
