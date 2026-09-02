@@ -1,7 +1,16 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { ArrowUp, Square, GitBranch, X, Paperclip, Loader2 } from "lucide-react";
+import {
+  ArrowUp,
+  Square,
+  GitBranch,
+  X,
+  Paperclip,
+  Loader2,
+  FileText,
+  Code,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BranchContext } from "@/hooks/useChatStream";
 import { FileAttachment } from "@graphmind/shared";
@@ -14,6 +23,26 @@ interface ChatInputProps {
   workspaceId?: string;
   activeBranch?: BranchContext | null;
   onClearBranch?: () => void;
+}
+
+const CODE_EXTENSIONS = new Set([
+  "py", "js", "ts", "tsx", "jsx", "json", "yaml", "yml", "toml", "sql",
+  "html", "css", "scss", "sass", "sh", "bash", "zsh", "rs", "go", "c",
+  "cpp", "h", "hpp", "java", "kt", "rb", "php", "cs", "swift", "dockerfile",
+  "graphql", "proto", "vue", "svelte",
+]);
+
+const DOC_EXTENSIONS = new Set([
+  "txt", "md", "markdown", "csv", "tsv", "log", "env", "ini", "cfg", "conf", "xml",
+]);
+
+function formatBytes(bytes: number, decimals = 1): string {
+  if (bytes === 0) return "0 B";
+  const k = 1024;
+  const dm = decimals < 0 ? 0 : decimals;
+  const sizes = ["B", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
 }
 
 export function ChatInput({
@@ -53,19 +82,45 @@ export function ChatInput({
   // Process incoming files from file picker, drag & drop, or paste
   const processFiles = useCallback(
     async (files: FileList | File[]) => {
-      const fileList = Array.from(files).filter((f) => f.type.startsWith("image/"));
+      const fileList = Array.from(files);
       if (fileList.length === 0) return;
 
       setIsUploading(true);
       try {
         for (const file of fileList) {
-          // Read base64 data URL for preview and multimodal transmission
-          const dataUrl = await new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result as string);
-            reader.onerror = reject;
-            reader.readAsDataURL(file);
-          });
+          const ext = file.name.split(".").pop()?.toLowerCase() || "";
+          const isImage = file.type.startsWith("image/");
+          const isCode = CODE_EXTENSIONS.has(ext);
+          const isDoc = DOC_EXTENSIONS.has(ext) || file.type.startsWith("text/");
+
+          let category = "other";
+          if (isImage) {
+            category = "image";
+          } else if (isCode) {
+            category = "code";
+          } else if (isDoc) {
+            category = "document";
+          }
+
+          let dataUrl: string | undefined = undefined;
+          let textContent: string | undefined = undefined;
+
+          if (isImage) {
+            dataUrl = await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result as string);
+              reader.onerror = reject;
+              reader.readAsDataURL(file);
+            });
+          } else {
+            // Read code / text file content
+            textContent = await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result as string);
+              reader.onerror = reject;
+              reader.readAsText(file);
+            });
+          }
 
           let uploadedId = `temp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
           let uploadedUrl: string | undefined = undefined;
@@ -76,6 +131,9 @@ export function ChatInput({
             if (res) {
               uploadedId = res.id;
               uploadedUrl = res.url;
+              if (res.extractedText && !textContent) {
+                textContent = res.extractedText;
+              }
             }
           }
 
@@ -83,10 +141,11 @@ export function ChatInput({
             id: uploadedId,
             name: file.name,
             sizeBytes: file.size,
-            mimeType: file.type || "image/png",
-            fileCategory: "image",
+            mimeType: file.type || (isCode ? "text/plain" : "application/octet-stream"),
+            fileCategory: category,
             url: uploadedUrl,
             data: dataUrl,
+            extractedText: textContent,
           };
 
           setAttachments((prev) => [...prev, newAttachment]);
@@ -108,18 +167,18 @@ export function ChatInput({
     const items = e.clipboardData?.items;
     if (!items) return;
 
-    const imageFiles: File[] = [];
+    const files: File[] = [];
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
       if (item.type.startsWith("image/")) {
         const file = item.getAsFile();
-        if (file) imageFiles.push(file);
+        if (file) files.push(file);
       }
     }
 
-    if (imageFiles.length > 0) {
+    if (files.length > 0) {
       e.preventDefault();
-      processFiles(imageFiles);
+      processFiles(files);
     }
   };
 
@@ -207,38 +266,72 @@ export function ChatInput({
         {/* Attachment Previews Tray */}
         {attachments.length > 0 && (
           <div className="flex flex-wrap gap-2 px-1 pt-1 pb-1 animate-in fade-in-50 duration-150">
-            {attachments.map((att) => (
-              <div
-                key={att.id}
-                className="relative group rounded-xl border border-zinc-200/90 bg-zinc-50 overflow-hidden shadow-2xs transition-all hover:border-zinc-300"
-              >
-                {att.data || att.url ? (
-                  <div className="relative w-16 h-16 bg-zinc-100 flex items-center justify-center overflow-hidden">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={att.data || att.url}
-                      alt={att.name}
-                      className="w-full h-full object-cover"
-                    />
+            {attachments.map((att) => {
+              const isImg = att.fileCategory === "image" || att.data?.startsWith("data:image/");
+              const isCode = att.fileCategory === "code";
+
+              if (isImg) {
+                return (
+                  <div
+                    key={att.id}
+                    className="relative group rounded-xl border border-zinc-200/90 bg-zinc-50 overflow-hidden shadow-2xs transition-all hover:border-zinc-300"
+                  >
+                    <div className="relative w-16 h-16 bg-zinc-100 flex items-center justify-center overflow-hidden">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={att.data || att.url}
+                        alt={att.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveAttachment(att.id)}
+                      className="absolute top-1 right-1 p-0.5 rounded-full bg-black/60 text-white hover:bg-black transition-colors cursor-pointer"
+                      title="Remove attachment"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
                   </div>
-                ) : (
-                  <div className="w-16 h-16 flex flex-col items-center justify-center p-1 text-[10px] text-zinc-500 text-center">
-                    <span className="truncate max-w-full font-medium">{att.name}</span>
-                  </div>
-                )}
-                <button
-                  type="button"
-                  onClick={() => handleRemoveAttachment(att.id)}
-                  className="absolute top-1 right-1 p-0.5 rounded-full bg-black/60 text-white hover:bg-black transition-colors cursor-pointer"
-                  title="Remove attachment"
+                );
+              }
+
+              return (
+                <div
+                  key={att.id}
+                  className="relative group flex items-center space-x-2.5 px-3 py-2 rounded-xl border border-zinc-200/90 bg-zinc-50 hover:bg-zinc-100/80 shadow-2xs transition-all max-w-[240px]"
                 >
-                  <X className="w-3 h-3" />
-                </button>
-              </div>
-            ))}
+                  <div className="p-1.5 rounded-lg bg-white border border-zinc-200/80 text-zinc-700 shrink-0">
+                    {isCode ? (
+                      <Code className="w-4 h-4 text-emerald-600" />
+                    ) : (
+                      <FileText className="w-4 h-4 text-blue-600" />
+                    )}
+                  </div>
+                  <div className="flex flex-col min-w-0 pr-4">
+                    <span className="text-xs font-medium text-zinc-900 truncate" title={att.name}>
+                      {att.name}
+                    </span>
+                    <span className="text-[10px] text-zinc-500 font-mono">
+                      {formatBytes(att.sizeBytes)}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveAttachment(att.id)}
+                    className="absolute top-1.5 right-1.5 p-0.5 rounded-full text-zinc-400 hover:text-zinc-700 hover:bg-zinc-200 transition-colors cursor-pointer"
+                    title="Remove attachment"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              );
+            })}
+
             {isUploading && (
-              <div className="w-16 h-16 rounded-xl border border-dashed border-zinc-300 bg-zinc-50 flex items-center justify-center">
+              <div className="h-14 px-3 rounded-xl border border-dashed border-zinc-300 bg-zinc-50 flex items-center justify-center space-x-2 text-xs text-zinc-500">
                 <Loader2 className="w-4 h-4 text-zinc-400 animate-spin" />
+                <span>Reading file...</span>
               </div>
             )}
           </div>
@@ -254,7 +347,7 @@ export function ChatInput({
           placeholder={
             activeBranch
               ? `Ask a follow-up about "${activeBranch.highlightedText.slice(0, 30)}..."`
-              : "Message GraphMind or paste images..."
+              : "Message GraphMind, attach code or paste images..."
           }
           rows={1}
           disabled={isStreaming}
@@ -268,7 +361,7 @@ export function ChatInput({
             <input
               type="file"
               ref={fileInputRef}
-              accept="image/png,image/jpeg,image/jpg,image/webp,image/gif,image/svg+xml"
+              accept="image/*,.txt,.md,.markdown,.py,.js,.jsx,.ts,.tsx,.json,.yaml,.yml,.toml,.sql,.html,.css,.scss,.sh,.bash,.zsh,.rs,.go,.c,.cpp,.h,.hpp,.java,.kt,.rb,.php,.cs,.swift,.dockerfile,.graphql,.proto,.vue,.svelte,.xml,.csv,.tsv,.env,.log"
               multiple
               className="hidden"
               onChange={(e) => {
@@ -283,7 +376,7 @@ export function ChatInput({
               onClick={() => fileInputRef.current?.click()}
               disabled={isStreaming || isUploading}
               className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              title="Attach image (PNG, JPG, WebP)"
+              title="Attach files (Images, Code, Documents)"
             >
               <Paperclip className="w-4 h-4" />
             </button>
