@@ -13,6 +13,8 @@ import {
   Pencil,
   ThumbsUp,
   ThumbsDown,
+  X,
+  Download,
 } from "lucide-react";
 
 import {
@@ -293,6 +295,7 @@ export function ChatMessage({
   const contentRef = useRef<HTMLDivElement>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
+  const [lightboxImage, setLightboxImage] = useState<{ src: string; name: string } | null>(null);
   const editTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Auto-focus and auto-resize textarea when entering edit mode
@@ -303,6 +306,18 @@ export function ChatMessage({
       editTextareaRef.current.style.height = `${editTextareaRef.current.scrollHeight}px`;
     }
   }, [isEditing]);
+
+  // Handle escape key to dismiss fullscreen lightbox
+  useEffect(() => {
+    if (!lightboxImage) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setLightboxImage(null);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [lightboxImage]);
 
   // Enable text selection tooltip for assistant responses only
   const { selection, clearSelection } = useTextSelection(
@@ -464,8 +479,8 @@ export function ChatMessage({
                       <div
                         key={att.id || idx}
                         className="relative rounded-xl overflow-hidden border border-zinc-200/90 bg-white max-w-xs shadow-2xs hover:border-zinc-300 transition-all cursor-pointer group/img"
-                        onClick={() => window.open(src, "_blank")}
-                        title="Click to view full resolution"
+                        onClick={() => setLightboxImage({ src, name: att.name || "Attachment" })}
+                        title="Click to view full screen"
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
@@ -485,6 +500,51 @@ export function ChatMessage({
             </div>
           </div>
         </div>
+
+        {/* In-Page Full Screen Image Lightbox */}
+        {lightboxImage && (
+          <div
+            className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in-50 duration-150"
+            onClick={() => setLightboxImage(null)}
+          >
+            <div
+              className="relative max-w-5xl max-h-[92vh] flex flex-col items-center"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Top action bar */}
+              <div className="w-full flex items-center justify-between pb-3 text-white/90 text-xs">
+                <span className="font-medium truncate max-w-md">{lightboxImage.name}</span>
+                <div className="flex items-center space-x-2">
+                  <a
+                    href={lightboxImage.src}
+                    download={lightboxImage.name}
+                    className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors flex items-center space-x-1.5 cursor-pointer"
+                    title="Download image"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Download</span>
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => setLightboxImage(null)}
+                    className="p-1 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+                    title="Close preview (Esc)"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Centered Image */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={lightboxImage.src}
+                alt={lightboxImage.name}
+                className="max-h-[82vh] max-w-[92vw] rounded-xl object-contain shadow-2xl border border-white/15 animate-in zoom-in-95 duration-150"
+              />
+            </div>
+          </div>
+        )}
       </div>
     );
   }
