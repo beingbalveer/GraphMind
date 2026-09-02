@@ -6,6 +6,7 @@ from ai_core import (
     ChatMessage,
     ChatRole,
     ConversationTree,
+    FileAttachment,
     GenerationResult,
     ModelConfig,
     get_provider,
@@ -61,6 +62,9 @@ class ChatStreamRequest(BaseModel):
         default=None, ge=1, le=32768, description="Optional maximum tokens parameter"
     )
     system_prompt: Optional[str] = Field(default=None, description="Optional system prompt context")
+    attachments: Optional[List[FileAttachment]] = Field(
+        default=None, description="Optional image or file attachments"
+    )
     metadata: Optional[Dict[str, Any]] = Field(
         default_factory=dict, description="Optional runtime metadata"
     )
@@ -105,7 +109,7 @@ def _resolve_api_key(provider_name: str, custom_key: Optional[str] = None) -> Op
 def _build_conversation_input(body: ChatStreamRequest) -> List[ChatMessage]:
     """
     Construct input messages from tree lineage, explicit message list, or raw prompt,
-    ensuring highlighted_context is always preserved and injected.
+    ensuring highlighted_context and attachments are always preserved and injected.
     """
     if body.tree:
         lineage: List[ChatMessage] = resolve_conversation_lineage(
@@ -114,6 +118,8 @@ def _build_conversation_input(body: ChatStreamRequest) -> List[ChatMessage]:
             new_prompt=body.prompt or "",
             highlighted_context=body.highlighted_context,
         )
+        if lineage and body.attachments:
+            lineage[-1].attachments = body.attachments
         return lineage
 
     if body.messages:
@@ -127,7 +133,10 @@ def _build_conversation_input(body: ChatStreamRequest) -> List[ChatMessage]:
                     role=ChatRole.USER,
                     content=f'[Focusing on excerpt: "{body.highlighted_context.strip()}"]\n\n{last_msg.content.strip()}',
                     metadata=last_msg.metadata,
+                    attachments=last_msg.attachments,
                 )
+        if messages and body.attachments and not messages[-1].attachments:
+            messages[-1].attachments = body.attachments
         return messages
 
     raw_prompt = (body.prompt or "").strip()
@@ -135,7 +144,7 @@ def _build_conversation_input(body: ChatStreamRequest) -> List[ChatMessage]:
         content = f'[Focusing on excerpt: "{body.highlighted_context.strip()}"]\n\n{raw_prompt}'
     else:
         content = raw_prompt
-    return [ChatMessage(role=ChatRole.USER, content=content)]
+    return [ChatMessage(role=ChatRole.USER, content=content, attachments=body.attachments)]
 
 
 @router.post("/completions", response_model=GenerationResult)

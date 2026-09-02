@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import os
 from typing import AsyncIterator, List, Optional, Tuple
 
@@ -60,19 +61,40 @@ class GeminiProvider(BaseLLMProvider):
 
         contents: List[types.Content] = []
         for msg in normalized:
-            if not msg.content:
-                continue
             if msg.role == ChatRole.SYSTEM:
                 if msg.content.strip():
                     system_parts.append(msg.content.strip())
             else:
-                role = "model" if msg.role == ChatRole.ASSISTANT else "user"
-                contents.append(
-                    types.Content(
-                        role=role,
-                        parts=[types.Part.from_text(text=msg.content)],
+                parts: List[types.Part] = []
+                if msg.content:
+                    parts.append(types.Part.from_text(text=msg.content))
+
+                if msg.attachments:
+                    for att in msg.attachments:
+                        if att.data and att.mime_type.startswith("image/"):
+                            raw_b64 = att.data
+                            if "," in raw_b64:
+                                raw_b64 = raw_b64.split(",", 1)[1]
+                            try:
+                                img_bytes = base64.b64decode(raw_b64)
+                                parts.append(
+                                    types.Part.from_bytes(data=img_bytes, mime_type=att.mime_type)
+                                )
+                            except Exception as e:
+                                logger.warning(
+                                    "Failed to decode base64 image attachment",
+                                    filename=att.name,
+                                    error=str(e),
+                                )
+
+                if parts:
+                    role = "model" if msg.role == ChatRole.ASSISTANT else "user"
+                    contents.append(
+                        types.Content(
+                            role=role,
+                            parts=parts,
+                        )
                     )
-                )
 
         combined_system = "\n\n".join(system_parts) if system_parts else None
         return combined_system, contents

@@ -2,7 +2,8 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Any, AsyncIterator, Dict, List, Optional, Union
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
+from pydantic.alias_generators import to_camel
 
 
 class ChatRole(str, Enum):
@@ -16,10 +17,30 @@ class ChatRole(str, Enum):
     TOOL = "tool"
 
 
+class FileAttachment(BaseModel):
+    """
+    Representation of an uploaded file or image asset attached to a message.
+    """
+
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel)
+
+    id: str = Field(..., description="Unique file identifier")
+    name: str = Field(..., description="Original filename")
+    mime_type: str = Field(..., description="MIME content type")
+    data: Optional[str] = Field(
+        default=None, description="Optional base64-encoded file data for multimodal ingestion"
+    )
+    url: Optional[str] = Field(
+        default=None, description="Optional download or view URL for referencing"
+    )
+
+
 class ChatMessage(BaseModel):
     """
     Individual message entity in a conversation thread.
     """
+
+    model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel)
 
     role: ChatRole = Field(..., description="Role of message author")
     content: str = Field(..., description="Textual content of the message")
@@ -27,10 +48,15 @@ class ChatMessage(BaseModel):
     metadata: Dict[str, Any] = Field(
         default_factory=dict, description="Arbitrary metadata attached to message"
     )
+    attachments: Optional[List[FileAttachment]] = Field(
+        default=None, description="Optional file or image attachments"
+    )
 
     @classmethod
-    def user(cls, content: str) -> "ChatMessage":
-        return cls(role=ChatRole.USER, content=content)
+    def user(
+        cls, content: str, attachments: Optional[List[FileAttachment]] = None
+    ) -> "ChatMessage":
+        return cls(role=ChatRole.USER, content=content, attachments=attachments)
 
     @classmethod
     def assistant(cls, content: str) -> "ChatMessage":

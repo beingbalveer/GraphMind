@@ -1,5 +1,5 @@
 import os
-from typing import AsyncIterator, Optional
+from typing import Any, AsyncIterator, Optional
 
 import structlog
 from openai import (
@@ -11,6 +11,8 @@ from openai import (
 )
 from openai.types.chat import (
     ChatCompletionAssistantMessageParam,
+    ChatCompletionContentPartImageParam,
+    ChatCompletionContentPartTextParam,
     ChatCompletionMessageParam,
     ChatCompletionSystemMessageParam,
     ChatCompletionUserMessageParam,
@@ -76,7 +78,35 @@ class OpenAIProvider(BaseLLMProvider):
                     ChatCompletionSystemMessageParam(role="system", content=msg.content)
                 )
             elif msg.role == ChatRole.USER:
-                formatted.append(ChatCompletionUserMessageParam(role="user", content=msg.content))
+                if msg.attachments:
+                    content_parts: list[Any] = []
+                    if msg.content:
+                        content_parts.append(
+                            ChatCompletionContentPartTextParam(type="text", text=msg.content)
+                        )
+                    for att in msg.attachments:
+                        if att.data and att.mime_type.startswith("image/"):
+                            raw_b64 = att.data
+                            if not raw_b64.startswith("data:"):
+                                raw_b64 = f"data:{att.mime_type};base64,{raw_b64}"
+                            content_parts.append(
+                                ChatCompletionContentPartImageParam(
+                                    type="image_url",
+                                    image_url={"url": raw_b64},
+                                )
+                            )
+                    if content_parts:
+                        formatted.append(
+                            ChatCompletionUserMessageParam(role="user", content=content_parts)
+                        )
+                    else:
+                        formatted.append(
+                            ChatCompletionUserMessageParam(role="user", content=msg.content)
+                        )
+                else:
+                    formatted.append(
+                        ChatCompletionUserMessageParam(role="user", content=msg.content)
+                    )
             elif msg.role == ChatRole.ASSISTANT:
                 formatted.append(
                     ChatCompletionAssistantMessageParam(role="assistant", content=msg.content)

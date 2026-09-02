@@ -53,19 +53,20 @@ class AnthropicProvider(BaseLLMProvider):
 
     def _to_anthropic_messages(
         self, messages: MessageInput, system_prompt: Optional[str] = None
-    ) -> Tuple[Optional[str], List[Dict[str, str]]]:
+    ) -> Tuple[Optional[str], List[Dict[str, Any]]]:
         """
         Normalize input messages for Anthropic Messages API:
         1. Extract system instructions into a separate top-level 'system' string.
-        2. Ensure strictly alternating user and assistant messages, merging consecutive roles.
-        3. Guarantee the conversation starts with a user message.
+        2. Format image attachments into native Anthropic base64 image blocks.
+        3. Ensure strictly alternating user and assistant messages, merging consecutive roles.
+        4. Guarantee the conversation starts with a user message.
         """
         normalized = self._normalize_messages(messages)
         system_parts: List[str] = []
         if system_prompt and system_prompt.strip():
             system_parts.append(system_prompt.strip())
 
-        raw_messages: List[Dict[str, str]] = []
+        raw_messages: List[Dict[str, Any]] = []
 
         for msg in normalized:
             if msg.role == ChatRole.SYSTEM:
@@ -73,15 +74,55 @@ class AnthropicProvider(BaseLLMProvider):
                     system_parts.append(msg.content.strip())
             elif msg.role in (ChatRole.USER, ChatRole.ASSISTANT):
                 role = "user" if msg.role == ChatRole.USER else "assistant"
-                raw_messages.append({"role": role, "content": msg.content})
+                content_blocks: List[Dict[str, Any]] = []
+                if msg.content:
+                    content_blocks.append({"type": "text", "text": msg.content})
+
+                if msg.attachments:
+                    for att in msg.attachments:
+                        if att.data and att.mime_type.startswith("image/"):
+                            raw_b64 = att.data
+                            if "," in raw_b64:
+                                raw_b64 = raw_b64.split(",", 1)[1]
+                            content_blocks.append(
+                                {
+                                    "type": "image",
+                                    "source": {
+                                        "type": "base64",
+                                        "media_type": att.mime_type,
+                                        "data": raw_b64,
+                                    },
+                                }
+                            )
+
+                if content_blocks:
+                    if len(content_blocks) == 1 and content_blocks[0]["type"] == "text":
+                        raw_messages.append({"role": role, "content": content_blocks[0]["text"]})
+                    else:
+                        raw_messages.append({"role": role, "content": content_blocks})
 
         combined_system = "\n\n".join(system_parts) if system_parts else None
 
         # Anthropic requires alternating user/assistant messages. Merge consecutive same-role turns.
-        merged_messages: List[Dict[str, str]] = []
+        merged_messages: List[Dict[str, Any]] = []
         for raw_turn in raw_messages:
             if merged_messages and merged_messages[-1]["role"] == raw_turn["role"]:
-                merged_messages[-1]["content"] += f"\n\n{raw_turn['content']}"
+                prev_content = merged_messages[-1]["content"]
+                curr_content = raw_turn["content"]
+                if isinstance(prev_content, str) and isinstance(curr_content, str):
+                    merged_messages[-1]["content"] = f"{prev_content}\n\n{curr_content}"
+                else:
+                    prev_blocks = (
+                        [{"type": "text", "text": prev_content}]
+                        if isinstance(prev_content, str)
+                        else list(prev_content)
+                    )
+                    curr_blocks = (
+                        [{"type": "text", "text": curr_content}]
+                        if isinstance(curr_content, str)
+                        else list(curr_content)
+                    )
+                    merged_messages[-1]["content"] = prev_blocks + curr_blocks
             else:
                 merged_messages.append(raw_turn.copy())
 
