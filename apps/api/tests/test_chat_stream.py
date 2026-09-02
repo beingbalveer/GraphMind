@@ -182,3 +182,30 @@ async def test_chat_stream_with_byok_and_generation_params() -> None:
         assert "text/event-stream" in response.headers.get("content-type", "")
         assert "data: " in response.text
 
+
+def test_resolve_api_keys_for_all_providers() -> None:
+    from routers.chat import _resolve_api_key
+
+    # Custom BYOK key has highest priority
+    assert _resolve_api_key("anthropic", "custom-claude-key") == "custom-claude-key"
+    assert _resolve_api_key("deepseek", "custom-deepseek-key") == "custom-deepseek-key"
+    assert _resolve_api_key("ollama", "custom-ollama-key") == "custom-ollama-key"
+
+    # Ollama default without custom key returns "ollama"
+    assert _resolve_api_key("ollama") == "ollama"
+
+
+@pytest.mark.asyncio
+async def test_chat_stream_request_with_base_url() -> None:
+    from routers.chat import ChatStreamRequest
+
+    req = ChatStreamRequest.model_validate(
+        {
+            "prompt": "Test ollama custom url",
+            "provider": "ollama",
+            "baseUrl": "http://192.168.1.100:11434/v1",
+        }
+    )
+    assert req.provider == "ollama"
+    assert req.base_url == "http://192.168.1.100:11434/v1"
+

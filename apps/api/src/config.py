@@ -46,6 +46,11 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: Optional[str] = Field(default=None, description="Google Gemini API Key")
     GOOGLE_API_KEY: Optional[str] = Field(default=None, description="Google Cloud API Key alias")
     OPENAI_API_KEY: Optional[str] = Field(default=None, description="OpenAI API Key")
+    ANTHROPIC_API_KEY: Optional[str] = Field(default=None, description="Anthropic API Key")
+    DEEPSEEK_API_KEY: Optional[str] = Field(default=None, description="DeepSeek API Key")
+    OLLAMA_BASE_URL: str = Field(
+        default="http://localhost:11434/v1", description="Ollama API Base URL"
+    )
 
     # Database configuration
     DATABASE_URL: str = Field(

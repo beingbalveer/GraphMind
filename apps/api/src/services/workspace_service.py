@@ -306,7 +306,7 @@ class WorkspaceService:
                         queue.append(child_id)
 
             latest_updated = max(n.updated_at for n in subtree_nodes)
-            
+
             # Resolve mainline leaf node
             curr_id = root.id
             while curr_id in children_map and children_map[curr_id]:

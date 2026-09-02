@@ -51,6 +51,9 @@ class ChatStreamRequest(BaseModel):
     api_key: Optional[str] = Field(
         default=None, description="Optional client-provided BYOK API key"
     )
+    base_url: Optional[str] = Field(
+        default=None, description="Optional custom base URL for Ollama or custom endpoints"
+    )
     temperature: Optional[float] = Field(
         default=None, ge=0.0, le=2.0, description="Optional temperature parameter"
     )
@@ -88,6 +91,14 @@ def _resolve_api_key(provider_name: str, custom_key: Optional[str] = None) -> Op
     if name == "openai":
         key = settings.OPENAI_API_KEY
         return str(key) if key else None
+    if name in ("anthropic", "claude"):
+        key = settings.ANTHROPIC_API_KEY
+        return str(key) if key else None
+    if name == "deepseek":
+        key = settings.DEEPSEEK_API_KEY
+        return str(key) if key else None
+    if name == "ollama":
+        return "ollama"
     return None
 
 
@@ -97,12 +108,13 @@ def _build_conversation_input(body: ChatStreamRequest) -> List[ChatMessage]:
     ensuring highlighted_context is always preserved and injected.
     """
     if body.tree:
-        return resolve_conversation_lineage(
+        lineage: List[ChatMessage] = resolve_conversation_lineage(
             tree=body.tree,
             target_node_id=body.parent_node_id,
             new_prompt=body.prompt or "",
             highlighted_context=body.highlighted_context,
         )
+        return lineage
 
     if body.messages:
         messages = list(body.messages)
@@ -134,17 +146,21 @@ async def create_chat_completion(body: ChatCompletionRequest) -> GenerationResul
     resolved_provider = body.provider or settings.DEFAULT_PROVIDER
     resolved_model = body.model or settings.DEFAULT_MODEL
     api_key = _resolve_api_key(resolved_provider, body.api_key)
+    resolved_base_url = body.base_url or (
+        settings.OLLAMA_BASE_URL if resolved_provider == "ollama" else None
+    )
 
     logger.info(
         "Received non-streaming chat completion request",
         provider=resolved_provider,
         model=resolved_model,
         has_api_key=bool(api_key),
+        has_base_url=bool(resolved_base_url),
         has_tree=bool(body.tree),
     )
 
     try:
-        provider = get_provider(resolved_provider, api_key=api_key)
+        provider = get_provider(resolved_provider, api_key=api_key, base_url=resolved_base_url)
     except Exception as e:
         logger.error("Failed to initialize AI provider", error=str(e))
         raise HTTPException(status_code=500, detail=f"Provider initialization failed: {str(e)}")
@@ -188,17 +204,21 @@ async def stream_chat(
     resolved_provider = body.provider or settings.DEFAULT_PROVIDER
     resolved_model = body.model or settings.DEFAULT_MODEL
     api_key = _resolve_api_key(resolved_provider, body.api_key)
+    resolved_base_url = body.base_url or (
+        settings.OLLAMA_BASE_URL if resolved_provider == "ollama" else None
+    )
 
     logger.info(
         "Received chat stream request",
         provider=resolved_provider,
         model=resolved_model,
         has_api_key=bool(api_key),
+        has_base_url=bool(resolved_base_url),
         has_tree=bool(body.tree),
     )
 
     try:
-        provider = get_provider(resolved_provider, api_key=api_key)
+        provider = get_provider(resolved_provider, api_key=api_key, base_url=resolved_base_url)
     except Exception as e:
         logger.error("Failed to initialize AI provider", error=str(e))
         raise HTTPException(status_code=500, detail=f"Provider initialization failed: {str(e)}")

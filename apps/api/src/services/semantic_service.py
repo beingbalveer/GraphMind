@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
 import structlog
 from ai_core.providers import get_embedding_provider
@@ -66,7 +66,7 @@ class SemanticService:
             node.embedding = vector
             await db.flush()
             logger.info("Generated and stored node embedding", node_id=node.id, dim=len(vector))
-            return vector
+            return cast(List[float], vector)
         except Exception as e:
             logger.error("Failed to generate node embedding", node_id=node.id, error=str(e))
             return None
