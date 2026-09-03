@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 
 import { GitBranch, Search } from "lucide-react";
 import { SelectionState } from "@/hooks/useTextSelection";
+import { MenuCard, MenuItem } from "@/components/ui/menu";
 
 interface SelectionTooltipProps {
   selection: SelectionState | null;
@@ -39,30 +40,23 @@ export function SelectionTooltip({
       }}
       className="z-50 select-none animate-in fade-in-50 zoom-in-95 duration-150"
     >
-      {/* Menu Card */}
-      <div className="bg-white border border-zinc-200/80 rounded-[20px] shadow-[0_4px_24px_rgba(0,0,0,0.08)] p-1.5 min-w-[145px] flex flex-col space-y-0.5">
-        {/* Explain Action */}
-        <button
-          type="button"
+      <MenuCard className="min-w-[145px]">
+        <MenuItem
+          icon={<GitBranch className="w-4 h-4" />}
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => onExplore(selection.text)}
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-[13px] font-normal text-zinc-800 hover:text-zinc-950 hover:bg-zinc-100/90 transition-colors cursor-pointer group text-left"
         >
-          <GitBranch className="w-4 h-4 text-zinc-700 group-hover:text-zinc-950 shrink-0" />
-          <span>Explain</span>
-        </button>
+          Explain
+        </MenuItem>
 
-        {/* Search Action */}
-        <button
-          type="button"
+        <MenuItem
+          icon={<Search className="w-4 h-4" />}
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => onSearch(selection.text)}
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-[13px] font-normal text-zinc-800 hover:text-zinc-950 hover:bg-zinc-100/90 transition-colors cursor-pointer group text-left"
         >
-          <Search className="w-4 h-4 text-zinc-700 group-hover:text-zinc-950 shrink-0" />
-          <span>Search</span>
-        </button>
-      </div>
+          Search
+        </MenuItem>
+      </MenuCard>
     </div>,
     document.body
   );

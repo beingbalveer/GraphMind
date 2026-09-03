@@ -11,7 +11,6 @@ import {
   Settings,
   Plus,
   FolderOpen,
-  PanelLeft,
   MessageSquare,
 } from "lucide-react";
 import { ChatItem } from "@/lib/workspaceApi";
@@ -169,61 +168,81 @@ export function ChatSidebar({
             : "-translate-x-full md:translate-x-0"
         } ${isResizing ? "transition-none" : "transition-[width,transform] duration-200 ease-in-out"}`}
       >
-        {isOpen ? (
-          <>
-            {/* Sidebar Header: Search & Collapse Button */}
-            <div className="p-2.5 border-b border-zinc-100 flex items-center justify-between gap-2 shrink-0 bg-white">
-              <div className="relative flex-1">
-                <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search chats..."
-                  className="w-full pl-8 pr-2.5 py-1.5 rounded-xl border border-zinc-200/80 bg-zinc-50/50 text-xs text-zinc-800 placeholder:text-zinc-400 focus:outline-none focus:bg-white focus:ring-1 focus:ring-zinc-900 transition-all shadow-2xs"
-                />
-              </div>
+        {/* Top Header: Search row */}
+        <div className="h-12 border-b border-zinc-100 flex items-center shrink-0 bg-white overflow-hidden">
+          <div
+            className="w-14 h-12 flex items-center justify-center shrink-0 cursor-pointer"
+            onClick={() => {
+              if (!isOpen) onToggle();
+            }}
+            title="Search chats..."
+          >
+            <Search className="w-4 h-4 text-zinc-400 hover:text-zinc-700 transition-colors shrink-0" />
+          </div>
 
-              <button
-                type="button"
-                onClick={onToggle}
-                className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 transition-colors cursor-pointer shrink-0"
-                title="Collapse sidebar (⌘B)"
+          <div
+            className={`flex-1 pr-3 transition-opacity duration-200 ${
+              isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+            }`}
+          >
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search chats..."
+              className="w-full py-1.5 px-2.5 rounded-lg border border-zinc-200/80 bg-zinc-50/60 text-xs text-zinc-800 placeholder:text-zinc-400 focus:outline-none focus:bg-white focus:ring-1 focus:ring-zinc-900 transition-all shadow-2xs"
+            />
+          </div>
+        </div>
+
+        {/* Quick Navigation Items: New Chat & Library */}
+        <div className="py-1.5 border-b border-zinc-100 space-y-0.5 shrink-0 overflow-hidden">
+          {onNewChat && (
+            <button
+              type="button"
+              onClick={onNewChat}
+              className="w-full flex items-center h-10 hover:bg-zinc-100/70 transition-colors cursor-pointer text-zinc-700 hover:text-zinc-950 group relative"
+              title="New chat (⌘N)"
+            >
+              <div className="w-14 h-10 flex items-center justify-center shrink-0">
+                <Plus className="w-4 h-4 text-zinc-500 group-hover:text-zinc-900 transition-colors shrink-0" />
+              </div>
+              <span
+                className={`text-xs font-medium truncate transition-opacity duration-200 whitespace-nowrap ${
+                  isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+                }`}
               >
-                <PanelLeft className="w-4 h-4" />
-              </button>
-            </div>
+                New chat
+              </span>
+            </button>
+          )}
 
-            {/* Minimalist Flat Chat List */}
-            <div className="flex-1 overflow-y-auto p-2 space-y-1">
-              {/* Quick Navigation Items: New Chat & Library */}
-              <div className="space-y-0.5 pb-2 mb-1.5 border-b border-zinc-100">
-                {onNewChat && (
-                  <button
-                    type="button"
-                    onClick={onNewChat}
-                    className="w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-medium text-zinc-700 hover:text-zinc-950 hover:bg-zinc-100/70 transition-colors cursor-pointer select-none group"
-                    title="Start a new chat (⌘N)"
-                  >
-                    <Plus className="w-4 h-4 text-zinc-500 group-hover:text-zinc-900 transition-colors shrink-0" />
-                    <span>New chat</span>
-                  </button>
-                )}
-
-                {onOpenFileLibrary && (
-                  <button
-                    type="button"
-                    onClick={onOpenFileLibrary}
-                    className="w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-medium text-zinc-700 hover:text-zinc-950 hover:bg-zinc-100/70 transition-colors cursor-pointer select-none group"
-                    title="Workspace File Library & Assets"
-                  >
-                    <FolderOpen className="w-4 h-4 text-zinc-500 group-hover:text-zinc-900 transition-colors shrink-0" />
-                    <span>Library</span>
-                  </button>
-                )}
+          {onOpenFileLibrary && (
+            <button
+              type="button"
+              onClick={onOpenFileLibrary}
+              className="w-full flex items-center h-10 hover:bg-zinc-100/70 transition-colors cursor-pointer text-zinc-700 hover:text-zinc-950 group relative"
+              title="Workspace File Library & Assets"
+            >
+              <div className="w-14 h-10 flex items-center justify-center shrink-0">
+                <FolderOpen className="w-4 h-4 text-zinc-500 group-hover:text-zinc-900 transition-colors shrink-0" />
               </div>
+              <span
+                className={`text-xs font-medium truncate transition-opacity duration-200 whitespace-nowrap ${
+                  isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+                }`}
+              >
+                Library
+              </span>
+            </button>
+          )}
+        </div>
 
-              <div className="px-2 pt-1 pb-1 text-[11px] font-medium text-zinc-400 tracking-wider uppercase">
+        {/* Middle Area: Conversations */}
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-1 space-y-1">
+          {isOpen ? (
+            <>
+              <div className="px-3 pt-2 pb-1 text-[11px] font-medium text-zinc-400 tracking-wider uppercase">
                 Conversations
               </div>
 
@@ -324,89 +343,46 @@ export function ChatSidebar({
                   );
                 })
               )}
-            </div>
-
-            {/* Sidebar Footer with Settings icon and text */}
-            <div className="p-2 border-t border-zinc-100 bg-white flex items-center shrink-0 select-none">
-              {onOpenSettings && (
-                <button
-                  type="button"
-                  onClick={onOpenSettings}
-                  className="w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-medium text-zinc-700 hover:text-zinc-950 hover:bg-zinc-100/70 transition-colors cursor-pointer select-none group"
-                  title="Settings & Model Configuration (⌘,)"
-                >
-                  <Settings className="w-4 h-4 text-zinc-500 group-hover:text-zinc-900 transition-colors shrink-0" />
-                  <span>Settings</span>
-                </button>
-              )}
-            </div>
-          </>
-        ) : (
-          /* Collapsed Mini Icon Rail (56px) */
-          <div className="flex flex-col items-center justify-between h-full py-2.5 px-1 bg-white select-none">
-            {/* Top: Expand Toggle + Nav Icons */}
-            <div className="flex flex-col items-center space-y-1.5 w-full">
+            </>
+          ) : (
+            <div className="flex flex-col items-center pt-1">
               <button
                 type="button"
                 onClick={onToggle}
-                className="w-9 h-9 flex items-center justify-center rounded-xl text-zinc-500 hover:text-zinc-950 hover:bg-zinc-100 transition-colors cursor-pointer"
-                title="Expand sidebar (⌘B)"
-              >
-                <PanelLeft className="w-4 h-4" />
-              </button>
-
-              <div className="w-6 h-px bg-zinc-100 my-1" />
-
-              {onNewChat && (
-                <button
-                  type="button"
-                  onClick={onNewChat}
-                  className="w-9 h-9 flex items-center justify-center rounded-xl text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100 transition-colors cursor-pointer group"
-                  title="New chat (⌘N)"
-                >
-                  <Plus className="w-4 h-4 text-zinc-500 group-hover:text-zinc-900 transition-colors" />
-                </button>
-              )}
-
-              {onOpenFileLibrary && (
-                <button
-                  type="button"
-                  onClick={onOpenFileLibrary}
-                  className="w-9 h-9 flex items-center justify-center rounded-xl text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100 transition-colors cursor-pointer group"
-                  title="Workspace File Library & Assets"
-                >
-                  <FolderOpen className="w-4 h-4 text-zinc-500 group-hover:text-zinc-900 transition-colors" />
-                </button>
-              )}
-
-              <button
-                type="button"
-                onClick={onToggle}
-                className="w-9 h-9 flex items-center justify-center rounded-xl text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 transition-colors cursor-pointer relative group"
+                className="w-14 h-10 flex items-center justify-center text-zinc-400 hover:text-zinc-800 hover:bg-zinc-100/80 transition-colors cursor-pointer relative group"
                 title={`Conversations (${chats.length})`}
               >
                 <MessageSquare className="w-4 h-4 text-zinc-400 group-hover:text-zinc-800 transition-colors" />
                 {chats.length > 0 && (
-                  <span className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-blue-500" />
+                  <span className="absolute top-2.5 right-4 w-1.5 h-1.5 rounded-full bg-blue-500" />
                 )}
               </button>
             </div>
+          )}
+        </div>
 
-            {/* Bottom: Settings Icon */}
-            <div className="flex flex-col items-center pt-2 border-t border-zinc-100 w-full">
-              {onOpenSettings && (
-                <button
-                  type="button"
-                  onClick={onOpenSettings}
-                  className="w-9 h-9 flex items-center justify-center rounded-xl text-zinc-500 hover:text-zinc-950 hover:bg-zinc-100 transition-colors cursor-pointer group"
-                  title="Settings & Model Configuration (⌘,)"
-                >
-                  <Settings className="w-4 h-4 text-zinc-500 group-hover:text-zinc-900 transition-colors" />
-                </button>
-              )}
-            </div>
-          </div>
-        )}
+        {/* Sidebar Footer: Settings */}
+        <div className="h-12 border-t border-zinc-100 bg-white flex items-center shrink-0 overflow-hidden">
+          {onOpenSettings && (
+            <button
+              type="button"
+              onClick={onOpenSettings}
+              className="w-full flex items-center h-10 hover:bg-zinc-100/70 transition-colors cursor-pointer text-zinc-700 hover:text-zinc-950 group relative"
+              title="Settings & Model Configuration (⌘,)"
+            >
+              <div className="w-14 h-10 flex items-center justify-center shrink-0">
+                <Settings className="w-4 h-4 text-zinc-500 group-hover:text-zinc-900 transition-colors shrink-0" />
+              </div>
+              <span
+                className={`text-xs font-medium truncate transition-opacity duration-200 whitespace-nowrap ${
+                  isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+                }`}
+              >
+                Settings
+              </span>
+            </button>
+          )}
+        </div>
 
         {/* Right-Edge Transparent Drag Handle for Resizing */}
         {isOpen && (

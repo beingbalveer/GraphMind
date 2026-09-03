@@ -15,6 +15,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { MenuCard, MenuItem, MenuHeader } from "@/components/ui/menu";
 import { BranchContext } from "@/hooks/useChatStream";
 import { FileAttachment } from "@graphmind/shared";
 import { uploadWorkspaceFile } from "@/lib/workspaceApi";
@@ -488,32 +489,30 @@ export function ChatInput({
 
             {/* Attachment Dropdown Menu */}
             {isAttachMenuOpen && (
-              <div className="absolute bottom-full left-0 mb-2 w-52 rounded-[20px] bg-white border border-zinc-200/80 shadow-[0_4px_24px_rgba(0,0,0,0.08)] p-1.5 z-50 animate-in fade-in-50 zoom-in-95 duration-150 flex flex-col space-y-0.5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsAttachMenuOpen(false);
-                    fileInputRef.current?.click();
-                  }}
-                  className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left text-[13px] font-normal text-zinc-800 hover:text-zinc-950 hover:bg-zinc-100/90 transition-colors cursor-pointer"
-                >
-                  <Upload className="w-4 h-4 text-zinc-700 shrink-0" />
-                  <span>Upload from computer</span>
-                </button>
-
-                {workspaceId && (
-                  <button
-                    type="button"
+              <div className="absolute bottom-full left-0 mb-2 z-50 animate-in fade-in-50 zoom-in-95 duration-150">
+                <MenuCard className="w-52">
+                  <MenuItem
+                    icon={<Upload className="w-4 h-4" />}
                     onClick={() => {
                       setIsAttachMenuOpen(false);
-                      setIsLibraryPickerOpen(true);
+                      fileInputRef.current?.click();
                     }}
-                    className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left text-[13px] font-normal text-zinc-800 hover:text-zinc-950 hover:bg-zinc-100/90 transition-colors cursor-pointer"
                   >
-                    <FolderOpen className="w-4 h-4 text-zinc-700 shrink-0" />
-                    <span>Attach from Library</span>
-                  </button>
-                )}
+                    Upload from computer
+                  </MenuItem>
+
+                  {workspaceId && (
+                    <MenuItem
+                      icon={<FolderOpen className="w-4 h-4" />}
+                      onClick={() => {
+                        setIsAttachMenuOpen(false);
+                        setIsLibraryPickerOpen(true);
+                      }}
+                    >
+                      Attach from Library
+                    </MenuItem>
+                  )}
+                </MenuCard>
               </div>
             )}
 
@@ -546,66 +545,54 @@ export function ChatInput({
 
               {/* Floating Skill Menu */}
               {isSkillMenuOpen && (
-                <div className="absolute bottom-full left-0 mb-2 min-w-[200px] rounded-[20px] bg-white border border-zinc-200/80 shadow-[0_4px_24px_rgba(0,0,0,0.08)] p-1.5 z-50 animate-in fade-in-50 zoom-in-95 duration-150 flex flex-col space-y-0.5">
-                  <div className="px-3 py-1.5 text-[11px] font-semibold text-zinc-400 uppercase tracking-wider select-none">
-                    Agent Skill Playbooks
-                  </div>
+                <div className="absolute bottom-full left-0 mb-2 z-50 animate-in fade-in-50 zoom-in-95 duration-150">
+                  <MenuCard className="min-w-[200px]">
+                    <MenuHeader>Agent Skill Playbooks</MenuHeader>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedSkill(null);
-                      setIsSkillMenuOpen(false);
-                    }}
-                    className={`w-full flex items-center justify-between gap-3 px-3 py-2 rounded-xl text-left text-[13px] transition-colors cursor-pointer ${
-                      selectedSkill === null ? "text-indigo-600 font-medium bg-indigo-50/70" : "text-zinc-800 hover:text-zinc-950 hover:bg-zinc-100/90 font-normal"
-                    }`}
-                  >
-                    <span>Standard Chat</span>
-                    {selectedSkill === null && <span className="text-indigo-600">✓</span>}
-                  </button>
+                    <MenuItem
+                      active={selectedSkill === null}
+                      trailing={selectedSkill === null ? <span className="text-indigo-600">✓</span> : null}
+                      onClick={() => {
+                        setSelectedSkill(null);
+                        setIsSkillMenuOpen(false);
+                      }}
+                    >
+                      Standard Chat
+                    </MenuItem>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedSkill("deep_research");
-                      setIsSkillMenuOpen(false);
-                    }}
-                    className={`w-full flex items-center justify-between gap-3 px-3 py-2 rounded-xl text-left text-[13px] transition-colors cursor-pointer ${
-                      selectedSkill === "deep_research" ? "text-indigo-600 font-medium bg-indigo-50/70" : "text-zinc-800 hover:text-zinc-950 hover:bg-zinc-100/90 font-normal"
-                    }`}
-                  >
-                    <span>⚡ Deep Research</span>
-                    {selectedSkill === "deep_research" && <span className="text-indigo-600">✓</span>}
-                  </button>
+                    <MenuItem
+                      active={selectedSkill === "deep_research"}
+                      trailing={selectedSkill === "deep_research" ? <span className="text-indigo-600">✓</span> : null}
+                      onClick={() => {
+                        setSelectedSkill("deep_research");
+                        setIsSkillMenuOpen(false);
+                      }}
+                    >
+                      ⚡ Deep Research
+                    </MenuItem>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedSkill("code_architect");
-                      setIsSkillMenuOpen(false);
-                    }}
-                    className={`w-full flex items-center justify-between gap-3 px-3 py-2 rounded-xl text-left text-[13px] transition-colors cursor-pointer ${
-                      selectedSkill === "code_architect" ? "text-indigo-600 font-medium bg-indigo-50/70" : "text-zinc-800 hover:text-zinc-950 hover:bg-zinc-100/90 font-normal"
-                    }`}
-                  >
-                    <span>🏛️ Code Architect</span>
-                    {selectedSkill === "code_architect" && <span className="text-indigo-600">✓</span>}
-                  </button>
+                    <MenuItem
+                      active={selectedSkill === "code_architect"}
+                      trailing={selectedSkill === "code_architect" ? <span className="text-indigo-600">✓</span> : null}
+                      onClick={() => {
+                        setSelectedSkill("code_architect");
+                        setIsSkillMenuOpen(false);
+                      }}
+                    >
+                      🏛️ Code Architect
+                    </MenuItem>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedSkill("quiz_master");
-                      setIsSkillMenuOpen(false);
-                    }}
-                    className={`w-full flex items-center justify-between gap-3 px-3 py-2 rounded-xl text-left text-[13px] transition-colors cursor-pointer ${
-                      selectedSkill === "quiz_master" ? "text-indigo-600 font-medium bg-indigo-50/70" : "text-zinc-800 hover:text-zinc-950 hover:bg-zinc-100/90 font-normal"
-                    }`}
-                  >
-                    <span>🎓 Quiz Master</span>
-                    {selectedSkill === "quiz_master" && <span className="text-indigo-600">✓</span>}
-                  </button>
+                    <MenuItem
+                      active={selectedSkill === "quiz_master"}
+                      trailing={selectedSkill === "quiz_master" ? <span className="text-indigo-600">✓</span> : null}
+                      onClick={() => {
+                        setSelectedSkill("quiz_master");
+                        setIsSkillMenuOpen(false);
+                      }}
+                    >
+                      🎓 Quiz Master
+                    </MenuItem>
+                  </MenuCard>
                 </div>
               )}
             </div>

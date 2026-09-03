@@ -4,6 +4,9 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 
+import { MenuCard, MenuItem } from "./menu";
+export { MenuCard, MenuItem, MenuHeader } from "./menu";
+
 export interface DropdownMenuItemProps {
   label: string;
   icon?: React.ReactNode;
@@ -124,38 +127,26 @@ export function DropdownMenu({
         ...(coords.right !== undefined ? { right: `${coords.right}px` } : {}),
         ...(coords.left !== undefined ? { left: `${coords.left}px` } : {}),
       }}
-      className={cn(
-        "z-[9999] min-w-[150px] rounded-[20px] bg-white p-1.5 text-zinc-950 shadow-[0_4px_24px_rgba(0,0,0,0.08)] border border-zinc-200/80 animate-in fade-in-0 zoom-in-95 duration-100 flex flex-col space-y-0.5",
-        className
-      )}
+      className="z-[9999]"
       onClick={(e) => e.stopPropagation()}
     >
-      {items.map((item, index) => (
-        <button
-          key={index}
-          type="button"
-          disabled={item.disabled}
-          onClick={(e) => {
-            e.stopPropagation();
-            close();
-            item.onClick(e);
-          }}
-          className={cn(
-            "relative flex w-full cursor-pointer select-none items-center rounded-xl px-3 py-2 text-[13px] font-normal outline-none transition-colors",
-            item.variant === "destructive"
-              ? "text-rose-600 hover:bg-rose-50 hover:text-rose-700 active:bg-rose-100"
-              : "text-zinc-800 hover:bg-zinc-100/90 hover:text-zinc-950 active:bg-zinc-200/70",
-            item.disabled && "pointer-events-none opacity-50"
-          )}
-        >
-          {item.icon && (
-            <span className="mr-3 h-4 w-4 flex items-center justify-center shrink-0 text-zinc-700">
-              {item.icon}
-            </span>
-          )}
-          <span>{item.label}</span>
-        </button>
-      ))}
+      <MenuCard className={cn("min-w-[150px] animate-in fade-in-0 zoom-in-95 duration-100", className)}>
+        {items.map((item, index) => (
+          <MenuItem
+            key={index}
+            disabled={item.disabled}
+            variant={item.variant}
+            icon={item.icon}
+            onClick={(e) => {
+              e.stopPropagation();
+              close();
+              item.onClick(e);
+            }}
+          >
+            {item.label}
+          </MenuItem>
+        ))}
+      </MenuCard>
     </div>
   ) : null;
 
