@@ -217,3 +217,66 @@ class WorkspaceFile(Base):
 
     # Relationships
     workspace: Mapped["Workspace"] = relationship("Workspace", back_populates="files")
+    chunks: Mapped[List["WorkspaceFileChunk"]] = relationship(
+        "WorkspaceFileChunk",
+        back_populates="file",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        order_by="WorkspaceFileChunk.chunk_index",
+    )
+
+
+class WorkspaceFileChunk(Base):
+    """
+    Semantic chunk of an uploaded workspace file for Enterprise RAG.
+    Dual-indexed with:
+      - pgvector dense embeddings for semantic search (HNSW index)
+      - PostgreSQL tsvector for lexical keyword matching (GIN index)
+    """
+
+    __tablename__ = "workspace_file_chunks"
+
+    id: Mapped[str] = mapped_column(
+        String(64),
+        primary_key=True,
+        default=lambda: f"chunk_{uuid.uuid4().hex[:12]}",
+    )
+    workspace_id: Mapped[str] = mapped_column(
+        String(64),
+        ForeignKey("workspaces.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    file_id: Mapped[str] = mapped_column(
+        String(64),
+        ForeignKey("workspace_files.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    chunk_index: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    enriched_content: Mapped[str] = mapped_column(Text, nullable=False)
+    page_number: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    section_header: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    token_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+    metadata_payload: Mapped[Dict[str, Any]] = mapped_column(
+        "metadata",
+        JSON,
+        default=dict,
+    )
+
+    # 768-dimensional dense vector embedding (text-embedding-004)
+    embedding: Mapped[Optional[List[float]]] = mapped_column(
+        Vector(768),
+        nullable=True,
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=_utc_now,
+    )
+
+    # Relationships
+    file: Mapped["WorkspaceFile"] = relationship("WorkspaceFile", back_populates="chunks")
+    workspace: Mapped["Workspace"] = relationship("Workspace")

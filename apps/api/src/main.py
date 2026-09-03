@@ -48,13 +48,28 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         from sqlalchemy import text
 
         engine = get_engine()
+        is_postgres = "postgresql" in str(engine.url)
         async with engine.begin() as conn:
-            await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
+            if is_postgres:
+                await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
             await conn.run_sync(Base.metadata.create_all)
-            await conn.execute(
-                text("ALTER TABLE nodes ADD COLUMN IF NOT EXISTS embedding vector(768);")
-            )
-        logger.info("Database schema and pgvector extension initialized successfully")
+            if is_postgres:
+                await conn.execute(
+                    text("ALTER TABLE nodes ADD COLUMN IF NOT EXISTS embedding vector(768);")
+                )
+                await conn.execute(
+                    text(
+                        "CREATE INDEX IF NOT EXISTS idx_file_chunks_embedding_hnsw "
+                        "ON workspace_file_chunks USING hnsw (embedding vector_cosine_ops);"
+                    )
+                )
+                await conn.execute(
+                    text(
+                        "CREATE INDEX IF NOT EXISTS idx_file_chunks_tsv_gin "
+                        "ON workspace_file_chunks USING gin (to_tsvector('english', enriched_content));"
+                    )
+                )
+        logger.info("Database schema, pgvector extension, and hybrid search indexes initialized successfully")
     except Exception as e:
         logger.warning("Database synchronization deferred or failed", error=str(e))
 

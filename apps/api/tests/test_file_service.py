@@ -364,3 +364,77 @@ async def test_workspace_tabular_file_uploads_and_extraction() -> None:
             assert "content" in chat_resp.json()
         finally:
             await client.delete(f"/api/v1/workspaces/{ws_id}")
+
+
+@pytest.mark.asyncio
+async def test_workspace_file_chunk_model() -> None:
+    from database import get_session_factory
+    from models.workspace import Workspace, WorkspaceFile, WorkspaceFileChunk
+    from sqlalchemy import select
+    from sqlalchemy.orm import selectinload
+
+    session_factory = get_session_factory()
+    async with session_factory() as session:
+        # 1. Create Workspace and WorkspaceFile
+        ws = Workspace(name="Chunk Test WS")
+        session.add(ws)
+        await session.flush()
+
+        wf = WorkspaceFile(
+            workspace_id=ws.id,
+            name="design_doc.md",
+            mime_type="text/markdown",
+            file_category="document",
+            storage_path="/tmp/design_doc.md",
+            size_bytes=1200,
+        )
+        session.add(wf)
+        await session.flush()
+
+        # 2. Add WorkspaceFileChunks
+        chunk1 = WorkspaceFileChunk(
+            workspace_id=ws.id,
+            file_id=wf.id,
+            chunk_index=0,
+            content="## Overview\nGraphMind provides spatial thinking.",
+            enriched_content="[File: design_doc.md | Overview]\n\n## Overview\nGraphMind provides spatial thinking.",
+            section_header="Overview",
+            token_count=15,
+            page_number=1,
+            embedding=[0.01] * 768,
+        )
+        chunk2 = WorkspaceFileChunk(
+            workspace_id=ws.id,
+            file_id=wf.id,
+            chunk_index=1,
+            content="## Architecture\nUses pgvector and FastAPI.",
+            enriched_content="[File: design_doc.md | Architecture]\n\n## Architecture\nUses pgvector and FastAPI.",
+            section_header="Architecture",
+            token_count=16,
+            page_number=1,
+            embedding=[0.02] * 768,
+        )
+        session.add_all([chunk1, chunk2])
+        await session.commit()
+
+        # 3. Query back chunks via file relationship with selectinload
+        res = await session.execute(
+            select(WorkspaceFile)
+            .options(selectinload(WorkspaceFile.chunks))
+            .where(WorkspaceFile.id == wf.id)
+        )
+        loaded_file = res.scalar_one()
+        assert len(loaded_file.chunks) == 2
+        assert loaded_file.chunks[0].chunk_index == 0
+        assert loaded_file.chunks[1].chunk_index == 1
+        assert loaded_file.chunks[0].section_header == "Overview"
+        assert len(loaded_file.chunks[0].embedding) == 768
+
+        # 4. Cascade delete: deleting workspace deletes file and its chunks
+        await session.delete(ws)
+        await session.commit()
+
+        chunk_res = await session.execute(
+            select(WorkspaceFileChunk).where(WorkspaceFileChunk.workspace_id == ws.id)
+        )
+        assert len(chunk_res.scalars().all()) == 0
