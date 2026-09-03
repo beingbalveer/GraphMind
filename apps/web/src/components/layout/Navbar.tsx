@@ -5,6 +5,7 @@ import {
   MessageSquare,
   LayoutGrid,
   PanelLeft,
+  ChevronDown,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -35,8 +36,8 @@ export function Navbar({
   breadcrumbs,
   viewMode = "chat",
   onViewModeChange,
-  workspaceName: _workspaceName = "Main Workspace",
-  onOpenWorkspaceModal: _onOpenWorkspaceModal,
+  workspaceName = "Main Workspace",
+  onOpenWorkspaceModal,
   onOpenModelConfig: _onOpenModelConfig,
   onOpenFileLibrary: _onOpenFileLibrary,
   activeModelName: _activeModelName = "gemini-2.5-flash",
@@ -47,7 +48,7 @@ export function Navbar({
 }: NavbarProps) {
   return (
     <header className="h-13 border-b border-zinc-200/80 bg-white/80 backdrop-blur-md px-3 sm:px-5 flex items-center justify-between z-30 shrink-0 select-none">
-      {/* Top Left: Sidebar Toggle + Minimalist Brand Logo */}
+      {/* Top Left: Sidebar Toggle + Workspace Switcher */}
       <div className="flex items-center space-x-2 shrink-0">
         {onToggleSidebar && (
           <Button
@@ -61,15 +62,28 @@ export function Navbar({
           </Button>
         )}
 
-        <Link
-          href="/"
-          className="flex items-center space-x-1.5 hover:opacity-80 transition-opacity"
-        >
-          <LogoBadge size="sm" />
-          <span className="font-semibold text-zinc-950 text-[13.5px] tracking-tight hidden sm:inline">
-            GraphMind
-          </span>
-        </Link>
+        {onOpenWorkspaceModal ? (
+          <button
+            type="button"
+            onClick={onOpenWorkspaceModal}
+            className="flex items-center space-x-1.5 px-2 py-1 rounded-xl hover:bg-zinc-100 text-zinc-900 text-xs font-semibold max-w-[200px] sm:max-w-[240px] truncate transition-colors cursor-pointer group"
+            title="Click to switch or manage workspaces"
+          >
+            <LogoBadge size="sm" />
+            <span className="truncate">{workspaceName}</span>
+            <ChevronDown className="w-3 h-3 text-zinc-400 group-hover:text-zinc-700 transition-colors shrink-0" />
+          </button>
+        ) : (
+          <Link
+            href="/"
+            className="flex items-center space-x-1.5 hover:opacity-80 transition-opacity"
+          >
+            <LogoBadge size="sm" />
+            <span className="font-semibold text-zinc-950 text-[13.5px] tracking-tight hidden sm:inline">
+              {workspaceName}
+            </span>
+          </Link>
+        )}
       </div>
 
       {/* Center: Branch Breadcrumbs */}

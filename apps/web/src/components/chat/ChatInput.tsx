@@ -486,24 +486,19 @@ export function ChatInput({
               <Plus className={`w-4 h-4 transition-transform duration-200 ${isAttachMenuOpen ? "rotate-45 text-zinc-950" : ""}`} />
             </button>
 
-            {/* Floating Dropdown Attachment Menu */}
+            {/* Attachment Dropdown Menu */}
             {isAttachMenuOpen && (
-              <div className="absolute bottom-full left-0 mb-2 w-56 rounded-xl bg-white border border-zinc-200/90 shadow-lg py-1.5 z-50 animate-in fade-in-50 zoom-in-95 duration-150">
+              <div className="absolute bottom-full left-0 mb-2 w-52 rounded-[20px] bg-white border border-zinc-200/80 shadow-[0_4px_24px_rgba(0,0,0,0.08)] p-1.5 z-50 animate-in fade-in-50 zoom-in-95 duration-150 flex flex-col space-y-0.5">
                 <button
                   type="button"
                   onClick={() => {
                     setIsAttachMenuOpen(false);
                     fileInputRef.current?.click();
                   }}
-                  className="w-full flex items-center space-x-2.5 px-3 py-2 text-left text-xs text-zinc-700 hover:bg-zinc-50 hover:text-zinc-950 transition-colors cursor-pointer"
+                  className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left text-[13px] font-normal text-zinc-800 hover:text-zinc-950 hover:bg-zinc-100/90 transition-colors cursor-pointer"
                 >
-                  <div className="p-1.5 rounded-lg bg-zinc-100 border border-zinc-200/60 text-zinc-700">
-                    <Upload className="w-3.5 h-3.5" />
-                  </div>
-                  <div className="flex flex-col min-w-0">
-                    <span className="font-medium">Upload from computer</span>
-                    <span className="text-[10px] text-zinc-400">PDF, images, sheets, code, docs</span>
-                  </div>
+                  <Upload className="w-4 h-4 text-zinc-700 shrink-0" />
+                  <span>Upload from computer</span>
                 </button>
 
                 {workspaceId && (
@@ -513,15 +508,10 @@ export function ChatInput({
                       setIsAttachMenuOpen(false);
                       setIsLibraryPickerOpen(true);
                     }}
-                    className="w-full flex items-center space-x-2.5 px-3 py-2 text-left text-xs text-zinc-700 hover:bg-zinc-50 hover:text-zinc-950 transition-colors cursor-pointer"
+                    className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-left text-[13px] font-normal text-zinc-800 hover:text-zinc-950 hover:bg-zinc-100/90 transition-colors cursor-pointer"
                   >
-                    <div className="p-1.5 rounded-lg bg-zinc-100 border border-zinc-200/60 text-zinc-700">
-                      <FolderOpen className="w-3.5 h-3.5" />
-                    </div>
-                    <div className="flex flex-col min-w-0">
-                      <span className="font-medium">Attach from Library</span>
-                      <span className="text-[10px] text-zinc-400">Saved workspace assets</span>
-                    </div>
+                    <FolderOpen className="w-4 h-4 text-zinc-700 shrink-0" />
+                    <span>Attach from Library</span>
                   </button>
                 )}
               </div>
@@ -533,17 +523,17 @@ export function ChatInput({
                 type="button"
                 onClick={() => setIsSkillMenuOpen((prev) => !prev)}
                 disabled={isStreaming}
-                className={`p-1.5 rounded-lg transition-all cursor-pointer flex items-center space-x-1.5 disabled:opacity-50 disabled:cursor-not-allowed ${
+                className={`flex items-center space-x-1 px-2 py-1 rounded-lg text-xs font-medium border transition-colors cursor-pointer select-none ${
                   selectedSkill
-                    ? "bg-indigo-100/80 text-indigo-900 font-medium"
+                    ? "bg-indigo-50/80 border-indigo-200 text-indigo-700 hover:bg-indigo-100/70"
                     : isSkillMenuOpen
-                    ? "bg-zinc-200 text-zinc-900"
-                    : "text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100"
+                    ? "bg-zinc-100 border-zinc-300 text-zinc-800"
+                    : "border-transparent text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100"
                 }`}
                 title="Select active agent skill playbook"
               >
                 <Sparkles className={`w-3.5 h-3.5 ${selectedSkill ? "text-indigo-600" : ""}`} />
-                <span className="text-xs hidden sm:inline">
+                <span className="hidden sm:inline">
                   {selectedSkill === "deep_research"
                     ? "Research"
                     : selectedSkill === "code_architect"
@@ -556,8 +546,8 @@ export function ChatInput({
 
               {/* Floating Skill Menu */}
               {isSkillMenuOpen && (
-                <div className="absolute bottom-full left-0 mb-2 w-48 rounded-xl bg-white border border-zinc-200/90 shadow-lg py-1.5 z-50 animate-in fade-in-50 zoom-in-95 duration-150">
-                  <div className="px-3 py-1 text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">
+                <div className="absolute bottom-full left-0 mb-2 min-w-[200px] rounded-[20px] bg-white border border-zinc-200/80 shadow-[0_4px_24px_rgba(0,0,0,0.08)] p-1.5 z-50 animate-in fade-in-50 zoom-in-95 duration-150 flex flex-col space-y-0.5">
+                  <div className="px-3 py-1.5 text-[11px] font-semibold text-zinc-400 uppercase tracking-wider select-none">
                     Agent Skill Playbooks
                   </div>
 
@@ -567,11 +557,11 @@ export function ChatInput({
                       setSelectedSkill(null);
                       setIsSkillMenuOpen(false);
                     }}
-                    className={`w-full flex items-center justify-between px-3 py-1.5 text-left text-xs hover:bg-zinc-50 transition-colors cursor-pointer ${
-                      selectedSkill === null ? "text-indigo-600 font-medium bg-indigo-50/50" : "text-zinc-700"
+                    className={`w-full flex items-center justify-between gap-3 px-3 py-2 rounded-xl text-left text-[13px] transition-colors cursor-pointer ${
+                      selectedSkill === null ? "text-indigo-600 font-medium bg-indigo-50/70" : "text-zinc-800 hover:text-zinc-950 hover:bg-zinc-100/90 font-normal"
                     }`}
                   >
-                    <span className="font-medium">Standard Chat</span>
+                    <span>Standard Chat</span>
                     {selectedSkill === null && <span className="text-indigo-600">✓</span>}
                   </button>
 
@@ -581,11 +571,11 @@ export function ChatInput({
                       setSelectedSkill("deep_research");
                       setIsSkillMenuOpen(false);
                     }}
-                    className={`w-full flex items-center justify-between px-3 py-1.5 text-left text-xs hover:bg-zinc-50 transition-colors cursor-pointer ${
-                      selectedSkill === "deep_research" ? "text-indigo-600 font-medium bg-indigo-50/50" : "text-zinc-700"
+                    className={`w-full flex items-center justify-between gap-3 px-3 py-2 rounded-xl text-left text-[13px] transition-colors cursor-pointer ${
+                      selectedSkill === "deep_research" ? "text-indigo-600 font-medium bg-indigo-50/70" : "text-zinc-800 hover:text-zinc-950 hover:bg-zinc-100/90 font-normal"
                     }`}
                   >
-                    <span className="font-medium">⚡ Deep Research</span>
+                    <span>⚡ Deep Research</span>
                     {selectedSkill === "deep_research" && <span className="text-indigo-600">✓</span>}
                   </button>
 
@@ -595,11 +585,11 @@ export function ChatInput({
                       setSelectedSkill("code_architect");
                       setIsSkillMenuOpen(false);
                     }}
-                    className={`w-full flex items-center justify-between px-3 py-1.5 text-left text-xs hover:bg-zinc-50 transition-colors cursor-pointer ${
-                      selectedSkill === "code_architect" ? "text-indigo-600 font-medium bg-indigo-50/50" : "text-zinc-700"
+                    className={`w-full flex items-center justify-between gap-3 px-3 py-2 rounded-xl text-left text-[13px] transition-colors cursor-pointer ${
+                      selectedSkill === "code_architect" ? "text-indigo-600 font-medium bg-indigo-50/70" : "text-zinc-800 hover:text-zinc-950 hover:bg-zinc-100/90 font-normal"
                     }`}
                   >
-                    <span className="font-medium">🏛️ Code Architect</span>
+                    <span>🏛️ Code Architect</span>
                     {selectedSkill === "code_architect" && <span className="text-indigo-600">✓</span>}
                   </button>
 
@@ -609,11 +599,11 @@ export function ChatInput({
                       setSelectedSkill("quiz_master");
                       setIsSkillMenuOpen(false);
                     }}
-                    className={`w-full flex items-center justify-between px-3 py-1.5 text-left text-xs hover:bg-zinc-50 transition-colors cursor-pointer ${
-                      selectedSkill === "quiz_master" ? "text-indigo-600 font-medium bg-indigo-50/50" : "text-zinc-700"
+                    className={`w-full flex items-center justify-between gap-3 px-3 py-2 rounded-xl text-left text-[13px] transition-colors cursor-pointer ${
+                      selectedSkill === "quiz_master" ? "text-indigo-600 font-medium bg-indigo-50/70" : "text-zinc-800 hover:text-zinc-950 hover:bg-zinc-100/90 font-normal"
                     }`}
                   >
-                    <span className="font-medium">🎓 Quiz Master</span>
+                    <span>🎓 Quiz Master</span>
                     {selectedSkill === "quiz_master" && <span className="text-indigo-600">✓</span>}
                   </button>
                 </div>

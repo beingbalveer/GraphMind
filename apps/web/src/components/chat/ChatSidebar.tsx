@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
   Search,
-  FolderGit2,
   MoreVertical,
   Pin,
   PinOff,
@@ -23,7 +22,7 @@ import { safeGetItem, safeSetItem } from "@/lib/storage";
 interface ChatSidebarProps {
   isOpen: boolean;
   onToggle: () => void;
-  workspaceName: string;
+  workspaceName?: string;
   chats: ChatItem[];
   activeChatId: string | null;
   onSelectChat: (chat: ChatItem) => void;
@@ -45,14 +44,14 @@ const MAX_WIDTH = 480;
 export function ChatSidebar({
   isOpen,
   onToggle,
-  workspaceName,
+  workspaceName: _workspaceName = "Main Workspace",
   chats,
   activeChatId,
   onSelectChat,
   onDeleteChat,
   onRenameChat,
   onTogglePinChat,
-  onOpenWorkspaceModal,
+  onOpenWorkspaceModal: _onOpenWorkspaceModal,
   onOpenSettings,
   onNewChat,
   onOpenFileLibrary,
@@ -172,42 +171,27 @@ export function ChatSidebar({
       >
         {isOpen ? (
           <>
-            {/* Sidebar Header with Workspace Badge + Collapse Button */}
-            <div className="p-3 border-b border-zinc-100 space-y-2 shrink-0 bg-white">
-              <div className="flex items-center justify-between">
-                <button
-                  type="button"
-                  onClick={onOpenWorkspaceModal}
-                  className="flex items-center space-x-2 px-2.5 py-1.5 rounded-xl hover:bg-zinc-100 text-zinc-800 hover:text-zinc-950 text-xs font-semibold max-w-[calc(100%-36px)] truncate transition-colors cursor-pointer"
-                  title="Click to switch or manage workspaces"
-                >
-                  <FolderGit2 className="w-4 h-4 text-zinc-500 shrink-0" />
-                  <span className="truncate">{workspaceName}</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={onToggle}
-                  className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 transition-colors cursor-pointer shrink-0"
-                  title="Collapse sidebar (⌘B)"
-                >
-                  <PanelLeft className="w-4 h-4" />
-                </button>
+            {/* Sidebar Header: Search & Collapse Button */}
+            <div className="p-2.5 border-b border-zinc-100 flex items-center justify-between gap-2 shrink-0 bg-white">
+              <div className="relative flex-1">
+                <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search chats..."
+                  className="w-full pl-8 pr-2.5 py-1.5 rounded-xl border border-zinc-200/80 bg-zinc-50/50 text-xs text-zinc-800 placeholder:text-zinc-400 focus:outline-none focus:bg-white focus:ring-1 focus:ring-zinc-900 transition-all shadow-2xs"
+                />
               </div>
 
-              {/* Quick Filter Search Input */}
-              {chats.length > 3 && (
-                <div className="relative flex items-center pt-0.5">
-                  <Search className="w-3.5 h-3.5 absolute left-3 text-zinc-400 pointer-events-none" />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search chats..."
-                    className="w-full pl-8 pr-3 py-1.5 rounded-xl border border-zinc-200/80 bg-white text-xs text-zinc-800 placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-900 transition-all shadow-2xs"
-                  />
-                </div>
-              )}
+              <button
+                type="button"
+                onClick={onToggle}
+                className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 transition-colors cursor-pointer shrink-0"
+                title="Collapse sidebar (⌘B)"
+              >
+                <PanelLeft className="w-4 h-4" />
+              </button>
             </div>
 
             {/* Minimalist Flat Chat List */}
@@ -392,17 +376,6 @@ export function ChatSidebar({
                   title="Workspace File Library & Assets"
                 >
                   <FolderOpen className="w-4 h-4 text-zinc-500 group-hover:text-zinc-900 transition-colors" />
-                </button>
-              )}
-
-              {onOpenWorkspaceModal && (
-                <button
-                  type="button"
-                  onClick={onOpenWorkspaceModal}
-                  className="w-9 h-9 flex items-center justify-center rounded-xl text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100 transition-colors cursor-pointer group"
-                  title={`Workspace: ${workspaceName}`}
-                >
-                  <FolderGit2 className="w-4 h-4 text-zinc-500 group-hover:text-zinc-900 transition-colors" />
                 </button>
               )}
 

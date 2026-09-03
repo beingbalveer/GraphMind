@@ -31,54 +31,37 @@ export function SelectionTooltip({
         position: "fixed",
         left: `${selection.x}px`,
         top: `${selection.y}px`,
-        transform: "translate(-50%, calc(-100% - 6px))",
+        transform: "translate(-50%, calc(-100% - 8px))",
       }}
-
       onMouseDown={(e) => {
         // Prevent clearing browser selection on container click/drag
         e.preventDefault();
       }}
       className="z-50 select-none animate-in fade-in-50 zoom-in-95 duration-150"
     >
-      <div className="relative flex flex-col items-center">
-        {/* Menu Card */}
-        <div className="bg-white border border-zinc-200 rounded-xl shadow-lg shadow-zinc-900/10 overflow-hidden min-w-[130px] p-1">
-          {/* Explain Action */}
-          <button
-            type="button"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => onExplore(selection.text)}
-            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-zinc-100 transition-colors duration-100 cursor-pointer group text-left"
-          >
-            <span className="flex items-center justify-center w-5 h-5 rounded-md bg-zinc-100 text-zinc-700 border border-zinc-200/90 shrink-0 group-hover:bg-zinc-200 group-hover:text-zinc-950 transition-colors shadow-2xs">
-              <GitBranch className="w-3 h-3" />
-            </span>
-            <span className="text-[12.5px] font-medium text-zinc-800 leading-none">
-              Explain
-            </span>
-          </button>
+      {/* Menu Card */}
+      <div className="bg-white border border-zinc-200/80 rounded-[20px] shadow-[0_4px_24px_rgba(0,0,0,0.08)] p-1.5 min-w-[145px] flex flex-col space-y-0.5">
+        {/* Explain Action */}
+        <button
+          type="button"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => onExplore(selection.text)}
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-[13px] font-normal text-zinc-800 hover:text-zinc-950 hover:bg-zinc-100/90 transition-colors cursor-pointer group text-left"
+        >
+          <GitBranch className="w-4 h-4 text-zinc-700 group-hover:text-zinc-950 shrink-0" />
+          <span>Explain</span>
+        </button>
 
-          {/* Divider */}
-          <div className="h-px bg-zinc-100 my-0.5 mx-1" />
-
-          {/* Search Action */}
-          <button
-            type="button"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => onSearch(selection.text)}
-            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-zinc-100 transition-colors duration-100 cursor-pointer group text-left"
-          >
-            <span className="flex items-center justify-center w-5 h-5 rounded-md bg-zinc-100 text-zinc-600 border border-zinc-200 shrink-0 group-hover:bg-zinc-200 group-hover:text-zinc-900 transition-colors">
-              <Search className="w-3 h-3" />
-            </span>
-            <span className="text-[12.5px] font-medium text-zinc-800 leading-none">
-              Search
-            </span>
-          </button>
-        </div>
-
-        {/* Bottom Caret pointing down toward the selection */}
-        <div className="w-2.5 h-2.5 bg-white border-r border-b border-zinc-200 rotate-45 -mt-[5px] shadow-sm" />
+        {/* Search Action */}
+        <button
+          type="button"
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => onSearch(selection.text)}
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-[13px] font-normal text-zinc-800 hover:text-zinc-950 hover:bg-zinc-100/90 transition-colors cursor-pointer group text-left"
+        >
+          <Search className="w-4 h-4 text-zinc-700 group-hover:text-zinc-950 shrink-0" />
+          <span>Search</span>
+        </button>
       </div>
     </div>,
     document.body

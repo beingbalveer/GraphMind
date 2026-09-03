@@ -125,7 +125,7 @@ export function DropdownMenu({
         ...(coords.left !== undefined ? { left: `${coords.left}px` } : {}),
       }}
       className={cn(
-        "z-[9999] min-w-[140px] rounded-xl bg-white p-1 text-zinc-950 shadow-xl border border-zinc-200 backdrop-blur-sm animate-in fade-in-0 zoom-in-95 duration-100",
+        "z-[9999] min-w-[150px] rounded-[20px] bg-white p-1.5 text-zinc-950 shadow-[0_4px_24px_rgba(0,0,0,0.08)] border border-zinc-200/80 animate-in fade-in-0 zoom-in-95 duration-100 flex flex-col space-y-0.5",
         className
       )}
       onClick={(e) => e.stopPropagation()}
@@ -141,15 +141,15 @@ export function DropdownMenu({
             item.onClick(e);
           }}
           className={cn(
-            "relative flex w-full cursor-pointer select-none items-center rounded-lg px-2.5 py-1.5 text-xs font-medium outline-none transition-colors",
+            "relative flex w-full cursor-pointer select-none items-center rounded-xl px-3 py-2 text-[13px] font-normal outline-none transition-colors",
             item.variant === "destructive"
               ? "text-rose-600 hover:bg-rose-50 hover:text-rose-700 active:bg-rose-100"
-              : "text-zinc-700 hover:bg-zinc-100 hover:text-zinc-950 active:bg-zinc-200",
+              : "text-zinc-800 hover:bg-zinc-100/90 hover:text-zinc-950 active:bg-zinc-200/70",
             item.disabled && "pointer-events-none opacity-50"
           )}
         >
           {item.icon && (
-            <span className="mr-2 h-3.5 w-3.5 flex items-center justify-center shrink-0">
+            <span className="mr-3 h-4 w-4 flex items-center justify-center shrink-0 text-zinc-700">
               {item.icon}
             </span>
           )}
