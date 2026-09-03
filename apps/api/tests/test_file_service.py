@@ -140,6 +140,8 @@ async def test_workspace_code_and_document_upload_and_extraction() -> None:
             md_data = md_resp.json()
             assert md_data["fileCategory"] == "document"
             assert md_data["extractedText"] == markdown_text.decode("utf-8")
+            assert md_data["metadata"].get("is_indexed") is True
+            assert md_data["metadata"].get("chunk_count", 0) >= 1
 
             # 4. List code files filter
             code_filter_resp = await client.get(f"/api/v1/workspaces/{ws_id}/files?category=code")

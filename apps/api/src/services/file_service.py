@@ -4,14 +4,17 @@ import json
 import os
 import re
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import openpyxl
 import pypdf
 import structlog
+from ai_core.providers import get_embedding_provider
 from anyio import Path as AsyncPath
-from models.workspace import Workspace, WorkspaceFile
+from models.workspace import Workspace, WorkspaceFile, WorkspaceFileChunk
+from services.chunking_service import ChunkingService
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -287,6 +290,14 @@ class FileService:
 
     def __init__(self, base_storage_dir: Optional[Path] = None):
         self.storage_dir = base_storage_dir or BASE_STORAGE_DIR
+        self.chunker = ChunkingService()
+        self._embedding_provider = None
+
+    @property
+    def embedding_provider(self):
+        if self._embedding_provider is None:
+            self._embedding_provider = get_embedding_provider()
+        return self._embedding_provider
 
     async def _ensure_workspace_dir(self, workspace_id: str) -> Path:
         ws_dir = self.storage_dir / "workspaces" / workspace_id / "files"
@@ -406,6 +417,67 @@ class FileService:
 
         db.add(file_record)
         await db.flush()
+
+        # 6. Automatic RAG chunking and vector indexing
+        if extracted_text and extracted_text.strip() and category != "image":
+            try:
+                chunks = self.chunker.chunk_document(
+                    filename=filename,
+                    content=extracted_text,
+                    file_category=category,
+                    metadata={"file_id": file_id, "original_filename": filename},
+                )
+                if chunks:
+                    texts_to_embed = [c.enriched_content for c in chunks]
+                    embeddings: List[List[float]] = []
+                    try:
+                        emb_result = await self.embedding_provider.embed(texts_to_embed)
+                        embeddings = emb_result.embeddings
+                    except Exception as emb_err:
+                        logger.warning(
+                            "Failed to generate batch chunk embeddings",
+                            file_id=file_id,
+                            error=str(emb_err),
+                        )
+                        embeddings = [[] for _ in chunks]
+
+                    chunk_models: List[WorkspaceFileChunk] = []
+                    for idx, c in enumerate(chunks):
+                        emb = embeddings[idx] if idx < len(embeddings) and embeddings[idx] else None
+                        chunk_models.append(
+                            WorkspaceFileChunk(
+                                id=f"chunk_{uuid.uuid4().hex[:12]}",
+                                workspace_id=workspace_id,
+                                file_id=file_id,
+                                chunk_index=c.chunk_index,
+                                content=c.content,
+                                enriched_content=c.enriched_content,
+                                page_number=c.page_number,
+                                section_header=c.section_header,
+                                token_count=c.token_count,
+                                metadata_payload=c.metadata,
+                                embedding=emb,
+                            )
+                        )
+                    db.add_all(chunk_models)
+                    # Update file metadata payload with index metrics
+                    new_meta = dict(file_record.metadata_payload or {})
+                    new_meta["chunk_count"] = len(chunk_models)
+                    new_meta["is_indexed"] = True
+                    new_meta["indexed_at"] = datetime.now(timezone.utc).isoformat()
+                    file_record.metadata_payload = new_meta
+                    await db.flush()
+                    logger.info(
+                        "Indexed workspace file chunks for Enterprise RAG",
+                        file_id=file_id,
+                        chunks_count=len(chunk_models),
+                    )
+            except Exception as chunk_err:
+                logger.warning(
+                    "Automatic chunking failed for file",
+                    file_id=file_id,
+                    error=str(chunk_err),
+                )
 
         logger.info(
             "Saved workspace file",
