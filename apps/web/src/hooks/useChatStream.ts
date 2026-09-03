@@ -378,7 +378,7 @@ export function useChatStream() {
           prompt: formattedPrompt,
           messages: messagesPayload,
           tree: currentTree,
-          parent_node_id: targetParentId,
+          parent_node_id: userNodeId || targetParentId,
           highlighted_context: branch?.highlightedText,
           provider,
           model,

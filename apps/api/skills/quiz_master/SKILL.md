@@ -19,5 +19,5 @@ When testing user comprehension or consolidating learning:
    - Avoid trivial trivia; test underlying mechanisms (e.g. failure modes, concurrency nuances, data invariants).
 
 3. **Sub-node Creation**:
-   - Invoke `create_subnode` with `branch_type="quiz"` to attach the quiz directly as a child node in the workspace knowledge graph.
+   - Invoke `create_subnode` with `branch_type="quiz"` to attach the quiz directly as a child node in the workspace knowledge graph (you can omit `parent_id` or leave it null to automatically attach to the current node).
    - Provide feedback criteria and explanation hints in the quiz content.

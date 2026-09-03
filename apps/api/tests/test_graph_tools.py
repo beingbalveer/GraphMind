@@ -145,12 +145,39 @@ async def test_create_subnode_tool() -> None:
             assert not res.is_error
             assert "node_id" in res.content
 
-            # Verify the node actually exists in the workspace
+            # Test with placeholder "current_node_id" (should resolve without FK error)
+            res_placeholder = await tool.run(
+                {
+                    "parent_id": "current_node_id",
+                    "content": "Quiz: What is a bounded context?",
+                    "branch_type": "quiz",
+                    "workspace_id": ws_id,
+                },
+                tool_call_id="call_create_2",
+            )
+            assert not res_placeholder.is_error
+            assert "node_id" in res_placeholder.content
+
+            # Test with omitted parent_id (should resolve to latest node)
+            res_omitted = await tool.run(
+                {
+                    "content": "Follow-up note on DDD patterns.",
+                    "branch_type": "assistant",
+                    "workspace_id": ws_id,
+                },
+                tool_call_id="call_create_3",
+            )
+            assert not res_omitted.is_error
+            assert "node_id" in res_omitted.content
+
+            # Verify the nodes actually exist in the workspace
             snap_resp = await client.get(f"/api/v1/workspaces/{ws_id}/graph")
             assert snap_resp.status_code == 200
             snapshot = snap_resp.json()
             node_contents = [n["content"] for n in snapshot["nodes"]]
             assert any("Independent deployability" in c for c in node_contents)
+            assert any("Quiz: What is a bounded context?" in c for c in node_contents)
+            assert any("Follow-up note on DDD patterns" in c for c in node_contents)
         finally:
             await client.delete(f"/api/v1/workspaces/{ws_id}")
 

@@ -5,10 +5,12 @@ import httpx
 import structlog
 from ai_core.base import BaseTool
 from database import get_session_factory
+from models.workspace import NodeModel
 from pydantic import BaseModel, Field
 from schemas.workspace import NodeCreate
 from services.semantic_service import SemanticService
 from services.workspace_service import WorkspaceService
+from sqlalchemy import select
 
 logger = structlog.get_logger()
 
@@ -150,7 +152,10 @@ class TraverseLineageTool(BaseTool):
 
 # 3. CreateSubnodeTool
 class CreateSubnodeInput(BaseModel):
-    parent_id: str = Field(..., description="Parent node ID to attach this new thought branch to")
+    parent_id: Optional[str] = Field(
+        default=None,
+        description="Parent node ID to attach this new thought branch to. Omit or pass null to attach to the current conversation node.",
+    )
     content: str = Field(..., description="Textual content for the sub-node")
     highlighted_context: Optional[str] = Field(
         default=None, description="Optional focus concept or quoted excerpt"
@@ -173,8 +178,8 @@ class CreateSubnodeTool(BaseTool):
 
     async def execute(
         self,
-        parent_id: str,
         content: str,
+        parent_id: Optional[str] = None,
         highlighted_context: Optional[str] = None,
         branch_type: Optional[str] = "assistant",
         workspace_id: Optional[str] = None,
@@ -184,8 +189,39 @@ class CreateSubnodeTool(BaseTool):
 
         factory = get_session_factory()
         async with factory() as db:
+            resolved_parent_id: Optional[str] = None
+            candidate = (parent_id or "").strip()
+            placeholder_values = {
+                "current_node_id",
+                "current",
+                "root",
+                "null",
+                "undefined",
+                "none",
+                "",
+            }
+
+            # If a candidate parent was passed and isn't a placeholder, verify it exists
+            if candidate and candidate.lower() not in placeholder_values:
+                parent_node = await db.get(NodeModel, candidate)
+                if parent_node and parent_node.workspace_id == workspace_id.strip():
+                    resolved_parent_id = parent_node.id
+
+            # Fallback: if parent_id is missing or not found in DB, resolve to latest workspace node
+            if not resolved_parent_id:
+                stmt = (
+                    select(NodeModel)
+                    .where(NodeModel.workspace_id == workspace_id.strip())
+                    .order_by(NodeModel.created_at.desc())
+                    .limit(1)
+                )
+                res = await db.execute(stmt)
+                latest_node = res.scalar_one_or_none()
+                if latest_node:
+                    resolved_parent_id = latest_node.id
+
             node_data = NodeCreate(
-                parent_id=parent_id,
+                parent_id=resolved_parent_id,
                 role="assistant",
                 content=content.strip(),
                 highlighted_context=highlighted_context,
@@ -199,7 +235,7 @@ class CreateSubnodeTool(BaseTool):
         logger.info(
             "Agent successfully created graph sub-node",
             node_id=created_node.id,
-            parent_id=parent_id,
+            parent_id=resolved_parent_id,
             workspace_id=workspace_id,
         )
         return {

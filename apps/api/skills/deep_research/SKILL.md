@@ -19,5 +19,5 @@ When tasked with in-depth research or exploring ambiguous technical domains:
    - Quote relevant sections or data points when citing fetched content.
 
 3. **Knowledge Evolution**:
-   - For substantial findings or distinct sub-topics, invoke `create_subnode` to persist an explicit child node under the current parent branch.
+   - For substantial findings or distinct sub-topics, invoke `create_subnode` to persist an explicit child node under the current parent branch (you can omit `parent_id` or leave it null to automatically attach to the current node).
    - Tag the branch with `branch_type="research"` so it integrates into the user's permanent knowledge graph.

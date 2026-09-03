@@ -536,6 +536,17 @@ class WorkspaceService:
             res = await session.execute(stmt)
             existing_node = res.scalar_one_or_none()
 
+        effective_parent_id = data.parent_id
+        if effective_parent_id:
+            parent_exists = await session.get(NodeModel, effective_parent_id)
+            if not parent_exists or parent_exists.workspace_id != workspace_id:
+                logger.warning(
+                    "Invalid parent_id provided for node creation; falling back to None",
+                    provided_parent_id=effective_parent_id,
+                    workspace_id=workspace_id,
+                )
+                effective_parent_id = None
+
         if existing_node:
             existing_node.content = data.content
             if data.provider:
@@ -553,7 +564,7 @@ class WorkspaceService:
             node = NodeModel(
                 id=data.id,
                 workspace_id=workspace_id,
-                parent_id=data.parent_id,
+                parent_id=effective_parent_id,
                 role=data.role,
                 content=data.content,
                 highlighted_context=data.highlighted_context,
@@ -575,12 +586,12 @@ class WorkspaceService:
         except Exception as e:
             logger.warning("Embedding generation deferred on node creation", error=str(e))
 
-        if data.parent_id and not existing_node:
-            edge_id = f"{data.parent_id}->{node.id}"
+        if effective_parent_id and not existing_node:
+            edge_id = f"{effective_parent_id}->{node.id}"
             edge = EdgeModel(
                 id=edge_id,
                 workspace_id=workspace_id,
-                source_id=data.parent_id,
+                source_id=effective_parent_id,
                 target_id=node.id,
                 highlighted_context=data.highlighted_context,
             )

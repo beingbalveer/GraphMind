@@ -357,6 +357,16 @@ async def create_chat_completion(body: ChatCompletionRequest) -> GenerationResul
                         and "workspace_id" in target_tool.to_json_schema().get("properties", {})
                     ):
                         call_args["workspace_id"] = body.workspace_id
+                    if (
+                        body.parent_node_id
+                        and (
+                            not call_args.get("parent_id")
+                            or str(call_args.get("parent_id")).strip().lower()
+                            in ("current_node_id", "current", "null", "undefined", "none", "root")
+                        )
+                        and "parent_id" in target_tool.to_json_schema().get("properties", {})
+                    ):
+                        call_args["parent_id"] = body.parent_node_id
                     tool_res = await target_tool.run(call_args, tool_call_id=tc.id)
                 else:
                     tool_res = ToolResult(
@@ -499,6 +509,16 @@ async def stream_chat(
                             and "workspace_id" in target_tool.to_json_schema().get("properties", {})
                         ):
                             call_args["workspace_id"] = body.workspace_id
+                        if (
+                            body.parent_node_id
+                            and (
+                                not call_args.get("parent_id")
+                                or str(call_args.get("parent_id")).strip().lower()
+                                in ("current_node_id", "current", "null", "undefined", "none", "root")
+                            )
+                            and "parent_id" in target_tool.to_json_schema().get("properties", {})
+                        ):
+                            call_args["parent_id"] = body.parent_node_id
                         tool_res = await target_tool.run(call_args, tool_call_id=tc.id)
                     else:
                         tool_res = ToolResult(
