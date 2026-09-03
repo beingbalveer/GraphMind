@@ -1,14 +1,14 @@
 # Phase 6: Multi-Agent Workflows & Knowledge Evolution (The WOW Feature)
 
 **Estimated Timeline:** 4 – 5 Weeks (~50 – 60 Engineering Hours @ 2 hrs/day)  
-**Status:** Planned  
-**Goal:** Introduce specialized agent workflows (Research, Quiz, Summarizer) and the Knowledge Evolution engine to analyze learning gaps and guide technical mastery.
+**Status:** In Progress 🚀 (Autonomous Tool Runtime & Skills Engine Delivered)  
+**Goal:** Introduce specialized agent workflows (Research, Quiz, Code Architect), autonomous tool execution, and the Knowledge Evolution engine to guide technical mastery.
 
 ---
 
 ## 1. Executive Summary
 
-Phase 6 introduces GraphMind's pinnacle differentiator: **Knowledge Evolution**. The knowledge graph transitions from passive storage into an active learning partner. Specialized agents can be invoked on any node, while a continuous Knowledge Curator analyzes what concepts you have explored, detects prerequisites you skipped, and generates tailored quizzes to test your understanding.
+Phase 6 introduces GraphMind's pinnacle differentiator: **Knowledge Evolution**. The knowledge graph transitions from passive storage into an active learning partner. Models are equipped with autonomous multi-turn tool calling, live web grounding, and specialized system skills (Code Architect, Deep Research, Quiz Master) to evaluate and expand your understanding.
 
 ---
 
@@ -19,7 +19,7 @@ Phase 6 introduces GraphMind's pinnacle differentiator: **Knowledge Evolution**.
                                              │
              ┌───────────────────────────────┼───────────────────────────────┐
              ▼                               ▼                               ▼
-    [ Research Agent ]               [ Quiz Agent ]               [ Knowledge Curator ]
+    [ Research Agent / Skill ]       [ Quiz Master Skill ]        [ Knowledge Curator ]
   (Performs web lookup,           (Traverses branch,            (Analyzes graph topology,
    summarizes docs, appends        generates MCQs & code         identifies skipped prerequisites,
    evidence nodes)                 quizzes with explanations)    recommends next topics)
@@ -29,19 +29,21 @@ Phase 6 introduces GraphMind's pinnacle differentiator: **Knowledge Evolution**.
 
 ## 3. Sub-Phases & Granular Tasks
 
-### Sub-Phase 6.1: Agent Runtime Architecture in `packages/ai-core`
+### Sub-Phase 6.1: Tool Execution Engine & Runtime in `packages/ai-core` & `apps/api`
 *Estimated Time: 5 – 6 Days*
 
-- [ ] **Task 6.1.1 — Agent Base Class & Lifecycle**: `BaseAgent` abstraction with state machines, tool execution hooks, and event emitters.
-- [ ] **Task 6.1.2 — Tool Execution Engine**: Standardized tool interface (`BaseTool`) with schema validation via Pydantic.
-- [ ] **Task 6.1.3 — Agent Context Traversal**: Provide agents with direct access to graph lineage, node siblings, and neighbor concepts.
+- [x] **Task 6.1.1 — Tool Domain Abstractions**: `BaseTool`, `ToolCall`, and `ToolResult` interfaces with Pydantic validation in `packages/ai-core`.
+- [x] **Task 6.1.2 — Multi-Turn Tool Execution Loop**: Autonomous tool loop in `apps/api/src/services/tool_service.py` with SSE streaming events (`tool_call`, `tool_result`).
+- [x] **Task 6.1.3 — Graph-Native Tools**: LLM tools (`search_graph`, `fetch_node_details`, `get_node_neighbors`, `traverse_branch_lineage`).
+- [x] **Task 6.1.4 — Web Search Grounding**: Live web search integration via DuckDuckGo (`search_web_grounding`).
 
-### Sub-Phase 6.2: Built-in Specialized Agents
+### Sub-Phase 6.2: Built-in Specialized System Skills
 *Estimated Time: 6 – 7 Days*
 
-- [ ] **Task 6.2.1 — Research Agent**: Gathers web documentation, extracts key findings, and generates source-cited sub-nodes.
-- [ ] **Task 6.2.2 — Technical Quiz Agent**: Traverses all descendant nodes under a topic (e.g. *"FastAPI Architecture"*), generates interactive multiple-choice and code quizzes.
-- [ ] **Task 6.2.3 — Branch Summarizer Agent**: Condenses $20+$ node deep sub-trees into a single parent executive summary node.
+- [x] **Task 6.2.1 — Markdown Skill Loader**: File-based skill parser in `skill_service.py` reading YAML frontmatter and instructions from `apps/api/skills/`.
+- [x] **Task 6.2.2 — Deep Research Skill**: Rigorous investigation persona synthesizing evidence with external citations.
+- [x] **Task 6.2.3 — Code Architect Skill**: Senior architectural persona enforcing production design patterns and type safety.
+- [x] **Task 6.2.4 — Quiz Master Skill**: Evaluator persona generating interactive quizzes from conversation branches.
 
 ### Sub-Phase 6.3: Knowledge State & Mastery Modeling
 *Estimated Time: 5 – 6 Days*

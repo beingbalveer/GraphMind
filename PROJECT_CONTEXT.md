@@ -228,47 +228,46 @@ JWT + Refresh Tokens.
 
 AI must be provider agnostic.
 
-Create abstraction layer.
+Provider abstraction layer built in `packages/ai-core`.
 
-Current provider implementation:
-OpenAI
-
-Future:
-Anthropic
-Gemini
-Ollama
-Azure
-OpenRouter
+Current provider implementations:
+- Google Gemini (Gemini 2.5 Flash & Pro with native grounding, multimodal files, and tools)
+- Anthropic Claude (Claude 3.5 Sonnet & Haiku with multimodal document/image analysis)
+- OpenAI (GPT-4o, GPT-4o-mini with function calling)
+- DeepSeek (Chat & Reasoner)
+- Ollama (Local offline models)
+- Mock Provider (Deterministic testing with token streaming)
 
 Application code must never directly depend on provider SDKs.
 
 # 17. AI Core
 
-Create an internal package:
+Internal package: `packages/ai-core`
 
-packages/ai-core
+Abstractions provided:
+- BaseProvider (generate, stream, stream_with_tools)
+- BaseEmbeddingProvider (OpenAI, Gemini, Mock)
+- BaseTool, ToolCall, ToolResult (autonomous function calling)
+- Skill (markdown-defined system personas)
+- Lineage context traversal engine
+- Message, Role, LLMConfig, TokenUsage
 
-Expose abstractions such as:
-- Provider
-- LLM
-- Agent
-- Memory
-
-Internals may use LangGraph/LangChain.
-
-The application should depend only on ai-core.
+The application depends strictly on `ai-core`.
 
 # 18. Agent Strategy
 
-MVP:
-Single Chat Agent.
+Autonomous Tool Execution & Skills:
+- Autonomous multi-turn tool calling loop in FastAPI with SSE streaming.
+- Graph-native tools: search_graph, fetch_node_details, get_node_neighbors, traverse_branch_lineage, search_web_grounding.
+- Declarative system skills (`apps/api/skills/`):
+  - Code Architect
+  - Deep Research
+  - Quiz Master
 
 Future:
-Research Agent
-Quiz Agent
-Summary Agent
-Timeline Agent
-Flashcard Agent
+- Visual Mastery Heatmap
+- Automated Gap Analysis & Evolution Engine
+- Timeline Replay View
 
 # 19. Folder Structure
 
@@ -344,21 +343,15 @@ Every 2–3 days should produce visible progress.
 
 Ideas beyond the MVP go into the roadmap instead of interrupting the current milestone.
 
-# 24. Milestones
+# 24. Milestones & Progress
 
-M0 Repository Foundation
-
-M1 UI shell
-
-M2 AI chat
-
-M3 Graph nodes
-
-M4 Branching
-
-M5 Persistence
-
-M6 Knowledge Evolution (future)
+- M0 Repository Foundation: Completed ✅
+- M1 UI Shell & Linear Stream: Completed ✅
+- M2 AI Chat Engine & SSE Streaming: Completed ✅
+- M3 Graph Nodes & React Flow Canvas: Completed ✅
+- M4 Branching & Lineage Traversal: Completed ✅
+- M5 Persistence, Workspaces & File Library: Completed ✅
+- M6 Knowledge Evolution, Autonomous Tools & Skills: Core runtime delivered ✅ (Mastery modeling & Curator in progress)
 
 # 25. Code Quality
 

@@ -8,14 +8,14 @@
 
 Assuming a focused pace of **~2 hours/day** (approx. **10 – 14 engineering hours/week**), here is the realistic timeline to build the entire production-grade platform:
 
-| Phase | Phase Name | Focus & Core Deliverable | Estimated Time | Spec Document |
+| Phase | Phase Name | Focus & Core Deliverable | Status | Spec Document |
 | :--- | :--- | :--- | :--- | :--- |
-| **Phase 1** | **Production Core & Streamed Chat** | Provider-agnostic AI Core, FastAPI SSE streaming, Next.js UI shell, Markdown + KaTeX, unit & E2E tests. | **2 – 3 Weeks** (~35 hrs) | [`phase-01-core-chat-engine.md`](./phases/phase-01-core-chat-engine.md) |
-| **Phase 2** | **Tree-Structured Branching** | Hierarchical conversation tree, text-highlight branching trigger, context lineage traversal engine. | **2 – 3 Weeks** (~30 hrs) | [`phase-02-tree-branching.md`](./phases/phase-02-tree-branching.md) |
-| **Phase 3** | **Spatial Graph Canvas** | 2D React Flow canvas, node cards, Dagre auto-layout, canvas + Focus Drawer dual UX, keyboard shortcuts. | **3 – 4 Weeks** (~45 hrs) | [`phase-03-spatial-graph-canvas.md`](./phases/phase-03-spatial-graph-canvas.md) |
-| **Phase 4** | **Workspace Persistence** | PostgreSQL + async SQLAlchemy, Alembic migrations, auth/JWT, auto-save debouncing, Obsidian markdown export. | **2 – 3 Weeks** (~35 hrs) | [`phase-04-persistence-workspaces.md`](./phases/phase-04-persistence-workspaces.md) |
-| **Phase 5** | **Semantic Graph & Discovery** | `pgvector` embeddings, background concept extraction, hybrid BM25+vector search, suggested cross-branch links. | **3 – 4 Weeks** (~45 hrs) | [`phase-05-semantic-graph-discovery.md`](./phases/phase-05-semantic-graph-discovery.md) |
-| **Phase 6** | **Knowledge Evolution & Agents** | Multi-agent runtime (Research, Quiz, Summarizer), user mastery modeling, Knowledge Curator, v1.0 release. | **4 – 5 Weeks** (~55 hrs) | [`phase-06-multi-agent-knowledge-evolution.md`](./phases/phase-06-multi-agent-knowledge-evolution.md) |
+| **Phase 1** | **Production Core & Streamed Chat** | Provider-agnostic AI Core, FastAPI SSE streaming, Next.js UI shell, Markdown + KaTeX. | **Completed** ✅ | [`phase-01-core-chat-engine.md`](./phases/phase-01-core-chat-engine.md) |
+| **Phase 2** | **Tree-Structured Branching** | Hierarchical conversation tree, text-highlight branching trigger, context lineage traversal engine. | **Completed** ✅ | [`phase-02-tree-branching.md`](./phases/phase-02-tree-branching.md) |
+| **Phase 3** | **Spatial Graph Canvas** | 2D React Flow canvas, node cards, Dagre auto-layout, mindmap layout, LOD, Focus Drawer. | **Completed** ✅ | [`phase-03-spatial-graph-canvas.md`](./phases/phase-03-spatial-graph-canvas.md) |
+| **Phase 4** | **Workspace Persistence** | PostgreSQL + async SQLAlchemy, Alembic migrations, debounced viewport sync, demo workspace seed. | **Completed** ✅ | [`phase-04-persistence-workspaces.md`](./phases/phase-04-persistence-workspaces.md) |
+| **Phase 5** | **Semantic Graph & Discovery** | `pgvector` embeddings, multimodal file library (PDF, Code, Tables), in-app modal viewers, vector search. | **Completed** ✅ | [`phase-05-semantic-graph-discovery.md`](./phases/phase-05-semantic-graph-discovery.md) |
+| **Phase 6** | **Knowledge Evolution & Agents** | Autonomous tool loop, graph-native tools, web grounding, system skills (Code Architect, Deep Research, Quiz Master). | **In Progress** 🚀 | [`phase-06-multi-agent-knowledge-evolution.md`](./phases/phase-06-multi-agent-knowledge-evolution.md) |
 
 **Total Estimated Duration:** **16 – 22 Weeks** (~4 to 5.5 Months) of structured, production-grade engineering.
 
