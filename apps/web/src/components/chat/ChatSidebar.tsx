@@ -10,6 +10,8 @@ import {
   Pencil,
   Trash2,
   Settings,
+  Plus,
+  FolderOpen,
 } from "lucide-react";
 import { ChatItem } from "@/lib/workspaceApi";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -28,6 +30,8 @@ interface ChatSidebarProps {
   onTogglePinChat?: (id: string, pinned: boolean) => Promise<void>;
   onOpenWorkspaceModal?: () => void;
   onOpenSettings?: () => void;
+  onNewChat?: () => void;
+  onOpenFileLibrary?: () => void;
 }
 
 
@@ -47,6 +51,8 @@ export function ChatSidebar({
   onTogglePinChat,
   onOpenWorkspaceModal,
   onOpenSettings,
+  onNewChat,
+  onOpenFileLibrary,
 }: ChatSidebarProps) {
 
 
@@ -192,6 +198,33 @@ export function ChatSidebar({
 
         {/* Minimalist Flat Chat List */}
         <div className="flex-1 overflow-y-auto p-2 space-y-1">
+          {/* Quick Navigation Items: New Chat & Library */}
+          <div className="space-y-0.5 pb-2 mb-1.5 border-b border-zinc-100">
+            {onNewChat && (
+              <button
+                type="button"
+                onClick={onNewChat}
+                className="w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-medium text-zinc-700 hover:text-zinc-950 hover:bg-zinc-100/70 transition-colors cursor-pointer select-none group"
+                title="Start a new chat (⌘N)"
+              >
+                <Plus className="w-4 h-4 text-zinc-500 group-hover:text-zinc-900 transition-colors shrink-0" />
+                <span>New chat</span>
+              </button>
+            )}
+
+            {onOpenFileLibrary && (
+              <button
+                type="button"
+                onClick={onOpenFileLibrary}
+                className="w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-medium text-zinc-700 hover:text-zinc-950 hover:bg-zinc-100/70 transition-colors cursor-pointer select-none group"
+                title="Workspace File Library & Assets"
+              >
+                <FolderOpen className="w-4 h-4 text-zinc-500 group-hover:text-zinc-900 transition-colors shrink-0" />
+                <span>Library</span>
+              </button>
+            )}
+          </div>
+
           <div className="px-2 pt-1 pb-1 text-[11px] font-medium text-zinc-400 tracking-wider uppercase">
             Conversations
           </div>

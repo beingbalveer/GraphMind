@@ -2,12 +2,10 @@
 
 import React from "react";
 import {
-  Plus,
   MessageSquare,
   LayoutGrid,
   PanelLeft,
   Sliders,
-  FolderOpen,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -41,12 +39,12 @@ export function Navbar({
   workspaceName: _workspaceName = "Main Workspace",
   onOpenWorkspaceModal: _onOpenWorkspaceModal,
   onOpenModelConfig,
-  onOpenFileLibrary,
+  onOpenFileLibrary: _onOpenFileLibrary,
   activeModelName = "gemini-2.5-flash",
   syncStatus: _syncStatus = "saved",
   isSidebarOpen: _isSidebarOpen = false,
   onToggleSidebar,
-  onNewChat,
+  onNewChat: _onNewChat,
 }: NavbarProps) {
   return (
     <header className="h-13 border-b border-zinc-200/80 bg-white/80 backdrop-blur-md px-3 sm:px-5 flex items-center justify-between z-30 shrink-0 select-none">
@@ -81,23 +79,8 @@ export function Navbar({
       </div>
 
 
-      {/* Right: Model Config + Library + View Mode Toggle + New Chat Button */}
+      {/* Right: Model Config + View Mode Toggle */}
       <div className="flex items-center space-x-2 shrink-0">
-        {/* Workspace File Library Trigger */}
-        {onOpenFileLibrary && (
-          <button
-            type="button"
-            onClick={onOpenFileLibrary}
-            className="flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg border border-zinc-200/90 bg-white hover:bg-zinc-50 hover:border-zinc-300 text-zinc-700 hover:text-zinc-950 text-xs font-medium shadow-2xs transition-all cursor-pointer group"
-            title="Workspace File Library & Assets"
-          >
-            <FolderOpen className="w-3.5 h-3.5 text-zinc-500 group-hover:text-zinc-900 transition-colors" />
-            <span className="hidden md:inline text-zinc-600 group-hover:text-zinc-950">
-              Library
-            </span>
-          </button>
-        )}
-
         {/* Model & AI Configuration Trigger */}
         {onOpenModelConfig && (
           <button
@@ -114,7 +97,6 @@ export function Navbar({
         )}
 
         {/* Toggle Mode Pill Button */}
-
         {onViewModeChange && (
           <div className="flex items-center p-0.5 bg-zinc-100 border border-zinc-200/80 rounded-lg shadow-2xs">
             <button
@@ -142,19 +124,6 @@ export function Navbar({
               <span className="hidden sm:inline">Canvas</span>
             </button>
           </div>
-        )}
-
-        {/* Top Right Clean Light New Chat Button (At the very last position) */}
-        {onNewChat && (
-          <button
-            type="button"
-            onClick={onNewChat}
-            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border border-zinc-200/90 bg-white hover:bg-zinc-50 hover:border-zinc-300 text-zinc-700 hover:text-zinc-950 text-xs font-medium shadow-2xs transition-all cursor-pointer group"
-            title="Start a new chat (⌘N)"
-          >
-            <Plus className="w-3.5 h-3.5 text-zinc-500 group-hover:text-zinc-900 transition-colors" />
-            <span className="font-semibold">New chat</span>
-          </button>
         )}
       </div>
     </header>

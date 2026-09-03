@@ -1047,6 +1047,8 @@ export function ChatContainer({
           onTogglePinChat={handleTogglePinChat}
           onOpenWorkspaceModal={() => setIsWorkspaceModalOpen(true)}
           onOpenSettings={() => setIsModelConfigOpen(true)}
+          onNewChat={handleNewChat}
+          onOpenFileLibrary={() => setIsFileLibraryOpen(true)}
         />
 
         {/* Content Area */}
