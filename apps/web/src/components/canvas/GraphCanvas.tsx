@@ -180,7 +180,7 @@ function FlowCanvas({
   };
 
   return (
-    <div className="w-full h-full bg-[#fafafa] relative animate-in fade-in duration-200">
+    <div className="w-full h-full bg-white relative animate-in fade-in duration-200">
       <ReactFlow
         nodes={nodes}
         edges={edges}

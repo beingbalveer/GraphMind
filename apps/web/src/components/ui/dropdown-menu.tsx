@@ -130,7 +130,7 @@ export function DropdownMenu({
       className="z-[9999]"
       onClick={(e) => e.stopPropagation()}
     >
-      <MenuCard className={cn("min-w-[150px] animate-in fade-in-0 zoom-in-95 duration-100", className)}>
+      <MenuCard className={cn("min-w-[180px] animate-in fade-in-0 zoom-in-95 duration-100", className)}>
         {items.map((item, index) => (
           <MenuItem
             key={index}

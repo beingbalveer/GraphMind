@@ -13,6 +13,10 @@ import {
   FileText,
   Code,
   Sparkles,
+  MessageSquare,
+  Compass,
+  Layers,
+  GraduationCap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MenuCard, MenuItem, MenuHeader } from "@/components/ui/menu";
@@ -546,12 +550,13 @@ export function ChatInput({
               {/* Floating Skill Menu */}
               {isSkillMenuOpen && (
                 <div className="absolute bottom-full left-0 mb-2 z-50 animate-in fade-in-50 zoom-in-95 duration-150">
-                  <MenuCard className="min-w-[200px]">
+                  <MenuCard className="min-w-[210px]">
                     <MenuHeader>Agent Skill Playbooks</MenuHeader>
 
                     <MenuItem
+                      icon={<MessageSquare className="w-4 h-4" />}
                       active={selectedSkill === null}
-                      trailing={selectedSkill === null ? <span className="text-indigo-600">✓</span> : null}
+                      trailing={selectedSkill === null ? <span className="text-zinc-900 font-medium">✓</span> : null}
                       onClick={() => {
                         setSelectedSkill(null);
                         setIsSkillMenuOpen(false);
@@ -561,36 +566,39 @@ export function ChatInput({
                     </MenuItem>
 
                     <MenuItem
+                      icon={<Compass className="w-4 h-4" />}
                       active={selectedSkill === "deep_research"}
-                      trailing={selectedSkill === "deep_research" ? <span className="text-indigo-600">✓</span> : null}
+                      trailing={selectedSkill === "deep_research" ? <span className="text-zinc-900 font-medium">✓</span> : null}
                       onClick={() => {
                         setSelectedSkill("deep_research");
                         setIsSkillMenuOpen(false);
                       }}
                     >
-                      ⚡ Deep Research
+                      Deep Research
                     </MenuItem>
 
                     <MenuItem
+                      icon={<Layers className="w-4 h-4" />}
                       active={selectedSkill === "code_architect"}
-                      trailing={selectedSkill === "code_architect" ? <span className="text-indigo-600">✓</span> : null}
+                      trailing={selectedSkill === "code_architect" ? <span className="text-zinc-900 font-medium">✓</span> : null}
                       onClick={() => {
                         setSelectedSkill("code_architect");
                         setIsSkillMenuOpen(false);
                       }}
                     >
-                      🏛️ Code Architect
+                      Code Architect
                     </MenuItem>
 
                     <MenuItem
+                      icon={<GraduationCap className="w-4 h-4" />}
                       active={selectedSkill === "quiz_master"}
-                      trailing={selectedSkill === "quiz_master" ? <span className="text-indigo-600">✓</span> : null}
+                      trailing={selectedSkill === "quiz_master" ? <span className="text-zinc-900 font-medium">✓</span> : null}
                       onClick={() => {
                         setSelectedSkill("quiz_master");
                         setIsSkillMenuOpen(false);
                       }}
                     >
-                      🎓 Quiz Master
+                      Quiz Master
                     </MenuItem>
                   </MenuCard>
                 </div>

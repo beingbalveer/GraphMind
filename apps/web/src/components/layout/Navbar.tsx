@@ -47,7 +47,7 @@ export function Navbar({
   onNewChat: _onNewChat,
 }: NavbarProps) {
   return (
-    <header className="h-13 border-b border-zinc-200/80 bg-white/80 backdrop-blur-md px-3 sm:px-5 flex items-center justify-between z-30 shrink-0 select-none">
+    <header className="h-13 border-b border-zinc-200/80 bg-white px-3 sm:px-5 flex items-center justify-between z-30 shrink-0 select-none">
       {/* Top Left: Sidebar Toggle + Workspace Switcher */}
       <div className="flex items-center space-x-2 shrink-0">
         {onToggleSidebar && (

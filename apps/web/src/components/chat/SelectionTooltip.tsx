@@ -3,9 +3,27 @@
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 
-import { GitBranch, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { SelectionState } from "@/hooks/useTextSelection";
 import { MenuCard, MenuItem } from "@/components/ui/menu";
+
+function BranchInChatIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M4 18h16" />
+      <path d="M10 18v-3a4 4 0 0 1 1.2-2.8l6.8-6.8" />
+      <polyline points="14 5 18 5 18 9" />
+    </svg>
+  );
+}
 
 interface SelectionTooltipProps {
   selection: SelectionState | null;
@@ -40,17 +58,17 @@ export function SelectionTooltip({
       }}
       className="z-50 select-none animate-in fade-in-50 zoom-in-95 duration-150"
     >
-      <MenuCard className="min-w-[145px]">
+      <MenuCard className="min-w-[190px]">
         <MenuItem
-          icon={<GitBranch className="w-4 h-4" />}
+          icon={<BranchInChatIcon />}
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => onExplore(selection.text)}
         >
-          Explain
+          Branch in new chat
         </MenuItem>
 
         <MenuItem
-          icon={<Search className="w-4 h-4" />}
+          icon={<Search />}
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => onSearch(selection.text)}
         >
