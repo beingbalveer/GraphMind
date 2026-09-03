@@ -34,6 +34,21 @@ class MockProvider(BaseLLMProvider):
         normalized = self._normalize_messages(messages)
         last_message = normalized[-1].content if normalized else "Hello"
 
+        # If the latest turn is a tool result, synthesize the final response based on tool output
+        if normalized and normalized[-1].role == ChatRole.TOOL:
+            tool_content = normalized[-1].content
+            content = f"Based on the tool execution result: {tool_content}\n\nThe operation completed successfully."
+            return GenerationResult(
+                content=content,
+                role=ChatRole.ASSISTANT,
+                model_name=cfg.model_name,
+                usage=TokenUsage(
+                    prompt_tokens=25,
+                    completion_tokens=len(content.split()),
+                    total_tokens=25 + len(content.split()),
+                ),
+            )
+
         # Check for explicitly requested tool call simulation in metadata
         sim_tool = cfg.metadata.get("simulate_tool_call")
         if sim_tool and isinstance(sim_tool, dict):
@@ -103,6 +118,14 @@ class MockProvider(BaseLLMProvider):
         delay = float(cfg.metadata.get("stream_delay", 0.02))
         normalized = self._normalize_messages(messages)
         last_message = normalized[-1].content if normalized else "Hello"
+
+        # If the latest turn is a tool result, synthesize the final stream response
+        if normalized and normalized[-1].role == ChatRole.TOOL:
+            tool_content = normalized[-1].content
+            yield StreamChunk(
+                content=f"Based on the tool execution result: {tool_content}\n\nThe operation completed successfully."
+            )
+            return
 
         # Check for simulated tool call in stream
         sim_tool = cfg.metadata.get("simulate_tool_call")

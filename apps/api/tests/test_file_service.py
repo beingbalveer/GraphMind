@@ -43,15 +43,11 @@ async def test_workspace_file_upload_lifecycle() -> None:
             assert any(f["id"] == file_id for f in file_list)
 
             # 4. Filter by category
-            image_list_resp = await client.get(
-                f"/api/v1/workspaces/{ws_id}/files?category=image"
-            )
+            image_list_resp = await client.get(f"/api/v1/workspaces/{ws_id}/files?category=image")
             assert image_list_resp.status_code == 200
             assert any(f["id"] == file_id for f in image_list_resp.json())
 
-            other_list_resp = await client.get(
-                f"/api/v1/workspaces/{ws_id}/files?category=code"
-            )
+            other_list_resp = await client.get(f"/api/v1/workspaces/{ws_id}/files?category=code")
             assert other_list_resp.status_code == 200
             assert not any(f["id"] == file_id for f in other_list_resp.json())
 
@@ -61,9 +57,7 @@ async def test_workspace_file_upload_lifecycle() -> None:
             assert meta_resp.json()["id"] == file_id
 
             # 6. Download raw file (inline by default)
-            down_resp = await client.get(
-                f"/api/v1/workspaces/{ws_id}/files/{file_id}/download"
-            )
+            down_resp = await client.get(f"/api/v1/workspaces/{ws_id}/files/{file_id}/download")
             assert down_resp.status_code == 200
             assert down_resp.headers["content-type"] == "image/png"
             assert "inline" in down_resp.headers["content-disposition"]
@@ -116,7 +110,9 @@ async def test_workspace_code_and_document_upload_and_extraction() -> None:
 
         try:
             # 2. Upload Python code file
-            python_code = b"def calculate_total(items):\n    return sum(item.price for item in items)\n"
+            python_code = (
+                b"def calculate_total(items):\n    return sum(item.price for item in items)\n"
+            )
             files = {
                 "file": ("calculator.py", io.BytesIO(python_code), "text/x-python"),
             }
@@ -130,7 +126,9 @@ async def test_workspace_code_and_document_upload_and_extraction() -> None:
             assert py_data["extractedText"] == python_code.decode("utf-8")
 
             # 3. Upload Markdown document
-            markdown_text = b"# Architecture Overview\nGraphMind uses async PostgreSQL and Next.js.\n"
+            markdown_text = (
+                b"# Architecture Overview\nGraphMind uses async PostgreSQL and Next.js.\n"
+            )
             files = {
                 "file": ("README.md", io.BytesIO(markdown_text), "text/markdown"),
             }
@@ -144,9 +142,7 @@ async def test_workspace_code_and_document_upload_and_extraction() -> None:
             assert md_data["extractedText"] == markdown_text.decode("utf-8")
 
             # 4. List code files filter
-            code_filter_resp = await client.get(
-                f"/api/v1/workspaces/{ws_id}/files?category=code"
-            )
+            code_filter_resp = await client.get(f"/api/v1/workspaces/{ws_id}/files?category=code")
             assert code_filter_resp.status_code == 200
             code_ids = [f["id"] for f in code_filter_resp.json()]
             assert py_data["id"] in code_ids
@@ -280,7 +276,9 @@ async def test_workspace_tabular_file_uploads_and_extraction() -> None:
             tsv_bytes = b"dept\theadcount\nSales\t45\nEngineering\t110"
             tsv_resp = await client.post(
                 f"/api/v1/workspaces/{ws_id}/files/upload",
-                files={"file": ("departments.tsv", io.BytesIO(tsv_bytes), "text/tab-separated-values")},
+                files={
+                    "file": ("departments.tsv", io.BytesIO(tsv_bytes), "text/tab-separated-values")
+                },
             )
             assert tsv_resp.status_code == 201
             tsv_data = tsv_resp.json()
@@ -315,7 +313,13 @@ async def test_workspace_tabular_file_uploads_and_extraction() -> None:
 
             xlsx_resp = await client.post(
                 f"/api/v1/workspaces/{ws_id}/files/upload",
-                files={"file": ("metrics.xlsx", io.BytesIO(xlsx_bytes), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
+                files={
+                    "file": (
+                        "metrics.xlsx",
+                        io.BytesIO(xlsx_bytes),
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    )
+                },
             )
             assert xlsx_resp.status_code == 201
             xlsx_data = xlsx_resp.json()
@@ -331,7 +335,12 @@ async def test_workspace_tabular_file_uploads_and_extraction() -> None:
             tab_files = tab_list_resp.json()
             assert len(tab_files) == 4
             file_names = {f["name"] for f in tab_files}
-            assert file_names == {"employees.csv", "departments.tsv", "products.jsonl", "metrics.xlsx"}
+            assert file_names == {
+                "employees.csv",
+                "departments.tsv",
+                "products.jsonl",
+                "metrics.xlsx",
+            }
 
             # 6. Verify chat completions prompt injection with tabular dataset
             chat_resp = await client.post(
@@ -355,5 +364,3 @@ async def test_workspace_tabular_file_uploads_and_extraction() -> None:
             assert "content" in chat_resp.json()
         finally:
             await client.delete(f"/api/v1/workspaces/{ws_id}")
-
-

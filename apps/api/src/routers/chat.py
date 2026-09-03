@@ -11,6 +11,8 @@ from ai_core import (
     FileAttachment,
     GenerationResult,
     ModelConfig,
+    ToolCall,
+    ToolResult,
     get_provider,
     resolve_conversation_lineage,
 )
@@ -20,6 +22,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from pydantic.alias_generators import to_camel
 from services.file_service import parse_tabular_bytes
+from services.tool_service import get_tool_registry
 
 logger = structlog.get_logger()
 router = APIRouter(prefix="/api/v1/chat", tags=["Chat"])
@@ -71,7 +74,12 @@ class ChatStreamRequest(BaseModel):
     metadata: Optional[Dict[str, Any]] = Field(
         default_factory=dict, description="Optional runtime metadata"
     )
-
+    enabled_tools: Optional[List[str]] = Field(
+        default=None, description="Optional list of enabled tool names"
+    )
+    max_tool_iterations: Optional[int] = Field(
+        default=5, ge=1, le=10, description="Maximum autonomous tool execution loop turns"
+    )
 
     @model_validator(mode="after")
     def validate_input(self) -> "ChatStreamRequest":
@@ -122,7 +130,8 @@ def _extract_attachment_text(att: FileAttachment) -> Optional[str]:
                 decoded_bytes = base64.b64decode(raw_b64)
                 # Check for tabular files
                 if att.file_category == "tabular" or any(
-                    att.name.lower().endswith(e) for e in (".csv", ".tsv", ".jsonl", ".ndjson", ".xlsx")
+                    att.name.lower().endswith(e)
+                    for e in (".csv", ".tsv", ".jsonl", ".ndjson", ".xlsx")
                 ):
                     summary, _ = parse_tabular_bytes(att.name, decoded_bytes, att.mime_type or "")
                     if summary:
@@ -156,15 +165,11 @@ def _format_message_with_attachments(msg: ChatMessage) -> ChatMessage:
                     f"[Attached PDF Document: `{att.name}`]\n```text\n{text_content}\n```"
                 )
             elif is_tabular:
-                text_blocks.append(
-                    f"[Attached Tabular Dataset: `{att.name}`]\n{text_content}"
-                )
+                text_blocks.append(f"[Attached Tabular Dataset: `{att.name}`]\n{text_content}")
             else:
                 ext = os.path.splitext(att.name.lower())[1].lstrip(".")
                 lang = ext if ext else "text"
-                text_blocks.append(
-                    f"[Attached File: `{att.name}`]\n```{lang}\n{text_content}\n```"
-                )
+                text_blocks.append(f"[Attached File: `{att.name}`]\n```{lang}\n{text_content}\n```")
 
     if not text_blocks:
         return msg
@@ -231,10 +236,20 @@ def _build_conversation_input(body: ChatStreamRequest) -> List[ChatMessage]:
     return [_format_message_with_attachments(msg)]
 
 
+@router.get("/tools")
+async def list_available_tools() -> List[Dict[str, Any]]:
+    """
+    Retrieve JSON Schema definitions of all registered tools available for agent execution.
+    """
+    registry = get_tool_registry()
+    return registry.list_tool_definitions()
+
+
 @router.post("/completions", response_model=GenerationResult)
 async def create_chat_completion(body: ChatCompletionRequest) -> GenerationResult:
     """
-    Generate a complete, non-streaming AI response with usage metrics.
+    Generate a complete, non-streaming AI response with usage metrics,
+    supporting autonomous multi-turn tool execution loops.
     """
     resolved_provider = body.provider or settings.DEFAULT_PROVIDER
     resolved_model = body.model or settings.DEFAULT_MODEL
@@ -250,6 +265,7 @@ async def create_chat_completion(body: ChatCompletionRequest) -> GenerationResul
         has_api_key=bool(api_key),
         has_base_url=bool(resolved_base_url),
         has_tree=bool(body.tree),
+        enabled_tools=body.enabled_tools,
     )
 
     try:
@@ -269,17 +285,57 @@ async def create_chat_completion(body: ChatCompletionRequest) -> GenerationResul
         model_kwargs["max_tokens"] = body.max_tokens
 
     config = ModelConfig(**model_kwargs)
-
     conversation_input = _build_conversation_input(body)
 
+    tool_registry = get_tool_registry()
+    active_tools = (
+        tool_registry.get_tools(body.enabled_tools) if body.enabled_tools is not None else None
+    )
+
+    current_messages = list(conversation_input)
+    max_turns = body.max_tool_iterations or 5
+    iteration = 0
+    tool_trace: List[Dict[str, Any]] = []
+
     try:
-        result = await provider.generate(conversation_input, config)
-        logger.info(
-            "Chat completion generated successfully",
-            model=result.model_name,
-            total_tokens=result.usage.total_tokens,
-        )
-        return result
+        while True:
+            result = await provider.generate(current_messages, config, tools=active_tools)
+            if not result.tool_calls or iteration >= max_turns:
+                if tool_trace:
+                    result.metadata["tool_trace"] = tool_trace
+                logger.info(
+                    "Chat completion generated successfully",
+                    model=result.model_name,
+                    total_tokens=result.usage.total_tokens,
+                    tool_iterations=iteration,
+                )
+                return result
+
+            iteration += 1
+            assistant_msg = ChatMessage.assistant(
+                content=result.content or "", tool_calls=result.tool_calls
+            )
+            current_messages.append(assistant_msg)
+
+            for tc in result.tool_calls:
+                target_tool = tool_registry.get(tc.name)
+                if target_tool:
+                    tool_res = await target_tool.run(tc.arguments, tool_call_id=tc.id)
+                else:
+                    tool_res = ToolResult(
+                        tool_call_id=tc.id,
+                        name=tc.name,
+                        content=f"Tool '{tc.name}' not found in registry.",
+                        is_error=True,
+                    )
+                tool_trace.append(tool_res.model_dump())
+                current_messages.append(
+                    ChatMessage.tool(
+                        content=tool_res.content,
+                        tool_call_id=tool_res.tool_call_id,
+                        name=tool_res.name,
+                    )
+                )
     except Exception as e:
         logger.error("Error during chat completion generation", error=str(e))
         raise HTTPException(status_code=500, detail=f"Generation failed: {str(e)}")
@@ -292,7 +348,7 @@ async def stream_chat(
 ) -> StreamingResponse:
     """
     Stream AI completion tokens in real-time as Server-Sent Events (SSE)
-    with client disconnect monitoring and error propagation.
+    with autonomous multi-turn tool execution and client disconnect monitoring.
     """
     resolved_provider = body.provider or settings.DEFAULT_PROVIDER
     resolved_model = body.model or settings.DEFAULT_MODEL
@@ -308,6 +364,7 @@ async def stream_chat(
         has_api_key=bool(api_key),
         has_base_url=bool(resolved_base_url),
         has_tree=bool(body.tree),
+        enabled_tools=body.enabled_tools,
     )
 
     try:
@@ -327,21 +384,93 @@ async def stream_chat(
         stream_model_kwargs["max_tokens"] = body.max_tokens
 
     config = ModelConfig(**stream_model_kwargs)
-
-
-
     conversation_input = _build_conversation_input(body)
 
+    tool_registry = get_tool_registry()
+    active_tools = (
+        tool_registry.get_tools(body.enabled_tools) if body.enabled_tools is not None else None
+    )
+    max_turns = body.max_tool_iterations or 5
+
     async def event_generator() -> AsyncIterator[str]:
+        current_messages = list(conversation_input)
+        iteration = 0
         try:
-            async for chunk in provider.stream(conversation_input, config):
-                # Check for client disconnect
-                if await request.is_disconnected():
-                    logger.info("Client disconnected, terminating stream generator")
+            while True:
+                pending_tool_calls: List[ToolCall] = []
+                turn_content = ""
+
+                async for chunk in provider.stream(current_messages, config, tools=active_tools):
+                    # Check for client disconnect
+                    if await request.is_disconnected():
+                        logger.info("Client disconnected, terminating stream generator")
+                        return
+
+                    if chunk.tool_calls:
+                        for tc in chunk.tool_calls:
+                            pending_tool_calls.append(tc)
+
+                    if chunk.content:
+                        turn_content += chunk.content
+                        payload = json.dumps({"content": chunk.content})
+                        yield f"event: token\ndata: {payload}\n\n"
+
+                if not pending_tool_calls or iteration >= max_turns:
+                    # Final textual response reached or turn limit attained
                     break
 
-                payload = json.dumps({"content": chunk.content})
-                yield f"event: token\ndata: {payload}\n\n"
+                iteration += 1
+                assistant_msg = ChatMessage.assistant(
+                    content=turn_content, tool_calls=pending_tool_calls
+                )
+                current_messages.append(assistant_msg)
+
+                for tc in pending_tool_calls:
+                    # Emit tool_call_start
+                    start_payload = json.dumps(
+                        {
+                            "type": "tool_call_start",
+                            "toolCall": {
+                                "id": tc.id,
+                                "name": tc.name,
+                                "arguments": tc.arguments,
+                            },
+                        }
+                    )
+                    yield f"event: tool_call_start\ndata: {start_payload}\n\n"
+
+                    target_tool = tool_registry.get(tc.name)
+                    if target_tool:
+                        tool_res = await target_tool.run(tc.arguments, tool_call_id=tc.id)
+                    else:
+                        tool_res = ToolResult(
+                            tool_call_id=tc.id,
+                            name=tc.name,
+                            content=f"Tool '{tc.name}' not found in registry.",
+                            is_error=True,
+                        )
+
+                    # Emit tool_call_result
+                    res_payload = json.dumps(
+                        {
+                            "type": "tool_call_result",
+                            "toolResult": {
+                                "toolCallId": tool_res.tool_call_id,
+                                "name": tool_res.name,
+                                "content": tool_res.content,
+                                "isError": tool_res.is_error,
+                            },
+                        }
+                    )
+                    yield f"event: tool_call_result\ndata: {res_payload}\n\n"
+
+                    current_messages.append(
+                        ChatMessage.tool(
+                            content=tool_res.content,
+                            tool_call_id=tool_res.tool_call_id,
+                            name=tool_res.name,
+                        )
+                    )
 
             yield "event: done\ndata: [DONE]\n\n"
         except Exception as e:

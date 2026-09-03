@@ -145,12 +145,14 @@ def parse_tabular_bytes(
                 "| " + " | ".join(["---"] * len(headers)) + " |",
             ]
             for r in preview_rows:
-                padded = (r + [""] * len(headers))[:len(headers)]
+                padded = (r + [""] * len(headers))[: len(headers)]
                 cleaned = [cell.replace("|", "\\|").replace("\n", " ").strip() for cell in padded]
                 md_lines.append("| " + " | ".join(cleaned) + " |")
 
             if total_rows > len(preview_rows):
-                md_lines.append(f"\n*(Showing top {len(preview_rows)} of {total_rows:,} total rows)*")
+                md_lines.append(
+                    f"\n*(Showing top {len(preview_rows)} of {total_rows:,} total rows)*"
+                )
 
             return "\n".join(md_lines), {
                 "format": "xlsx",
@@ -165,7 +167,10 @@ def parse_tabular_bytes(
             return None, {"error": str(e)}
 
     # 2. JSONL (.jsonl, .ndjson)
-    if ext in (".jsonl", ".ndjson") or norm_mime in ("application/x-ndjson", "application/jsonlines"):
+    if ext in (".jsonl", ".ndjson") or norm_mime in (
+        "application/x-ndjson",
+        "application/jsonlines",
+    ):
         try:
             text = content.decode("utf-8", errors="replace")
             lines = [line.strip() for line in text.splitlines() if line.strip()]
@@ -202,11 +207,16 @@ def parse_tabular_bytes(
                 "| " + " | ".join(["---"] * len(headers)) + " |",
             ]
             for r in preview_rows:
-                cells = [str(r.get(k, "")).replace("|", "\\|").replace("\n", " ").strip() for k in headers]
+                cells = [
+                    str(r.get(k, "")).replace("|", "\\|").replace("\n", " ").strip()
+                    for k in headers
+                ]
                 md_lines.append("| " + " | ".join(cells) + " |")
 
             if total_rows > len(preview_rows):
-                md_lines.append(f"\n*(Showing top {len(preview_rows)} of {total_rows:,} total rows)*")
+                md_lines.append(
+                    f"\n*(Showing top {len(preview_rows)} of {total_rows:,} total rows)*"
+                )
 
             return "\n".join(md_lines), {
                 "format": "jsonl",
@@ -250,7 +260,7 @@ def parse_tabular_bytes(
             "| " + " | ".join(["---"] * len(headers)) + " |",
         ]
         for r in preview_rows:
-            padded = (r + [""] * len(headers))[:len(headers)]
+            padded = (r + [""] * len(headers))[: len(headers)]
             cleaned = [cell.replace("|", "\\|").replace("\n", " ").strip() for cell in padded]
             md_lines.append("| " + " | ".join(cleaned) + " |")
 
@@ -303,9 +313,7 @@ class FileService:
 
         # 2. Validate payload size
         if len(content) > MAX_FILE_SIZE_BYTES:
-            raise ValueError(
-                f"File size ({len(content)} bytes) exceeds maximum limit of 20MB."
-            )
+            raise ValueError(f"File size ({len(content)} bytes) exceeds maximum limit of 20MB.")
 
         # 3. Categorize file & extract text
         normalized_mime = mime_type.lower().split(";")[0].strip()

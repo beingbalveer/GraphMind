@@ -156,7 +156,6 @@ async def update_chat_tree(
     body: Dict[str, Any],
     db: AsyncSession = Depends(get_db),
 ) -> Dict[str, Any]:
-
     """
     Update a conversation tree's metadata (title and/or pinned state) on its root node.
     Body: { "title"?: string, "pinned"?: boolean }
@@ -182,7 +181,6 @@ async def update_chat_tree(
             detail=f"Chat '{chat_root_id}' not found in workspace '{workspace_id}'",
         )
     return {"id": chat_root_id, "title": title_val, "pinned": pinned_val}
-
 
 
 @router.delete("/{workspace_id}/nodes/{node_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -261,7 +259,6 @@ async def update_node(
             detail=f"Node '{node_id}' not found in workspace '{workspace_id}'",
         )
     return node
-
 
 
 @router.post("/{workspace_id}/delta")

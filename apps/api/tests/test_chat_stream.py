@@ -208,4 +208,3 @@ async def test_chat_stream_request_with_base_url() -> None:
     )
     assert req.provider == "ollama"
     assert req.base_url == "http://192.168.1.100:11434/v1"
-

@@ -39,7 +39,6 @@ class Settings(BaseSettings):
         description="Allowed CORS origins",
     )
 
-
     # AI Provider configuration
     DEFAULT_PROVIDER: str = Field(default="gemini", description="Default AI provider")
     DEFAULT_MODEL: str = Field(default="gemini-2.5-flash", description="Default foundation model")

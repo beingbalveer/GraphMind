@@ -148,11 +148,17 @@ class WorkspaceService:
             import shutil
             from pathlib import Path
 
-            ws_storage_dir = Path(os.getenv("STORAGE_DIR", "data/storage")) / "workspaces" / workspace_id
+            ws_storage_dir = (
+                Path(os.getenv("STORAGE_DIR", "data/storage")) / "workspaces" / workspace_id
+            )
             if ws_storage_dir.exists():
                 shutil.rmtree(ws_storage_dir, ignore_errors=True)
         except Exception as err:
-            logger.warning("Failed to clean up workspace disk directory", workspace_id=workspace_id, error=str(err))
+            logger.warning(
+                "Failed to clean up workspace disk directory",
+                workspace_id=workspace_id,
+                error=str(err),
+            )
 
         logger.info("Workspace deleted", workspace_id=workspace_id)
         return True
@@ -258,7 +264,6 @@ class WorkspaceService:
         elif nodes:
             active_id = nodes[-1].id
 
-
         ws_response = WorkspaceResponse(
             id=ws.id,
             name=ws.name,
@@ -342,7 +347,9 @@ class WorkspaceService:
                 title = root.content[:40].strip() + ("..." if len(root.content) > 40 else "")
             if not title:
                 title = "Untitled Chat"
-            is_pinned = bool(root.metadata_payload.get("pinned", False)) if root.metadata_payload else False
+            is_pinned = (
+                bool(root.metadata_payload.get("pinned", False)) if root.metadata_payload else False
+            )
 
             chats.append(
                 ChatSummary(
@@ -356,7 +363,6 @@ class WorkspaceService:
                     pinned=is_pinned,
                 )
             )
-
 
         # Sort pinned chats to the top, then by updated_at descending
         chats.sort(key=lambda c: (1 if c.pinned else 0, c.updated_at), reverse=True)
@@ -387,9 +393,13 @@ class WorkspaceService:
             return False
 
         await session.flush()
-        logger.info("Branch deleted", workspace_id=workspace_id, node_id=node_id, deleted_count=len(deleted_ids))
+        logger.info(
+            "Branch deleted",
+            workspace_id=workspace_id,
+            node_id=node_id,
+            deleted_count=len(deleted_ids),
+        )
         return True
-
 
     @staticmethod
     async def delete_chat(session: AsyncSession, workspace_id: str, chat_root_id: str) -> bool:
@@ -457,7 +467,6 @@ class WorkspaceService:
 
     @staticmethod
     async def update_node(
-
         session: AsyncSession,
         workspace_id: str,
         node_id: str,
@@ -514,7 +523,6 @@ class WorkspaceService:
 
     @staticmethod
     async def add_node_and_edge(
-
         session: AsyncSession, workspace_id: str, data: NodeCreate
     ) -> NodeResponse:
         """
