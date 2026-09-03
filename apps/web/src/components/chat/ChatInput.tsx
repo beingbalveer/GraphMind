@@ -19,7 +19,7 @@ import {
   GraduationCap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { MenuCard, MenuItem, MenuHeader } from "@/components/ui/menu";
+import { MenuCard, MenuItem } from "@/components/ui/menu";
 import { BranchContext } from "@/hooks/useChatStream";
 import { FileAttachment } from "@graphmind/shared";
 import { uploadWorkspaceFile } from "@/lib/workspaceApi";
@@ -551,8 +551,6 @@ export function ChatInput({
               {isSkillMenuOpen && (
                 <div className="absolute bottom-full left-0 mb-2 z-50 animate-in fade-in-50 zoom-in-95 duration-150">
                   <MenuCard className="min-w-[210px]">
-                    <MenuHeader>Agent Skill Playbooks</MenuHeader>
-
                     <MenuItem
                       icon={<MessageSquare className="w-4 h-4" />}
                       active={selectedSkill === null}
@@ -604,10 +602,6 @@ export function ChatInput({
                 </div>
               )}
             </div>
-
-            <span className="text-[11px] text-zinc-400 select-none pl-1 hidden sm:inline">
-              Press <kbd className="font-sans px-1 py-0.5 rounded bg-zinc-100 border border-zinc-200 text-zinc-500 text-[10px]">Enter</kbd> to send
-            </span>
           </div>
 
           {/* Right Action: Send / Stop Button */}
