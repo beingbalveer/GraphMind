@@ -556,7 +556,7 @@ export function ChatInput({
 
               {/* Floating Skill Menu */}
               {isSkillMenuOpen && (
-                <div className="absolute bottom-full left-0 mb-2 w-64 rounded-xl bg-white border border-zinc-200/90 shadow-lg py-1.5 z-50 animate-in fade-in-50 zoom-in-95 duration-150">
+                <div className="absolute bottom-full left-0 mb-2 w-48 rounded-xl bg-white border border-zinc-200/90 shadow-lg py-1.5 z-50 animate-in fade-in-50 zoom-in-95 duration-150">
                   <div className="px-3 py-1 text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">
                     Agent Skill Playbooks
                   </div>
@@ -567,14 +567,11 @@ export function ChatInput({
                       setSelectedSkill(null);
                       setIsSkillMenuOpen(false);
                     }}
-                    className={`w-full flex items-center justify-between px-3 py-2 text-left text-xs hover:bg-zinc-50 transition-colors cursor-pointer ${
+                    className={`w-full flex items-center justify-between px-3 py-1.5 text-left text-xs hover:bg-zinc-50 transition-colors cursor-pointer ${
                       selectedSkill === null ? "text-indigo-600 font-medium bg-indigo-50/50" : "text-zinc-700"
                     }`}
                   >
-                    <div className="flex flex-col">
-                      <span className="font-medium">Standard Chat</span>
-                      <span className="text-[10px] text-zinc-400">Default conversational assistant</span>
-                    </div>
+                    <span className="font-medium">Standard Chat</span>
                     {selectedSkill === null && <span className="text-indigo-600">✓</span>}
                   </button>
 
@@ -584,16 +581,11 @@ export function ChatInput({
                       setSelectedSkill("deep_research");
                       setIsSkillMenuOpen(false);
                     }}
-                    className={`w-full flex items-center justify-between px-3 py-2 text-left text-xs hover:bg-zinc-50 transition-colors cursor-pointer ${
+                    className={`w-full flex items-center justify-between px-3 py-1.5 text-left text-xs hover:bg-zinc-50 transition-colors cursor-pointer ${
                       selectedSkill === "deep_research" ? "text-indigo-600 font-medium bg-indigo-50/50" : "text-zinc-700"
                     }`}
                   >
-                    <div className="flex flex-col">
-                      <span className="font-medium flex items-center space-x-1.5">
-                        <span>⚡ Deep Research</span>
-                      </span>
-                      <span className="text-[10px] text-zinc-400">Web search, graph search & subnode notes</span>
-                    </div>
+                    <span className="font-medium">⚡ Deep Research</span>
                     {selectedSkill === "deep_research" && <span className="text-indigo-600">✓</span>}
                   </button>
 
@@ -603,16 +595,11 @@ export function ChatInput({
                       setSelectedSkill("code_architect");
                       setIsSkillMenuOpen(false);
                     }}
-                    className={`w-full flex items-center justify-between px-3 py-2 text-left text-xs hover:bg-zinc-50 transition-colors cursor-pointer ${
+                    className={`w-full flex items-center justify-between px-3 py-1.5 text-left text-xs hover:bg-zinc-50 transition-colors cursor-pointer ${
                       selectedSkill === "code_architect" ? "text-indigo-600 font-medium bg-indigo-50/50" : "text-zinc-700"
                     }`}
                   >
-                    <div className="flex flex-col">
-                      <span className="font-medium flex items-center space-x-1.5">
-                        <span>🏛️ Code Architect</span>
-                      </span>
-                      <span className="text-[10px] text-zinc-400">Modularity, trade-offs & lineage traversal</span>
-                    </div>
+                    <span className="font-medium">🏛️ Code Architect</span>
                     {selectedSkill === "code_architect" && <span className="text-indigo-600">✓</span>}
                   </button>
 
@@ -622,16 +609,11 @@ export function ChatInput({
                       setSelectedSkill("quiz_master");
                       setIsSkillMenuOpen(false);
                     }}
-                    className={`w-full flex items-center justify-between px-3 py-2 text-left text-xs hover:bg-zinc-50 transition-colors cursor-pointer ${
+                    className={`w-full flex items-center justify-between px-3 py-1.5 text-left text-xs hover:bg-zinc-50 transition-colors cursor-pointer ${
                       selectedSkill === "quiz_master" ? "text-indigo-600 font-medium bg-indigo-50/50" : "text-zinc-700"
                     }`}
                   >
-                    <div className="flex flex-col">
-                      <span className="font-medium flex items-center space-x-1.5">
-                        <span>🎓 Quiz Master</span>
-                      </span>
-                      <span className="text-[10px] text-zinc-400">Socratic questions & learning checks</span>
-                    </div>
+                    <span className="font-medium">🎓 Quiz Master</span>
                     {selectedSkill === "quiz_master" && <span className="text-indigo-600">✓</span>}
                   </button>
                 </div>

@@ -12,6 +12,8 @@ import {
   Settings,
   Plus,
   FolderOpen,
+  PanelLeft,
+  MessageSquare,
 } from "lucide-react";
 import { ChatItem } from "@/lib/workspaceApi";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -36,6 +38,7 @@ interface ChatSidebarProps {
 
 
 const DEFAULT_WIDTH = 260;
+const COLLAPSED_WIDTH = 56;
 const MIN_WIDTH = 180;
 const MAX_WIDTH = 480;
 
@@ -160,185 +163,277 @@ export function ChatSidebar({
       {/* Collapsible & Resizable Left Sidebar Container */}
       <aside
         suppressHydrationWarning
-        style={{ width: isOpen ? `${width}px` : 0 }}
+        style={{ width: isOpen ? `${width}px` : `${COLLAPSED_WIDTH}px` }}
         className={`fixed md:static inset-y-0 left-0 z-40 flex flex-col bg-white border-r border-zinc-200/80 select-none relative overflow-hidden ${
           isOpen
             ? "translate-x-0"
-            : "-translate-x-full md:translate-x-0 overflow-hidden border-r-0"
+            : "-translate-x-full md:translate-x-0"
         } ${isResizing ? "transition-none" : "transition-[width,transform] duration-200 ease-in-out"}`}
       >
-        {/* Sidebar Header with Workspace Badge */}
-        <div className="p-3 border-b border-zinc-100 space-y-2 shrink-0 bg-white">
-          <div className="flex items-center justify-between">
-            <button
-              type="button"
-              onClick={onOpenWorkspaceModal}
-              className="flex items-center space-x-2 px-2.5 py-1.5 rounded-xl hover:bg-zinc-100 text-zinc-800 hover:text-zinc-950 text-xs font-semibold max-w-full truncate transition-colors cursor-pointer"
-              title="Click to switch or manage workspaces"
-            >
-              <FolderGit2 className="w-4 h-4 text-zinc-500 shrink-0" />
-              <span className="truncate">{workspaceName}</span>
-            </button>
-          </div>
-
-          {/* Quick Filter Search Input */}
-          {chats.length > 3 && (
-            <div className="relative flex items-center pt-0.5">
-              <Search className="w-3.5 h-3.5 absolute left-3 text-zinc-400 pointer-events-none" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search chats..."
-                className="w-full pl-8 pr-3 py-1.5 rounded-xl border border-zinc-200/80 bg-white text-xs text-zinc-800 placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-900 transition-all shadow-2xs"
-              />
-            </div>
-          )}
-        </div>
-
-        {/* Minimalist Flat Chat List */}
-        <div className="flex-1 overflow-y-auto p-2 space-y-1">
-          {/* Quick Navigation Items: New Chat & Library */}
-          <div className="space-y-0.5 pb-2 mb-1.5 border-b border-zinc-100">
-            {onNewChat && (
-              <button
-                type="button"
-                onClick={onNewChat}
-                className="w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-medium text-zinc-700 hover:text-zinc-950 hover:bg-zinc-100/70 transition-colors cursor-pointer select-none group"
-                title="Start a new chat (⌘N)"
-              >
-                <Plus className="w-4 h-4 text-zinc-500 group-hover:text-zinc-900 transition-colors shrink-0" />
-                <span>New chat</span>
-              </button>
-            )}
-
-            {onOpenFileLibrary && (
-              <button
-                type="button"
-                onClick={onOpenFileLibrary}
-                className="w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-medium text-zinc-700 hover:text-zinc-950 hover:bg-zinc-100/70 transition-colors cursor-pointer select-none group"
-                title="Workspace File Library & Assets"
-              >
-                <FolderOpen className="w-4 h-4 text-zinc-500 group-hover:text-zinc-900 transition-colors shrink-0" />
-                <span>Library</span>
-              </button>
-            )}
-          </div>
-
-          <div className="px-2 pt-1 pb-1 text-[11px] font-medium text-zinc-400 tracking-wider uppercase">
-            Conversations
-          </div>
-
-          {filteredChats.length === 0 ? (
-            <div className="py-8 px-3 text-center text-xs text-zinc-400">
-              {searchQuery ? "No matching chats" : "No chats yet"}
-            </div>
-          ) : (
-            filteredChats.map((chat) => {
-              const isActive = chat.id === activeChatId;
-              const isRenaming = renamingChatId === chat.id;
-
-              return (
-                <div
-                  key={chat.id}
-                  onClick={() => !isRenaming && onSelectChat(chat)}
-                  className={`group relative flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-colors cursor-pointer select-none ${
-                    isActive
-                      ? "bg-[#F1F6FE] text-zinc-950 font-medium"
-                      : "text-zinc-600 hover:bg-zinc-100/60 hover:text-zinc-950"
-                  }`}
+        {isOpen ? (
+          <>
+            {/* Sidebar Header with Workspace Badge + Collapse Button */}
+            <div className="p-3 border-b border-zinc-100 space-y-2 shrink-0 bg-white">
+              <div className="flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={onOpenWorkspaceModal}
+                  className="flex items-center space-x-2 px-2.5 py-1.5 rounded-xl hover:bg-zinc-100 text-zinc-800 hover:text-zinc-950 text-xs font-semibold max-w-[calc(100%-36px)] truncate transition-colors cursor-pointer"
+                  title="Click to switch or manage workspaces"
                 >
-                  {isRenaming ? (
-                    /* Inline rename input */
-                    <input
-                      ref={renameInputRef}
-                      type="text"
-                      value={renameValue}
-                      onChange={(e) => setRenameValue(e.target.value)}
-                      onBlur={commitRename}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") { e.preventDefault(); commitRename(); }
-                        if (e.key === "Escape") { e.preventDefault(); setRenamingChatId(null); }
-                      }}
-                      onClick={(e) => e.stopPropagation()}
-                      className="flex-1 mr-1 bg-white border border-blue-400 rounded-md px-2 py-0.5 text-[13px] text-zinc-950 outline-none ring-2 ring-blue-100 min-w-0"
-                    />
-                  ) : (
-                    <span className="truncate text-[13px] leading-snug flex-1 mr-1 flex items-center min-w-0">
-                      {chat.pinned && (
-                        <Pin className="w-3 h-3 text-zinc-400 shrink-0 mr-1.5 fill-zinc-400/30" />
-                      )}
-                      <span className="truncate">{chat.title || "New conversation"}</span>
-                    </span>
-                  )}
+                  <FolderGit2 className="w-4 h-4 text-zinc-500 shrink-0" />
+                  <span className="truncate">{workspaceName}</span>
+                </button>
 
-                  {/* 3-dot context menu — vertical dots, appears on hover; stays visible while open */}
-                  {!isRenaming && (
-                    <div
-                      className={`transition-opacity shrink-0 ${
-                        openMenuChatId === chat.id
-                          ? "opacity-100"
-                          : "opacity-0 group-hover:opacity-100"
-                      }`}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <DropdownMenu
-                        align="right"
-                        onOpenChange={(isOpen) =>
-                          setOpenMenuChatId(isOpen ? chat.id : null)
-                        }
-                        trigger={
-                          <div className="p-1 rounded-md hover:bg-zinc-200/70 text-zinc-400 hover:text-zinc-700 transition-colors cursor-pointer">
-                            <MoreVertical className="w-3.5 h-3.5" />
-                          </div>
-                        }
-                        items={[
-                          {
-                            label: chat.pinned ? "Unpin" : "Pin",
-                            icon: chat.pinned ? (
-                              <PinOff className="w-3.5 h-3.5" />
-                            ) : (
-                              <Pin className="w-3.5 h-3.5" />
-                            ),
-                            onClick: () => onTogglePinChat?.(chat.id, !chat.pinned),
-                          },
-                          {
-                            label: "Rename",
-                            icon: <Pencil className="w-3.5 h-3.5" />,
-                            onClick: () => startRename(chat),
-                          },
-                          {
-                            label: "Delete",
-                            icon: <Trash2 className="w-3.5 h-3.5" />,
-                            variant: "destructive",
-                            onClick: () => setDeletingChatId(chat.id),
-                          },
-                        ]}
-                      />
-                    </div>
-                  )}
+                <button
+                  type="button"
+                  onClick={onToggle}
+                  className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 transition-colors cursor-pointer shrink-0"
+                  title="Collapse sidebar (⌘B)"
+                >
+                  <PanelLeft className="w-4 h-4" />
+                </button>
+              </div>
 
-
+              {/* Quick Filter Search Input */}
+              {chats.length > 3 && (
+                <div className="relative flex items-center pt-0.5">
+                  <Search className="w-3.5 h-3.5 absolute left-3 text-zinc-400 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search chats..."
+                    className="w-full pl-8 pr-3 py-1.5 rounded-xl border border-zinc-200/80 bg-white text-xs text-zinc-800 placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-900 transition-all shadow-2xs"
+                  />
                 </div>
-              );
-            })
-          )}
-        </div>
+              )}
+            </div>
 
-        {/* Sidebar Footer */}
-        <div className="px-3 py-2 border-t border-zinc-100 bg-white flex items-center shrink-0 select-none">
-          {onOpenSettings && (
-            <button
-              type="button"
-              onClick={onOpenSettings}
-              className="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-950 hover:bg-zinc-100 transition-colors cursor-pointer"
-              title="Settings & Model Configuration (⌘,)"
-            >
-              <Settings className="w-4 h-4" />
-            </button>
-          )}
-        </div>
+            {/* Minimalist Flat Chat List */}
+            <div className="flex-1 overflow-y-auto p-2 space-y-1">
+              {/* Quick Navigation Items: New Chat & Library */}
+              <div className="space-y-0.5 pb-2 mb-1.5 border-b border-zinc-100">
+                {onNewChat && (
+                  <button
+                    type="button"
+                    onClick={onNewChat}
+                    className="w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-medium text-zinc-700 hover:text-zinc-950 hover:bg-zinc-100/70 transition-colors cursor-pointer select-none group"
+                    title="Start a new chat (⌘N)"
+                  >
+                    <Plus className="w-4 h-4 text-zinc-500 group-hover:text-zinc-900 transition-colors shrink-0" />
+                    <span>New chat</span>
+                  </button>
+                )}
 
+                {onOpenFileLibrary && (
+                  <button
+                    type="button"
+                    onClick={onOpenFileLibrary}
+                    className="w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-medium text-zinc-700 hover:text-zinc-950 hover:bg-zinc-100/70 transition-colors cursor-pointer select-none group"
+                    title="Workspace File Library & Assets"
+                  >
+                    <FolderOpen className="w-4 h-4 text-zinc-500 group-hover:text-zinc-900 transition-colors shrink-0" />
+                    <span>Library</span>
+                  </button>
+                )}
+              </div>
+
+              <div className="px-2 pt-1 pb-1 text-[11px] font-medium text-zinc-400 tracking-wider uppercase">
+                Conversations
+              </div>
+
+              {filteredChats.length === 0 ? (
+                <div className="py-8 px-3 text-center text-xs text-zinc-400">
+                  {searchQuery ? "No matching chats" : "No chats yet"}
+                </div>
+              ) : (
+                filteredChats.map((chat) => {
+                  const isActive = chat.id === activeChatId;
+                  const isRenaming = renamingChatId === chat.id;
+
+                  return (
+                    <div
+                      key={chat.id}
+                      onClick={() => !isRenaming && onSelectChat(chat)}
+                      className={`group relative flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-colors cursor-pointer select-none ${
+                        isActive
+                          ? "bg-[#F1F6FE] text-zinc-950 font-medium"
+                          : "text-zinc-600 hover:bg-zinc-100/60 hover:text-zinc-950"
+                      }`}
+                    >
+                      {isRenaming ? (
+                        /* Inline rename input */
+                        <input
+                          ref={renameInputRef}
+                          type="text"
+                          value={renameValue}
+                          onChange={(e) => setRenameValue(e.target.value)}
+                          onBlur={commitRename}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") commitRename();
+                            if (e.key === "Escape") setRenamingChatId(null);
+                          }}
+                          className="w-full bg-white border border-zinc-300 rounded px-1.5 py-0.5 text-xs text-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
+                          autoFocus
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      ) : (
+                        <>
+                          <div className="flex items-center space-x-2 min-w-0 pr-1">
+                            {chat.pinned && (
+                              <Pin className="w-3 h-3 text-zinc-400 shrink-0 rotate-45" />
+                            )}
+                            <span className="truncate">{chat.title || "Untitled Chat"}</span>
+                          </div>
+
+                          {/* Action Menu Trigger Button */}
+                          <div
+                            className={`shrink-0 transition-opacity ${
+                              openMenuChatId === chat.id
+                                ? "opacity-100"
+                                : "opacity-0 group-hover:opacity-100"
+                            }`}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <DropdownMenu
+                              trigger={
+                                <button
+                                  type="button"
+                                  className="p-1 rounded-md text-zinc-400 hover:text-zinc-700 hover:bg-zinc-200/60 transition-colors"
+                                  title="Chat options"
+                                >
+                                  <MoreVertical className="w-3.5 h-3.5" />
+                                </button>
+                              }
+                              onOpenChange={(isOpen) =>
+                                setOpenMenuChatId(isOpen ? chat.id : null)
+                              }
+                              align="right"
+                              items={[
+                                {
+                                  label: chat.pinned ? "Unpin" : "Pin to top",
+                                  icon: chat.pinned ? (
+                                    <PinOff className="w-3.5 h-3.5" />
+                                  ) : (
+                                    <Pin className="w-3.5 h-3.5" />
+                                  ),
+                                  onClick: () => onTogglePinChat?.(chat.id, !chat.pinned),
+                                },
+                                {
+                                  label: "Rename",
+                                  icon: <Pencil className="w-3.5 h-3.5" />,
+                                  onClick: () => startRename(chat),
+                                },
+                                {
+                                  label: "Delete",
+                                  icon: <Trash2 className="w-3.5 h-3.5" />,
+                                  variant: "destructive",
+                                  onClick: () => setDeletingChatId(chat.id),
+                                },
+                              ]}
+                            />
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Sidebar Footer with Settings icon and text */}
+            <div className="p-2 border-t border-zinc-100 bg-white flex items-center shrink-0 select-none">
+              {onOpenSettings && (
+                <button
+                  type="button"
+                  onClick={onOpenSettings}
+                  className="w-full flex items-center space-x-2.5 px-3 py-2 rounded-xl text-xs font-medium text-zinc-700 hover:text-zinc-950 hover:bg-zinc-100/70 transition-colors cursor-pointer select-none group"
+                  title="Settings & Model Configuration (⌘,)"
+                >
+                  <Settings className="w-4 h-4 text-zinc-500 group-hover:text-zinc-900 transition-colors shrink-0" />
+                  <span>Settings</span>
+                </button>
+              )}
+            </div>
+          </>
+        ) : (
+          /* Collapsed Mini Icon Rail (56px) */
+          <div className="flex flex-col items-center justify-between h-full py-2.5 px-1 bg-white select-none">
+            {/* Top: Expand Toggle + Nav Icons */}
+            <div className="flex flex-col items-center space-y-1.5 w-full">
+              <button
+                type="button"
+                onClick={onToggle}
+                className="w-9 h-9 flex items-center justify-center rounded-xl text-zinc-500 hover:text-zinc-950 hover:bg-zinc-100 transition-colors cursor-pointer"
+                title="Expand sidebar (⌘B)"
+              >
+                <PanelLeft className="w-4 h-4" />
+              </button>
+
+              <div className="w-6 h-px bg-zinc-100 my-1" />
+
+              {onNewChat && (
+                <button
+                  type="button"
+                  onClick={onNewChat}
+                  className="w-9 h-9 flex items-center justify-center rounded-xl text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100 transition-colors cursor-pointer group"
+                  title="New chat (⌘N)"
+                >
+                  <Plus className="w-4 h-4 text-zinc-500 group-hover:text-zinc-900 transition-colors" />
+                </button>
+              )}
+
+              {onOpenFileLibrary && (
+                <button
+                  type="button"
+                  onClick={onOpenFileLibrary}
+                  className="w-9 h-9 flex items-center justify-center rounded-xl text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100 transition-colors cursor-pointer group"
+                  title="Workspace File Library & Assets"
+                >
+                  <FolderOpen className="w-4 h-4 text-zinc-500 group-hover:text-zinc-900 transition-colors" />
+                </button>
+              )}
+
+              {onOpenWorkspaceModal && (
+                <button
+                  type="button"
+                  onClick={onOpenWorkspaceModal}
+                  className="w-9 h-9 flex items-center justify-center rounded-xl text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100 transition-colors cursor-pointer group"
+                  title={`Workspace: ${workspaceName}`}
+                >
+                  <FolderGit2 className="w-4 h-4 text-zinc-500 group-hover:text-zinc-900 transition-colors" />
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={onToggle}
+                className="w-9 h-9 flex items-center justify-center rounded-xl text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 transition-colors cursor-pointer relative group"
+                title={`Conversations (${chats.length})`}
+              >
+                <MessageSquare className="w-4 h-4 text-zinc-400 group-hover:text-zinc-800 transition-colors" />
+                {chats.length > 0 && (
+                  <span className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-blue-500" />
+                )}
+              </button>
+            </div>
+
+            {/* Bottom: Settings Icon */}
+            <div className="flex flex-col items-center pt-2 border-t border-zinc-100 w-full">
+              {onOpenSettings && (
+                <button
+                  type="button"
+                  onClick={onOpenSettings}
+                  className="w-9 h-9 flex items-center justify-center rounded-xl text-zinc-500 hover:text-zinc-950 hover:bg-zinc-100 transition-colors cursor-pointer group"
+                  title="Settings & Model Configuration (⌘,)"
+                >
+                  <Settings className="w-4 h-4 text-zinc-500 group-hover:text-zinc-900 transition-colors" />
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Right-Edge Transparent Drag Handle for Resizing */}
         {isOpen && (
