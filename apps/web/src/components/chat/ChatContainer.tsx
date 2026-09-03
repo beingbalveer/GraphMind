@@ -963,6 +963,7 @@ export function ChatContainer({
     onCommandPalette: () => setIsPaletteOpen((prev) => !prev),
     onToggleSidebar: () => setIsSidebarOpen((prev) => !prev),
     onNewChat: handleNewChat,
+    onOpenSettings: () => setIsModelConfigOpen(true),
   });
 
 

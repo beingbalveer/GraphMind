@@ -13,6 +13,7 @@ interface KeyboardShortcutsHandlers {
   onCommandPalette?: () => void;
   onToggleSidebar?: () => void;
   onNewChat?: () => void;
+  onOpenSettings?: () => void;
 }
 
 export function useKeyboardShortcuts({
@@ -26,6 +27,7 @@ export function useKeyboardShortcuts({
   onCommandPalette,
   onToggleSidebar,
   onNewChat,
+  onOpenSettings,
 }: KeyboardShortcutsHandlers) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -94,7 +96,14 @@ export function useKeyboardShortcuts({
         return;
       }
 
-      // 10. Escape: Close palette / drawer / side branch
+      // 10. Settings: Cmd+, / Ctrl+,
+      if (isModifier && e.key === ",") {
+        e.preventDefault();
+        onOpenSettings?.();
+        return;
+      }
+
+      // 11. Escape: Close palette / drawer / side branch
       if (e.key === "Escape") {
         onEscape?.();
         return;
@@ -114,5 +123,6 @@ export function useKeyboardShortcuts({
     onCommandPalette,
     onToggleSidebar,
     onNewChat,
+    onOpenSettings,
   ]);
 }
