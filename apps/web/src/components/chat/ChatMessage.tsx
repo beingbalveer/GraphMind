@@ -590,26 +590,55 @@ export function ChatMessage({
                     <div className="flex flex-wrap gap-2">
                       {codeAttachments.map((att, idx) => {
                         const isCode = att.fileCategory === "code";
+                        const isMd =
+                          att.name.toLowerCase().endsWith(".md") ||
+                          att.name.toLowerCase().endsWith(".markdown");
+                        const label = isMd
+                          ? "MARKDOWN"
+                          : att.fileCategory?.toUpperCase() || "FILE";
+
                         return (
                           <div
                             key={att.id || idx}
                             onClick={() => setViewingCodeFile(att)}
-                            className="flex items-center space-x-2.5 px-3 py-2 rounded-xl border border-zinc-200/90 bg-white hover:border-zinc-300 hover:shadow-xs transition-all cursor-pointer group/card max-w-[260px]"
-                            title="Click to view file content"
+                            className={`flex items-center space-x-2.5 px-3 py-2 rounded-xl border transition-all cursor-pointer group/card max-w-[260px] ${
+                              isMd
+                                ? "border-blue-200/90 bg-blue-50/30 hover:bg-blue-50/70 hover:border-blue-300 hover:shadow-xs"
+                                : "border-zinc-200/90 bg-white hover:border-zinc-300 hover:shadow-xs"
+                            }`}
+                            title={
+                              isMd
+                                ? "Click to preview markdown"
+                                : "Click to view file content"
+                            }
                           >
-                            <div className="p-1.5 rounded-lg bg-zinc-100 border border-zinc-200/80 text-zinc-700 shrink-0 group-hover/card:bg-zinc-200 transition-colors">
-                              {isCode ? (
+                            <div
+                              className={`p-1.5 rounded-lg border shrink-0 transition-colors ${
+                                isMd
+                                  ? "bg-white border-blue-200 text-blue-600 group-hover/card:scale-105 transition-transform"
+                                  : "bg-zinc-100 border border-zinc-200/80 text-zinc-700 group-hover/card:bg-zinc-200"
+                              }`}
+                            >
+                              {isMd ? (
+                                <FileText className="w-4 h-4 text-blue-600" />
+                              ) : isCode ? (
                                 <Code className="w-4 h-4 text-emerald-600" />
                               ) : (
-                                <FileText className="w-4 h-4 text-blue-600" />
+                                <FileText className="w-4 h-4 text-zinc-600" />
                               )}
                             </div>
                             <div className="flex flex-col min-w-0 pr-1">
                               <span className="text-xs font-medium text-zinc-900 truncate font-mono">
                                 {att.name}
                               </span>
-                              <span className="text-[10px] text-zinc-400 font-mono">
-                                {att.fileCategory?.toUpperCase() || "FILE"} · View
+                              <span
+                                className={`text-[10px] font-mono ${
+                                  isMd
+                                    ? "text-blue-600/80 font-medium"
+                                    : "text-zinc-400"
+                                }`}
+                              >
+                                {label} · {isMd ? "Preview" : "View"}
                               </span>
                             </div>
                           </div>

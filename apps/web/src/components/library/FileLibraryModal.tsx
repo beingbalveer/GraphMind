@@ -298,6 +298,9 @@ export function FileLibraryModal({
                   );
                 const isCode = file.fileCategory === "code";
                 const isDoc = file.fileCategory === "document" && !isPdf && !isTabular;
+                const isMd =
+                  file.name.toLowerCase().endsWith(".md") ||
+                  file.name.toLowerCase().endsWith(".markdown");
                 const downloadUrl = resolveFileUrl(
                   file.url || `/api/v1/workspaces/${workspaceId}/files/${file.id}/download`
                 );
@@ -315,13 +318,13 @@ export function FileLibraryModal({
                         setViewingPdfFile(file);
                       } else if (isTabular) {
                         setViewingTabularFile(file);
-                      } else if (isCode || isDoc || file.extractedText) {
+                      } else if (isCode || isDoc || isMd || file.extractedText) {
                         setViewingCodeFile(file);
                       }
                     }}
                     className="group relative flex flex-col rounded-xl border border-zinc-200/90 bg-white hover:border-zinc-300 hover:shadow-sm transition-all overflow-hidden cursor-pointer"
                   >
-                    {/* Viewport: Image, PDF, Tabular, or Code Preview */}
+                    {/* Viewport: Image, PDF, Tabular, Markdown, or Code Preview */}
                     <div className="h-36 bg-zinc-100/70 relative flex items-center justify-center overflow-hidden border-b border-zinc-100">
                       {isImage ? (
                         /* eslint-disable-next-line @next/next/no-img-element */
@@ -364,6 +367,23 @@ export function FileLibraryModal({
                             {file.metadata?.row_count !== undefined
                               ? `${(file.metadata.row_count as number).toLocaleString()} rows · Explore`
                               : "Click to explore table"}
+                          </div>
+                        </div>
+                      ) : isMd ? (
+                        <div className="w-full h-full p-3 bg-blue-50/60 text-zinc-700 flex flex-col justify-between select-none border-b border-blue-100">
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className="font-bold text-blue-700 bg-blue-100/90 border border-blue-200/80 px-1.5 py-0.5 rounded text-[10px] uppercase">
+                              MD
+                            </span>
+                            <FileText className="w-4 h-4 text-blue-600" />
+                          </div>
+                          <div className="text-[11px] text-zinc-600 line-clamp-3 leading-snug font-sans">
+                            {file.extractedText
+                              ? file.extractedText.slice(0, 120)
+                              : "Markdown document stored in workspace library."}
+                          </div>
+                          <div className="text-[10px] text-blue-600 font-medium">
+                            Click to preview markdown
                           </div>
                         </div>
                       ) : (
