@@ -38,7 +38,7 @@ export function CopyButton({
     <button
       type="button"
       onClick={handleCopy}
-      className={`p-1.5 rounded-md text-zinc-400 hover:text-zinc-800 hover:bg-zinc-100 transition-all cursor-pointer flex items-center justify-center shrink-0 select-none ${className}`}
+      className={`w-7 h-7 rounded-xl text-zinc-400 hover:text-zinc-800 hover:bg-zinc-100 transition-colors cursor-pointer flex items-center justify-center shrink-0 select-none ${className}`}
       title={copied ? copiedTitle : title}
       aria-label={copied ? copiedTitle : title}
     >

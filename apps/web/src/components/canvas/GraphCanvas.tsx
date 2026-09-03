@@ -28,7 +28,6 @@ import { treeToGraph } from "@/lib/treeToGraph";
 import { getLayoutedElements, LayoutDirection } from "@/lib/layoutEngine";
 import { ThreadGraphNode, ThreadNodeData, ZoomMode } from "./ThreadGraphNode";
 import { MindMapEdge } from "./MindMapEdge";
-import { Button } from "@/components/ui/button";
 
 interface GraphCanvasProps {
   tree: ConversationTree | null;
@@ -223,80 +222,74 @@ function FlowCanvas({
 
       {/* Floating Canvas Camera & Layout Toolbar */}
       <div
-        className={`absolute top-4 z-20 flex items-center space-x-1.5 p-1 bg-white/90 backdrop-blur-md border border-zinc-200/90 rounded-xl shadow-md select-none transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+        className={`absolute top-4 z-20 flex items-center space-x-1 p-1 bg-white border border-zinc-200/70 rounded-2xl select-none transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
           isSidePeekOpen
             ? "right-4 sm:right-[496px] md:right-[556px] lg:right-[596px]"
             : "right-4"
         }`}
       >
         {/* LOD Mode Indicator Badge */}
-        <div className="px-2 py-0.5 rounded-lg bg-zinc-100 border border-zinc-200 text-[10px] font-semibold text-zinc-700 capitalize">
+        <div className="px-2.5 py-1 rounded-xl bg-zinc-100 text-[11px] font-medium text-zinc-800 capitalize">
           {zoomMode === "orb" ? "🌌 Galaxy View" : zoomMode === "detailed" ? "🔍 Focus View" : "📄 Thread Tree"}
         </div>
-        <div className="w-px h-4 bg-zinc-200 mx-0.5" />
+        <div className="w-px h-4 bg-zinc-200/80 mx-0.5" />
 
-        <Button
-          variant="ghost"
-          size="iconSm"
+        <button
+          type="button"
           onClick={handleToggleDirection}
-          className="h-7 w-7 text-zinc-600 hover:text-zinc-950 cursor-pointer"
+          className="w-7 h-7 rounded-xl text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100 flex items-center justify-center transition-colors cursor-pointer"
           title={`Switch Layout: ${direction === "LR" ? "Horizontal (Left-to-Right)" : "Vertical (Top-to-Bottom)"}`}
         >
           {direction === "LR" ? (
-            <Rows3 className="w-3.5 h-3.5" />
+            <Rows3 className="w-3.5 h-3.5 stroke-[1.75]" />
           ) : (
-            <Columns3 className="w-3.5 h-3.5" />
+            <Columns3 className="w-3.5 h-3.5 stroke-[1.75]" />
           )}
-        </Button>
-        <Button
-          variant="ghost"
-          size="iconSm"
+        </button>
+        <button
+          type="button"
           onClick={handleAutoLayout}
-          className="h-7 w-7 text-zinc-600 hover:text-zinc-950 cursor-pointer"
+          className="w-7 h-7 rounded-xl text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100 flex items-center justify-center transition-colors cursor-pointer"
           title="Recompute Clean Auto-Layout (⌘L)"
         >
-          <Sparkles className="w-3.5 h-3.5" />
-        </Button>
-        <div className="w-px h-4 bg-zinc-200 mx-0.5" />
-        <Button
-          variant="ghost"
-          size="iconSm"
+          <Sparkles className="w-3.5 h-3.5 stroke-[1.75]" />
+        </button>
+        <div className="w-px h-4 bg-zinc-200/80 mx-0.5" />
+        <button
+          type="button"
           onClick={() => centerOnNode()}
-          className="h-7 w-7 text-zinc-600 hover:text-zinc-950 cursor-pointer"
+          className="w-7 h-7 rounded-xl text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100 flex items-center justify-center transition-colors cursor-pointer"
           title="Center on Active Node (⌘.)"
         >
-          <Crosshair className="w-3.5 h-3.5" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="iconSm"
+          <Crosshair className="w-3.5 h-3.5 stroke-[1.75]" />
+        </button>
+        <button
+          type="button"
           onClick={handleFitView}
-          className="h-7 w-7 text-zinc-600 hover:text-zinc-950 cursor-pointer"
+          className="w-7 h-7 rounded-xl text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100 flex items-center justify-center transition-colors cursor-pointer"
           title="Fit All Nodes in View (⌘0)"
         >
-          <Maximize2 className="w-3.5 h-3.5" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="iconSm"
+          <Maximize2 className="w-3.5 h-3.5 stroke-[1.75]" />
+        </button>
+        <button
+          type="button"
           onClick={handleResetZoom}
-          className="h-7 w-7 text-zinc-600 hover:text-zinc-950 cursor-pointer"
+          className="w-7 h-7 rounded-xl text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100 flex items-center justify-center transition-colors cursor-pointer"
           title="Reset Zoom to 100%"
         >
-          <RotateCcw className="w-3.5 h-3.5" />
-        </Button>
-        <div className="w-px h-4 bg-zinc-200 mx-0.5" />
-        <Button
-          variant="ghost"
-          size="iconSm"
+          <RotateCcw className="w-3.5 h-3.5 stroke-[1.75]" />
+        </button>
+        <div className="w-px h-4 bg-zinc-200/80 mx-0.5" />
+        <button
+          type="button"
           onClick={() => setShowMinimap((prev) => !prev)}
-          className={`h-7 w-7 text-zinc-600 hover:text-zinc-950 cursor-pointer ${
-            showMinimap ? "bg-zinc-100 text-zinc-900" : ""
+          className={`w-7 h-7 rounded-xl text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100 flex items-center justify-center transition-colors cursor-pointer ${
+            showMinimap ? "bg-zinc-100 text-zinc-950 font-medium" : ""
           }`}
           title="Toggle Radar Minimap"
         >
-          <Map className="w-3.5 h-3.5" />
-        </Button>
+          <Map className="w-3.5 h-3.5 stroke-[1.75]" />
+        </button>
       </div>
     </div>
   );

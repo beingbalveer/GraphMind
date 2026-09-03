@@ -96,29 +96,29 @@ export function Navbar({
       <div className="flex items-center space-x-2 shrink-0">
         {/* Toggle Mode Pill Button */}
         {onViewModeChange && (
-          <div className="flex items-center p-0.5 bg-zinc-100 border border-zinc-200/80 rounded-lg shadow-2xs">
+          <div className="flex items-center p-1 bg-white border border-zinc-200/70 rounded-2xl space-x-0.5">
             <button
               type="button"
               onClick={() => onViewModeChange("chat")}
-              className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all cursor-pointer ${
+              className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-xl text-[13px] transition-colors cursor-pointer ${
                 viewMode === "chat"
-                  ? "bg-white text-zinc-950 shadow-2xs font-semibold"
-                  : "text-zinc-500 hover:text-zinc-900"
+                  ? "bg-zinc-100 text-zinc-950 font-medium"
+                  : "text-zinc-600 hover:text-zinc-950 hover:bg-zinc-50 font-normal"
               }`}
             >
-              <MessageSquare className="w-3.5 h-3.5" />
+              <MessageSquare className="w-4 h-4 stroke-[1.75]" />
               <span className="hidden sm:inline">Chat</span>
             </button>
             <button
               type="button"
               onClick={() => onViewModeChange("canvas")}
-              className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-all cursor-pointer ${
+              className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-xl text-[13px] transition-colors cursor-pointer ${
                 viewMode === "canvas"
-                  ? "bg-white text-zinc-950 shadow-2xs font-semibold"
-                  : "text-zinc-500 hover:text-zinc-900"
+                  ? "bg-zinc-100 text-zinc-950 font-medium"
+                  : "text-zinc-600 hover:text-zinc-950 hover:bg-zinc-50 font-normal"
               }`}
             >
-              <LayoutGrid className="w-3.5 h-3.5" />
+              <LayoutGrid className="w-4 h-4 stroke-[1.75]" />
               <span className="hidden sm:inline">Canvas</span>
             </button>
           </div>

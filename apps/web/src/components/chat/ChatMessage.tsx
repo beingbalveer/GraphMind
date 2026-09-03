@@ -803,7 +803,7 @@ export function ChatMessage({
           {/* Action Row */}
           <div className="pt-1 flex flex-wrap items-center justify-between gap-2">
             {!isUser && message.content ? (
-              <div className="flex items-center space-x-1.5">
+              <div className="flex items-center space-x-1">
                 {/* Copy Button */}
                 <CopyButton
                   text={message.content}
@@ -821,10 +821,10 @@ export function ChatMessage({
                         (message.metadata?.rating as string) === "up" ? null : "up"
                       )
                     }
-                    className={`p-1 rounded-md transition-all cursor-pointer flex items-center justify-center opacity-0 group-hover:opacity-100 ${
+                    className={`w-7 h-7 rounded-xl transition-colors cursor-pointer flex items-center justify-center opacity-0 group-hover:opacity-100 ${
                       (message.metadata?.rating as string) === "up"
-                        ? "text-zinc-700 bg-zinc-100/90 border border-zinc-200/80 shadow-2xs"
-                        : "text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100/60"
+                        ? "text-zinc-800 bg-zinc-100 opacity-100"
+                        : "text-zinc-400 hover:text-zinc-800 hover:bg-zinc-100"
                     }`}
                     title={
                       (message.metadata?.rating as string) === "up"
@@ -836,7 +836,7 @@ export function ChatMessage({
                       className={`w-3.5 h-3.5 ${
                         (message.metadata?.rating as string) === "up"
                           ? "fill-zinc-400/50 stroke-[1.8]"
-                          : ""
+                          : "stroke-[1.75]"
                       }`}
                     />
                   </button>
@@ -852,10 +852,10 @@ export function ChatMessage({
                         (message.metadata?.rating as string) === "down" ? null : "down"
                       )
                     }
-                    className={`p-1 rounded-md transition-all cursor-pointer flex items-center justify-center opacity-0 group-hover:opacity-100 ${
+                    className={`w-7 h-7 rounded-xl transition-colors cursor-pointer flex items-center justify-center opacity-0 group-hover:opacity-100 ${
                       (message.metadata?.rating as string) === "down"
-                        ? "text-zinc-700 bg-zinc-100/90 border border-zinc-200/80 shadow-2xs"
-                        : "text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100/60"
+                        ? "text-zinc-800 bg-zinc-100 opacity-100"
+                        : "text-zinc-400 hover:text-zinc-800 hover:bg-zinc-100"
                     }`}
                     title={
                       (message.metadata?.rating as string) === "down"
@@ -867,24 +867,21 @@ export function ChatMessage({
                       className={`w-3.5 h-3.5 ${
                         (message.metadata?.rating as string) === "down"
                           ? "fill-zinc-400/50 stroke-[1.8]"
-                          : ""
+                          : "stroke-[1.75]"
                       }`}
                     />
                   </button>
                 )}
-
-
-
 
                 {/* Regenerate Button (Only on the last assistant message) */}
                 {onRegenerate && isLastAssistantMessage && !message.isStreaming && (
                   <button
                     type="button"
                     onClick={() => onRegenerate(message.id)}
-                    className="p-1 rounded-md text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-all opacity-0 group-hover:opacity-100 cursor-pointer flex items-center justify-center"
+                    className="w-7 h-7 rounded-xl text-zinc-400 hover:text-zinc-800 hover:bg-zinc-100 transition-colors opacity-0 group-hover:opacity-100 cursor-pointer flex items-center justify-center"
                     title="Regenerate response"
                   >
-                    <RotateCcw className="w-3.5 h-3.5" />
+                    <RotateCcw className="w-3.5 h-3.5 stroke-[1.75]" />
                   </button>
                 )}
 
