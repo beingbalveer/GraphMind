@@ -1,3 +1,4 @@
+import re
 from typing import Any, Dict, List, Optional
 
 import structlog
@@ -8,6 +9,19 @@ from sqlalchemy import func, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = structlog.get_logger()
+
+STOPWORDS = {
+    "what", "when", "where", "which", "who", "whom", "this", "that", "these",
+    "those", "am", "is", "are", "was", "were", "be", "been", "being", "have",
+    "has", "had", "having", "do", "does", "did", "doing", "would", "should",
+    "could", "ought", "the", "and", "but", "if", "or", "because", "as", "until",
+    "while", "of", "at", "by", "for", "with", "about", "against", "between",
+    "into", "through", "during", "before", "after", "above", "below", "to", "from",
+    "up", "down", "in", "out", "on", "off", "over", "under", "again", "further",
+    "then", "once", "here", "there", "all", "any", "both", "each", "few", "more",
+    "most", "other", "some", "such", "no", "nor", "not", "only", "own", "same",
+    "so", "than", "too", "very", "can", "will", "just", "now", "happens", "happen"
+}
 
 
 class RetrievedChunk(BaseModel):
@@ -120,7 +134,17 @@ class RAGService:
             is_postgres = bool(bind and "postgresql" in str(bind.url))
 
             if is_postgres:
-                ts_query = func.plainto_tsquery("english", cleaned_query)
+                raw_words = re.findall(r"[A-Za-z0-9_]{2,}", cleaned_query)
+                search_terms = [w for w in raw_words if w.lower() not in STOPWORDS]
+                if not search_terms:
+                    search_terms = raw_words
+
+                if search_terms:
+                    or_terms_str = " | ".join(search_terms[:15])
+                    ts_query = func.to_tsquery("english", or_terms_str)
+                else:
+                    ts_query = func.plainto_tsquery("english", cleaned_query)
+
                 ts_vector = func.to_tsvector("english", WorkspaceFileChunk.enriched_content)
                 rank_expr = func.ts_rank_cd(ts_vector, ts_query)
 

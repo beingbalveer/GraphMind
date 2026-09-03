@@ -17,11 +17,13 @@ from ai_core import (
     resolve_conversation_lineage,
 )
 from config import get_settings
+from database import get_session_factory
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from pydantic.alias_generators import to_camel
 from services.file_service import parse_tabular_bytes
+from services.rag_service import GroundedContext, RAGService, rag_service
 from services.skill_service import get_skill_registry
 from services.tool_service import get_tool_registry
 
@@ -77,6 +79,13 @@ class ChatStreamRequest(BaseModel):
     )
     workspace_id: Optional[str] = Field(
         default=None, description="Optional active workspace identifier"
+    )
+    enable_rag: Optional[bool] = Field(
+        default=True,
+        description="Whether to automatically retrieve grounded sources from workspace knowledge base",
+    )
+    rag_file_ids: Optional[List[str]] = Field(
+        default=None, description="Optional scoped file IDs to search within"
     )
     enabled_tools: Optional[List[str]] = Field(
         default=None, description="Optional list of enabled tool names"
@@ -298,6 +307,40 @@ async def create_chat_completion(body: ChatCompletionRequest) -> GenerationResul
     base_sys_prompt = body.system_prompt or DEFAULT_CONCISE_SYSTEM_PROMPT
     final_sys_prompt = skill_registry.build_system_prompt(base_sys_prompt, active_skills)
 
+    # Grounded RAG Retrieval across workspace documents
+    grounded_context: Optional[GroundedContext] = None
+    if body.workspace_id and body.enable_rag:
+        rag_srv = RAGService(provider_name=body.provider) if body.provider else rag_service
+        search_query = body.prompt or (body.messages[-1].content if body.messages else "")
+        if body.highlighted_context:
+            search_query = f"{body.highlighted_context} {search_query}".strip()
+        if search_query:
+            try:
+                session_factory = get_session_factory()
+                async with session_factory() as session:
+                    chunks = await rag_srv.hybrid_search(
+                        db=session,
+                        workspace_id=body.workspace_id,
+                        query=search_query,
+                        file_ids=body.rag_file_ids,
+                        top_k=5,
+                    )
+                    if chunks:
+                        grounded_context = rag_srv.build_grounded_context(chunks)
+            except Exception as rag_err:
+                logger.warning("RAG retrieval failed during completion", error=str(rag_err))
+
+    if grounded_context and grounded_context.total_chunks > 0:
+        rag_prompt = (
+            f"\n\n--- GROUNDED KNOWLEDGE BASE SOURCES ---\n"
+            f"{grounded_context.context_text}\n\n"
+            "STRICT GROUNDING INSTRUCTIONS:\n"
+            "1. Answer using ONLY the verified sources above whenever relevant.\n"
+            "2. Cite your sources accurately using references like [Source 1, p. 3] or [Source 2].\n"
+            "3. If the sources do not contain the answer, answer based on general knowledge but explicitly state that the answer is not in the uploaded documents."
+        )
+        final_sys_prompt += rag_prompt
+
     model_kwargs: Dict[str, Any] = {
         "model_name": resolved_model,
         "system_prompt": final_sys_prompt,
@@ -333,6 +376,8 @@ async def create_chat_completion(body: ChatCompletionRequest) -> GenerationResul
             if not result.tool_calls or iteration >= max_turns:
                 if tool_trace:
                     result.metadata["tool_trace"] = tool_trace
+                if grounded_context and grounded_context.citations:
+                    result.metadata["rag_citations"] = grounded_context.citations
                 logger.info(
                     "Chat completion generated successfully",
                     model=result.model_name,
@@ -428,6 +473,40 @@ async def stream_chat(
     base_sys_prompt = body.system_prompt or DEFAULT_CONCISE_SYSTEM_PROMPT
     final_sys_prompt = skill_registry.build_system_prompt(base_sys_prompt, active_skills)
 
+    # Grounded RAG Retrieval across workspace documents
+    grounded_context: Optional[GroundedContext] = None
+    if body.workspace_id and body.enable_rag:
+        rag_srv = RAGService(provider_name=body.provider) if body.provider else rag_service
+        search_query = body.prompt or (body.messages[-1].content if body.messages else "")
+        if body.highlighted_context:
+            search_query = f"{body.highlighted_context} {search_query}".strip()
+        if search_query:
+            try:
+                session_factory = get_session_factory()
+                async with session_factory() as session:
+                    chunks = await rag_srv.hybrid_search(
+                        db=session,
+                        workspace_id=body.workspace_id,
+                        query=search_query,
+                        file_ids=body.rag_file_ids,
+                        top_k=5,
+                    )
+                    if chunks:
+                        grounded_context = rag_srv.build_grounded_context(chunks)
+            except Exception as rag_err:
+                logger.warning("RAG retrieval failed during stream", error=str(rag_err))
+
+    if grounded_context and grounded_context.total_chunks > 0:
+        rag_prompt = (
+            f"\n\n--- GROUNDED KNOWLEDGE BASE SOURCES ---\n"
+            f"{grounded_context.context_text}\n\n"
+            "STRICT GROUNDING INSTRUCTIONS:\n"
+            "1. Answer using ONLY the verified sources above whenever relevant.\n"
+            "2. Cite your sources accurately using references like [Source 1, p. 3] or [Source 2].\n"
+            "3. If the sources do not contain the answer, answer based on general knowledge but explicitly state that the answer is not in the uploaded documents."
+        )
+        final_sys_prompt += rag_prompt
+
     stream_model_kwargs: Dict[str, Any] = {
         "model_name": resolved_model,
         "system_prompt": final_sys_prompt,
@@ -457,6 +536,17 @@ async def stream_chat(
         current_messages = list(conversation_input)
         iteration = 0
         try:
+            # Emit real-time rag_sources event before token streaming begins
+            if grounded_context and grounded_context.citations:
+                rag_payload = json.dumps(
+                    {
+                        "type": "rag_sources",
+                        "sources": grounded_context.citations,
+                        "totalChunks": grounded_context.total_chunks,
+                    }
+                )
+                yield f"event: rag_sources\ndata: {rag_payload}\n\n"
+
             while True:
                 pending_tool_calls: List[ToolCall] = []
                 turn_content = ""

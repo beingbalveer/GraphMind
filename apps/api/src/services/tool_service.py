@@ -10,6 +10,7 @@ from services.graph_tools import (
     SearchGraphTool,
     TraverseLineageTool,
 )
+from services.rag_tool import SearchKnowledgeBaseTool
 
 logger = structlog.get_logger()
 
@@ -91,6 +92,7 @@ class ToolRegistry:
         self.register(TraverseLineageTool())
         self.register(CreateSubnodeTool())
         self.register(FetchUrlTool())
+        self.register(SearchKnowledgeBaseTool())
 
     def register(self, tool: BaseTool) -> None:
         """Register a tool instance."""

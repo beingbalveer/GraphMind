@@ -296,7 +296,11 @@ class FileService:
     @property
     def embedding_provider(self):
         if self._embedding_provider is None:
-            self._embedding_provider = get_embedding_provider()
+            from config import get_settings
+
+            st = get_settings()
+            prov = "mock" if st.ENVIRONMENT == "test" or st.DEFAULT_PROVIDER == "mock" else None
+            self._embedding_provider = get_embedding_provider(prov)
         return self._embedding_provider
 
     async def _ensure_workspace_dir(self, workspace_id: str) -> Path:
