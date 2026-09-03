@@ -4,6 +4,12 @@ from typing import Any, Dict, List, Optional
 import structlog
 from ai_core.base import BaseTool
 from pydantic import BaseModel, Field
+from services.graph_tools import (
+    CreateSubnodeTool,
+    FetchUrlTool,
+    SearchGraphTool,
+    TraverseLineageTool,
+)
 
 logger = structlog.get_logger()
 
@@ -77,9 +83,14 @@ class ToolRegistry:
 
     def __init__(self) -> None:
         self._tools: Dict[str, BaseTool] = {}
-        # Register default tools
+        # Register default calculation and system tools
         self.register(CalculatorTool())
         self.register(SystemInfoTool())
+        # Register graph-native agent tools
+        self.register(SearchGraphTool())
+        self.register(TraverseLineageTool())
+        self.register(CreateSubnodeTool())
+        self.register(FetchUrlTool())
 
     def register(self, tool: BaseTool) -> None:
         """Register a tool instance."""

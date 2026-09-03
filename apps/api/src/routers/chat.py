@@ -74,6 +74,9 @@ class ChatStreamRequest(BaseModel):
     metadata: Optional[Dict[str, Any]] = Field(
         default_factory=dict, description="Optional runtime metadata"
     )
+    workspace_id: Optional[str] = Field(
+        default=None, description="Optional active workspace identifier"
+    )
     enabled_tools: Optional[List[str]] = Field(
         default=None, description="Optional list of enabled tool names"
     )
@@ -320,7 +323,14 @@ async def create_chat_completion(body: ChatCompletionRequest) -> GenerationResul
             for tc in result.tool_calls:
                 target_tool = tool_registry.get(tc.name)
                 if target_tool:
-                    tool_res = await target_tool.run(tc.arguments, tool_call_id=tc.id)
+                    call_args = dict(tc.arguments) if tc.arguments else {}
+                    if (
+                        body.workspace_id
+                        and not call_args.get("workspace_id")
+                        and "workspace_id" in target_tool.to_json_schema().get("properties", {})
+                    ):
+                        call_args["workspace_id"] = body.workspace_id
+                    tool_res = await target_tool.run(call_args, tool_call_id=tc.id)
                 else:
                     tool_res = ToolResult(
                         tool_call_id=tc.id,
@@ -441,7 +451,14 @@ async def stream_chat(
 
                     target_tool = tool_registry.get(tc.name)
                     if target_tool:
-                        tool_res = await target_tool.run(tc.arguments, tool_call_id=tc.id)
+                        call_args = dict(tc.arguments) if tc.arguments else {}
+                        if (
+                            body.workspace_id
+                            and not call_args.get("workspace_id")
+                            and "workspace_id" in target_tool.to_json_schema().get("properties", {})
+                        ):
+                            call_args["workspace_id"] = body.workspace_id
+                        tool_res = await target_tool.run(call_args, tool_call_id=tc.id)
                     else:
                         tool_res = ToolResult(
                             tool_call_id=tc.id,
