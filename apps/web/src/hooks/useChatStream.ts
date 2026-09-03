@@ -16,6 +16,15 @@ export interface BranchContext {
   highlightedText: string;
 }
 
+export interface ToolCallItem {
+  id: string;
+  name: string;
+  arguments?: Record<string, unknown>;
+  status: "running" | "completed" | "error";
+  result?: string;
+  isError?: boolean;
+}
+
 export interface SendMessageOptions {
   branchOverride?: BranchContext | null;
   targetParentId?: string | null;
@@ -27,6 +36,9 @@ export interface SendMessageOptions {
   maxTokens?: number;
   systemPrompt?: string;
   attachments?: FileAttachment[];
+  enabledSkills?: string[];
+  enabledTools?: string[];
+  workspaceId?: string;
 }
 
 
@@ -376,6 +388,9 @@ export function useChatStream() {
           max_tokens: explicitOptions?.maxTokens,
           system_prompt: explicitOptions?.systemPrompt,
           attachments: explicitOptions?.attachments,
+          workspace_id: explicitOptions?.workspaceId,
+          enabled_tools: explicitOptions?.enabledTools,
+          enabled_skills: explicitOptions?.enabledSkills,
         };
 
 
@@ -398,6 +413,7 @@ export function useChatStream() {
         const decoder = new TextDecoder();
         
         let lineBuffer = "";
+        const toolCallsMap = new Map<string, ToolCallItem>();
 
         while (true) {
           const { done, value } = await reader.read();
@@ -418,6 +434,71 @@ export function useChatStream() {
                 if (parsed.error) {
                   throw new Error(parsed.error);
                 }
+
+                if (parsed.type === "tool_call_start" && parsed.toolCall) {
+                  const tc = parsed.toolCall;
+                  toolCallsMap.set(tc.id, {
+                    id: tc.id,
+                    name: tc.name,
+                    arguments: tc.arguments,
+                    status: "running",
+                  });
+                  const updatedToolCalls = Array.from(toolCallsMap.values());
+                  setTree((prev) => {
+                    if (!prev) return prev;
+                    const existingNode = prev.nodes[assistantNodeId];
+                    if (!existingNode) return prev;
+                    return {
+                      ...prev,
+                      nodes: {
+                        ...prev.nodes,
+                        [assistantNodeId]: {
+                          ...existingNode,
+                          metadata: {
+                            ...existingNode.metadata,
+                            toolCalls: updatedToolCalls,
+                          },
+                        },
+                      },
+                    };
+                  });
+                } else if (parsed.type === "tool_call_result" && parsed.toolResult) {
+                  const tr = parsed.toolResult;
+                  const existing = toolCallsMap.get(tr.toolCallId);
+                  if (existing) {
+                    existing.status = tr.isError ? "error" : "completed";
+                    existing.result = tr.content;
+                    existing.isError = tr.isError;
+                  } else {
+                    toolCallsMap.set(tr.toolCallId, {
+                      id: tr.toolCallId,
+                      name: tr.name,
+                      status: tr.isError ? "error" : "completed",
+                      result: tr.content,
+                      isError: tr.isError,
+                    });
+                  }
+                  const updatedToolCalls = Array.from(toolCallsMap.values());
+                  setTree((prev) => {
+                    if (!prev) return prev;
+                    const existingNode = prev.nodes[assistantNodeId];
+                    if (!existingNode) return prev;
+                    return {
+                      ...prev,
+                      nodes: {
+                        ...prev.nodes,
+                        [assistantNodeId]: {
+                          ...existingNode,
+                          metadata: {
+                            ...existingNode.metadata,
+                            toolCalls: updatedToolCalls,
+                          },
+                        },
+                      },
+                    };
+                  });
+                }
+
                 if (parsed.content) {
                   accumulatedContent += parsed.content;
                   setTree((prev) => {

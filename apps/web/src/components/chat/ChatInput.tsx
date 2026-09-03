@@ -12,6 +12,7 @@ import {
   Loader2,
   FileText,
   Code,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BranchContext } from "@/hooks/useChatStream";
@@ -20,7 +21,11 @@ import { uploadWorkspaceFile } from "@/lib/workspaceApi";
 import { FileLibraryModal } from "../library/FileLibraryModal";
 
 interface ChatInputProps {
-  onSendMessage: (prompt: string, attachments?: FileAttachment[]) => void;
+  onSendMessage: (
+    prompt: string,
+    attachments?: FileAttachment[],
+    activeSkill?: string | null
+  ) => void;
   onStopStreaming: () => void;
   isStreaming: boolean;
   workspaceId?: string;
@@ -62,10 +67,13 @@ export function ChatInput({
   const [isDragOver, setIsDragOver] = useState(false);
   const [isAttachMenuOpen, setIsAttachMenuOpen] = useState(false);
   const [isLibraryPickerOpen, setIsLibraryPickerOpen] = useState(false);
+  const [selectedSkill, setSelectedSkill] = useState<string | null>(null);
+  const [isSkillMenuOpen, setIsSkillMenuOpen] = useState(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const attachMenuRef = useRef<HTMLDivElement>(null);
+  const skillMenuRef = useRef<HTMLDivElement>(null);
 
   // Close attach menu on click outside or Escape
   useEffect(() => {
@@ -87,6 +95,27 @@ export function ChatInput({
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [isAttachMenuOpen]);
+
+  // Close skill menu on click outside or Escape
+  useEffect(() => {
+    if (!isSkillMenuOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (skillMenuRef.current && !skillMenuRef.current.contains(e.target as Node)) {
+        setIsSkillMenuOpen(false);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsSkillMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isSkillMenuOpen]);
 
   // Auto-focus and scroll to bottom when branching is triggered
   useEffect(() => {
@@ -240,7 +269,11 @@ export function ChatInput({
       return;
     }
 
-    onSendMessage(cleanPrompt, attachments.length > 0 ? attachments : undefined);
+    onSendMessage(
+      cleanPrompt,
+      attachments.length > 0 ? attachments : undefined,
+      selectedSkill
+    );
     setPrompt("");
     setAttachments([]);
     if (textareaRef.current) {
@@ -290,6 +323,30 @@ export function ChatInput({
                 <X className="w-3.5 h-3.5" />
               </button>
             )}
+          </div>
+        )}
+
+        {/* Active Skill Context Pill */}
+        {selectedSkill && (
+          <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-indigo-50/90 border border-indigo-200/90 text-xs text-indigo-900 animate-in fade-in-50 slide-in-from-bottom-1 duration-150">
+            <div className="flex items-center space-x-1.5 min-w-0 pr-2">
+              <Sparkles className="w-3.5 h-3.5 text-indigo-600 animate-pulse shrink-0" />
+              <span className="font-semibold text-indigo-950 shrink-0">Skill:</span>
+              <span className="truncate">
+                {selectedSkill === "deep_research" && "⚡ Deep Research (Web & Graph Search)"}
+                {selectedSkill === "code_architect" && "🏛️ Code Architect (Modularity & Design)"}
+                {selectedSkill === "quiz_master" && "🎓 Quiz Master (Socratic Learning Checks)"}
+                {!["deep_research", "code_architect", "quiz_master"].includes(selectedSkill) && selectedSkill}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSelectedSkill(null)}
+              className="text-indigo-400 hover:text-indigo-800 p-0.5 rounded transition-colors shrink-0 cursor-pointer"
+              title="Deactivate skill"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
           </div>
         )}
 
@@ -469,6 +526,117 @@ export function ChatInput({
                 )}
               </div>
             )}
+
+            {/* Skill Selector Button & Menu */}
+            <div className="relative" ref={skillMenuRef}>
+              <button
+                type="button"
+                onClick={() => setIsSkillMenuOpen((prev) => !prev)}
+                disabled={isStreaming}
+                className={`p-1.5 rounded-lg transition-all cursor-pointer flex items-center space-x-1.5 disabled:opacity-50 disabled:cursor-not-allowed ${
+                  selectedSkill
+                    ? "bg-indigo-100/80 text-indigo-900 font-medium"
+                    : isSkillMenuOpen
+                    ? "bg-zinc-200 text-zinc-900"
+                    : "text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100"
+                }`}
+                title="Select active agent skill playbook"
+              >
+                <Sparkles className={`w-3.5 h-3.5 ${selectedSkill ? "text-indigo-600" : ""}`} />
+                <span className="text-xs hidden sm:inline">
+                  {selectedSkill === "deep_research"
+                    ? "Research"
+                    : selectedSkill === "code_architect"
+                    ? "Architect"
+                    : selectedSkill === "quiz_master"
+                    ? "Quiz"
+                    : "Skills"}
+                </span>
+              </button>
+
+              {/* Floating Skill Menu */}
+              {isSkillMenuOpen && (
+                <div className="absolute bottom-full left-0 mb-2 w-64 rounded-xl bg-white border border-zinc-200/90 shadow-lg py-1.5 z-50 animate-in fade-in-50 zoom-in-95 duration-150">
+                  <div className="px-3 py-1 text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">
+                    Agent Skill Playbooks
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedSkill(null);
+                      setIsSkillMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-3 py-2 text-left text-xs hover:bg-zinc-50 transition-colors cursor-pointer ${
+                      selectedSkill === null ? "text-indigo-600 font-medium bg-indigo-50/50" : "text-zinc-700"
+                    }`}
+                  >
+                    <div className="flex flex-col">
+                      <span className="font-medium">Standard Chat</span>
+                      <span className="text-[10px] text-zinc-400">Default conversational assistant</span>
+                    </div>
+                    {selectedSkill === null && <span className="text-indigo-600">✓</span>}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedSkill("deep_research");
+                      setIsSkillMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-3 py-2 text-left text-xs hover:bg-zinc-50 transition-colors cursor-pointer ${
+                      selectedSkill === "deep_research" ? "text-indigo-600 font-medium bg-indigo-50/50" : "text-zinc-700"
+                    }`}
+                  >
+                    <div className="flex flex-col">
+                      <span className="font-medium flex items-center space-x-1.5">
+                        <span>⚡ Deep Research</span>
+                      </span>
+                      <span className="text-[10px] text-zinc-400">Web search, graph search & subnode notes</span>
+                    </div>
+                    {selectedSkill === "deep_research" && <span className="text-indigo-600">✓</span>}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedSkill("code_architect");
+                      setIsSkillMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-3 py-2 text-left text-xs hover:bg-zinc-50 transition-colors cursor-pointer ${
+                      selectedSkill === "code_architect" ? "text-indigo-600 font-medium bg-indigo-50/50" : "text-zinc-700"
+                    }`}
+                  >
+                    <div className="flex flex-col">
+                      <span className="font-medium flex items-center space-x-1.5">
+                        <span>🏛️ Code Architect</span>
+                      </span>
+                      <span className="text-[10px] text-zinc-400">Modularity, trade-offs & lineage traversal</span>
+                    </div>
+                    {selectedSkill === "code_architect" && <span className="text-indigo-600">✓</span>}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedSkill("quiz_master");
+                      setIsSkillMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-3 py-2 text-left text-xs hover:bg-zinc-50 transition-colors cursor-pointer ${
+                      selectedSkill === "quiz_master" ? "text-indigo-600 font-medium bg-indigo-50/50" : "text-zinc-700"
+                    }`}
+                  >
+                    <div className="flex flex-col">
+                      <span className="font-medium flex items-center space-x-1.5">
+                        <span>🎓 Quiz Master</span>
+                      </span>
+                      <span className="text-[10px] text-zinc-400">Socratic questions & learning checks</span>
+                    </div>
+                    {selectedSkill === "quiz_master" && <span className="text-indigo-600">✓</span>}
+                  </button>
+                </div>
+              )}
+            </div>
 
             <span className="text-[11px] text-zinc-400 select-none pl-1 hidden sm:inline">
               Press <kbd className="font-sans px-1 py-0.5 rounded bg-zinc-100 border border-zinc-200 text-zinc-500 text-[10px]">Enter</kbd> to send

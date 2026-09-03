@@ -502,7 +502,11 @@ export function ChatContainer({
 
   // Send message, persist nodes to PostgreSQL, and update chat list
   const handleSendMessage = useCallback(
-    async (prompt: string, attachments?: FileAttachment[]) => {
+    async (
+      prompt: string,
+      attachments?: FileAttachment[],
+      activeSkill?: string | null
+    ) => {
       if (!currentWorkspace) return;
 
       const isFirstMessageInNewChat = !activeChatId || !tree || Object.keys(tree.nodes).length === 0;
@@ -530,6 +534,8 @@ export function ChatContainer({
         maxTokens: llmConfig.maxTokens,
         systemPrompt: llmConfig.systemPrompt || undefined,
         attachments: attachments && attachments.length > 0 ? attachments : undefined,
+        enabledSkills: activeSkill ? [activeSkill] : undefined,
+        workspaceId: currentWorkspace.id,
         targetParentId,
         onNodeCreated: ({ userNodeId, assistantNodeId, parentId }) => {
           createdUserNodeId = userNodeId;

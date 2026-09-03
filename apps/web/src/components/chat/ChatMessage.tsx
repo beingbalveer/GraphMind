@@ -35,6 +35,8 @@ import { SelectionTooltip } from "./SelectionTooltip";
 import { CodeViewerModal } from "./CodeViewerModal";
 import { PdfViewerModal } from "./PdfViewerModal";
 import { TableViewerModal } from "./TableViewerModal";
+import { AgentToolCallsBanner } from "./AgentToolCallsBanner";
+import { ToolCallItem } from "@/hooks/useChatStream";
 import { resolveFileUrl } from "@/lib/workspaceApi";
 
 export interface BranchLinkInfo {
@@ -731,6 +733,13 @@ export function ChatMessage({
 
         {/* Message Content Container */}
         <div className="flex-1 min-w-0 space-y-2">
+          {/* Real-time Agent Tool Execution Actions */}
+          {Boolean(message.metadata?.toolCalls) && (
+            <AgentToolCallsBanner
+              toolCalls={message.metadata?.toolCalls as ToolCallItem[]}
+            />
+          )}
+
           {/* Markdown Rendered Body */}
           <div
             ref={contentRef}
