@@ -132,7 +132,7 @@ class WorkspaceService:
     @staticmethod
     async def delete_workspace(session: AsyncSession, workspace_id: str) -> bool:
         """
-        Delete a workspace and cascade-delete all child nodes and edges.
+        Delete a workspace and cascade-delete all child nodes, edges, and physical storage.
         """
         stmt = select(Workspace).where(Workspace.id == workspace_id)
         result = await session.execute(stmt)
@@ -141,6 +141,19 @@ class WorkspaceService:
             return False
         await session.delete(ws)
         await session.flush()
+
+        # Clean up physical storage directory if exists
+        try:
+            import os
+            import shutil
+            from pathlib import Path
+
+            ws_storage_dir = Path(os.getenv("STORAGE_DIR", "data/storage")) / "workspaces" / workspace_id
+            if ws_storage_dir.exists():
+                shutil.rmtree(ws_storage_dir, ignore_errors=True)
+        except Exception as err:
+            logger.warning("Failed to clean up workspace disk directory", workspace_id=workspace_id, error=str(err))
+
         logger.info("Workspace deleted", workspace_id=workspace_id)
         return True
 

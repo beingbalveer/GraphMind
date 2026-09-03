@@ -1,27 +1,31 @@
 import asyncio
-from typing import AsyncIterator, Optional
+import re
+from typing import AsyncIterator, List, Optional
 
 from ai_core.base import (
     BaseLLMProvider,
+    BaseTool,
     ChatRole,
     GenerationResult,
     MessageInput,
     ModelConfig,
     StreamChunk,
     TokenUsage,
+    ToolCall,
 )
 
 
 class MockProvider(BaseLLMProvider):
     """
     Mock AI Provider generating simulated responses for offline development,
-    deterministic automated tests, and error simulation.
+    deterministic automated tests, tool simulation, and error simulation.
     """
 
     async def generate(
         self,
         messages: MessageInput,
         config: Optional[ModelConfig] = None,
+        tools: Optional[List[BaseTool]] = None,
     ) -> GenerationResult:
         cfg = config or ModelConfig(model_name="mock-provider")
         if cfg.metadata.get("simulate_error"):
@@ -29,6 +33,42 @@ class MockProvider(BaseLLMProvider):
 
         normalized = self._normalize_messages(messages)
         last_message = normalized[-1].content if normalized else "Hello"
+
+        # Check for explicitly requested tool call simulation in metadata
+        sim_tool = cfg.metadata.get("simulate_tool_call")
+        if sim_tool and isinstance(sim_tool, dict):
+            tool_call = ToolCall(
+                id=sim_tool.get("id", "call_mock_meta_1"),
+                name=sim_tool.get("name", "mock_tool"),
+                arguments=sim_tool.get("arguments", {}),
+            )
+            return GenerationResult(
+                content="Invoking requested tool action.",
+                role=ChatRole.ASSISTANT,
+                model_name=cfg.model_name,
+                tool_calls=[tool_call],
+                usage=TokenUsage(prompt_tokens=10, completion_tokens=10, total_tokens=20),
+            )
+
+        # Check for prompt-based tool trigger (e.g., "[TRIGGER_TOOL: search]")
+        if tools and "[TRIGGER_TOOL:" in last_message:
+            match = re.search(r"\[TRIGGER_TOOL:\s*(\w+)\]", last_message)
+            tool_name = match.group(1) if match else tools[0].name
+            target_tool = next((t for t in tools if t.name == tool_name), tools[0])
+            tool_call = ToolCall(
+                id="call_mock_auto_1",
+                name=target_tool.name,
+                arguments={"query": "test query"}
+                if "query" in str(target_tool.to_json_schema())
+                else {},
+            )
+            return GenerationResult(
+                content=f"Triggering tool `{target_tool.name}` per prompt instruction.",
+                role=ChatRole.ASSISTANT,
+                model_name=cfg.model_name,
+                tool_calls=[tool_call],
+                usage=TokenUsage(prompt_tokens=15, completion_tokens=15, total_tokens=30),
+            )
 
         content = (
             f"**GraphMind Mock Completion**\n\n"
@@ -54,6 +94,7 @@ class MockProvider(BaseLLMProvider):
         self,
         messages: MessageInput,
         config: Optional[ModelConfig] = None,
+        tools: Optional[List[BaseTool]] = None,
     ) -> AsyncIterator[StreamChunk]:
         cfg = config or ModelConfig(model_name="mock-provider")
         if cfg.metadata.get("simulate_error"):
@@ -62,6 +103,37 @@ class MockProvider(BaseLLMProvider):
         delay = float(cfg.metadata.get("stream_delay", 0.02))
         normalized = self._normalize_messages(messages)
         last_message = normalized[-1].content if normalized else "Hello"
+
+        # Check for simulated tool call in stream
+        sim_tool = cfg.metadata.get("simulate_tool_call")
+        if sim_tool and isinstance(sim_tool, dict):
+            tool_call = ToolCall(
+                id=sim_tool.get("id", "call_mock_stream_1"),
+                name=sim_tool.get("name", "mock_tool"),
+                arguments=sim_tool.get("arguments", {}),
+            )
+            yield StreamChunk(
+                content="Invoking requested tool stream action... ",
+                tool_calls=[tool_call],
+            )
+            return
+
+        if tools and "[TRIGGER_TOOL:" in last_message:
+            match = re.search(r"\[TRIGGER_TOOL:\s*(\w+)\]", last_message)
+            tool_name = match.group(1) if match else tools[0].name
+            target_tool = next((t for t in tools if t.name == tool_name), tools[0])
+            tool_call = ToolCall(
+                id="call_mock_stream_auto_1",
+                name=target_tool.name,
+                arguments={"query": "test query"}
+                if "query" in str(target_tool.to_json_schema())
+                else {},
+            )
+            yield StreamChunk(
+                content=f"Triggering tool `{target_tool.name}` in stream... ",
+                tool_calls=[tool_call],
+            )
+            return
 
         paragraphs = [
             f"**GraphMind Simulated Response** for: *'{last_message}'*\n\n",

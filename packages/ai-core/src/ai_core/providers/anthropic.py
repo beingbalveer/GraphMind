@@ -18,12 +18,14 @@ from tenacity import (
 
 from ai_core.base import (
     BaseLLMProvider,
+    BaseTool,
     ChatRole,
     GenerationResult,
     MessageInput,
     ModelConfig,
     StreamChunk,
     TokenUsage,
+    ToolCall,
 )
 
 logger = structlog.get_logger()
@@ -39,10 +41,24 @@ RETRYABLE_ANTHROPIC_ERRORS = (
 DEFAULT_ANTHROPIC_MODEL = "claude-3-5-sonnet-20241022"
 
 
+def _to_anthropic_tools(tools: Optional[List[BaseTool]]) -> Optional[List[Dict[str, Any]]]:
+    """Convert BaseTool list into Anthropic tool specification."""
+    if not tools:
+        return None
+    return [
+        {
+            "name": t.name,
+            "description": t.description,
+            "input_schema": t.to_json_schema(),
+        }
+        for t in tools
+    ]
+
+
 class AnthropicProvider(BaseLLMProvider):
     """
     Anthropic foundation model provider implementation (Claude 3.7 / 3.5 Sonnet & Haiku)
-    with production resilience, message role normalization, and async token streaming.
+    with production resilience, message role normalization, tool execution, and async token streaming.
     """
 
     def __init__(self, api_key: Optional[str] = None):
@@ -58,8 +74,9 @@ class AnthropicProvider(BaseLLMProvider):
         Normalize input messages for Anthropic Messages API:
         1. Extract system instructions into a separate top-level 'system' string.
         2. Format image attachments into native Anthropic base64 image blocks.
-        3. Ensure strictly alternating user and assistant messages, merging consecutive roles.
-        4. Guarantee the conversation starts with a user message.
+        3. Support tool results and tool use assistant blocks.
+        4. Ensure strictly alternating user and assistant messages, merging consecutive roles.
+        5. Guarantee the conversation starts with a user message.
         """
         normalized = self._normalize_messages(messages)
         system_parts: List[str] = []
@@ -72,11 +89,35 @@ class AnthropicProvider(BaseLLMProvider):
             if msg.role == ChatRole.SYSTEM:
                 if msg.content.strip():
                     system_parts.append(msg.content.strip())
+            elif msg.role == ChatRole.TOOL:
+                raw_messages.append(
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "tool_result",
+                                "tool_use_id": msg.tool_call_id or "",
+                                "content": msg.content,
+                            }
+                        ],
+                    }
+                )
             elif msg.role in (ChatRole.USER, ChatRole.ASSISTANT):
                 role = "user" if msg.role == ChatRole.USER else "assistant"
                 content_blocks: List[Dict[str, Any]] = []
                 if msg.content:
                     content_blocks.append({"type": "text", "text": msg.content})
+
+                if msg.tool_calls and msg.role == ChatRole.ASSISTANT:
+                    for tc in msg.tool_calls:
+                        content_blocks.append(
+                            {
+                                "type": "tool_use",
+                                "id": tc.id,
+                                "name": tc.name,
+                                "input": tc.arguments,
+                            }
+                        )
 
                 if msg.attachments:
                     for att in msg.attachments:
@@ -87,9 +128,8 @@ class AnthropicProvider(BaseLLMProvider):
                             raw_b64 = raw_b64.split(",", 1)[1]
 
                         is_image = att.mime_type.startswith("image/")
-                        is_pdf = (
-                            att.mime_type == "application/pdf"
-                            or att.name.lower().endswith(".pdf")
+                        is_pdf = att.mime_type == "application/pdf" or att.name.lower().endswith(
+                            ".pdf"
                         )
 
                         if is_image:
@@ -166,6 +206,7 @@ class AnthropicProvider(BaseLLMProvider):
         self,
         messages: MessageInput,
         config: Optional[ModelConfig] = None,
+        tools: Optional[List[BaseTool]] = None,
     ) -> GenerationResult:
         cfg = config or ModelConfig(model_name=DEFAULT_ANTHROPIC_MODEL)
         system_prompt, anthropic_messages = self._to_anthropic_messages(messages, cfg.system_prompt)
@@ -188,14 +229,28 @@ class AnthropicProvider(BaseLLMProvider):
             kwargs["temperature"] = cfg.temperature
         if system_prompt:
             kwargs["system"] = system_prompt
+        anthropic_tools = _to_anthropic_tools(tools)
+        if anthropic_tools:
+            kwargs["tools"] = anthropic_tools
 
         try:
             response = await self.client.messages.create(**kwargs)
 
             content = ""
+            parsed_tool_calls: Optional[List[ToolCall]] = None
             for block in response.content:
                 if block.type == "text":
                     content += block.text
+                elif block.type == "tool_use":
+                    if parsed_tool_calls is None:
+                        parsed_tool_calls = []
+                    parsed_tool_calls.append(
+                        ToolCall(
+                            id=block.id,
+                            name=block.name,
+                            arguments=dict(block.input) if block.input else {},
+                        )
+                    )
 
             prompt_tokens = response.usage.input_tokens if response.usage else 0
             completion_tokens = response.usage.output_tokens if response.usage else 0
@@ -210,6 +265,7 @@ class AnthropicProvider(BaseLLMProvider):
                     total_tokens=prompt_tokens + completion_tokens,
                 ),
                 finish_reason=response.stop_reason,
+                tool_calls=parsed_tool_calls,
             )
         except Exception as e:
             logger.error("Anthropic generation failed", error=str(e), model=model_name)
@@ -219,6 +275,7 @@ class AnthropicProvider(BaseLLMProvider):
         self,
         messages: MessageInput,
         config: Optional[ModelConfig] = None,
+        tools: Optional[List[BaseTool]] = None,
     ) -> AsyncIterator[StreamChunk]:
         cfg = config or ModelConfig(model_name=DEFAULT_ANTHROPIC_MODEL)
         system_prompt, anthropic_messages = self._to_anthropic_messages(messages, cfg.system_prompt)
@@ -240,6 +297,9 @@ class AnthropicProvider(BaseLLMProvider):
             kwargs["temperature"] = cfg.temperature
         if system_prompt:
             kwargs["system"] = system_prompt
+        anthropic_tools = _to_anthropic_tools(tools)
+        if anthropic_tools:
+            kwargs["tools"] = anthropic_tools
 
         try:
             async with self.client.messages.stream(**kwargs) as stream:
@@ -250,9 +310,23 @@ class AnthropicProvider(BaseLLMProvider):
                 prompt_tokens = final_msg.usage.input_tokens if final_msg.usage else 0
                 completion_tokens = final_msg.usage.output_tokens if final_msg.usage else 0
 
+                chunk_tool_calls: Optional[List[ToolCall]] = None
+                for block in final_msg.content:
+                    if block.type == "tool_use":
+                        if chunk_tool_calls is None:
+                            chunk_tool_calls = []
+                        chunk_tool_calls.append(
+                            ToolCall(
+                                id=block.id,
+                                name=block.name,
+                                arguments=dict(block.input) if block.input else {},
+                            )
+                        )
+
                 yield StreamChunk(
                     content="",
                     finish_reason=final_msg.stop_reason,
+                    tool_calls=chunk_tool_calls,
                     usage=TokenUsage(
                         prompt_tokens=prompt_tokens,
                         completion_tokens=completion_tokens,

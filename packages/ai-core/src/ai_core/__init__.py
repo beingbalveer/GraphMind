@@ -2,6 +2,7 @@ from ai_core.base import (
     BaseEmbeddingProvider,
     BaseLLMProvider,
     BaseProvider,
+    BaseTool,
     ChatMessage,
     ChatRole,
     EmbeddingResult,
@@ -12,6 +13,8 @@ from ai_core.base import (
     ModelConfig,
     StreamChunk,
     TokenUsage,
+    ToolCall,
+    ToolResult,
 )
 from ai_core.lineage import (
     budget_lineage_messages,
@@ -41,6 +44,7 @@ __all__ = [
     "BaseLLMProvider",
     "BaseProvider",
     "BaseEmbeddingProvider",
+    "BaseTool",
     "ChatMessage",
     "ChatRole",
     "FileAttachment",
@@ -51,6 +55,8 @@ __all__ = [
     "ModelConfig",
     "StreamChunk",
     "TokenUsage",
+    "ToolCall",
+    "ToolResult",
     "AnthropicProvider",
     "DeepSeekProvider",
     "GeminiProvider",

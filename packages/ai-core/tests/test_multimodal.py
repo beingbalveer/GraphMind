@@ -135,4 +135,3 @@ def test_anthropic_multimodal_pdf_attachment() -> None:
     assert blocks[1]["source"]["type"] == "base64"
     assert blocks[1]["source"]["media_type"] == "application/pdf"
     assert blocks[1]["source"]["data"] == pdf_b64
-

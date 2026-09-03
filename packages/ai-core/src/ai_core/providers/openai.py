@@ -1,5 +1,6 @@
+import json
 import os
-from typing import Any, AsyncIterator, Optional
+from typing import Any, AsyncIterator, Dict, List, Optional
 
 import structlog
 from openai import (
@@ -10,7 +11,6 @@ from openai import (
     RateLimitError,
 )
 from openai.types.chat import (
-    ChatCompletionAssistantMessageParam,
     ChatCompletionContentPartImageParam,
     ChatCompletionContentPartTextParam,
     ChatCompletionMessageParam,
@@ -26,12 +26,14 @@ from tenacity import (
 
 from ai_core.base import (
     BaseLLMProvider,
+    BaseTool,
     ChatRole,
     GenerationResult,
     MessageInput,
     ModelConfig,
     StreamChunk,
     TokenUsage,
+    ToolCall,
 )
 
 logger = structlog.get_logger()
@@ -45,9 +47,27 @@ RETRYABLE_OPENAI_ERRORS = (
 )
 
 
+def _to_openai_tools(tools: Optional[List[BaseTool]]) -> Optional[list[dict[str, Any]]]:
+    """Convert BaseTool list into OpenAI function tools specification."""
+    if not tools:
+        return None
+    return [
+        {
+            "type": "function",
+            "function": {
+                "name": t.name,
+                "description": t.description,
+                "parameters": t.to_json_schema(),
+            },
+        }
+        for t in tools
+    ]
+
+
 class OpenAIProvider(BaseLLMProvider):
     """
-    OpenAI foundation model provider implementation with production resilience and retry logic.
+    OpenAI foundation model provider implementation with production resilience,
+    retry logic, and native tool-calling / function execution support.
     """
 
     def __init__(
@@ -76,6 +96,14 @@ class OpenAIProvider(BaseLLMProvider):
             if msg.role == ChatRole.SYSTEM:
                 formatted.append(
                     ChatCompletionSystemMessageParam(role="system", content=msg.content)
+                )
+            elif msg.role == ChatRole.TOOL:
+                formatted.append(
+                    {
+                        "role": "tool",
+                        "tool_call_id": msg.tool_call_id or "",
+                        "content": msg.content,
+                    }
                 )
             elif msg.role == ChatRole.USER:
                 if msg.attachments:
@@ -108,9 +136,25 @@ class OpenAIProvider(BaseLLMProvider):
                         ChatCompletionUserMessageParam(role="user", content=msg.content)
                     )
             elif msg.role == ChatRole.ASSISTANT:
-                formatted.append(
-                    ChatCompletionAssistantMessageParam(role="assistant", content=msg.content)
-                )
+                assistant_dict: dict[str, Any] = {
+                    "role": "assistant",
+                    "content": msg.content,
+                }
+                if msg.tool_calls:
+                    assistant_dict["tool_calls"] = [
+                        {
+                            "id": tc.id,
+                            "type": "function",
+                            "function": {
+                                "name": tc.name,
+                                "arguments": json.dumps(tc.arguments)
+                                if isinstance(tc.arguments, dict)
+                                else str(tc.arguments),
+                            },
+                        }
+                        for tc in msg.tool_calls
+                    ]
+                formatted.append(assistant_dict)  # type: ignore[arg-type]
 
         return formatted
 
@@ -124,20 +168,44 @@ class OpenAIProvider(BaseLLMProvider):
         self,
         messages: MessageInput,
         config: Optional[ModelConfig] = None,
+        tools: Optional[List[BaseTool]] = None,
     ) -> GenerationResult:
         cfg = config or ModelConfig(model_name=self.default_model)
         target_model = cfg.model_name or self.default_model
         openai_messages = self._to_openai_messages(messages, cfg.system_prompt)
+        openai_tools = _to_openai_tools(tools)
+
+        call_kwargs: dict[str, Any] = {
+            "model": target_model,
+            "messages": openai_messages,
+            "temperature": cfg.temperature,
+            "max_tokens": cfg.max_tokens,
+            "top_p": cfg.top_p,
+        }
+        if openai_tools:
+            call_kwargs["tools"] = openai_tools
 
         try:
-            response = await self.client.chat.completions.create(
-                model=target_model,
-                messages=openai_messages,
-                temperature=cfg.temperature,
-                max_tokens=cfg.max_tokens,
-                top_p=cfg.top_p,
-            )
-            content = response.choices[0].message.content or ""
+            response = await self.client.chat.completions.create(**call_kwargs)
+            choice = response.choices[0]
+            content = choice.message.content or ""
+
+            parsed_tool_calls: Optional[List[ToolCall]] = None
+            if choice.message.tool_calls:
+                parsed_tool_calls = []
+                for tc in choice.message.tool_calls:
+                    try:
+                        args = json.loads(tc.function.arguments) if tc.function.arguments else {}
+                    except Exception:
+                        args = {"raw": tc.function.arguments}
+                    parsed_tool_calls.append(
+                        ToolCall(
+                            id=tc.id,
+                            name=tc.function.name,
+                            arguments=args,
+                        )
+                    )
+
             usage = TokenUsage(
                 prompt_tokens=response.usage.prompt_tokens if response.usage else 0,
                 completion_tokens=response.usage.completion_tokens if response.usage else 0,
@@ -148,7 +216,8 @@ class OpenAIProvider(BaseLLMProvider):
                 role=ChatRole.ASSISTANT,
                 model_name=target_model,
                 usage=usage,
-                finish_reason=response.choices[0].finish_reason,
+                finish_reason=choice.finish_reason,
+                tool_calls=parsed_tool_calls,
             )
         except Exception as e:
             logger.error("OpenAI generation failed", error=str(e), model=target_model)
@@ -158,26 +227,52 @@ class OpenAIProvider(BaseLLMProvider):
         self,
         messages: MessageInput,
         config: Optional[ModelConfig] = None,
+        tools: Optional[List[BaseTool]] = None,
     ) -> AsyncIterator[StreamChunk]:
         cfg = config or ModelConfig(model_name=self.default_model)
         target_model = cfg.model_name or self.default_model
         openai_messages = self._to_openai_messages(messages, cfg.system_prompt)
+        openai_tools = _to_openai_tools(tools)
+
+        call_kwargs: dict[str, Any] = {
+            "model": target_model,
+            "messages": openai_messages,
+            "temperature": cfg.temperature,
+            "max_tokens": cfg.max_tokens,
+            "top_p": cfg.top_p,
+            "stream": True,
+        }
+        if openai_tools:
+            call_kwargs["tools"] = openai_tools
 
         try:
-            response_stream = await self.client.chat.completions.create(
-                model=target_model,
-                messages=openai_messages,
-                temperature=cfg.temperature,
-                max_tokens=cfg.max_tokens,
-                top_p=cfg.top_p,
-                stream=True,
-            )
+            response_stream = await self.client.chat.completions.create(**call_kwargs)
             async for chunk in response_stream:
-                if chunk.choices and chunk.choices[0].delta.content:
-                    yield StreamChunk(
-                        content=chunk.choices[0].delta.content,
-                        finish_reason=chunk.choices[0].finish_reason,
-                    )
+                if chunk.choices:
+                    delta = chunk.choices[0].delta
+                    chunk_tool_calls: Optional[List[ToolCall]] = None
+                    if delta.tool_calls:
+                        chunk_tool_calls = []
+                        for tc in delta.tool_calls:
+                            args: Dict[str, Any] = {}
+                            if tc.function and tc.function.arguments:
+                                try:
+                                    args = json.loads(tc.function.arguments)
+                                except Exception:
+                                    args = {"delta": tc.function.arguments}
+                            chunk_tool_calls.append(
+                                ToolCall(
+                                    id=tc.id or "",
+                                    name=tc.function.name or "" if tc.function else "",
+                                    arguments=args,
+                                )
+                            )
+                    if delta.content or chunk_tool_calls or chunk.choices[0].finish_reason:
+                        yield StreamChunk(
+                            content=delta.content or "",
+                            finish_reason=chunk.choices[0].finish_reason,
+                            tool_calls=chunk_tool_calls,
+                        )
         except Exception as e:
             logger.error("OpenAI streaming failed", error=str(e), model=cfg.model_name)
             raise

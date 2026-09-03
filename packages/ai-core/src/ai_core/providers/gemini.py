@@ -9,11 +9,13 @@ from google.genai import types
 
 from ai_core.base import (
     BaseLLMProvider,
+    BaseTool,
     ChatRole,
     GenerationResult,
     MessageInput,
     ModelConfig,
     StreamChunk,
+    ToolCall,
 )
 
 logger = structlog.get_logger()
@@ -64,17 +66,37 @@ class GeminiProvider(BaseLLMProvider):
             if msg.role == ChatRole.SYSTEM:
                 if msg.content.strip():
                     system_parts.append(msg.content.strip())
+            elif msg.role == ChatRole.TOOL:
+                contents.append(
+                    types.Content(
+                        role="user",
+                        parts=[
+                            types.Part.from_function_response(
+                                name=msg.name or "tool",
+                                response={"result": msg.content},
+                            )
+                        ],
+                    )
+                )
             else:
                 parts: List[types.Part] = []
                 if msg.content:
                     parts.append(types.Part.from_text(text=msg.content))
 
+                if msg.tool_calls and msg.role == ChatRole.ASSISTANT:
+                    for tc in msg.tool_calls:
+                        parts.append(
+                            types.Part.from_function_call(
+                                name=tc.name,
+                                args=tc.arguments,
+                            )
+                        )
+
                 if msg.attachments:
                     for att in msg.attachments:
                         is_image = att.mime_type.startswith("image/")
-                        is_pdf = (
-                            att.mime_type == "application/pdf"
-                            or att.name.lower().endswith(".pdf")
+                        is_pdf = att.mime_type == "application/pdf" or att.name.lower().endswith(
+                            ".pdf"
                         )
                         if att.data and (is_image or is_pdf):
                             raw_b64 = att.data
@@ -104,23 +126,40 @@ class GeminiProvider(BaseLLMProvider):
         return combined_system, contents
 
     def _build_genai_config(
-        self, system_instruction: Optional[str], cfg: ModelConfig
+        self,
+        system_instruction: Optional[str],
+        cfg: ModelConfig,
+        tools: Optional[List[BaseTool]] = None,
     ) -> types.GenerateContentConfig:
-        """Construct types.GenerateContentConfig including system instruction, temperature, and tokens."""
+        """Construct types.GenerateContentConfig including system instruction, temperature, tokens, and tools."""
+        gemini_tools = None
+        if tools:
+            declarations = [
+                types.FunctionDeclaration(
+                    name=t.name,
+                    description=t.description,
+                    parameters=t.to_json_schema(),
+                )
+                for t in tools
+            ]
+            gemini_tools = [types.Tool(function_declarations=declarations)]
+
         return types.GenerateContentConfig(
             system_instruction=system_instruction,
             temperature=cfg.temperature,
             max_output_tokens=cfg.max_tokens,
+            tools=gemini_tools,
         )
 
     async def generate(
         self,
         messages: MessageInput,
         config: Optional[ModelConfig] = None,
+        tools: Optional[List[BaseTool]] = None,
     ) -> GenerationResult:
         cfg = config or ModelConfig(model_name="gemini-2.5-flash")
         system_instruction, contents = self._to_genai_contents(messages, cfg.system_prompt)
-        genai_config = self._build_genai_config(system_instruction, cfg)
+        genai_config = self._build_genai_config(system_instruction, cfg, tools)
 
         if not contents:
             return GenerationResult(
@@ -137,10 +176,31 @@ class GeminiProvider(BaseLLMProvider):
                     contents=contents,
                     config=genai_config,
                 )
+
+                content_text = ""
+                try:
+                    content_text = response.text or ""
+                except Exception:
+                    pass
+
+                parsed_tool_calls: Optional[List[ToolCall]] = None
+                if response.function_calls:
+                    parsed_tool_calls = []
+                    for idx, fc in enumerate(response.function_calls):
+                        args = dict(fc.args) if fc.args else {}
+                        parsed_tool_calls.append(
+                            ToolCall(
+                                id=f"gemini_call_{idx + 1}",
+                                name=fc.name or "",
+                                arguments=args,
+                            )
+                        )
+
                 return GenerationResult(
-                    content=response.text or "",
+                    content=content_text,
                     role=ChatRole.ASSISTANT,
                     model_name=cfg.model_name,
+                    tool_calls=parsed_tool_calls,
                 )
             except Exception as e:
                 last_exception = e
@@ -171,10 +231,11 @@ class GeminiProvider(BaseLLMProvider):
         self,
         messages: MessageInput,
         config: Optional[ModelConfig] = None,
+        tools: Optional[List[BaseTool]] = None,
     ) -> AsyncIterator[StreamChunk]:
         cfg = config or ModelConfig(model_name="gemini-2.5-flash")
         system_instruction, contents = self._to_genai_contents(messages, cfg.system_prompt)
-        genai_config = self._build_genai_config(system_instruction, cfg)
+        genai_config = self._build_genai_config(system_instruction, cfg, tools)
 
         if not contents:
             return
@@ -188,8 +249,29 @@ class GeminiProvider(BaseLLMProvider):
                     config=genai_config,
                 )
                 async for chunk in response_stream:
-                    if chunk.text:
-                        yield StreamChunk(content=chunk.text)
+                    chunk_text = ""
+                    try:
+                        chunk_text = chunk.text or ""
+                    except Exception:
+                        pass
+
+                    chunk_tool_calls: Optional[List[ToolCall]] = None
+                    if chunk.function_calls:
+                        chunk_tool_calls = []
+                        for idx, fc in enumerate(chunk.function_calls):
+                            chunk_tool_calls.append(
+                                ToolCall(
+                                    id=f"gemini_stream_call_{idx + 1}",
+                                    name=fc.name or "",
+                                    arguments=dict(fc.args) if fc.args else {},
+                                )
+                            )
+
+                    if chunk_text or chunk_tool_calls:
+                        yield StreamChunk(
+                            content=chunk_text,
+                            tool_calls=chunk_tool_calls,
+                        )
                 return
             except Exception as e:
                 last_exception = e
