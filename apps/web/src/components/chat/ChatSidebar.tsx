@@ -326,7 +326,7 @@ export function ChatSidebar({
         </div>
 
         {/* Sidebar Footer */}
-        <div className="px-3 py-2 border-t border-zinc-100 bg-white flex items-center justify-between shrink-0 select-none">
+        <div className="px-3 py-2 border-t border-zinc-100 bg-white flex items-center shrink-0 select-none">
           {onOpenSettings && (
             <button
               type="button"
@@ -337,7 +337,6 @@ export function ChatSidebar({
               <Settings className="w-4 h-4" />
             </button>
           )}
-          <span className="font-mono text-[10px] text-zinc-400 pr-0.5">GraphMind</span>
         </div>
 
 
