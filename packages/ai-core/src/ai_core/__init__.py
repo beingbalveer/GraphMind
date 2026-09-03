@@ -38,6 +38,13 @@ from ai_core.providers import (
     register_embedding_provider,
     register_provider,
 )
+from ai_core.skills import (
+    Skill,
+    SkillMetadata,
+    load_skill_from_file,
+    load_skill_from_text,
+    load_skills_from_dir,
+)
 from ai_core.tree import ConversationTree, TreeNode
 
 __all__ = [
@@ -77,4 +84,9 @@ __all__ = [
     "resolve_conversation_lineage",
     "budget_lineage_messages",
     "estimate_tokens",
+    "Skill",
+    "SkillMetadata",
+    "load_skill_from_text",
+    "load_skill_from_file",
+    "load_skills_from_dir",
 ]

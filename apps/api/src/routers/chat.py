@@ -22,6 +22,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from pydantic.alias_generators import to_camel
 from services.file_service import parse_tabular_bytes
+from services.skill_service import get_skill_registry
 from services.tool_service import get_tool_registry
 
 logger = structlog.get_logger()
@@ -79,6 +80,9 @@ class ChatStreamRequest(BaseModel):
     )
     enabled_tools: Optional[List[str]] = Field(
         default=None, description="Optional list of enabled tool names"
+    )
+    enabled_skills: Optional[List[str]] = Field(
+        default=None, description="Optional list of enabled procedural skills to activate"
     )
     max_tool_iterations: Optional[int] = Field(
         default=5, ge=1, le=10, description="Maximum autonomous tool execution loop turns"
@@ -248,11 +252,20 @@ async def list_available_tools() -> List[Dict[str, Any]]:
     return registry.list_tool_definitions()
 
 
+@router.get("/skills")
+async def list_available_skills() -> List[Dict[str, Any]]:
+    """
+    Retrieve definitions, descriptions, and required tools of all registered procedural skills.
+    """
+    registry = get_skill_registry()
+    return registry.list_skills()
+
+
 @router.post("/completions", response_model=GenerationResult)
 async def create_chat_completion(body: ChatCompletionRequest) -> GenerationResult:
     """
     Generate a complete, non-streaming AI response with usage metrics,
-    supporting autonomous multi-turn tool execution loops.
+    supporting autonomous multi-turn tool execution loops and procedural skills.
     """
     resolved_provider = body.provider or settings.DEFAULT_PROVIDER
     resolved_model = body.model or settings.DEFAULT_MODEL
@@ -269,6 +282,7 @@ async def create_chat_completion(body: ChatCompletionRequest) -> GenerationResul
         has_base_url=bool(resolved_base_url),
         has_tree=bool(body.tree),
         enabled_tools=body.enabled_tools,
+        enabled_skills=body.enabled_skills,
     )
 
     try:
@@ -277,9 +291,16 @@ async def create_chat_completion(body: ChatCompletionRequest) -> GenerationResul
         logger.error("Failed to initialize AI provider", error=str(e))
         raise HTTPException(status_code=500, detail=f"Provider initialization failed: {str(e)}")
 
+    skill_registry = get_skill_registry()
+    active_skills = (
+        skill_registry.get_skills(body.enabled_skills) if body.enabled_skills is not None else []
+    )
+    base_sys_prompt = body.system_prompt or DEFAULT_CONCISE_SYSTEM_PROMPT
+    final_sys_prompt = skill_registry.build_system_prompt(base_sys_prompt, active_skills)
+
     model_kwargs: Dict[str, Any] = {
         "model_name": resolved_model,
-        "system_prompt": body.system_prompt or DEFAULT_CONCISE_SYSTEM_PROMPT,
+        "system_prompt": final_sys_prompt,
         "metadata": body.metadata or {},
     }
     if body.temperature is not None:
@@ -291,9 +312,15 @@ async def create_chat_completion(body: ChatCompletionRequest) -> GenerationResul
     conversation_input = _build_conversation_input(body)
 
     tool_registry = get_tool_registry()
-    active_tools = (
-        tool_registry.get_tools(body.enabled_tools) if body.enabled_tools is not None else None
-    )
+    skill_required_tools = skill_registry.resolve_required_tools(active_skills)
+    if skill_required_tools:
+        requested_tool_names = list(body.enabled_tools) if body.enabled_tools is not None else []
+        combined_tools = list(set(requested_tool_names) | set(skill_required_tools))
+        active_tools = tool_registry.get_tools(combined_tools)
+    else:
+        active_tools = (
+            tool_registry.get_tools(body.enabled_tools) if body.enabled_tools is not None else None
+        )
 
     current_messages = list(conversation_input)
     max_turns = body.max_tool_iterations or 5
@@ -375,6 +402,7 @@ async def stream_chat(
         has_base_url=bool(resolved_base_url),
         has_tree=bool(body.tree),
         enabled_tools=body.enabled_tools,
+        enabled_skills=body.enabled_skills,
     )
 
     try:
@@ -383,9 +411,16 @@ async def stream_chat(
         logger.error("Failed to initialize AI provider", error=str(e))
         raise HTTPException(status_code=500, detail=f"Provider initialization failed: {str(e)}")
 
+    skill_registry = get_skill_registry()
+    active_skills = (
+        skill_registry.get_skills(body.enabled_skills) if body.enabled_skills is not None else []
+    )
+    base_sys_prompt = body.system_prompt or DEFAULT_CONCISE_SYSTEM_PROMPT
+    final_sys_prompt = skill_registry.build_system_prompt(base_sys_prompt, active_skills)
+
     stream_model_kwargs: Dict[str, Any] = {
         "model_name": resolved_model,
-        "system_prompt": body.system_prompt or DEFAULT_CONCISE_SYSTEM_PROMPT,
+        "system_prompt": final_sys_prompt,
         "metadata": body.metadata or {},
     }
     if body.temperature is not None:
@@ -397,9 +432,15 @@ async def stream_chat(
     conversation_input = _build_conversation_input(body)
 
     tool_registry = get_tool_registry()
-    active_tools = (
-        tool_registry.get_tools(body.enabled_tools) if body.enabled_tools is not None else None
-    )
+    skill_required_tools = skill_registry.resolve_required_tools(active_skills)
+    if skill_required_tools:
+        requested_tool_names = list(body.enabled_tools) if body.enabled_tools is not None else []
+        combined_tools = list(set(requested_tool_names) | set(skill_required_tools))
+        active_tools = tool_registry.get_tools(combined_tools)
+    else:
+        active_tools = (
+            tool_registry.get_tools(body.enabled_tools) if body.enabled_tools is not None else None
+        )
     max_turns = body.max_tool_iterations or 5
 
     async def event_generator() -> AsyncIterator[str]:
