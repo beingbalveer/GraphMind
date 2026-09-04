@@ -10,6 +10,7 @@ interface PdfViewerModalProps {
   url?: string;
   data?: string;
   sizeBytes?: number;
+  initialPage?: number;
 }
 
 function formatBytes(bytes?: number): string {
@@ -27,6 +28,7 @@ export function PdfViewerModal({
   url,
   data,
   sizeBytes,
+  initialPage,
 }: PdfViewerModalProps) {
   useEffect(() => {
     if (!isOpen) return;
@@ -39,7 +41,8 @@ export function PdfViewerModal({
 
   if (!isOpen) return null;
 
-  const pdfSource = data || url;
+  const baseSource = data || url;
+  const pdfSource = baseSource && initialPage ? `${baseSource}#page=${initialPage}` : baseSource;
 
   const handleDownload = () => {
     if (url) {
@@ -77,6 +80,11 @@ export function PdfViewerModal({
               <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700">
                 PDF
               </span>
+              {initialPage && (
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-zinc-200/70 text-zinc-800">
+                  Page {initialPage}
+                </span>
+              )}
               {sizeBytes && (
                 <span className="text-xs text-zinc-400 font-mono hidden sm:inline">
                   ({formatBytes(sizeBytes)})

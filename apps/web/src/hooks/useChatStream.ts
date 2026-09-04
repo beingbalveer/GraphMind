@@ -39,6 +39,8 @@ export interface SendMessageOptions {
   enabledSkills?: string[];
   enabledTools?: string[];
   workspaceId?: string;
+  enableRag?: boolean;
+  ragFileIds?: string[];
 }
 
 
@@ -391,6 +393,8 @@ export function useChatStream() {
           workspace_id: explicitOptions?.workspaceId,
           enabled_tools: explicitOptions?.enabledTools,
           enabled_skills: explicitOptions?.enabledSkills,
+          enable_rag: explicitOptions?.enableRag,
+          rag_file_ids: explicitOptions?.ragFileIds,
         };
 
 
@@ -435,7 +439,26 @@ export function useChatStream() {
                   throw new Error(parsed.error);
                 }
 
-                if (parsed.type === "tool_call_start" && parsed.toolCall) {
+                if (parsed.type === "rag_sources" && parsed.sources) {
+                  setTree((prev) => {
+                    if (!prev) return prev;
+                    const existingNode = prev.nodes[assistantNodeId];
+                    if (!existingNode) return prev;
+                    return {
+                      ...prev,
+                      nodes: {
+                        ...prev.nodes,
+                        [assistantNodeId]: {
+                          ...existingNode,
+                          metadata: {
+                            ...existingNode.metadata,
+                            ragSources: parsed.sources,
+                          },
+                        },
+                      },
+                    };
+                  });
+                } else if (parsed.type === "tool_call_start" && parsed.toolCall) {
                   const tc = parsed.toolCall;
                   toolCallsMap.set(tc.id, {
                     id: tc.id,
