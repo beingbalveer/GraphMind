@@ -322,7 +322,7 @@ export function FileLibraryModal({
                         setViewingCodeFile(file);
                       }
                     }}
-                    className="group relative flex flex-col rounded-xl border border-zinc-200/90 bg-white hover:border-zinc-300 hover:shadow-sm transition-all overflow-hidden cursor-pointer"
+                    className="group relative flex flex-col rounded-2xl border border-zinc-200/70 bg-white hover:border-zinc-300 hover:shadow-sm transition-all overflow-hidden cursor-pointer"
                   >
                     {/* Viewport: Image, PDF, Tabular, Markdown, or Code Preview */}
                     <div className="h-36 bg-zinc-100/70 relative flex items-center justify-center overflow-hidden border-b border-zinc-100">
@@ -409,8 +409,8 @@ export function FileLibraryModal({
                         </div>
                       )}
 
-                      {/* Action Hover Strip */}
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center space-x-2">
+                      {/* Top-Right Floating Action Cluster */}
+                      <div className="absolute top-2 right-2 z-10 flex items-center space-x-0.5 p-0.5 rounded-xl bg-white/95 backdrop-blur-md border border-zinc-200/80 shadow-[0_2px_8px_rgba(0,0,0,0.06)] opacity-0 group-hover:opacity-100 transition-opacity duration-150">
                         <button
                           type="button"
                           onClick={(e) => {
@@ -425,27 +425,27 @@ export function FileLibraryModal({
                               setViewingCodeFile(file);
                             }
                           }}
-                          className="p-1.5 rounded-lg bg-white/90 text-zinc-800 hover:bg-white transition-colors cursor-pointer shadow-xs"
+                          className="w-7 h-7 rounded-lg text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100 flex items-center justify-center transition-colors cursor-pointer"
                           title="Open preview"
                         >
-                          <ExternalLink className="w-3.5 h-3.5" />
+                          <ExternalLink className="w-3.5 h-3.5 stroke-[1.75]" />
                         </button>
                         <a
                           href={downloadUrl}
                           download={file.name}
                           onClick={(e) => e.stopPropagation()}
-                          className="p-1.5 rounded-lg bg-white/90 text-zinc-800 hover:bg-white transition-colors cursor-pointer shadow-xs"
+                          className="w-7 h-7 rounded-lg text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100 flex items-center justify-center transition-colors cursor-pointer"
                           title="Download asset"
                         >
-                          <Download className="w-3.5 h-3.5" />
+                          <Download className="w-3.5 h-3.5 stroke-[1.75]" />
                         </a>
                         <button
                           type="button"
                           onClick={(e) => handleDelete(file.id, e)}
-                          className="p-1.5 rounded-lg bg-red-600/90 text-white hover:bg-red-600 transition-colors cursor-pointer shadow-xs"
+                          className="w-7 h-7 rounded-lg text-rose-500 hover:text-rose-700 hover:bg-rose-50 flex items-center justify-center transition-colors cursor-pointer"
                           title="Delete file"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          <Trash2 className="w-3.5 h-3.5 stroke-[1.75]" />
                         </button>
                       </div>
                     </div>

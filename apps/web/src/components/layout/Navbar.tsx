@@ -5,6 +5,7 @@ import {
   MessageSquare,
   LayoutGrid,
   PanelLeft,
+  PanelRight,
   ChevronDown,
 } from "lucide-react";
 import Link from "next/link";
@@ -27,6 +28,8 @@ interface NavbarProps {
   syncStatus?: "saved" | "syncing" | "offline";
   isSidebarOpen?: boolean;
   onToggleSidebar?: () => void;
+  isRightSidebarOpen?: boolean;
+  onToggleRightSidebar?: () => void;
   onNewChat?: () => void;
 }
 
@@ -44,6 +47,8 @@ export function Navbar({
   syncStatus: _syncStatus = "saved",
   isSidebarOpen: _isSidebarOpen = false,
   onToggleSidebar,
+  isRightSidebarOpen = false,
+  onToggleRightSidebar,
   onNewChat: _onNewChat,
 }: NavbarProps) {
   return (
@@ -122,6 +127,23 @@ export function Navbar({
               <span className="hidden sm:inline">Canvas</span>
             </button>
           </div>
+        )}
+
+        {/* Right Sidebar Toggle */}
+        {onToggleRightSidebar && (
+          <Button
+            variant="ghost"
+            size="iconSm"
+            onClick={onToggleRightSidebar}
+            className={`h-8 w-8 cursor-pointer transition-colors ${
+              isRightSidebarOpen
+                ? "text-zinc-950 bg-zinc-100"
+                : "text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100"
+            }`}
+            title="Toggle right panel"
+          >
+            <PanelRight className="w-4 h-4 stroke-[1.75]" />
+          </Button>
         )}
       </div>
     </header>

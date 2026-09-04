@@ -58,6 +58,45 @@ function formatBytes(bytes: number, decimals = 1): string {
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
 }
 
+interface SlashCommand {
+  id: string | null;
+  command: string;
+  label: string;
+  description: string;
+  icon: React.ComponentType<{ className?: string }>;
+}
+
+const SLASH_COMMANDS: SlashCommand[] = [
+  {
+    id: null,
+    command: "/chat",
+    label: "Standard Chat",
+    description: "Default conversational assistant",
+    icon: MessageSquare,
+  },
+  {
+    id: "deep_research",
+    command: "/research",
+    label: "Deep Research",
+    description: "Autonomous web and knowledge graph exploration",
+    icon: Compass,
+  },
+  {
+    id: "code_architect",
+    command: "/code",
+    label: "Code Architect",
+    description: "System design, refactoring, and code review",
+    icon: Layers,
+  },
+  {
+    id: "quiz_master",
+    command: "/quiz",
+    label: "Quiz Master",
+    description: "Interactive Socratic learning checks",
+    icon: GraduationCap,
+  },
+];
+
 export function ChatInput({
   onSendMessage,
   onStopStreaming,
@@ -73,12 +112,23 @@ export function ChatInput({
   const [isAttachMenuOpen, setIsAttachMenuOpen] = useState(false);
   const [isLibraryPickerOpen, setIsLibraryPickerOpen] = useState(false);
   const [selectedSkill, setSelectedSkill] = useState<string | null>(null);
-  const [isSkillMenuOpen, setIsSkillMenuOpen] = useState(false);
+  const [slashIndex, setSlashIndex] = useState(0);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const attachMenuRef = useRef<HTMLDivElement>(null);
-  const skillMenuRef = useRef<HTMLDivElement>(null);
+
+  // Slash commands trigger when input begins with "/" and hasn't started a space
+  const isSlashMode = prompt.startsWith("/") && !prompt.includes(" ");
+  const matchingSlashCommands = isSlashMode
+    ? SLASH_COMMANDS.filter((cmd) =>
+        cmd.command.toLowerCase().startsWith(prompt.toLowerCase())
+      )
+    : [];
+
+  useEffect(() => {
+    setSlashIndex(0);
+  }, [prompt]);
 
   // Close attach menu on click outside or Escape
   useEffect(() => {
@@ -100,27 +150,6 @@ export function ChatInput({
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [isAttachMenuOpen]);
-
-  // Close skill menu on click outside or Escape
-  useEffect(() => {
-    if (!isSkillMenuOpen) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      if (skillMenuRef.current && !skillMenuRef.current.contains(e.target as Node)) {
-        setIsSkillMenuOpen(false);
-      }
-    };
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setIsSkillMenuOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isSkillMenuOpen]);
 
   // Auto-focus and scroll to bottom when branching is triggered
   useEffect(() => {
@@ -269,7 +298,18 @@ export function ChatInput({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanPrompt = prompt.trim();
+    let cleanPrompt = prompt.trim();
+    let effectiveSkill = selectedSkill;
+
+    // Smart slash command parsing, e.g. "/research quantum computing"
+    for (const cmd of SLASH_COMMANDS) {
+      if (cleanPrompt.startsWith(cmd.command + " ")) {
+        effectiveSkill = cmd.id;
+        cleanPrompt = cleanPrompt.slice(cmd.command.length + 1).trim();
+        break;
+      }
+    }
+
     if ((!cleanPrompt && attachments.length === 0) || isStreaming || isUploading) {
       return;
     }
@@ -277,7 +317,7 @@ export function ChatInput({
     onSendMessage(
       cleanPrompt,
       attachments.length > 0 ? attachments : undefined,
-      selectedSkill
+      effectiveSkill
     );
     setPrompt("");
     setAttachments([]);
@@ -287,6 +327,36 @@ export function ChatInput({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (isSlashMode && matchingSlashCommands.length > 0) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setSlashIndex((prev) => (prev + 1) % matchingSlashCommands.length);
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setSlashIndex((prev) => (prev - 1 + matchingSlashCommands.length) % matchingSlashCommands.length);
+        return;
+      }
+      if (e.key === "Enter" || e.key === "Tab") {
+        e.preventDefault();
+        const selected = matchingSlashCommands[slashIndex] || matchingSlashCommands[0];
+        if (selected) {
+          setSelectedSkill(selected.id);
+          setPrompt("");
+          if (textareaRef.current) {
+            textareaRef.current.focus();
+          }
+        }
+        return;
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setPrompt("");
+        return;
+      }
+    }
+
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSubmit(e);
@@ -302,12 +372,43 @@ export function ChatInput({
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className={`bg-white rounded-2xl border transition-all p-2.5 flex flex-col space-y-2 shadow-sm ${
+        className={`relative bg-white rounded-2xl border transition-all p-2.5 flex flex-col space-y-2 shadow-sm ${
           isDragOver
             ? "border-blue-400 bg-blue-50/20 shadow-md ring-2 ring-blue-100"
             : "border-zinc-200/90 hover:border-zinc-300 focus-within:border-zinc-400 focus-within:shadow-md"
         }`}
       >
+        {/* Floating Slash Command Autocomplete Menu */}
+        {isSlashMode && matchingSlashCommands.length > 0 && (
+          <div className="absolute bottom-full left-0 mb-2 z-50 animate-in fade-in-50 zoom-in-95 duration-150">
+            <MenuCard className="min-w-[240px]">
+              {matchingSlashCommands.map((cmd, idx) => {
+                const Icon = cmd.icon;
+                const isHighlighted = idx === slashIndex;
+                return (
+                  <MenuItem
+                    key={cmd.command}
+                    icon={<Icon className="w-4 h-4 stroke-[1.75]" />}
+                    active={isHighlighted}
+                    onClick={() => {
+                      setSelectedSkill(cmd.id);
+                      setPrompt("");
+                      textareaRef.current?.focus();
+                    }}
+                  >
+                    <div className="flex items-center space-x-2">
+                      <span className="font-mono text-[12px] text-zinc-400 font-normal">
+                        {cmd.command}
+                      </span>
+                      <span className="font-medium text-zinc-900">{cmd.label}</span>
+                    </div>
+                  </MenuItem>
+                );
+              })}
+            </MenuCard>
+          </div>
+        )}
+
         {/* Active Branch Context Pill */}
         {activeBranch && (
           <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-zinc-100/90 border border-zinc-200/90 text-xs text-zinc-700 animate-in fade-in-50 slide-in-from-bottom-1 duration-150">
@@ -328,30 +429,6 @@ export function ChatInput({
                 <X className="w-3.5 h-3.5" />
               </button>
             )}
-          </div>
-        )}
-
-        {/* Active Skill Context Pill */}
-        {selectedSkill && (
-          <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-indigo-50/90 border border-indigo-200/90 text-xs text-indigo-900 animate-in fade-in-50 slide-in-from-bottom-1 duration-150">
-            <div className="flex items-center space-x-1.5 min-w-0 pr-2">
-              <Sparkles className="w-3.5 h-3.5 text-indigo-600 animate-pulse shrink-0" />
-              <span className="font-semibold text-indigo-950 shrink-0">Skill:</span>
-              <span className="truncate">
-                {selectedSkill === "deep_research" && "⚡ Deep Research (Web & Graph Search)"}
-                {selectedSkill === "code_architect" && "🏛️ Code Architect (Modularity & Design)"}
-                {selectedSkill === "quiz_master" && "🎓 Quiz Master (Socratic Learning Checks)"}
-                {!["deep_research", "code_architect", "quiz_master"].includes(selectedSkill) && selectedSkill}
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={() => setSelectedSkill(null)}
-              className="text-indigo-400 hover:text-indigo-800 p-0.5 rounded transition-colors shrink-0 cursor-pointer"
-              title="Deactivate skill"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
           </div>
         )}
 
@@ -461,139 +538,108 @@ export function ChatInput({
 
         {/* Action Bar */}
         <div className="flex items-center justify-between pt-1 px-1">
-          {/* Left tools: Plus (+) attachment button and popup menu */}
-          <div className="relative flex items-center space-x-1.5" ref={attachMenuRef}>
-            <input
-              type="file"
-              ref={fileInputRef}
-              accept="image/*,application/pdf,.pdf,.csv,.tsv,.xlsx,.jsonl,.ndjson,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,text/tab-separated-values,.txt,.md,.markdown,.py,.js,.jsx,.ts,.tsx,.json,.yaml,.yml,.toml,.sql,.html,.css,.scss,.sh,.bash,.zsh,.rs,.go,.c,.cpp,.h,.hpp,.java,.kt,.rb,.php,.cs,.swift,.dockerfile,.graphql,.proto,.vue,.svelte,.xml,.env,.log"
-              multiple
-              className="hidden"
-              onChange={(e) => {
-                if (e.target.files) {
-                  processFiles(e.target.files);
-                  e.target.value = "";
-                }
-              }}
-            />
+          {/* Left tools: Unified Plus (+) menu and Active Mode Chip */}
+          <div className="flex items-center space-x-2">
+            <div className="relative flex items-center" ref={attachMenuRef}>
+              <input
+                type="file"
+                ref={fileInputRef}
+                accept="image/*,application/pdf,.pdf,.csv,.tsv,.xlsx,.jsonl,.ndjson,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,text/tab-separated-values,.txt,.md,.markdown,.py,.js,.jsx,.ts,.tsx,.json,.yaml,.yml,.toml,.sql,.html,.css,.scss,.sh,.bash,.zsh,.rs,.go,.c,.cpp,.h,.hpp,.java,.kt,.rb,.php,.cs,.swift,.dockerfile,.graphql,.proto,.vue,.svelte,.xml,.env,.log"
+                multiple
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files) {
+                    processFiles(e.target.files);
+                    e.target.value = "";
+                  }
+                }}
+              />
 
-            <button
-              type="button"
-              onClick={() => setIsAttachMenuOpen((prev) => !prev)}
-              disabled={isStreaming || isUploading}
-              className={`p-1.5 rounded-lg transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
-                isAttachMenuOpen
-                  ? "bg-zinc-200 text-zinc-900"
-                  : "text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100"
-              }`}
-              title="Add attachment (image, PDF, spreadsheet, code, doc)"
-            >
-              <Plus className={`w-4 h-4 transition-transform duration-200 ${isAttachMenuOpen ? "rotate-45 text-zinc-950" : ""}`} />
-            </button>
-
-            {/* Attachment Dropdown Menu */}
-            {isAttachMenuOpen && (
-              <div className="absolute bottom-full left-0 mb-2 z-50 animate-in fade-in-50 zoom-in-95 duration-150">
-                <MenuCard className="w-52">
-                  <MenuItem
-                    icon={<Upload className="w-4 h-4" />}
-                    onClick={() => {
-                      setIsAttachMenuOpen(false);
-                      fileInputRef.current?.click();
-                    }}
-                  >
-                    Upload from computer
-                  </MenuItem>
-
-                  {workspaceId && (
-                    <MenuItem
-                      icon={<FolderOpen className="w-4 h-4" />}
-                      onClick={() => {
-                        setIsAttachMenuOpen(false);
-                        setIsLibraryPickerOpen(true);
-                      }}
-                    >
-                      Attach from Library
-                    </MenuItem>
-                  )}
-                </MenuCard>
-              </div>
-            )}
-
-            {/* Skill Selector Button & Menu */}
-            <div className="relative" ref={skillMenuRef}>
               <button
                 type="button"
-                onClick={() => setIsSkillMenuOpen((prev) => !prev)}
-                disabled={isStreaming}
-                className={`flex items-center space-x-1 px-2 py-1 rounded-lg text-xs font-medium border transition-colors cursor-pointer select-none ${
-                  selectedSkill
-                    ? "bg-indigo-50/80 border-indigo-200 text-indigo-700 hover:bg-indigo-100/70"
-                    : isSkillMenuOpen
-                    ? "bg-zinc-100 border-zinc-300 text-zinc-800"
-                    : "border-transparent text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100"
+                onClick={() => setIsAttachMenuOpen((prev) => !prev)}
+                disabled={isStreaming || isUploading}
+                className={`w-7 h-7 rounded-xl transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center ${
+                  isAttachMenuOpen
+                    ? "bg-zinc-200 text-zinc-950"
+                    : "text-zinc-500 hover:text-zinc-950 hover:bg-zinc-100"
                 }`}
-                title="Select active agent skill playbook"
+                title="Add attachment or select mode"
               >
-                <Sparkles className={`w-3.5 h-3.5 ${selectedSkill ? "text-indigo-600" : ""}`} />
-                <span className="hidden sm:inline">
-                  {selectedSkill === "deep_research"
-                    ? "Research"
-                    : selectedSkill === "code_architect"
-                    ? "Architect"
-                    : selectedSkill === "quiz_master"
-                    ? "Quiz"
-                    : "Skills"}
-                </span>
+                <Plus className={`w-4 h-4 stroke-[1.75] transition-transform duration-200 ${isAttachMenuOpen ? "rotate-45 text-zinc-950" : ""}`} />
               </button>
 
-              {/* Floating Skill Menu */}
-              {isSkillMenuOpen && (
+              {/* Unified Action Dropdown Menu */}
+              {isAttachMenuOpen && (
                 <div className="absolute bottom-full left-0 mb-2 z-50 animate-in fade-in-50 zoom-in-95 duration-150">
                   <MenuCard className="min-w-[210px]">
                     <MenuItem
-                      icon={<MessageSquare className="w-4 h-4" />}
+                      icon={<Upload className="w-4 h-4 stroke-[1.75]" />}
+                      onClick={() => {
+                        setIsAttachMenuOpen(false);
+                        fileInputRef.current?.click();
+                      }}
+                    >
+                      Upload from computer
+                    </MenuItem>
+
+                    {workspaceId && (
+                      <MenuItem
+                        icon={<FolderOpen className="w-4 h-4 stroke-[1.75]" />}
+                        onClick={() => {
+                          setIsAttachMenuOpen(false);
+                          setIsLibraryPickerOpen(true);
+                        }}
+                      >
+                        Attach from Library
+                      </MenuItem>
+                    )}
+
+                    <div className="my-1 border-t border-zinc-100" />
+
+                    <MenuItem
+                      icon={<MessageSquare className="w-4 h-4 stroke-[1.75]" />}
                       active={selectedSkill === null}
                       trailing={selectedSkill === null ? <span className="text-zinc-900 font-medium">✓</span> : null}
                       onClick={() => {
                         setSelectedSkill(null);
-                        setIsSkillMenuOpen(false);
+                        setIsAttachMenuOpen(false);
                       }}
                     >
                       Standard Chat
                     </MenuItem>
 
                     <MenuItem
-                      icon={<Compass className="w-4 h-4" />}
+                      icon={<Compass className="w-4 h-4 stroke-[1.75]" />}
                       active={selectedSkill === "deep_research"}
                       trailing={selectedSkill === "deep_research" ? <span className="text-zinc-900 font-medium">✓</span> : null}
                       onClick={() => {
                         setSelectedSkill("deep_research");
-                        setIsSkillMenuOpen(false);
+                        setIsAttachMenuOpen(false);
                       }}
                     >
                       Deep Research
                     </MenuItem>
 
                     <MenuItem
-                      icon={<Layers className="w-4 h-4" />}
+                      icon={<Layers className="w-4 h-4 stroke-[1.75]" />}
                       active={selectedSkill === "code_architect"}
                       trailing={selectedSkill === "code_architect" ? <span className="text-zinc-900 font-medium">✓</span> : null}
                       onClick={() => {
                         setSelectedSkill("code_architect");
-                        setIsSkillMenuOpen(false);
+                        setIsAttachMenuOpen(false);
                       }}
                     >
                       Code Architect
                     </MenuItem>
 
                     <MenuItem
-                      icon={<GraduationCap className="w-4 h-4" />}
+                      icon={<GraduationCap className="w-4 h-4 stroke-[1.75]" />}
                       active={selectedSkill === "quiz_master"}
                       trailing={selectedSkill === "quiz_master" ? <span className="text-zinc-900 font-medium">✓</span> : null}
                       onClick={() => {
                         setSelectedSkill("quiz_master");
-                        setIsSkillMenuOpen(false);
+                        setIsAttachMenuOpen(false);
                       }}
                     >
                       Quiz Master
@@ -602,6 +648,35 @@ export function ChatInput({
                 </div>
               )}
             </div>
+
+            {/* Active Mode Compact Chip */}
+            {selectedSkill && (
+              <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded-xl bg-zinc-100 border border-zinc-200/70 text-xs text-zinc-800 animate-in fade-in-50 zoom-in-95 duration-150 select-none">
+                {selectedSkill === "deep_research" ? (
+                  <Compass className="w-3.5 h-3.5 text-zinc-700 shrink-0 stroke-[1.75]" />
+                ) : selectedSkill === "code_architect" ? (
+                  <Layers className="w-3.5 h-3.5 text-zinc-700 shrink-0 stroke-[1.75]" />
+                ) : selectedSkill === "quiz_master" ? (
+                  <GraduationCap className="w-3.5 h-3.5 text-zinc-700 shrink-0 stroke-[1.75]" />
+                ) : (
+                  <Sparkles className="w-3.5 h-3.5 text-zinc-700 shrink-0 stroke-[1.75]" />
+                )}
+                <span className="font-medium text-zinc-900">
+                  {selectedSkill === "deep_research" && "Deep Research"}
+                  {selectedSkill === "code_architect" && "Code Architect"}
+                  {selectedSkill === "quiz_master" && "Quiz Master"}
+                  {!["deep_research", "code_architect", "quiz_master"].includes(selectedSkill) && selectedSkill}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedSkill(null)}
+                  className="text-zinc-400 hover:text-zinc-700 p-0.5 rounded transition-colors shrink-0 cursor-pointer ml-0.5"
+                  title="Clear mode"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Right Action: Send / Stop Button */}
