@@ -27,6 +27,7 @@ interface FocusDrawerProps {
   onEditUserMessage?: (userNodeId: string, newContent: string) => void;
   onSwitchBranch?: (nodeId: string) => void;
   onRateResponse?: (nodeId: string, rating: "up" | "down" | null) => void;
+  workspaceId?: string;
 }
 
 export function FocusDrawer({
@@ -43,6 +44,7 @@ export function FocusDrawer({
   onEditUserMessage,
   onSwitchBranch,
   onRateResponse,
+  workspaceId,
 }: FocusDrawerProps) {
 
 
@@ -141,6 +143,11 @@ export function FocusDrawer({
             return (
               <ChatMessage
                 key={msg.id}
+                workspaceId={
+                  workspaceId ||
+                  (node as unknown as { workspaceId?: string })?.workspaceId ||
+                  (tree as unknown as { workspaceId?: string })?.workspaceId
+                }
                 message={{
                   ...msg,
                   isStreaming: isLastAssistant,

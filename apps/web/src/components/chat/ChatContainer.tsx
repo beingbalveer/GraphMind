@@ -18,6 +18,7 @@ import { BranchBreadcrumbs, BreadcrumbStep } from "./BranchBreadcrumbs";
 
 import { ChatSidebar } from "./ChatSidebar";
 import { RightSidebar } from "./RightSidebar";
+import { MasteryPanel } from "./MasteryPanel";
 import { GraphCanvas } from "../canvas/GraphCanvas";
 import { CommandPalette } from "../canvas/CommandPalette";
 import { WorkspaceModal } from "../workspace/WorkspaceModal";
@@ -1153,6 +1154,7 @@ export function ChatContainer({
                         return (
                           <ChatMessage
                             key={node.id}
+                            workspaceId={currentWorkspace?.id}
                             message={{
                               ...node,
                               isStreaming: isLastAssistant,
@@ -1239,11 +1241,23 @@ export function ChatContainer({
           />
         </div>
 
-        {/* Right Sidebar: Notes & Tools */}
+        {/* Right Sidebar: Knowledge & Mastery */}
         <RightSidebar
           isOpen={isRightSidebarOpen}
           onToggle={handleToggleRightSidebar}
-        />
+          title="Knowledge & Mastery"
+        >
+          {currentWorkspace ? (
+            <MasteryPanel
+              workspaceId={currentWorkspace.id}
+              onQuizConcept={(conceptName) => {
+                handleSendMessage(
+                  `/quiz Test my retention and comprehension of "${conceptName}" with interactive questions.`
+                );
+              }}
+            />
+          ) : undefined}
+        </RightSidebar>
       </div>
 
       {/* Global Command Palette (⌘K) */}

@@ -36,6 +36,7 @@ import { CodeViewerModal } from "./CodeViewerModal";
 import { PdfViewerModal } from "./PdfViewerModal";
 import { TableViewerModal } from "./TableViewerModal";
 import { AgentToolCallsBanner } from "./AgentToolCallsBanner";
+import { QuizCard } from "./QuizCard";
 import { ToolCallItem } from "@/hooks/useChatStream";
 import { resolveFileUrl } from "@/lib/workspaceApi";
 
@@ -68,6 +69,7 @@ interface ChatMessageProps {
   onExploreBranch?: (messageId: string, highlightedText: string) => void;
   onOpenSideBranch?: (childNodeId: string, excerpt: string) => void;
   onRateResponse?: (nodeId: string, rating: "up" | "down" | null) => void;
+  workspaceId?: string;
 }
 
 
@@ -107,7 +109,7 @@ export function injectBranchLinks(content: string, branches: BranchLinkInfo[]): 
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function CodeBlock({ children, className, ...props }: any) {
+function CodeBlock({ children, className, workspaceId, ...props }: any) {
   const match = /language-(\w+)/.exec(className || "");
   const language = match ? match[1] : "";
 
@@ -121,6 +123,11 @@ function CodeBlock({ children, className, ...props }: any) {
   };
 
   const rawCode = getRawCode(children).replace(/\n$/, "");
+
+  // Interactive Quiz Card renderer for Phase 6 Knowledge Evolution
+  if (language === "quiz") {
+    return <QuizCard rawCode={rawCode} workspaceId={workspaceId} />;
+  }
 
   if (!language && !className?.includes("hljs")) {
     return (
@@ -158,10 +165,12 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
   content,
   branchLinks,
   onOpenSideBranch,
+  workspaceId,
 }: {
   content: string;
   branchLinks?: BranchLinkInfo[];
   onOpenSideBranch?: (childNodeId: string, excerpt: string) => void;
+  workspaceId?: string;
 }) {
   const processedContent = useMemo(() => {
     return branchLinks && branchLinks.length > 0
@@ -174,7 +183,10 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
       remarkPlugins={[remarkGfm, remarkMath]}
       rehypePlugins={[rehypeKatex, rehypeHighlight]}
       components={{
-        code: CodeBlock,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        code(codeProps: any) {
+          return <CodeBlock {...codeProps} workspaceId={workspaceId} />;
+        },
         p({ children }) {
           return <p className="mb-4 last:mb-0 leading-[1.8]">{children}</p>;
         },
@@ -310,6 +322,7 @@ export function ChatMessage({
   onExploreBranch,
   onOpenSideBranch,
   onRateResponse,
+  workspaceId,
 }: ChatMessageProps) {
 
   const isUser = message.role === "user";
@@ -853,6 +866,11 @@ export function ChatMessage({
                 content={message.content}
                 branchLinks={branchLinks}
                 onOpenSideBranch={onOpenSideBranch}
+                workspaceId={
+                  workspaceId ||
+                  (tree as unknown as { workspaceId?: string })?.workspaceId ||
+                  (message as unknown as { workspaceId?: string })?.workspaceId
+                }
               />
             ) : message.isStreaming ? (
               /* Smooth Staggered Wave Thinking State */
