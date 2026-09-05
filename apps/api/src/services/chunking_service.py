@@ -249,7 +249,6 @@ class ChunkingService:
         Chunk source code files, prioritizing function/class declaration boundaries.
         """
         chunks: List[DocumentChunk] = []
-        lines = text.splitlines()
         code_chunks = self._split_text_with_overlap(text)
 
         for idx, c_text in enumerate(code_chunks):

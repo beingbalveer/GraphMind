@@ -5,7 +5,7 @@ import structlog
 from ai_core.providers import get_embedding_provider
 from models.workspace import WorkspaceFile, WorkspaceFileChunk
 from pydantic import BaseModel, Field
-from sqlalchemy import func, or_, select, text
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = structlog.get_logger()

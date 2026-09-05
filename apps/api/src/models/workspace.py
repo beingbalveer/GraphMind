@@ -6,11 +6,13 @@ from database import Base
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     JSON,
+    Column,
     DateTime,
     Float,
     ForeignKey,
     Integer,
     String,
+    Table,
     Text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -71,6 +73,27 @@ class Workspace(Base):
         passive_deletes=True,
         order_by="WorkspaceFile.created_at.desc()",
     )
+    concepts: Mapped[List["ConceptModel"]] = relationship(
+        "ConceptModel",
+        back_populates="workspace",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        order_by="ConceptModel.created_at.desc()",
+    )
+
+
+node_concepts = Table(
+    "node_concepts",
+    Base.metadata,
+    Column("node_id", String(64), ForeignKey("nodes.id", ondelete="CASCADE"), primary_key=True),
+    Column(
+        "concept_id",
+        String(64),
+        ForeignKey("workspace_concepts.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    Column("created_at", DateTime(timezone=True), default=_utc_now),
+)
 
 
 class NodeModel(Base):
@@ -135,6 +158,11 @@ class NodeModel(Base):
         "NodeModel",
         backref=None,
         cascade="all",
+    )
+    concepts: Mapped[List["ConceptModel"]] = relationship(
+        "ConceptModel",
+        secondary=node_concepts,
+        back_populates="nodes",
     )
 
 
@@ -280,3 +308,63 @@ class WorkspaceFileChunk(Base):
     # Relationships
     file: Mapped["WorkspaceFile"] = relationship("WorkspaceFile", back_populates="chunks")
     workspace: Mapped["Workspace"] = relationship("Workspace")
+
+
+class ConceptModel(Base):
+    """
+    Persistent concept mastery model representing a tracked technical skill/concept.
+    """
+
+    __tablename__ = "workspace_concepts"
+
+    id: Mapped[str] = mapped_column(
+        String(64),
+        primary_key=True,
+        default=lambda: f"concept_{uuid.uuid4().hex[:12]}",
+    )
+    workspace_id: Mapped[str] = mapped_column(
+        String(64),
+        ForeignKey("workspaces.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    # Mastery state: unexplored, explored, quizzed, mastered, stale
+    mastery_level: Mapped[str] = mapped_column(String(32), nullable=False, default="explored")
+    confidence_score: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    times_quizzed: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    times_correct: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    last_reviewed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    metadata_payload: Mapped[Dict[str, Any]] = mapped_column(
+        "metadata",
+        JSON,
+        default=dict,
+    )
+
+    # 768-dimensional dense vector embedding (optional for semantic grouping)
+    embedding: Mapped[Optional[List[float]]] = mapped_column(
+        Vector(768),
+        nullable=True,
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=_utc_now,
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=_utc_now,
+        onupdate=_utc_now,
+    )
+
+    # Relationships
+    workspace: Mapped["Workspace"] = relationship("Workspace", back_populates="concepts")
+    nodes: Mapped[List["NodeModel"]] = relationship(
+        "NodeModel",
+        secondary=node_concepts,
+        back_populates="concepts",
+    )
+

@@ -1,8 +1,7 @@
 import pytest
 from database import get_session_factory
 from models.workspace import Workspace, WorkspaceFile, WorkspaceFileChunk
-from services.rag_service import RAGService, RetrievedChunk
-from sqlalchemy import select
+from services.rag_service import RAGService
 
 
 @pytest.mark.asyncio

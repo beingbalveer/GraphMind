@@ -1,4 +1,12 @@
-import { ConversationTree, FileAttachment, TreeNode } from "@graphmind/shared";
+import {
+  Concept,
+  ConceptCreateInput,
+  ConceptUpdateInput,
+  ConversationTree,
+  FileAttachment,
+  TreeNode,
+  WorkspaceMasterySummary,
+} from "@graphmind/shared";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8300";
@@ -496,5 +504,122 @@ export async function deleteWorkspaceFile(
     return res.ok;
   } catch {
     return false;
+  }
+}
+
+// ---------------------------------------------------------
+// Phase 6 Knowledge Mastery & Concept APIs
+// ---------------------------------------------------------
+
+export async function getWorkspaceMastery(
+  workspaceId: string,
+  stalenessDays: number = 14
+): Promise<WorkspaceMasterySummary | null> {
+  try {
+    const res = await fetch(
+      `${API_BASE_URL}/api/v1/workspaces/${workspaceId}/mastery?staleness_days=${stalenessDays}`
+    );
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (err) {
+    console.warn("Error fetching workspace mastery summary:", err);
+    return null;
+  }
+}
+
+export async function listWorkspaceConcepts(
+  workspaceId: string,
+  limit: number = 100
+): Promise<Concept[]> {
+  try {
+    const res = await fetch(
+      `${API_BASE_URL}/api/v1/workspaces/${workspaceId}/concepts?limit=${limit}`
+    );
+    if (!res.ok) return [];
+    return await res.json();
+  } catch (err) {
+    console.warn("Error listing workspace concepts:", err);
+    return [];
+  }
+}
+
+export async function createWorkspaceConcept(
+  workspaceId: string,
+  data: ConceptCreateInput
+): Promise<Concept | null> {
+  try {
+    const res = await fetch(
+      `${API_BASE_URL}/api/v1/workspaces/${workspaceId}/concepts`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      }
+    );
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (err) {
+    console.warn("Error creating workspace concept:", err);
+    return null;
+  }
+}
+
+export async function updateWorkspaceConcept(
+  workspaceId: string,
+  conceptId: string,
+  data: ConceptUpdateInput
+): Promise<Concept | null> {
+  try {
+    const res = await fetch(
+      `${API_BASE_URL}/api/v1/workspaces/${workspaceId}/concepts/${conceptId}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      }
+    );
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (err) {
+    console.warn("Error updating workspace concept:", err);
+    return null;
+  }
+}
+
+export async function linkNodeConcepts(
+  workspaceId: string,
+  nodeId: string,
+  conceptIds: string[]
+): Promise<Concept[]> {
+  try {
+    const res = await fetch(
+      `${API_BASE_URL}/api/v1/workspaces/${workspaceId}/nodes/${nodeId}/concepts`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conceptIds }),
+      }
+    );
+    if (!res.ok) return [];
+    return await res.json();
+  } catch (err) {
+    console.warn("Error linking node concepts:", err);
+    return [];
+  }
+}
+
+export async function getNodeConcepts(
+  workspaceId: string,
+  nodeId: string
+): Promise<Concept[]> {
+  try {
+    const res = await fetch(
+      `${API_BASE_URL}/api/v1/workspaces/${workspaceId}/nodes/${nodeId}/concepts`
+    );
+    if (!res.ok) return [];
+    return await res.json();
+  } catch (err) {
+    console.warn("Error getting node concepts:", err);
+    return [];
   }
 }

@@ -48,7 +48,7 @@ Phase 6 introduces GraphMind's pinnacle differentiator: **Knowledge Evolution**.
 ### Sub-Phase 6.3: Knowledge State & Mastery Modeling
 *Estimated Time: 5 – 6 Days*
 
-- [ ] **Task 6.3.1 — User Knowledge Profile Schema**: Store concept mastery levels (`explored`, `quizzed`, `mastered`, `stale`).
+- [x] **Task 6.3.1 — User Knowledge Profile Schema**: Store concept mastery levels (`explored`, `quizzed`, `mastered`, `stale`).
 - [ ] **Task 6.3.2 — Quiz Feedback Loop**: Answering quiz questions updates concept confidence scores in the user profile.
 - [ ] **Task 6.3.3 — Visual Mastery Overlay (Heatmap)**: Canvas mode overlay coloring nodes by user mastery level (Green = Mastered, Amber = Learning, Gray = Unexplored).
 

@@ -94,4 +94,69 @@ export interface ConversationTree {
   updatedAt: string;
 }
 
+/**
+ * Phase 6 Knowledge State & Mastery Modeling Domain Types
+ */
+
+export type ConceptMasteryLevel =
+  | 'unexplored'
+  | 'explored'
+  | 'quizzed'
+  | 'mastered'
+  | 'stale';
+
+export interface Concept {
+  id: string;
+  workspaceId: string;
+  name: string;
+  description?: string | null;
+  masteryLevel: ConceptMasteryLevel;
+  confidenceScore: number;
+  timesQuizzed: number;
+  timesCorrect: number;
+  lastReviewedAt?: string | null;
+  nodeIds?: string[];
+  metadata?: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ConceptMasteryDistribution {
+  unexplored: number;
+  explored: number;
+  quizzed: number;
+  mastered: number;
+  stale: number;
+}
+
+export interface WorkspaceMasterySummary {
+  workspaceId: string;
+  totalConcepts: number;
+  overallScore: number;
+  distribution: ConceptMasteryDistribution;
+  topMastered: Concept[];
+  needingReview: Concept[];
+  concepts: Concept[];
+}
+
+export interface ConceptCreateInput {
+  name: string;
+  description?: string | null;
+  masteryLevel?: ConceptMasteryLevel;
+  confidenceScore?: number;
+  nodeIds?: string[];
+  metadata?: Record<string, unknown>;
+}
+
+export interface ConceptUpdateInput {
+  name?: string;
+  description?: string | null;
+  masteryLevel?: ConceptMasteryLevel;
+  confidenceScore?: number;
+  timesQuizzed?: number;
+  timesCorrect?: number;
+  quizResult?: boolean;
+  metadata?: Record<string, unknown>;
+}
+
 export * from './tree-utils';
