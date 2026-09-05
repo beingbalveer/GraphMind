@@ -85,7 +85,7 @@ export function RightSidebar({
       <aside
         suppressHydrationWarning
         style={{ width: isOpen ? `${width}px` : "0px" }}
-        className={`fixed md:static inset-y-0 right-0 z-40 flex flex-col bg-white border-l border-zinc-200/80 select-none relative overflow-hidden shrink-0 ${
+        className={`fixed md:static inset-y-0 right-0 z-40 flex flex-col bg-[#F8F9FA] select-none relative overflow-hidden shrink-0 ${
           isOpen ? "translate-x-0" : "translate-x-full md:translate-x-0"
         } ${isResizing ? "transition-none" : "transition-[width,transform] duration-200 ease-in-out"}`}
       >
@@ -101,7 +101,7 @@ export function RightSidebar({
         )}
 
         {/* Top Header */}
-        <div className="h-13 border-b border-zinc-100 px-3 sm:px-4 flex items-center justify-between shrink-0 bg-white overflow-hidden">
+        <div className="h-13 px-3 sm:px-4 flex items-center justify-between shrink-0 bg-transparent overflow-hidden">
           <div className="flex items-center space-x-2 min-w-0">
             <Sparkles className="w-4 h-4 text-zinc-600 shrink-0" />
             <h2 className="text-xs font-semibold text-zinc-900 truncate tracking-tight">
@@ -126,7 +126,7 @@ export function RightSidebar({
             children
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-center px-4 py-8 space-y-3 select-none">
-              <div className="w-10 h-10 rounded-2xl bg-zinc-50 border border-zinc-200/70 flex items-center justify-center text-zinc-400">
+              <div className="w-10 h-10 rounded-2xl bg-white shadow-2xs flex items-center justify-center text-zinc-400">
                 <StickyNote className="w-5 h-5 stroke-[1.5]" />
               </div>
               <div className="space-y-1">

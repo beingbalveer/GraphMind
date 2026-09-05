@@ -483,7 +483,7 @@ export function ChatMessage({
           )}
 
           {/* Bubble */}
-          <div className="max-w-2xl rounded-2xl bg-zinc-100/90 text-zinc-900 px-4.5 py-3 border border-zinc-200/70 shadow-2xs">
+          <div className="max-w-2xl rounded-2xl bg-[#F4F4F6] text-zinc-900 px-4.5 py-3 border-0 shadow-2xs">
             {message.highlightedContext && (
               <div className="text-[11px] font-medium text-emerald-800 bg-emerald-50 border border-emerald-200/80 rounded-md px-2 py-0.5 mb-2 inline-flex items-center space-x-1.5 shadow-2xs">
                 <GitBranch className="w-3 h-3 text-emerald-600 shrink-0" />
@@ -774,7 +774,7 @@ export function ChatMessage({
 
       <div className="max-w-3xl mx-auto flex space-x-3.5">
         {/* Assistant Avatar */}
-        <div className="w-7 h-7 rounded-full bg-zinc-100 border border-zinc-200/80 flex items-center justify-center shrink-0 mt-0.5 text-zinc-800 shadow-2xs">
+        <div className="w-7 h-7 rounded-full bg-[#F4F4F6] flex items-center justify-center shrink-0 mt-0.5 text-zinc-800 shadow-2xs">
           <Sparkles className="w-3.5 h-3.5 text-zinc-700" />
         </div>
 
@@ -792,7 +792,7 @@ export function ChatMessage({
             message.metadata?.ragSources &&
               (message.metadata.ragSources as RagSourceItem[]).length > 0
           ) && (
-            <div className="rounded-xl border border-blue-200/80 bg-blue-50/40 p-2.5 space-y-1.5 mb-2 select-none animate-in fade-in-50 duration-150">
+            <div className="rounded-xl bg-blue-50/50 p-2.5 space-y-1.5 mb-2 select-none animate-in fade-in-50 duration-150">
               <div className="flex items-center space-x-1.5 text-xs font-semibold text-blue-900">
                 <Sparkles className="w-3.5 h-3.5 text-blue-600" />
                 <span>Verified Sources</span>

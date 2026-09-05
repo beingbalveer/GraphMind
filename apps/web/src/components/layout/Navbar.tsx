@@ -52,7 +52,7 @@ export function Navbar({
   onNewChat: _onNewChat,
 }: NavbarProps) {
   return (
-    <header className="h-13 border-b border-zinc-200/80 bg-white px-3 sm:px-5 flex items-center justify-between z-30 shrink-0 select-none">
+    <header className="h-13 bg-white px-3 sm:px-5 flex items-center justify-between z-30 shrink-0 select-none">
       {/* Top Left: Sidebar Toggle + Workspace Switcher */}
       <div className="flex items-center space-x-2 shrink-0">
         {onToggleSidebar && (
@@ -101,14 +101,14 @@ export function Navbar({
       <div className="flex items-center space-x-2 shrink-0">
         {/* Toggle Mode Pill Button */}
         {onViewModeChange && (
-          <div className="flex items-center p-1 bg-white border border-zinc-200/70 rounded-2xl space-x-0.5">
+          <div className="flex items-center p-1 bg-zinc-100/70 rounded-2xl space-x-0.5">
             <button
               type="button"
               onClick={() => onViewModeChange("chat")}
-              className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-xl text-[13px] transition-colors cursor-pointer ${
+              className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-xl text-[13px] transition-all cursor-pointer ${
                 viewMode === "chat"
-                  ? "bg-zinc-100 text-zinc-950 font-medium"
-                  : "text-zinc-600 hover:text-zinc-950 hover:bg-zinc-50 font-normal"
+                  ? "bg-white text-zinc-950 font-medium shadow-2xs"
+                  : "text-zinc-600 hover:text-zinc-950 hover:bg-white/50 font-normal"
               }`}
             >
               <MessageSquare className="w-4 h-4 stroke-[1.75]" />
@@ -117,10 +117,10 @@ export function Navbar({
             <button
               type="button"
               onClick={() => onViewModeChange("canvas")}
-              className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-xl text-[13px] transition-colors cursor-pointer ${
+              className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-xl text-[13px] transition-all cursor-pointer ${
                 viewMode === "canvas"
-                  ? "bg-zinc-100 text-zinc-950 font-medium"
-                  : "text-zinc-600 hover:text-zinc-950 hover:bg-zinc-50 font-normal"
+                  ? "bg-white text-zinc-950 font-medium shadow-2xs"
+                  : "text-zinc-600 hover:text-zinc-950 hover:bg-white/50 font-normal"
               }`}
             >
               <LayoutGrid className="w-4 h-4 stroke-[1.75]" />

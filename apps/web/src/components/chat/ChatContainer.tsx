@@ -1120,9 +1120,9 @@ export function ChatContainer({
                             onClick={() => {
                               handleSendMessage(item.prompt);
                             }}
-                            className="p-3 rounded-xl border border-zinc-200/80 bg-zinc-50/50 hover:bg-zinc-100/80 hover:border-zinc-300 text-left transition-all duration-150 group cursor-pointer shadow-2xs"
+                            className="p-3 rounded-xl bg-[#F8F9FA] hover:bg-zinc-100/80 text-left transition-all duration-150 group cursor-pointer shadow-2xs"
                           >
-                            <div className="w-6 h-6 rounded-md bg-white border border-zinc-200 flex items-center justify-center mb-2 text-zinc-700 group-hover:text-zinc-950 transition-colors shadow-2xs">
+                            <div className="w-6 h-6 rounded-md bg-white shadow-2xs flex items-center justify-center mb-2 text-zinc-700 group-hover:text-zinc-950 transition-colors">
                               <Icon className="w-3.5 h-3.5" />
                             </div>
                             <h3 className="text-xs font-semibold text-zinc-800 group-hover:text-zinc-950 mb-1 leading-snug">
@@ -1182,7 +1182,7 @@ export function ChatContainer({
                   <button
                     type="button"
                     onClick={() => scrollToBottom(true)}
-                    className="absolute -top-9 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-white border border-zinc-200 shadow-md text-zinc-700 hover:text-zinc-950 hover:border-zinc-300 text-xs font-medium flex items-center space-x-1.5 transition-all animate-in fade-in-50 slide-in-from-bottom-2 duration-150 cursor-pointer select-none"
+                    className="absolute -top-9 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-white shadow-md text-zinc-700 hover:text-zinc-950 text-xs font-medium flex items-center space-x-1.5 transition-all animate-in fade-in-50 slide-in-from-bottom-2 duration-150 cursor-pointer select-none"
                   >
                     <span>Scroll to bottom</span>
                     <ArrowDown className="w-3 h-3" />

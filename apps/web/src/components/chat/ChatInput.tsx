@@ -372,10 +372,10 @@ export function ChatInput({
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className={`relative bg-white rounded-2xl border transition-all p-2.5 flex flex-col space-y-2 shadow-sm ${
+        className={`relative bg-white rounded-2xl transition-all p-2.5 flex flex-col space-y-2 border-0 ${
           isDragOver
-            ? "border-blue-400 bg-blue-50/20 shadow-md ring-2 ring-blue-100"
-            : "border-zinc-200/90 hover:border-zinc-300 focus-within:border-zinc-400 focus-within:shadow-md"
+            ? "bg-blue-50/30 shadow-lg ring-2 ring-blue-200"
+            : "shadow-[0_4px_24px_-4px_rgba(0,0,0,0.08)] hover:shadow-[0_6px_28px_-4px_rgba(0,0,0,0.11)] focus-within:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.14)]"
         }`}
       >
         {/* Floating Slash Command Autocomplete Menu */}
@@ -411,7 +411,7 @@ export function ChatInput({
 
         {/* Active Branch Context Pill */}
         {activeBranch && (
-          <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-zinc-100/90 border border-zinc-200/90 text-xs text-zinc-700 animate-in fade-in-50 slide-in-from-bottom-1 duration-150">
+          <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-[#F4F4F6] text-xs text-zinc-700 animate-in fade-in-50 slide-in-from-bottom-1 duration-150">
             <div className="flex items-center space-x-1.5 min-w-0 pr-2">
               <GitBranch className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
               <span className="font-semibold text-zinc-900 shrink-0">Sub-topic:</span>
@@ -651,7 +651,7 @@ export function ChatInput({
 
             {/* Active Mode Compact Chip */}
             {selectedSkill && (
-              <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded-xl bg-zinc-100 border border-zinc-200/70 text-xs text-zinc-800 animate-in fade-in-50 zoom-in-95 duration-150 select-none">
+              <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded-xl bg-[#F4F4F6] text-xs text-zinc-800 shadow-2xs animate-in fade-in-50 zoom-in-95 duration-150 select-none">
                 {selectedSkill === "deep_research" ? (
                   <Compass className="w-3.5 h-3.5 text-zinc-700 shrink-0 stroke-[1.75]" />
                 ) : selectedSkill === "code_architect" ? (

@@ -162,14 +162,14 @@ export function ChatSidebar({
       <aside
         suppressHydrationWarning
         style={{ width: isOpen ? `${width}px` : `${COLLAPSED_WIDTH}px` }}
-        className={`fixed md:static inset-y-0 left-0 z-40 flex flex-col bg-white border-r border-zinc-200/80 select-none relative overflow-hidden ${
+        className={`fixed md:static inset-y-0 left-0 z-40 flex flex-col bg-[#F8F9FA] select-none relative overflow-hidden ${
           isOpen
             ? "translate-x-0"
             : "-translate-x-full md:translate-x-0"
         } ${isResizing ? "transition-none" : "transition-[width,transform] duration-200 ease-in-out"}`}
       >
         {/* Top Header: Search row */}
-        <div className="h-12 border-b border-zinc-100 flex items-center shrink-0 bg-white overflow-hidden">
+        <div className="h-12 flex items-center shrink-0 bg-transparent overflow-hidden">
           <div
             className="w-14 h-12 flex items-center justify-center shrink-0 cursor-pointer"
             onClick={() => {
@@ -190,21 +190,21 @@ export function ChatSidebar({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search chats..."
-              className="w-full py-1.5 px-2.5 rounded-lg border border-zinc-200/80 bg-zinc-50/60 text-xs text-zinc-800 placeholder:text-zinc-400 focus:outline-none focus:bg-white focus:ring-1 focus:ring-zinc-900 transition-all shadow-2xs"
+              className="w-full py-1.5 px-2.5 rounded-lg border-0 bg-white text-xs text-zinc-800 placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-900/15 transition-all shadow-2xs"
             />
           </div>
         </div>
 
         {/* Quick Navigation Items: New Chat & Library */}
-        <div className="py-1.5 border-b border-zinc-100 space-y-0.5 shrink-0 overflow-hidden">
+        <div className="py-1 px-1.5 space-y-0.5 shrink-0 overflow-hidden">
           {onNewChat && (
             <button
               type="button"
               onClick={onNewChat}
-              className="w-full flex items-center h-10 hover:bg-zinc-100/70 transition-colors cursor-pointer text-zinc-700 hover:text-zinc-950 group relative"
+              className="w-full flex items-center h-9 hover:bg-zinc-200/40 rounded-xl transition-colors cursor-pointer text-zinc-700 hover:text-zinc-950 group relative"
               title="New chat (⌘N)"
             >
-              <div className="w-14 h-10 flex items-center justify-center shrink-0">
+              <div className="w-12 h-9 flex items-center justify-center shrink-0">
                 <Plus className="w-4 h-4 text-zinc-500 group-hover:text-zinc-900 transition-colors shrink-0" />
               </div>
               <span
@@ -221,10 +221,10 @@ export function ChatSidebar({
             <button
               type="button"
               onClick={onOpenFileLibrary}
-              className="w-full flex items-center h-10 hover:bg-zinc-100/70 transition-colors cursor-pointer text-zinc-700 hover:text-zinc-950 group relative"
+              className="w-full flex items-center h-9 hover:bg-zinc-200/40 rounded-xl transition-colors cursor-pointer text-zinc-700 hover:text-zinc-950 group relative"
               title="Workspace File Library & Assets"
             >
-              <div className="w-14 h-10 flex items-center justify-center shrink-0">
+              <div className="w-12 h-9 flex items-center justify-center shrink-0">
                 <FolderOpen className="w-4 h-4 text-zinc-500 group-hover:text-zinc-900 transition-colors shrink-0" />
               </div>
               <span
@@ -259,10 +259,10 @@ export function ChatSidebar({
                     <div
                       key={chat.id}
                       onClick={() => !isRenaming && onSelectChat(chat)}
-                      className={`group relative flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-colors cursor-pointer select-none ${
+                      className={`group relative flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all cursor-pointer select-none ${
                         isActive
-                          ? "bg-[#F1F6FE] text-zinc-950 font-medium"
-                          : "text-zinc-600 hover:bg-zinc-100/60 hover:text-zinc-950"
+                          ? "bg-white text-zinc-950 font-medium shadow-2xs"
+                          : "text-zinc-600 hover:bg-zinc-200/40 hover:text-zinc-950"
                       }`}
                     >
                       {isRenaming ? (
@@ -277,7 +277,7 @@ export function ChatSidebar({
                             if (e.key === "Enter") commitRename();
                             if (e.key === "Escape") setRenamingChatId(null);
                           }}
-                          className="w-full bg-white border border-zinc-300 rounded px-1.5 py-0.5 text-xs text-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900"
+                          className="w-full bg-white border-0 shadow-2xs rounded-lg px-2 py-0.5 text-xs text-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900/15"
                           autoFocus
                           onClick={(e) => e.stopPropagation()}
                         />
@@ -349,12 +349,12 @@ export function ChatSidebar({
               <button
                 type="button"
                 onClick={onToggle}
-                className="w-14 h-10 flex items-center justify-center text-zinc-400 hover:text-zinc-800 hover:bg-zinc-100/80 transition-colors cursor-pointer relative group"
+                className="w-10 h-10 rounded-xl flex items-center justify-center text-zinc-400 hover:text-zinc-800 hover:bg-zinc-200/40 transition-colors cursor-pointer relative group"
                 title={`Conversations (${chats.length})`}
               >
                 <MessageSquare className="w-4 h-4 text-zinc-400 group-hover:text-zinc-800 transition-colors" />
                 {chats.length > 0 && (
-                  <span className="absolute top-2.5 right-4 w-1.5 h-1.5 rounded-full bg-blue-500" />
+                  <span className="absolute top-2.5 right-2.5 w-1.5 h-1.5 rounded-full bg-blue-500" />
                 )}
               </button>
             </div>
@@ -362,15 +362,15 @@ export function ChatSidebar({
         </div>
 
         {/* Sidebar Footer: Settings */}
-        <div className="h-12 border-t border-zinc-100 bg-white flex items-center shrink-0 overflow-hidden">
+        <div className="h-12 bg-transparent flex items-center shrink-0 overflow-hidden px-1.5">
           {onOpenSettings && (
             <button
               type="button"
               onClick={onOpenSettings}
-              className="w-full flex items-center h-10 hover:bg-zinc-100/70 transition-colors cursor-pointer text-zinc-700 hover:text-zinc-950 group relative"
+              className="w-full flex items-center h-9 hover:bg-zinc-200/40 rounded-xl transition-colors cursor-pointer text-zinc-700 hover:text-zinc-950 group relative"
               title="Settings & Model Configuration (⌘,)"
             >
-              <div className="w-14 h-10 flex items-center justify-center shrink-0">
+              <div className="w-12 h-9 flex items-center justify-center shrink-0">
                 <Settings className="w-4 h-4 text-zinc-500 group-hover:text-zinc-900 transition-colors shrink-0" />
               </div>
               <span
