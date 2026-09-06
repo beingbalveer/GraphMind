@@ -1,7 +1,7 @@
 import { ConversationTree } from "@graphmind/shared";
 import { Node, Edge, MarkerType } from "@xyflow/react";
 import { extractConversationThreads, ConversationThread } from "./threadUtils";
-import { ThreadNodeData, ZoomMode } from "@/components/canvas/ThreadGraphNode";
+import { ThreadNodeData, ThreadMasteryInfo, ZoomMode } from "@/components/canvas/ThreadGraphNode";
 
 export interface TreeToGraphOptions {
   activeNodeId?: string;
@@ -9,6 +9,8 @@ export interface TreeToGraphOptions {
   zoomMode?: ZoomMode;
   onSelectThread?: (threadId: string) => void;
   onDeleteThread?: (threadId: string) => void;
+  masteryMap?: Record<string, ThreadMasteryInfo>;
+  isHeatmapMode?: boolean;
 }
 
 /**
@@ -28,6 +30,8 @@ export function treeToGraph(
     zoomMode = "capsule",
     onSelectThread,
     onDeleteThread,
+    masteryMap,
+    isHeatmapMode = false,
   } = options || {};
 
   const { threads, edges: rawEdges } = extractConversationThreads(
@@ -89,6 +93,8 @@ export function treeToGraph(
         zoomMode,
         onSelectThread,
         onDeleteThread,
+        masteryInfo: masteryMap?.[thread.id],
+        isHeatmapMode,
       },
     });
   }

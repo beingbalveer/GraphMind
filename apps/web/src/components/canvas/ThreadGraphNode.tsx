@@ -12,14 +12,24 @@ import {
 import { ConversationThread } from "@/lib/threadUtils";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { ConceptMasteryLevel } from "@graphmind/shared";
 
 export type ZoomMode = "orb" | "capsule" | "detailed";
+
+export interface ThreadMasteryInfo {
+  level: ConceptMasteryLevel;
+  score: number;
+  primaryConcept?: string;
+  totalConcepts?: number;
+}
 
 export interface ThreadNodeData {
   thread: ConversationThread;
   zoomMode?: ZoomMode;
   onSelectThread?: (threadId: string) => void;
   onDeleteThread?: (threadId: string) => void;
+  masteryInfo?: ThreadMasteryInfo;
+  isHeatmapMode?: boolean;
   [key: string]: unknown;
 }
 
@@ -28,7 +38,7 @@ export const ThreadGraphNode = memo(function ThreadGraphNode({
   targetPosition = Position.Left,
   sourcePosition = Position.Right,
 }: NodeProps<Node<ThreadNodeData>>) {
-  const { thread, zoomMode = "capsule" } = data;
+  const { thread, zoomMode = "capsule", masteryInfo, isHeatmapMode = false } = data;
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const isRoot = !thread.parentThreadId;
@@ -66,6 +76,14 @@ export const ThreadGraphNode = memo(function ThreadGraphNode({
               ? "bg-zinc-900 text-white ring-4 ring-zinc-900/30 animate-pulse"
               : isActive
               ? "bg-zinc-950 text-white ring-4 ring-zinc-950/20 shadow-md"
+              : isHeatmapMode && masteryInfo
+              ? masteryInfo.level === "mastered"
+                ? "bg-emerald-600 text-white ring-4 ring-emerald-500/30 shadow-[0_0_12px_rgba(16,185,129,0.4)]"
+                : masteryInfo.level === "quizzed"
+                ? "bg-purple-600 text-white ring-4 ring-purple-500/30 shadow-[0_0_12px_rgba(168,85,247,0.4)]"
+                : masteryInfo.level === "stale"
+                ? "bg-amber-500 text-white ring-4 ring-amber-500/30 shadow-[0_0_12px_rgba(245,158,11,0.4)]"
+                : "bg-sky-500 text-white ring-4 ring-sky-500/30 shadow-[0_0_12px_rgba(14,165,233,0.4)]"
               : isRoot
               ? "bg-zinc-900 text-white border border-zinc-800"
               : "bg-white text-zinc-800 hover:bg-zinc-50 border border-zinc-300 shadow-2xs"
@@ -107,11 +125,41 @@ export const ThreadGraphNode = memo(function ThreadGraphNode({
           ? "bg-white border-zinc-900 ring-2 ring-zinc-900/20 shadow-md animate-pulse z-20"
           : isActive
           ? "bg-white border-zinc-950 ring-2 ring-zinc-950/15 shadow-md z-10"
+          : isHeatmapMode && masteryInfo
+          ? masteryInfo.level === "mastered"
+            ? "bg-white border-emerald-500 ring-1 ring-emerald-500/30 shadow-[0_0_16px_rgba(16,185,129,0.14)] text-zinc-950"
+            : masteryInfo.level === "quizzed"
+            ? "bg-white border-purple-500 ring-1 ring-purple-500/30 shadow-[0_0_16px_rgba(168,85,247,0.14)] text-zinc-950"
+            : masteryInfo.level === "stale"
+            ? "bg-white border-amber-400 ring-1 ring-amber-400/30 shadow-[0_0_16px_rgba(245,158,11,0.14)] text-zinc-950"
+            : "bg-white border-sky-400 ring-1 ring-sky-400/20 shadow-[0_0_16px_rgba(14,165,233,0.14)] text-zinc-950"
           : isRoot
           ? "bg-zinc-50/90 border-zinc-300 text-zinc-900 hover:border-zinc-400"
           : "bg-white border-zinc-200/90 text-zinc-900 hover:border-zinc-300 hover:shadow-xs"
       }`}
     >
+      {/* Heatmap Mastery Pill */}
+      {isHeatmapMode && masteryInfo && (
+        <div
+          className={`flex items-center justify-between px-2 py-0.5 mb-2 rounded-lg text-[10px] font-semibold border select-none ${
+            masteryInfo.level === "mastered"
+              ? "bg-emerald-50 text-emerald-800 border-emerald-200/80"
+              : masteryInfo.level === "quizzed"
+              ? "bg-purple-50 text-purple-800 border-purple-200/80"
+              : masteryInfo.level === "stale"
+              ? "bg-amber-50 text-amber-800 border-amber-200/80"
+              : "bg-sky-50 text-sky-800 border-sky-200/80"
+          }`}
+        >
+          <span className="truncate max-w-[140px]">
+            {masteryInfo.primaryConcept || masteryInfo.level.toUpperCase()}
+          </span>
+          <span className="font-mono ml-1">
+            {Math.round(masteryInfo.score * 100)}%
+          </span>
+        </div>
+      )}
+
       {!isRoot && (
         <Handle
           type="target"

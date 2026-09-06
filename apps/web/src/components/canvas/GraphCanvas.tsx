@@ -17,20 +17,24 @@ import {
 import {
   Maximize2,
   Crosshair,
-  Map,
+  Map as MapIcon,
   RotateCcw,
   Rows3,
   Columns3,
   Sparkles,
+  Flame,
 } from "lucide-react";
-import { ConversationTree } from "@graphmind/shared";
+import { ConceptMasteryLevel, ConversationTree, WorkspaceMasterySummary } from "@graphmind/shared";
 import { treeToGraph } from "@/lib/treeToGraph";
 import { getLayoutedElements, LayoutDirection } from "@/lib/layoutEngine";
-import { ThreadGraphNode, ThreadNodeData, ZoomMode } from "./ThreadGraphNode";
+import { extractConversationThreads } from "@/lib/threadUtils";
+import { getWorkspaceMastery } from "@/lib/workspaceApi";
+import { ThreadGraphNode, ThreadNodeData, ThreadMasteryInfo, ZoomMode } from "./ThreadGraphNode";
 import { MindMapEdge } from "./MindMapEdge";
 
 interface GraphCanvasProps {
   tree: ConversationTree | null;
+  workspaceId?: string;
   isStreaming?: boolean;
   onSelectNode: (nodeId: string) => void;
   onExploreBranch?: (nodeId: string, contextText?: string) => void;
@@ -54,6 +58,7 @@ const edgeTypes = {
 
 function FlowCanvas({
   tree,
+  workspaceId,
   isStreaming = false,
   onSelectNode,
   onDeleteBranch,
@@ -65,10 +70,113 @@ function FlowCanvas({
 }: GraphCanvasProps) {
   const [zoomMode, setZoomMode] = useState<ZoomMode>("capsule");
   const [direction, setDirection] = useState<LayoutDirection>("LR");
+  const [isHeatmapMode, setIsHeatmapMode] = useState(false);
+  const [masterySummary, setMasterySummary] = useState<WorkspaceMasterySummary | null>(null);
   const { fitView, setCenter, getNodes, getZoom, zoomTo } = useReactFlow();
   const { zoom } = useViewport();
   const [showMinimap, setShowMinimap] = useState(true);
   const isFirstRender = useRef(true);
+
+  // Load workspace mastery for the visual heatmap overlay
+  const fetchMastery = useCallback(async () => {
+    if (!workspaceId) return;
+    try {
+      const data = await getWorkspaceMastery(workspaceId);
+      setMasterySummary(data);
+    } catch (err) {
+      console.warn("Error fetching mastery for canvas heatmap:", err);
+    }
+  }, [workspaceId]);
+
+  useEffect(() => {
+    fetchMastery();
+
+    const handleUpdate = () => {
+      fetchMastery();
+    };
+
+    window.addEventListener("concept-mastery-updated", handleUpdate);
+    return () => {
+      window.removeEventListener("concept-mastery-updated", handleUpdate);
+    };
+  }, [fetchMastery]);
+
+  // Compute Thread to Concept Mastery map
+  const masteryMap = useMemo(() => {
+    if (!masterySummary || !tree) return {};
+
+    const nodeToConcepts = new Map<string, typeof masterySummary.concepts>();
+    for (const c of masterySummary.concepts) {
+      if (c.nodeIds) {
+        for (const nid of c.nodeIds) {
+          const list = nodeToConcepts.get(nid) || [];
+          list.push(c);
+          nodeToConcepts.set(nid, list);
+        }
+      }
+    }
+
+    const { threads } = extractConversationThreads(tree, tree.activeNodeId, isStreaming);
+    const map: Record<string, ThreadMasteryInfo> = {};
+
+    for (const thread of threads) {
+      const matchedConcepts: typeof masterySummary.concepts = [];
+      const seenConceptIds = new Set<string>();
+
+      for (const msg of thread.messages) {
+        const concepts = nodeToConcepts.get(msg.id);
+        if (concepts) {
+          for (const c of concepts) {
+            if (!seenConceptIds.has(c.id)) {
+              seenConceptIds.add(c.id);
+              matchedConcepts.push(c);
+            }
+          }
+        }
+      }
+
+      if (matchedConcepts.length === 0) {
+        for (const c of masterySummary.concepts) {
+          const cName = c.name.toLowerCase();
+          if (
+            (thread.highlightedContext && thread.highlightedContext.toLowerCase().includes(cName)) ||
+            thread.title.toLowerCase().includes(cName)
+          ) {
+            if (!seenConceptIds.has(c.id)) {
+              seenConceptIds.add(c.id);
+              matchedConcepts.push(c);
+            }
+          }
+        }
+      }
+
+      if (matchedConcepts.length > 0) {
+        const avgScore =
+          matchedConcepts.reduce((acc, c) => acc + c.confidenceScore, 0) /
+          matchedConcepts.length;
+
+        let level: ConceptMasteryLevel = "unexplored";
+        if (matchedConcepts.some((c) => c.masteryLevel === "mastered" || c.confidenceScore >= 0.8)) {
+          level = "mastered";
+        } else if (matchedConcepts.some((c) => c.masteryLevel === "quizzed" || c.confidenceScore >= 0.5)) {
+          level = "quizzed";
+        } else if (matchedConcepts.some((c) => c.masteryLevel === "stale")) {
+          level = "stale";
+        } else if (matchedConcepts.some((c) => c.masteryLevel === "explored" || c.confidenceScore > 0.0)) {
+          level = "explored";
+        }
+
+        map[thread.id] = {
+          level,
+          score: avgScore,
+          primaryConcept: matchedConcepts[0].name,
+          totalConcepts: matchedConcepts.length,
+        };
+      }
+    }
+
+    return map;
+  }, [masterySummary, tree, isStreaming]);
 
   // Update zoomMode based on zoom
   useEffect(() => {
@@ -84,26 +192,30 @@ function FlowCanvas({
       isStreaming,
       zoomMode,
       onDeleteThread: onDeleteBranch,
+      masteryMap,
+      isHeatmapMode,
     });
     const layouted = getLayoutedElements(raw.nodes, raw.edges, direction);
     return { initialNodes: layouted.nodes, initialEdges: layouted.edges };
-  }, [tree, isStreaming, zoomMode, direction, onDeleteBranch]);
+  }, [tree, isStreaming, zoomMode, direction, onDeleteBranch, masteryMap, isHeatmapMode]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<ThreadNodeData>>(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
-  // Synchronize graph nodes and edges whenever tree, zoomMode, or direction updates
+  // Synchronize graph nodes and edges whenever tree, zoomMode, direction, or heatmap updates
   useEffect(() => {
     const raw = treeToGraph(tree, {
       activeNodeId: tree?.activeNodeId,
       isStreaming,
       zoomMode,
       onDeleteThread: onDeleteBranch,
+      masteryMap,
+      isHeatmapMode,
     });
     const layouted = getLayoutedElements(raw.nodes, raw.edges, direction);
     setNodes(layouted.nodes);
     setEdges(layouted.edges);
-  }, [tree, isStreaming, zoomMode, direction, onDeleteBranch, setNodes, setEdges]);
+  }, [tree, isStreaming, zoomMode, direction, onDeleteBranch, masteryMap, isHeatmapMode, setNodes, setEdges]);
 
   // Center camera on a specific thread node
   const centerOnNode = useCallback(
@@ -135,12 +247,14 @@ function FlowCanvas({
       isStreaming,
       zoomMode,
       onDeleteThread: onDeleteBranch,
+      masteryMap,
+      isHeatmapMode,
     });
     const layouted = getLayoutedElements(raw.nodes, raw.edges, direction);
     setNodes(layouted.nodes);
     setEdges(layouted.edges);
     handleFitView();
-  }, [tree, isStreaming, zoomMode, direction, onDeleteBranch, handleFitView, setNodes, setEdges]);
+  }, [tree, isStreaming, zoomMode, direction, onDeleteBranch, masteryMap, isHeatmapMode, handleFitView, setNodes, setEdges]);
 
   const handleToggleDirection = useCallback(() => {
     const newDir = direction === "LR" ? "TB" : "LR";
@@ -288,9 +402,65 @@ function FlowCanvas({
           }`}
           title="Toggle Radar Minimap"
         >
-          <Map className="w-3.5 h-3.5 stroke-[1.75]" />
+          <MapIcon className="w-3.5 h-3.5 stroke-[1.75]" />
+        </button>
+        <div className="w-px h-4 bg-zinc-200/80 mx-0.5" />
+        <button
+          type="button"
+          onClick={() => setIsHeatmapMode((prev) => !prev)}
+          className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+            isHeatmapMode
+              ? "bg-purple-600 text-white shadow-xs"
+              : "text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100"
+          }`}
+          title="Toggle Concept Mastery Heatmap"
+        >
+          <Flame className="w-3.5 h-3.5 stroke-[2]" />
+          <span>Heatmap</span>
         </button>
       </div>
+
+      {/* Floating Heatmap Legend */}
+      {isHeatmapMode && (
+        <div className="absolute bottom-4 left-4 z-20 bg-white/95 backdrop-blur-xs border border-zinc-200/80 rounded-2xl p-3 shadow-md select-none text-[11px] animate-in fade-in slide-in-from-bottom-2 duration-150 space-y-2 max-w-[220px]">
+          <div className="flex items-center justify-between text-xs font-semibold text-zinc-900 pb-1 border-b border-zinc-100">
+            <span className="flex items-center space-x-1.5">
+              <Flame className="w-3.5 h-3.5 text-purple-600" />
+              <span>Mastery Heatmap</span>
+            </span>
+          </div>
+          <div className="space-y-1.5 text-zinc-700">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                <span>Mastered</span>
+              </div>
+              <span className="font-mono text-[10px] text-zinc-400">≥80%</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-1.5">
+                <span className="w-2 h-2 rounded-full bg-purple-500 shrink-0" />
+                <span>Quizzed</span>
+              </div>
+              <span className="font-mono text-[10px] text-zinc-400">50-79%</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-1.5">
+                <span className="w-2 h-2 rounded-full bg-sky-500 shrink-0" />
+                <span>Explored</span>
+              </div>
+              <span className="font-mono text-[10px] text-zinc-400">&gt;0%</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-1.5">
+                <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+                <span>Stale</span>
+              </div>
+              <span className="font-mono text-[10px] text-zinc-400">Needs Review</span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

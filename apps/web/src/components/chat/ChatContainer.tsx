@@ -1075,6 +1075,7 @@ export function ChatContainer({
             <div className="w-full h-full relative">
               <GraphCanvas
                 tree={tree}
+                workspaceId={currentWorkspace?.id}
                 isStreaming={isStreaming}
                 onSelectNode={handleSelectTreeNode}
                 onDeleteBranch={(nodeId) => currentWorkspace && deleteBranch(nodeId, currentWorkspace.id)}
