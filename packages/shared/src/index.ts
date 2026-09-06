@@ -213,4 +213,30 @@ export interface NextTopicsResponse {
   generatedAt: string;
 }
 
+export type TimelineEventType =
+  | 'node_created'
+  | 'branch_created'
+  | 'concept_explored'
+  | 'concept_mastered';
+
+export interface TimelineEvent {
+  id: string;
+  timestamp: string;
+  eventType: TimelineEventType;
+  title: string;
+  description?: string | null;
+  entityId: string;
+  isMilestone: boolean;
+  metadata?: Record<string, unknown>;
+}
+
+export interface WorkspaceTimelineResponse {
+  workspaceId: string;
+  startTime?: string | null;
+  endTime?: string | null;
+  totalEvents: number;
+  events: TimelineEvent[];
+  milestones: TimelineEvent[];
+}
+
 export * from './tree-utils';

@@ -11,6 +11,7 @@ export interface TreeToGraphOptions {
   onDeleteThread?: (threadId: string) => void;
   masteryMap?: Record<string, ThreadMasteryInfo>;
   isHeatmapMode?: boolean;
+  cutoffTimestamp?: string | null;
 }
 
 /**
@@ -32,10 +33,28 @@ export function treeToGraph(
     onDeleteThread,
     masteryMap,
     isHeatmapMode = false,
+    cutoffTimestamp = null,
   } = options || {};
 
+  // Filter tree nodes if cutoffTimestamp is specified for timeline replay
+  let effectiveTree = tree;
+  if (cutoffTimestamp && tree && tree.nodes) {
+    const cutoffTime = new Date(cutoffTimestamp).getTime();
+    const filteredNodes: typeof tree.nodes = {};
+    for (const [id, node] of Object.entries(tree.nodes)) {
+      const nodeTime = new Date(node.createdAt).getTime();
+      if (id === tree.rootNodeId || nodeTime <= cutoffTime) {
+        filteredNodes[id] = node;
+      }
+    }
+    effectiveTree = {
+      ...tree,
+      nodes: filteredNodes,
+    };
+  }
+
   const { threads, edges: rawEdges } = extractConversationThreads(
-    tree,
+    effectiveTree,
     activeNodeId,
     isStreaming
   );

@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Literal, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import Field
 from schemas.workspace import BaseSchema
@@ -112,3 +112,31 @@ class NextTopicsResponse(BaseSchema):
         description="Domains active in the learner's frontier",
     )
     generated_at: datetime = Field(..., description="Timestamp of recommendation generation")
+
+
+TimelineEventType = Literal[
+    "node_created",
+    "branch_created",
+    "concept_explored",
+    "concept_mastered",
+]
+
+
+class TimelineEvent(BaseSchema):
+    id: str = Field(..., description="Unique event identifier")
+    timestamp: datetime = Field(..., description="UTC timestamp of the event")
+    event_type: TimelineEventType = Field(..., description="Type of evolution event")
+    title: str = Field(..., description="Short summary title of the milestone or event")
+    description: Optional[str] = Field(default=None, description="Detailed context or snippet")
+    entity_id: str = Field(..., description="ID of the associated node or concept")
+    is_milestone: bool = Field(default=False, description="Flag indicating significant milestone")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Custom event metadata")
+
+
+class WorkspaceTimelineResponse(BaseSchema):
+    workspace_id: str = Field(..., description="Workspace identifier")
+    start_time: Optional[datetime] = Field(default=None, description="Timestamp of first event")
+    end_time: Optional[datetime] = Field(default=None, description="Timestamp of most recent event")
+    total_events: int = Field(default=0, description="Total count of historical events")
+    events: List[TimelineEvent] = Field(default_factory=list, description="Chronological event log")
+    milestones: List[TimelineEvent] = Field(default_factory=list, description="Extracted inflection milestones")

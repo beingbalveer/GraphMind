@@ -3,15 +3,17 @@ from datetime import datetime, timezone
 from typing import Dict, List, Optional, Set
 
 import structlog
-from models.workspace import ConceptModel, Workspace
+from models.workspace import ConceptModel, NodeModel, Workspace
 from schemas.curator import (
     GapAnalysisResponse,
     KnowledgeGap,
     KnowledgeGapSeverity,
     KnowledgeGapStatus,
     NextTopicsResponse,
+    TimelineEvent,
     TopicReadiness,
     TopicRecommendation,
+    WorkspaceTimelineResponse,
 )
 from schemas.mastery import ConceptCreate, ConceptResponse
 from services.mastery_service import DEFAULT_STALENESS_DAYS, MasteryService
@@ -763,4 +765,132 @@ class CuratorService:
             recommendations=top_recommendations,
             active_frontier_domains=sorted(list(active_domains)),
             generated_at=_utc_now(),
+        )
+
+    @classmethod
+    async def get_workspace_timeline(
+        cls,
+        db: AsyncSession,
+        workspace_id: str,
+    ) -> WorkspaceTimelineResponse:
+        """
+        Aggregates the chronological history of nodes, branches, and concept
+        mastery achievements for a workspace, extracting key inflection milestones.
+        """
+        # 1. Verify workspace exists
+        ws_stmt = select(Workspace).where(Workspace.id == workspace_id)
+        ws_res = await db.execute(ws_stmt)
+        if not ws_res.scalar_one_or_none():
+            raise ValueError(f"Workspace '{workspace_id}' not found")
+
+        # 2. Query all nodes ordered chronologically
+        nodes_stmt = (
+            select(NodeModel)
+            .where(NodeModel.workspace_id == workspace_id)
+            .order_by(NodeModel.created_at.asc())
+        )
+        nodes_res = await db.execute(nodes_stmt)
+        nodes = list(nodes_res.scalars().all())
+
+        # 3. Query all concepts ordered chronologically
+        concepts_stmt = (
+            select(ConceptModel)
+            .where(ConceptModel.workspace_id == workspace_id)
+            .order_by(ConceptModel.created_at.asc())
+        )
+        concepts_res = await db.execute(concepts_stmt)
+        concepts = list(concepts_res.scalars().all())
+
+        events: List[TimelineEvent] = []
+
+        # Count child occurrences to detect branch creation
+        parent_seen_children: Dict[str, int] = {}
+
+        for n in nodes:
+            is_root = n.parent_id is None
+            is_branch = False
+
+            if n.parent_id:
+                seen = parent_seen_children.get(n.parent_id, 0)
+                parent_seen_children[n.parent_id] = seen + 1
+                # If this parent already had at least 1 child, this new child represents a branch split!
+                if seen >= 1:
+                    is_branch = True
+
+            # Extract title snippet
+            raw_text = (n.content or "").strip()
+            first_line = raw_text.split("\n")[0] if raw_text else "Empty node"
+            title_snippet = first_line[:60] + ("..." if len(first_line) > 60 else "")
+
+            if is_root:
+                event_type = "node_created"
+                title = f"Workspace Initialized: {title_snippet}"
+                is_milestone = True
+            elif is_branch:
+                event_type = "branch_created"
+                title = f"New Branch Created: {title_snippet}"
+                is_milestone = True
+            else:
+                event_type = "node_created"
+                title = f"{n.role.capitalize()}: {title_snippet}"
+                is_milestone = False
+
+            events.append(
+                TimelineEvent(
+                    id=f"evt_node_{n.id}",
+                    timestamp=n.created_at,
+                    event_type=event_type,
+                    title=title,
+                    description=raw_text[:200] if len(raw_text) > 60 else None,
+                    entity_id=n.id,
+                    is_milestone=is_milestone,
+                    metadata={"role": n.role, "parent_id": n.parent_id},
+                )
+            )
+
+        # Concept events
+        for c in concepts:
+            # Concept Explored event
+            events.append(
+                TimelineEvent(
+                    id=f"evt_concept_exp_{c.id}",
+                    timestamp=c.created_at,
+                    event_type="concept_explored",
+                    title=f"Concept Explored: {c.name}",
+                    description=c.description,
+                    entity_id=c.id,
+                    is_milestone=False,
+                    metadata={"domain": (c.metadata_payload or {}).get("domain"), "mastery_level": c.mastery_level},
+                )
+            )
+
+            # If concept is mastered and was reviewed/tested
+            if (c.mastery_level == "mastered" or c.confidence_score >= 0.8) and c.last_reviewed_at:
+                events.append(
+                    TimelineEvent(
+                        id=f"evt_concept_mst_{c.id}",
+                        timestamp=c.last_reviewed_at,
+                        event_type="concept_mastered",
+                        title=f"Mastery Achieved: {c.name} ({round(c.confidence_score * 100)}%)",
+                        description="Demonstrated technical mastery through verified retention.",
+                        entity_id=c.id,
+                        is_milestone=True,
+                        metadata={"confidence_score": c.confidence_score, "times_quizzed": c.times_quizzed},
+                    )
+                )
+
+        # Sort all events chronologically
+        events.sort(key=lambda e: e.timestamp)
+
+        milestones = [e for e in events if e.is_milestone]
+        start_time = events[0].timestamp if events else None
+        end_time = events[-1].timestamp if events else None
+
+        return WorkspaceTimelineResponse(
+            workspace_id=workspace_id,
+            start_time=start_time,
+            end_time=end_time,
+            total_events=len(events),
+            events=events,
+            milestones=milestones,
         )

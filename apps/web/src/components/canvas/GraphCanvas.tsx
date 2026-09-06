@@ -23,14 +23,21 @@ import {
   Columns3,
   Sparkles,
   Flame,
+  History,
 } from "lucide-react";
-import { ConceptMasteryLevel, ConversationTree, WorkspaceMasterySummary } from "@graphmind/shared";
+import {
+  ConceptMasteryLevel,
+  ConversationTree,
+  WorkspaceMasterySummary,
+  WorkspaceTimelineResponse,
+} from "@graphmind/shared";
 import { treeToGraph } from "@/lib/treeToGraph";
 import { getLayoutedElements, LayoutDirection } from "@/lib/layoutEngine";
 import { extractConversationThreads } from "@/lib/threadUtils";
-import { getWorkspaceMastery } from "@/lib/workspaceApi";
+import { getWorkspaceMastery, getWorkspaceTimeline } from "@/lib/workspaceApi";
 import { ThreadGraphNode, ThreadNodeData, ThreadMasteryInfo, ZoomMode } from "./ThreadGraphNode";
 import { MindMapEdge } from "./MindMapEdge";
+import { TimelineReplayBar } from "./TimelineReplayBar";
 
 interface GraphCanvasProps {
   tree: ConversationTree | null;
@@ -100,6 +107,55 @@ function FlowCanvas({
       window.removeEventListener("concept-mastery-updated", handleUpdate);
     };
   }, [fetchMastery]);
+
+  // Timeline Replay State
+  const [isReplayMode, setIsReplayMode] = useState(false);
+  const [timeline, setTimeline] = useState<WorkspaceTimelineResponse | null>(null);
+  const [currentEventIndex, setCurrentEventIndex] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [playbackSpeed, setPlaybackSpeed] = useState(1);
+
+  const fetchTimeline = useCallback(async () => {
+    if (!workspaceId) return;
+    try {
+      const tl = await getWorkspaceTimeline(workspaceId);
+      setTimeline(tl);
+      if (tl && tl.events.length > 0) {
+        setCurrentEventIndex(tl.events.length - 1);
+      }
+    } catch (err) {
+      console.warn("Error fetching workspace timeline:", err);
+    }
+  }, [workspaceId]);
+
+  useEffect(() => {
+    if (isReplayMode) {
+      fetchTimeline();
+    } else {
+      setIsPlaying(false);
+    }
+  }, [isReplayMode, fetchTimeline]);
+
+  // Automated playback ticker
+  useEffect(() => {
+    if (!isPlaying || !timeline || timeline.events.length === 0) return;
+    const intervalMs = Math.max(250, Math.floor(1200 / playbackSpeed));
+    const timer = setInterval(() => {
+      setCurrentEventIndex((prev) => {
+        if (prev >= timeline.events.length - 1) {
+          setIsPlaying(false);
+          return prev;
+        }
+        return prev + 1;
+      });
+    }, intervalMs);
+    return () => clearInterval(timer);
+  }, [isPlaying, timeline, playbackSpeed]);
+
+  const cutoffTimestamp = useMemo(() => {
+    if (!isReplayMode || !timeline || !timeline.events[currentEventIndex]) return null;
+    return timeline.events[currentEventIndex].timestamp;
+  }, [isReplayMode, timeline, currentEventIndex]);
 
   // Compute Thread to Concept Mastery map
   const masteryMap = useMemo(() => {
@@ -194,15 +250,16 @@ function FlowCanvas({
       onDeleteThread: onDeleteBranch,
       masteryMap,
       isHeatmapMode,
+      cutoffTimestamp,
     });
     const layouted = getLayoutedElements(raw.nodes, raw.edges, direction);
     return { initialNodes: layouted.nodes, initialEdges: layouted.edges };
-  }, [tree, isStreaming, zoomMode, direction, onDeleteBranch, masteryMap, isHeatmapMode]);
+  }, [tree, isStreaming, zoomMode, direction, onDeleteBranch, masteryMap, isHeatmapMode, cutoffTimestamp]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<ThreadNodeData>>(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
-  // Synchronize graph nodes and edges whenever tree, zoomMode, direction, or heatmap updates
+  // Synchronize graph nodes and edges whenever tree, zoomMode, direction, heatmap, or cutoffTimestamp updates
   useEffect(() => {
     const raw = treeToGraph(tree, {
       activeNodeId: tree?.activeNodeId,
@@ -211,11 +268,12 @@ function FlowCanvas({
       onDeleteThread: onDeleteBranch,
       masteryMap,
       isHeatmapMode,
+      cutoffTimestamp,
     });
     const layouted = getLayoutedElements(raw.nodes, raw.edges, direction);
     setNodes(layouted.nodes);
     setEdges(layouted.edges);
-  }, [tree, isStreaming, zoomMode, direction, onDeleteBranch, masteryMap, isHeatmapMode, setNodes, setEdges]);
+  }, [tree, isStreaming, zoomMode, direction, onDeleteBranch, masteryMap, isHeatmapMode, cutoffTimestamp, setNodes, setEdges]);
 
   // Center camera on a specific thread node
   const centerOnNode = useCallback(
@@ -418,6 +476,22 @@ function FlowCanvas({
           <Flame className="w-3.5 h-3.5 stroke-[2]" />
           <span>Heatmap</span>
         </button>
+        <div className="w-px h-4 bg-zinc-200/80 mx-0.5" />
+        <button
+          type="button"
+          onClick={() => {
+            setIsReplayMode((prev) => !prev);
+          }}
+          className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+            isReplayMode
+              ? "bg-purple-600 text-white shadow-xs"
+              : "text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100"
+          }`}
+          title="Replay Knowledge Graph Evolution"
+        >
+          <History className="w-3.5 h-3.5 stroke-[2]" />
+          <span>Replay</span>
+        </button>
       </div>
 
       {/* Floating Heatmap Legend */}
@@ -460,6 +534,29 @@ function FlowCanvas({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Floating Timeline Replay Bar */}
+      {isReplayMode && (
+        <TimelineReplayBar
+          timeline={timeline}
+          currentEventIndex={currentEventIndex}
+          onSelectEventIndex={setCurrentEventIndex}
+          isPlaying={isPlaying}
+          onTogglePlay={() => setIsPlaying((prev) => !prev)}
+          playbackSpeed={playbackSpeed}
+          onSpeedChange={setPlaybackSpeed}
+          onClose={() => {
+            setIsReplayMode(false);
+            setIsPlaying(false);
+          }}
+          visibleNodeCount={initialNodes.length}
+          totalNodeCount={Object.keys(tree?.nodes || {}).length}
+          masteredConceptCount={
+            masterySummary?.concepts.filter((c) => c.masteryLevel === "mastered").length || 0
+          }
+          totalConceptCount={masterySummary?.totalConcepts || 0}
+        />
       )}
     </div>
   );

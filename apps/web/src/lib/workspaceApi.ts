@@ -8,6 +8,7 @@ import {
   NextTopicsResponse,
   TreeNode,
   WorkspaceMasterySummary,
+  WorkspaceTimelineResponse,
 } from "@graphmind/shared";
 
 const API_BASE_URL =
@@ -676,6 +677,21 @@ export async function getNextTopicRecommendations(
     return await res.json();
   } catch (err) {
     console.warn("Error fetching next topic recommendations:", err);
+    return null;
+  }
+}
+
+export async function getWorkspaceTimeline(
+  workspaceId: string
+): Promise<WorkspaceTimelineResponse | null> {
+  try {
+    const res = await fetch(
+      `${API_BASE_URL}/api/v1/workspaces/${workspaceId}/curator/timeline`
+    );
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (err) {
+    console.warn("Error fetching workspace timeline:", err);
     return null;
   }
 }
