@@ -4,6 +4,7 @@ import {
   ConceptUpdateInput,
   ConversationTree,
   FileAttachment,
+  GapAnalysisResponse,
   TreeNode,
   WorkspaceMasterySummary,
 } from "@graphmind/shared";
@@ -621,5 +622,43 @@ export async function getNodeConcepts(
   } catch (err) {
     console.warn("Error getting node concepts:", err);
     return [];
+  }
+}
+
+export async function getWorkspaceKnowledgeGaps(
+  workspaceId: string,
+  stalenessDays: number = 14
+): Promise<GapAnalysisResponse | null> {
+  try {
+    const res = await fetch(
+      `${API_BASE_URL}/api/v1/workspaces/${workspaceId}/curator/gaps?staleness_days=${stalenessDays}`
+    );
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (err) {
+    console.warn("Error fetching knowledge gaps:", err);
+    return null;
+  }
+}
+
+export async function adoptKnowledgeGap(
+  workspaceId: string,
+  gapId: string,
+  initialMasteryLevel: string = "unexplored"
+): Promise<Concept | null> {
+  try {
+    const res = await fetch(
+      `${API_BASE_URL}/api/v1/workspaces/${workspaceId}/curator/gaps/${encodeURIComponent(gapId)}/adopt`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ initialMasteryLevel }),
+      }
+    );
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (err) {
+    console.warn("Error adopting knowledge gap:", err);
+    return null;
   }
 }

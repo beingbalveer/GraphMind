@@ -1256,6 +1256,15 @@ export function ChatContainer({
                   `/quiz Test my retention and comprehension of "${conceptName}" with interactive questions.`
                 );
               }}
+              onExploreGap={(gap) => {
+                const deps =
+                  gap.dependentConcepts.length > 0
+                    ? ` as a prerequisite for ${gap.dependentConcepts.join(", ")}`
+                    : "";
+                handleSendMessage(
+                  `Explain "${gap.conceptName}"${deps}. Detail its core architecture, why it matters, and how it works in practice.`
+                );
+              }}
             />
           ) : undefined}
         </RightSidebar>

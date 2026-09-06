@@ -159,4 +159,33 @@ export interface ConceptUpdateInput {
   metadata?: Record<string, unknown>;
 }
 
+export type KnowledgeGapSeverity = 'high' | 'medium' | 'low';
+export type KnowledgeGapStatus =
+  | 'missing'
+  | 'unexplored'
+  | 'stale'
+  | 'weak_retention';
+
+export interface KnowledgeGap {
+  id: string;
+  conceptName: string;
+  domain: string;
+  severity: KnowledgeGapSeverity;
+  status: KnowledgeGapStatus;
+  dependentConcepts: string[];
+  rationale: string;
+  suggestedAction: string;
+  foundationalImportance: string;
+}
+
+export interface GapAnalysisResponse {
+  workspaceId: string;
+  analyzedAt: string;
+  totalGaps: number;
+  highSeverityCount: number;
+  mediumSeverityCount: number;
+  gaps: KnowledgeGap[];
+  exploredDomains: string[];
+}
+
 export * from './tree-utils';
