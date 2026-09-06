@@ -9,6 +9,9 @@ from schemas.curator import (
     KnowledgeGap,
     KnowledgeGapSeverity,
     KnowledgeGapStatus,
+    NextTopicsResponse,
+    TopicReadiness,
+    TopicRecommendation,
 )
 from schemas.mastery import ConceptCreate, ConceptResponse
 from services.mastery_service import DEFAULT_STALENESS_DAYS, MasteryService
@@ -561,3 +564,203 @@ class CuratorService:
         )
 
         return await MasteryService.create_or_get_concept(db, workspace_id=workspace_id, data=create_data)
+
+    @classmethod
+    async def recommend_next_topics(
+        cls,
+        db: AsyncSession,
+        workspace_id: str,
+        limit: int = 3,
+    ) -> NextTopicsResponse:
+        """
+        Forward frontier recommendation engine: analyzes completed and explored
+        concepts in the workspace, identifies downstream concepts whose prerequisites
+        have been satisfied, and suggests the top next topics to learn.
+        """
+        # Verify workspace exists
+        ws_stmt = select(Workspace).where(Workspace.id == workspace_id)
+        ws_res = await db.execute(ws_stmt)
+        if not ws_res.scalar_one_or_none():
+            raise ValueError(f"Workspace '{workspace_id}' not found")
+
+        # Load all concepts in workspace
+        concepts_stmt = select(ConceptModel).where(ConceptModel.workspace_id == workspace_id)
+        concepts_res = await db.execute(concepts_stmt)
+        workspace_concepts = list(concepts_res.scalars().all())
+
+        # Map domain concept IDs to user concept models
+        user_domain_concepts: Dict[str, ConceptModel] = {}
+        for c in workspace_concepts:
+            dc = cls.find_matching_domain_concept(c.name)
+            if dc:
+                existing = user_domain_concepts.get(dc.id)
+                if not existing or c.confidence_score > existing.confidence_score:
+                    user_domain_concepts[dc.id] = c
+
+        # Partition domain concepts by status
+        mastered_ids: Set[str] = set()
+        explored_ids: Set[str] = set()
+        weak_ids: Set[str] = set()
+        active_domains: Set[str] = set()
+
+        for dc_id, c in user_domain_concepts.items():
+            dc = cls._catalog_by_id.get(dc_id)
+            if dc:
+                active_domains.add(dc.domain)
+
+            if c.mastery_level == "mastered" or c.confidence_score >= 0.8:
+                mastered_ids.add(dc_id)
+            elif c.mastery_level in ("explored", "quizzed") and c.confidence_score >= 0.4:
+                explored_ids.add(dc_id)
+            else:
+                weak_ids.add(dc_id)
+
+        all_completed_ids = mastered_ids | explored_ids
+
+        # Build reverse downstream map: concept_id -> [downstream concepts that depend on it]
+        downstream_map: Dict[str, List[DomainConcept]] = {}
+        for dc in cls._catalog_by_id.values():
+            for p_id in dc.prerequisites:
+                downstream_map.setdefault(p_id, []).append(dc)
+
+        candidates: List[TopicRecommendation] = []
+
+        for dc in cls._catalog_by_id.values():
+            # Skip if already mastered
+            if dc.id in mastered_ids:
+                continue
+
+            user_concept = user_domain_concepts.get(dc.id)
+            if user_concept and (user_concept.mastery_level == "mastered" or user_concept.confidence_score >= 0.8):
+                continue
+
+            # Compute Prerequisite Satisfaction Score
+            unlocked_by: List[str] = []
+            if not dc.prerequisites:
+                # Root concept with no prerequisites
+                prereq_score = 0.85 if dc.domain in active_domains else 0.55
+            else:
+                weights: List[float] = []
+                for p_id in dc.prerequisites:
+                    prereq_dc = cls._catalog_by_id.get(p_id)
+                    p_name = prereq_dc.name if prereq_dc else p_id
+
+                    if p_id in mastered_ids:
+                        weights.append(1.0)
+                        unlocked_by.append(p_name)
+                    elif p_id in explored_ids:
+                        weights.append(0.7)
+                        unlocked_by.append(p_name)
+                    elif p_id in weak_ids:
+                        weights.append(0.25)
+                    else:
+                        weights.append(0.0)
+
+                prereq_score = sum(weights) / len(weights)
+
+            # Compute Domain Synergy Bonus
+            synergy_bonus = 0.0
+            if dc.domain in active_domains:
+                synergy_bonus += 0.15
+
+            # Cross-domain synergy: does this topic bridge multiple active domains?
+            prereq_domains = {
+                cls._catalog_by_id[p_id].domain
+                for p_id in dc.prerequisites
+                if p_id in cls._catalog_by_id
+            }
+            if len(prereq_domains) > 1 and prereq_domains.issubset(active_domains):
+                synergy_bonus += 0.15
+
+            composite_score = min(1.0, round(prereq_score * 0.75 + synergy_bonus * 0.25, 4))
+
+            # Determine Readiness State
+            if dc.prerequisites and all(p in mastered_ids for p in dc.prerequisites):
+                readiness: TopicReadiness = "ready_to_unlock"
+            elif composite_score >= 0.75 or (dc.prerequisites and all(p in all_completed_ids for p in dc.prerequisites)):
+                readiness = "ready_to_unlock"
+            elif composite_score >= 0.45 or len(unlocked_by) > 0:
+                readiness = "prerequisites_in_progress"
+            else:
+                readiness = "exploratory"
+
+            # Future Unlocks: What advanced concepts does mastering this unlock?
+            future_concepts = [
+                d.name
+                for d in downstream_map.get(dc.id, [])
+                if d.id not in mastered_ids and d.id != dc.id
+            ]
+            future_unlocks = future_concepts[:3]
+
+            # Generate pedagogical rationale
+            if unlocked_by:
+                unlocked_str = ", ".join(f"'{u}'" for u in unlocked_by)
+                if readiness == "ready_to_unlock":
+                    rationale = (
+                        f"Natural progression: Having completed {unlocked_str}, you are ready "
+                        f"to master {dc.name}. {dc.description}"
+                    )
+                else:
+                    rationale = (
+                        f"Advancement opportunity: Builds upon {unlocked_str}. "
+                        f"Mastering this bridges toward advanced applications. {dc.description}"
+                    )
+            else:
+                if dc.importance == "foundational":
+                    rationale = (
+                        f"Foundational gateway: Master {dc.name} to establish fundamental "
+                        f"competence in {dc.domain}. {dc.description}"
+                    )
+                else:
+                    rationale = (
+                        f"Core domain topic: Expands your capabilities in {dc.domain}. {dc.description}"
+                    )
+
+            suggested_prompt = (
+                f"Teach me about {dc.name} in {dc.domain}. "
+                f"Explain its architectural mental model, core APIs, and practical best practices."
+            )
+
+            candidates.append(
+                TopicRecommendation(
+                    id=dc.id,
+                    topic_name=dc.name,
+                    domain=dc.domain,
+                    readiness=readiness,
+                    readiness_score=composite_score,
+                    rationale=rationale,
+                    unlocked_by=unlocked_by,
+                    future_unlocks=future_unlocks,
+                    suggested_prompt=suggested_prompt,
+                    importance=dc.importance,
+                )
+            )
+
+        # Sort candidates
+        readiness_order = {"ready_to_unlock": 0, "prerequisites_in_progress": 1, "exploratory": 2}
+        importance_order = {"foundational": 0, "core": 1, "specialized": 2}
+
+        candidates.sort(
+            key=lambda c: (
+                readiness_order.get(c.readiness, 3),
+                -c.readiness_score,
+                -len(c.future_unlocks),
+                importance_order.get(c.importance, 3),
+                c.topic_name,
+            )
+        )
+
+        top_recommendations = candidates[:limit]
+
+        logger.info(
+            "Generated next topic recommendations",
+            workspace_id=workspace_id,
+            recommended_count=len(top_recommendations),
+        )
+
+        return NextTopicsResponse(
+            workspace_id=workspace_id,
+            recommendations=top_recommendations,
+            active_frontier_domains=sorted(list(active_domains)),
+            generated_at=_utc_now(),
+        )

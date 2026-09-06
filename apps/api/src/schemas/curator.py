@@ -60,3 +60,55 @@ class AdoptGapRequest(BaseSchema):
         default="unexplored",
         description="Initial mastery level when registering gap into workspace concepts",
     )
+
+
+TopicReadiness = Literal["ready_to_unlock", "prerequisites_in_progress", "exploratory"]
+
+
+class TopicRecommendation(BaseSchema):
+    id: str = Field(..., description="Canonical concept identifier in domain catalog")
+    topic_name: str = Field(..., description="Display name of the recommended topic")
+    domain: str = Field(..., description="Knowledge domain")
+    readiness: TopicReadiness = Field(
+        ...,
+        description="Readiness state: ready_to_unlock, prerequisites_in_progress, exploratory",
+    )
+    readiness_score: float = Field(
+        ...,
+        ge=0.0,
+        le=1.0,
+        description="Computed composite score based on prerequisite satisfaction and domain synergy",
+    )
+    rationale: str = Field(
+        ...,
+        description="Pedagogical rationale explaining why this is the optimal next learning step",
+    )
+    unlocked_by: List[str] = Field(
+        default_factory=list,
+        description="Prerequisites completed by the user that unlocked this recommendation",
+    )
+    future_unlocks: List[str] = Field(
+        default_factory=list,
+        description="Downstream advanced topics that mastering this topic will make accessible",
+    )
+    suggested_prompt: str = Field(
+        ...,
+        description="Actionable prompt to kick off exploring this topic in the conversation",
+    )
+    importance: str = Field(
+        default="core",
+        description="Concept importance: foundational, core, specialized",
+    )
+
+
+class NextTopicsResponse(BaseSchema):
+    workspace_id: str = Field(..., description="Workspace identifier")
+    recommendations: List[TopicRecommendation] = Field(
+        default_factory=list,
+        description="Top recommended topics sorted by priority",
+    )
+    active_frontier_domains: List[str] = Field(
+        default_factory=list,
+        description="Domains active in the learner's frontier",
+    )
+    generated_at: datetime = Field(..., description="Timestamp of recommendation generation")

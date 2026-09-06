@@ -1,6 +1,6 @@
 from database import get_db
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from schemas.curator import AdoptGapRequest, GapAnalysisResponse
+from schemas.curator import AdoptGapRequest, GapAnalysisResponse, NextTopicsResponse
 from schemas.mastery import ConceptResponse
 from services.curator_service import CuratorService
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -49,3 +49,23 @@ async def adopt_knowledge_gap(
         )
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.get("/next-topics", response_model=NextTopicsResponse)
+async def get_next_topic_recommendations(
+    workspace_id: str,
+    limit: int = Query(default=3, ge=1, le=10),
+    db: AsyncSession = Depends(get_db),
+) -> NextTopicsResponse:
+    """
+    Recommend the next best topics to learn based on the learner's completed prerequisites,
+    active domains, and cross-domain synergies.
+    """
+    try:
+        return await CuratorService.recommend_next_topics(
+            db,
+            workspace_id=workspace_id,
+            limit=limit,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))

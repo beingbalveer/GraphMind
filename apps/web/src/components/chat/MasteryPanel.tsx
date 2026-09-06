@@ -12,10 +12,18 @@ import {
   GitBranch,
   Compass,
   Plus,
+  Rocket,
 } from "lucide-react";
-import { GapAnalysisResponse, KnowledgeGap, WorkspaceMasterySummary } from "@graphmind/shared";
+import {
+  GapAnalysisResponse,
+  KnowledgeGap,
+  NextTopicsResponse,
+  TopicRecommendation,
+  WorkspaceMasterySummary,
+} from "@graphmind/shared";
 import {
   adoptKnowledgeGap,
+  getNextTopicRecommendations,
   getWorkspaceKnowledgeGaps,
   getWorkspaceMastery,
 } from "@/lib/workspaceApi";
@@ -24,15 +32,18 @@ interface MasteryPanelProps {
   workspaceId: string;
   onQuizConcept?: (conceptName: string) => void;
   onExploreGap?: (gap: KnowledgeGap) => void;
+  onStartTopic?: (topic: TopicRecommendation) => void;
 }
 
 export function MasteryPanel({
   workspaceId,
   onQuizConcept,
   onExploreGap,
+  onStartTopic,
 }: MasteryPanelProps) {
   const [summary, setSummary] = useState<WorkspaceMasterySummary | null>(null);
   const [gapAnalysis, setGapAnalysis] = useState<GapAnalysisResponse | null>(null);
+  const [nextTopics, setNextTopics] = useState<NextTopicsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [adoptingGapId, setAdoptingGapId] = useState<string | null>(null);
@@ -40,14 +51,16 @@ export function MasteryPanel({
   const loadSummary = useCallback(async () => {
     if (!workspaceId) return;
     try {
-      const [summaryData, gapsData] = await Promise.all([
+      const [summaryData, gapsData, topicsData] = await Promise.all([
         getWorkspaceMastery(workspaceId),
         getWorkspaceKnowledgeGaps(workspaceId),
+        getNextTopicRecommendations(workspaceId, 3),
       ]);
       setSummary(summaryData);
       setGapAnalysis(gapsData);
+      setNextTopics(topicsData);
     } catch (err) {
-      console.warn("Failed to load workspace mastery or knowledge gaps:", err);
+      console.warn("Failed to load workspace mastery or recommendations:", err);
     } finally {
       setLoading(false);
     }
@@ -258,6 +271,118 @@ export function MasteryPanel({
                           <Plus className="w-3 h-3" />
                         )}
                         <span>Track</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Next Best Topics (Forward Learning Frontier) */}
+      {nextTopics && nextTopics.recommendations.length > 0 && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between px-1">
+            <div className="flex items-center space-x-1.5">
+              <Rocket className="w-3.5 h-3.5 text-indigo-500" />
+              <h3 className="text-xs font-semibold text-zinc-900">
+                Next Best Topics
+              </h3>
+            </div>
+            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md border bg-indigo-50 text-indigo-700 border-indigo-200">
+              AI Curated
+            </span>
+          </div>
+
+          <div className="space-y-2">
+            {nextTopics.recommendations.map((rec) => {
+              const isReady = rec.readiness === "ready_to_unlock";
+              const isProgress = rec.readiness === "prerequisites_in_progress";
+
+              return (
+                <div
+                  key={rec.id}
+                  className={`p-3 rounded-xl border transition-all text-xs space-y-2 ${
+                    isReady
+                      ? "bg-emerald-50/40 border-emerald-200/80 hover:border-emerald-300"
+                      : isProgress
+                      ? "bg-indigo-50/40 border-indigo-200/80 hover:border-indigo-300"
+                      : "bg-zinc-50/60 border-zinc-200/80 hover:border-zinc-300"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 pr-1">
+                      <p className="font-semibold text-zinc-900 truncate">
+                        {rec.topicName}
+                      </p>
+                      <p className="text-[10px] text-zinc-500 font-medium">
+                        {rec.domain}
+                      </p>
+                    </div>
+                    <span
+                      className={`text-[9px] px-1.5 py-0.5 rounded font-medium shrink-0 uppercase tracking-wider border ${
+                        isReady
+                          ? "bg-emerald-100 text-emerald-800 border-emerald-200"
+                          : isProgress
+                          ? "bg-indigo-100 text-indigo-800 border-indigo-200"
+                          : "bg-zinc-100 text-zinc-700 border-zinc-200"
+                      }`}
+                    >
+                      {rec.readiness.replace(/_/g, " ")}
+                    </span>
+                  </div>
+
+                  <p className="text-[11px] text-zinc-600 leading-snug">
+                    {rec.rationale}
+                  </p>
+
+                  {rec.unlockedBy.length > 0 && (
+                    <div className="pt-0.5">
+                      <span className="text-[10px] font-medium text-zinc-400">
+                        Unlocked by:
+                      </span>
+                      <div className="flex flex-wrap gap-1 mt-0.5">
+                        {rec.unlockedBy.map((u, idx) => (
+                          <span
+                            key={idx}
+                            className="text-[10px] px-1.5 py-0.5 rounded bg-white/90 border border-zinc-200/80 text-zinc-700 font-medium"
+                          >
+                            {u}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {rec.futureUnlocks.length > 0 && (
+                    <div className="pt-0.5">
+                      <span className="text-[10px] font-medium text-purple-600">
+                        Unlocks next:
+                      </span>
+                      <div className="flex flex-wrap gap-1 mt-0.5">
+                        {rec.futureUnlocks.map((fu, idx) => (
+                          <span
+                            key={idx}
+                            className="text-[10px] px-1.5 py-0.5 rounded bg-purple-50/80 border border-purple-200/80 text-purple-800 font-medium"
+                          >
+                            {fu}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="pt-1">
+                    {onStartTopic && (
+                      <button
+                        type="button"
+                        onClick={() => onStartTopic(rec)}
+                        className="w-full flex items-center justify-center space-x-1.5 px-2.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-medium transition-colors cursor-pointer shadow-2xs"
+                      >
+                        <Rocket className="w-3 h-3 text-indigo-200" />
+                        <span>Start Learning Topic</span>
                       </button>
                     )}
                   </div>

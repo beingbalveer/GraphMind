@@ -5,6 +5,7 @@ import {
   ConversationTree,
   FileAttachment,
   GapAnalysisResponse,
+  NextTopicsResponse,
   TreeNode,
   WorkspaceMasterySummary,
 } from "@graphmind/shared";
@@ -659,6 +660,22 @@ export async function adoptKnowledgeGap(
     return await res.json();
   } catch (err) {
     console.warn("Error adopting knowledge gap:", err);
+    return null;
+  }
+}
+
+export async function getNextTopicRecommendations(
+  workspaceId: string,
+  limit: number = 3
+): Promise<NextTopicsResponse | null> {
+  try {
+    const res = await fetch(
+      `${API_BASE_URL}/api/v1/workspaces/${workspaceId}/curator/next-topics?limit=${limit}`
+    );
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (err) {
+    console.warn("Error fetching next topic recommendations:", err);
     return null;
   }
 }

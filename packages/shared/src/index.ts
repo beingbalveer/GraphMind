@@ -188,4 +188,29 @@ export interface GapAnalysisResponse {
   exploredDomains: string[];
 }
 
+export type TopicReadiness =
+  | 'ready_to_unlock'
+  | 'prerequisites_in_progress'
+  | 'exploratory';
+
+export interface TopicRecommendation {
+  id: string;
+  topicName: string;
+  domain: string;
+  readiness: TopicReadiness;
+  readinessScore: number;
+  rationale: string;
+  unlockedBy: string[];
+  futureUnlocks: string[];
+  suggestedPrompt: string;
+  importance: string;
+}
+
+export interface NextTopicsResponse {
+  workspaceId: string;
+  recommendations: TopicRecommendation[];
+  activeFrontierDomains: string[];
+  generatedAt: string;
+}
+
 export * from './tree-utils';

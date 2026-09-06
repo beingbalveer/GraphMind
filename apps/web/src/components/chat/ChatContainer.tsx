@@ -1265,6 +1265,9 @@ export function ChatContainer({
                   `Explain "${gap.conceptName}"${deps}. Detail its core architecture, why it matters, and how it works in practice.`
                 );
               }}
+              onStartTopic={(topic) => {
+                handleSendMessage(topic.suggestedPrompt);
+              }}
             />
           ) : undefined}
         </RightSidebar>
