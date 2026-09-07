@@ -12,8 +12,6 @@ import {
   Plus,
   FolderOpen,
   MessageSquare,
-  PanelLeft,
-  PanelLeftClose,
 } from "lucide-react";
 import { ChatItem } from "@/lib/workspaceApi";
 import { Button } from "@/components/ui/button";
@@ -173,36 +171,17 @@ export function ChatSidebar({
         } ${isResizing ? "transition-none" : "transition-[width,transform] duration-200 ease-in-out"}`}
       >
         {/* Top Header: Standardized to h-13 with border-b, matching Navbar exactly */}
-        <div className="h-13 px-3 flex items-center justify-between shrink-0 bg-white border-b border-zinc-200/80 overflow-hidden">
+        <div className="h-13 px-3 flex items-center shrink-0 bg-white border-b border-zinc-200/80 overflow-hidden">
           {isOpen ? (
-            <>
-              <div className="flex items-center space-x-2 min-w-0">
-                <LogoBadge size="sm" />
-                <span className="text-xs font-semibold text-zinc-900 truncate tracking-tight">
-                  GraphMind
-                </span>
-              </div>
-              <Button
-                variant="ghost"
-                size="iconSm"
-                onClick={onToggle}
-                className="h-8 w-8 text-zinc-400 hover:text-zinc-950 cursor-pointer shrink-0"
-                title="Collapse sidebar (⌘B)"
-              >
-                <PanelLeftClose className="w-4 h-4" />
-              </Button>
-            </>
+            <div className="flex items-center space-x-2 min-w-0">
+              <LogoBadge size="sm" />
+              <span className="text-xs font-semibold text-zinc-900 truncate tracking-tight">
+                GraphMind
+              </span>
+            </div>
           ) : (
             <div className="w-full flex items-center justify-center">
-              <Button
-                variant="ghost"
-                size="iconSm"
-                onClick={onToggle}
-                className="h-8 w-8 text-zinc-500 hover:text-zinc-950 cursor-pointer"
-                title="Expand sidebar (⌘B)"
-              >
-                <PanelLeft className="w-4 h-4" />
-              </Button>
+              <LogoBadge size="sm" />
             </div>
           )}
         </div>

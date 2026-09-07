@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { PanelRightClose, Sparkles, StickyNote } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Sparkles, StickyNote } from "lucide-react";
 import { safeGetItem, safeSetItem } from "@/lib/storage";
 
 interface RightSidebarProps {
@@ -12,9 +11,9 @@ interface RightSidebarProps {
   children?: React.ReactNode;
 }
 
-const DEFAULT_WIDTH = 280;
-const MIN_WIDTH = 200;
-const MAX_WIDTH = 520;
+const DEFAULT_WIDTH = 340;
+const MIN_WIDTH = 280;
+const MAX_WIDTH = 560;
 
 export function RightSidebar({
   isOpen,
@@ -101,27 +100,17 @@ export function RightSidebar({
         )}
 
         {/* Top Header: Standardized to h-13 with border-b, matching Navbar exactly */}
-        <div className="h-13 px-3.5 sm:px-4 flex items-center justify-between shrink-0 bg-white border-b border-zinc-200/80 overflow-hidden">
+        <div className="h-13 px-4 flex items-center shrink-0 bg-white border-b border-zinc-200/80 overflow-hidden">
           <div className="flex items-center space-x-2 min-w-0">
             <Sparkles className="w-4 h-4 text-zinc-700 shrink-0" />
-            <h2 className="text-xs font-semibold text-zinc-900 truncate tracking-tight">
+            <h2 className="text-sm font-semibold text-zinc-900 truncate tracking-tight">
               {title}
             </h2>
           </div>
-
-          <Button
-            variant="ghost"
-            size="iconSm"
-            onClick={onToggle}
-            className="h-8 w-8 text-zinc-400 hover:text-zinc-950 cursor-pointer shrink-0"
-            title="Collapse panel"
-          >
-            <PanelRightClose className="w-4 h-4" />
-          </Button>
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 overflow-y-auto p-3.5 sm:p-4 flex flex-col min-w-0 bg-[#F8F9FA]">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-5 flex flex-col min-w-0 bg-[#F8F9FA]">
           {children ? (
             children
           ) : (
