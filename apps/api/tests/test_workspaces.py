@@ -129,3 +129,37 @@ async def test_workspace_crud_lifecycle() -> None:
         # 10. Verify 404 after deletion
         get_404 = await client.get(f"/api/v1/workspaces/{ws_id}")
         assert get_404.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_seed_demo_workspace_with_multi_agent_concepts() -> None:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        seed_resp = await client.post("/api/v1/workspaces/seed")
+        assert seed_resp.status_code == 201
+        data = seed_resp.json()
+        assert "workspaceId" in data
+        assert "initialChatId" in data
+        ws_id = data["workspaceId"]
+
+        # Verify graph nodes and edges
+        graph_resp = await client.get(f"/api/v1/workspaces/{ws_id}/graph")
+        assert graph_resp.status_code == 200
+        graph = graph_resp.json()
+        assert len(graph["nodes"]) >= 8
+        assert len(graph["edges"]) >= 7
+
+        # Verify multi-agent skills metadata
+        skills = [n.get("metadata", {}).get("skill") for n in graph["nodes"]]
+        assert "code_architect" in skills
+        assert "deep_research" in skills
+        assert "quiz_master" in skills
+
+        # Verify pre-populated concepts & mastery summary
+        mastery_resp = await client.get(f"/api/v1/workspaces/{ws_id}/mastery")
+        assert mastery_resp.status_code == 200
+        mastery = mastery_resp.json()
+        assert mastery["totalConcepts"] >= 6
+        assert mastery["distribution"]["mastered"] >= 2
+        assert mastery["distribution"]["quizzed"] >= 1
+        assert mastery["distribution"]["explored"] >= 2
+

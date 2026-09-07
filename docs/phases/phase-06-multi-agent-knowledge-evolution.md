@@ -63,7 +63,7 @@ Phase 6 introduces GraphMind's pinnacle differentiator: **Knowledge Evolution**.
 *Estimated Time: 4 – 5 Days*
 
 - [x] **Task 6.5.1 — Performance Profiling & Optimization**: Ensure graph rendering, vector search, and agent runs remain fast on large workspaces ($500+$ nodes).
-- [ ] **Task 6.5.2 — Contributor Documentation & Video Walkthrough**: Complete `CONTRIBUTING.md`, architecture diagrams, and interactive demo workspace.
+- [x] **Task 6.5.2 — Contributor Documentation & Video Walkthrough**: Complete `CONTRIBUTING.md`, architecture diagrams, and interactive demo workspace.
 - [ ] **Task 6.5.3 — Release v1.0 Packaging**: Docker self-hosting verification, semantic version tagging, and GitHub release notes.
 
 ---
