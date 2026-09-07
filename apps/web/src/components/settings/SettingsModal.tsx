@@ -16,6 +16,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Modal } from "@/components/ui/modal";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { SegmentedTabs } from "@/components/ui/segmented-tabs";
@@ -217,8 +218,12 @@ export function SettingsModal({
 
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-zinc-950/30 backdrop-blur-xs animate-in fade-in duration-150">
-      <div className="relative w-full max-w-4xl h-[600px] bg-white rounded-2xl border border-zinc-200/90 shadow-2xl overflow-hidden flex flex-col sm:flex-row animate-in zoom-in-95 duration-150">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      size="4xl"
+      className="h-[600px] flex-col sm:flex-row"
+    >
         {/* Left Sidebar Navigation */}
         <aside className="w-full sm:w-56 bg-zinc-50/80 border-r border-zinc-200/70 flex flex-col shrink-0 p-3 select-none">
           <div className="px-3 py-2.5 mb-1">
@@ -230,7 +235,7 @@ export function SettingsModal({
           <div className="flex-1 overflow-y-auto space-y-4 pr-1">
             {navSections.map((sec) => (
               <div key={sec.title} className="space-y-1">
-                <span className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider px-3">
+                <span className="text-2xs font-semibold text-zinc-400 uppercase tracking-wider px-3">
                   {sec.title}
                 </span>
                 <div className="space-y-0.5 mt-1">
@@ -257,7 +262,7 @@ export function SettingsModal({
                           <span className="truncate">{item.label}</span>
                         </div>
                         {item.badge && (
-                          <span className="text-[9.5px] font-medium text-amber-700 bg-amber-50 border border-amber-200/60 px-1.5 py-0.2 rounded-md shrink-0">
+                          <span className="text-2xs font-medium text-amber-700 bg-amber-50 border border-amber-200/60 px-1.5 py-0.2 rounded-md shrink-0">
                             {item.badge}
                           </span>
                         )}
@@ -271,7 +276,7 @@ export function SettingsModal({
 
 
           {/* Footer User / Version Badge */}
-          <div className="pt-2 border-t border-zinc-200/60 px-3 py-1 flex items-center justify-between text-[11px] text-zinc-400">
+          <div className="pt-2 border-t border-zinc-200/60 px-3 py-1 flex items-center justify-between text-2xs text-zinc-400">
             <span>GraphMind v0.1.0</span>
             <span className="font-mono">Web</span>
           </div>
@@ -347,7 +352,7 @@ export function SettingsModal({
                         value={geminiApiKey}
                         onChange={(e) => setGeminiApiKey(e.target.value)}
                         placeholder="AIzaSy... (uses server key by default)"
-                        className="font-mono text-[11px]"
+                        className="font-mono text-2xs"
                         endIcon={
                           <button
                             type="button"
@@ -371,7 +376,7 @@ export function SettingsModal({
                         value={openaiApiKey}
                         onChange={(e) => setOpenaiApiKey(e.target.value)}
                         placeholder="sk-proj-..."
-                        className="font-mono text-[11px]"
+                        className="font-mono text-2xs"
                         endIcon={
                           <button
                             type="button"
@@ -395,7 +400,7 @@ export function SettingsModal({
                         value={anthropicApiKey}
                         onChange={(e) => setAnthropicApiKey(e.target.value)}
                         placeholder="sk-ant-api03-..."
-                        className="font-mono text-[11px]"
+                        className="font-mono text-2xs"
                         endIcon={
                           <button
                             type="button"
@@ -419,7 +424,7 @@ export function SettingsModal({
                         value={deepseekApiKey}
                         onChange={(e) => setDeepseekApiKey(e.target.value)}
                         placeholder="sk-..."
-                        className="font-mono text-[11px]"
+                        className="font-mono text-2xs"
                         endIcon={
                           <button
                             type="button"
@@ -443,7 +448,7 @@ export function SettingsModal({
                         value={ollamaBaseUrl}
                         onChange={(e) => setOllamaBaseUrl(e.target.value)}
                         placeholder="http://localhost:11434/v1"
-                        className="font-mono text-[11px]"
+                        className="font-mono text-2xs"
                       />
                     </SettingRow>
                   )}
@@ -492,7 +497,7 @@ export function SettingsModal({
                             value={selectedModel}
                             onChange={(e) => setSelectedModel(e.target.value)}
                             placeholder="Or enter custom tag (e.g. deepseek-r1:14b)"
-                            className="font-mono text-[11px]"
+                            className="font-mono text-2xs"
                           />
                         </div>
                       )}
@@ -628,7 +633,7 @@ export function SettingsModal({
                     label="Database Persistence"
                     description="Conversations and branch nodes are saved in PostgreSQL."
                   >
-                    <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                    <span className="text-2xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
                       Connected
                     </span>
                   </SettingRow>
@@ -712,7 +717,6 @@ export function SettingsModal({
             </div>
           </div>
         </main>
-      </div>
-    </div>
+    </Modal>
   );
 }

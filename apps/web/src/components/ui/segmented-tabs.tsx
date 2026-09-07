@@ -36,7 +36,7 @@ export function SegmentedTabs<T extends string = string>({
             key={item.id}
             type="button"
             onClick={() => onChange(item.id)}
-            className={`flex items-center justify-center space-x-1.5 rounded-lg font-medium transition-all cursor-pointer ${
+            className={`flex items-center justify-center gap-1.5 rounded-lg font-medium transition-all cursor-pointer ${
               size === "sm" ? "px-2.5 py-1 text-xs" : "px-3 py-1.5 text-xs"
             } ${
               isSelected
@@ -54,7 +54,7 @@ export function SegmentedTabs<T extends string = string>({
             <span>{item.label}</span>
             {item.badge && (
               <span
-                className={`ml-1 text-[10px] px-1 py-0.2 rounded-md ${
+                className={`ml-1 text-2xs px-1 py-0.5 rounded-md ${
                   isSelected
                     ? "bg-blue-100/80 text-blue-700 font-semibold"
                     : "bg-zinc-200/80 text-zinc-600"

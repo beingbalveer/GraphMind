@@ -41,7 +41,9 @@ export function CustomBranchEdge({
     borderRadius: 16,
   });
 
-  const strokeColor = isActive ? "#18181b" : "#d4d4d8";
+  const strokeColor = isActive
+    ? "var(--canvas-edge-active, #18181b)"
+    : "var(--canvas-edge, #d4d4d8)";
   const strokeWidth = isActive ? 2 : 1.5;
 
   return (
@@ -69,7 +71,7 @@ export function CustomBranchEdge({
               transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
               pointerEvents: "all",
             }}
-            className="nodrag nopan flex items-center space-x-1 px-2 py-0.5 rounded-full bg-white/95 border border-zinc-200 shadow-2xs text-[10px] text-zinc-600 font-medium max-w-[130px] truncate select-none hover:border-zinc-400 transition-colors"
+            className="nodrag nopan flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/95 border border-zinc-200 shadow-xs text-2xs text-zinc-600 font-medium max-w-[130px] truncate select-none hover:border-zinc-400 transition-colors"
             title={`Branched from excerpt: "${highlightedContext}"`}
           >
             <GitBranch className="w-2.5 h-2.5 text-zinc-400 shrink-0" />

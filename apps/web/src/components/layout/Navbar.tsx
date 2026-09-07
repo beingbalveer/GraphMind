@@ -54,7 +54,7 @@ export function Navbar({
   return (
     <header className="h-13 bg-white px-3 sm:px-5 flex items-center justify-between z-30 shrink-0 select-none border-b border-zinc-200/80">
       {/* Top Left: Sidebar Toggle + Workspace Switcher */}
-      <div className="flex items-center space-x-2 shrink-0">
+      <div className="flex items-center gap-2 shrink-0">
         {onToggleSidebar && (
           <Button
             variant="ghost"
@@ -62,6 +62,7 @@ export function Navbar({
             onClick={onToggleSidebar}
             className="h-8 w-8 text-zinc-600 hover:text-zinc-950 cursor-pointer -ml-1"
             title="Toggle sidebar (⌘B)"
+            aria-label="Toggle sidebar"
           >
             <PanelLeft className="w-4 h-4" />
           </Button>
@@ -71,8 +72,9 @@ export function Navbar({
           <button
             type="button"
             onClick={onOpenWorkspaceModal}
-            className="flex items-center space-x-1.5 px-2 py-1 rounded-xl hover:bg-zinc-100 text-zinc-900 text-xs font-semibold max-w-[200px] sm:max-w-[240px] truncate transition-colors cursor-pointer group"
+            className="flex items-center gap-1.5 px-2 py-1 rounded-xl hover:bg-zinc-100 text-zinc-900 text-xs font-semibold max-w-[200px] sm:max-w-[240px] truncate transition-colors cursor-pointer group"
             title="Click to switch or manage workspaces"
+            aria-label="Switch or manage workspaces"
           >
             <LogoBadge size="sm" />
             <span className="truncate">{workspaceName}</span>
@@ -81,10 +83,10 @@ export function Navbar({
         ) : (
           <Link
             href="/"
-            className="flex items-center space-x-1.5 hover:opacity-80 transition-opacity"
+            className="flex items-center gap-1.5 hover:opacity-80 transition-opacity"
           >
             <LogoBadge size="sm" />
-            <span className="font-semibold text-zinc-950 text-[13.5px] tracking-tight hidden sm:inline">
+            <span className="font-semibold text-zinc-950 text-sm tracking-tight hidden sm:inline">
               {workspaceName}
             </span>
           </Link>
@@ -96,18 +98,17 @@ export function Navbar({
         {breadcrumbs}
       </div>
 
-
       {/* Right: View Mode Toggle */}
-      <div className="flex items-center space-x-2 shrink-0">
+      <div className="flex items-center gap-2 shrink-0">
         {/* Toggle Mode Pill Button */}
         {onViewModeChange && (
-          <div className="flex items-center p-1 bg-zinc-100/70 rounded-2xl space-x-0.5">
+          <div className="flex items-center p-1 bg-zinc-100/70 rounded-2xl gap-0.5">
             <button
               type="button"
               onClick={() => onViewModeChange("chat")}
-              className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-xl text-[13px] transition-all cursor-pointer ${
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
                 viewMode === "chat"
-                  ? "bg-white text-zinc-950 font-medium shadow-2xs"
+                  ? "bg-white text-zinc-950 font-medium shadow-xs"
                   : "text-zinc-600 hover:text-zinc-950 hover:bg-white/50 font-normal"
               }`}
             >
@@ -117,9 +118,9 @@ export function Navbar({
             <button
               type="button"
               onClick={() => onViewModeChange("canvas")}
-              className={`flex items-center space-x-2 px-3.5 py-1.5 rounded-xl text-[13px] transition-all cursor-pointer ${
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
                 viewMode === "canvas"
-                  ? "bg-white text-zinc-950 font-medium shadow-2xs"
+                  ? "bg-white text-zinc-950 font-medium shadow-xs"
                   : "text-zinc-600 hover:text-zinc-950 hover:bg-white/50 font-normal"
               }`}
             >
@@ -141,6 +142,7 @@ export function Navbar({
                 : "text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100"
             }`}
             title="Toggle right panel"
+            aria-label="Toggle right panel"
           >
             <PanelRight className="w-4 h-4 stroke-[1.75]" />
           </Button>

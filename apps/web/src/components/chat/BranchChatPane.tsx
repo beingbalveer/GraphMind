@@ -366,7 +366,7 @@ export function BranchChatPane({
               <div
                 key={tab.id}
                 onClick={() => !isRenaming && handleSelectTab(tab.leafId)}
-                className={`group relative flex items-center space-x-1.5 px-3 pb-2 pt-1.5 text-[13px] font-medium transition-colors cursor-pointer select-none shrink-0 border-b-2 -mb-px ${
+                className={`group relative flex items-center space-x-1.5 px-3 pb-2 pt-1.5 text-xs font-medium transition-colors cursor-pointer select-none shrink-0 border-b-2 -mb-px ${
                   isActive
                     ? "border-zinc-950 text-zinc-950 font-semibold"
                     : "border-transparent text-zinc-500 hover:text-zinc-900 hover:border-zinc-300"
@@ -454,7 +454,7 @@ export function BranchChatPane({
           <button
             type="button"
             onClick={handleStartNewTab}
-            className={`flex items-center justify-center px-2 pb-2.5 pt-1 text-[13px] font-medium transition-colors cursor-pointer select-none shrink-0 border-b-2 -mb-px ${
+            className={`flex items-center justify-center px-2 pb-2.5 pt-1 text-xs font-medium transition-colors cursor-pointer select-none shrink-0 border-b-2 -mb-px ${
               isDraftingNewTab
                 ? "border-zinc-950 text-zinc-950 font-semibold"
                 : "border-transparent text-zinc-400 hover:text-zinc-900 hover:border-zinc-300"
@@ -493,7 +493,7 @@ export function BranchChatPane({
                 <h3 className="text-sm font-semibold text-zinc-900">
                   Explorations for &ldquo;{displayContext}&rdquo;
                 </h3>
-                <span className="text-[11px] text-zinc-400 font-medium">Quick Starters</span>
+                <span className="text-2xs text-zinc-400 font-medium">Quick Starters</span>
               </div>
 
               {/* 2-Column Template Grid */}
@@ -515,7 +515,7 @@ export function BranchChatPane({
                         <div className="text-xs font-semibold text-zinc-900 group-hover:text-zinc-950">
                           {tpl.title}
                         </div>
-                        <p className="text-[11px] text-zinc-500 leading-snug mt-0.5">
+                        <p className="text-2xs text-zinc-500 leading-snug mt-0.5">
                           {tpl.desc}
                         </p>
                       </div>

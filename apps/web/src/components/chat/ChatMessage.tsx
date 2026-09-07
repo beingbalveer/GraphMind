@@ -132,7 +132,7 @@ function CodeBlock({ children, className, workspaceId, ...props }: any) {
   if (!language && !className?.includes("hljs")) {
     return (
       <code
-        className="px-1.5 py-0.5 rounded-md bg-zinc-100 border border-zinc-200/80 text-zinc-900 font-mono text-[13.5px] font-medium"
+        className="px-1.5 py-0.5 rounded-md bg-zinc-100 border border-zinc-200/80 text-zinc-900 font-mono text-xs font-medium"
         {...props}
       >
         {children}
@@ -141,8 +141,8 @@ function CodeBlock({ children, className, workspaceId, ...props }: any) {
   }
 
   return (
-    <div className="my-5 rounded-xl overflow-hidden border border-zinc-800 bg-[#1e2227] text-zinc-100 font-mono text-[13px] leading-relaxed shadow-xs group/code">
-      <div className="px-4 py-2 bg-[#181b1f] border-b border-zinc-800/80 text-[11.5px] text-zinc-400 font-medium flex items-center justify-between select-none">
+    <div className="my-5 rounded-xl overflow-hidden border border-zinc-800 bg-code-bg text-zinc-100 font-mono text-xs leading-relaxed shadow-xs group/code">
+      <div className="px-4 py-2 bg-code-header-bg border-b border-zinc-800/80 text-xs text-zinc-400 font-medium flex items-center justify-between select-none">
         <span className="lowercase font-mono text-zinc-400">{language || "code"}</span>
         <CopyButton
           text={rawCode}
@@ -437,7 +437,7 @@ export function ChatMessage({
                   }
                 }}
                 rows={2}
-                className="w-full text-[14.5px] text-zinc-900 leading-relaxed outline-none resize-none bg-transparent"
+                className="w-full text-sm text-zinc-900 leading-relaxed outline-none resize-none bg-transparent"
                 placeholder="Edit your message..."
               />
               <div className="flex items-center justify-end space-x-2 pt-1.5 border-t border-zinc-100">
@@ -496,9 +496,9 @@ export function ChatMessage({
           )}
 
           {/* Bubble */}
-          <div className="max-w-2xl rounded-2xl bg-[#F4F4F6] text-zinc-900 px-4.5 py-3 border-0 shadow-2xs">
+          <div className="max-w-2xl rounded-2xl bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 px-4.5 py-3 border-0 shadow-2xs">
             {message.highlightedContext && (
-              <div className="text-[11px] font-medium text-emerald-800 bg-emerald-50 border border-emerald-200/80 rounded-md px-2 py-0.5 mb-2 inline-flex items-center space-x-1.5 shadow-2xs">
+              <div className="text-2xs font-medium text-emerald-800 bg-emerald-50 border border-emerald-200/80 rounded-md px-2 py-0.5 mb-2 inline-flex items-center gap-1.5 shadow-2xs">
                 <GitBranch className="w-3 h-3 text-emerald-600 shrink-0" />
                 <span className="truncate">Sub-topic: &ldquo;{message.highlightedContext}&rdquo;</span>
               </div>
@@ -577,7 +577,7 @@ export function ChatMessage({
                             <span className="text-xs font-semibold text-zinc-900 truncate">
                               {att.name}
                             </span>
-                            <span className="text-[10px] text-red-600/80 font-medium">
+                            <span className="text-2xs text-red-600/80 font-medium">
                               PDF Document · Click to view
                             </span>
                           </div>
@@ -606,7 +606,7 @@ export function ChatMessage({
                               <span className="text-xs font-semibold text-zinc-900 truncate font-mono">
                                 {att.name}
                               </span>
-                              <span className="text-[10px] text-emerald-700/90 font-medium">
+                              <span className="text-2xs text-emerald-700/90 font-medium">
                                 {ext} {rowCount !== undefined ? `· ${rowCount.toLocaleString()} rows` : "· Click to explore"}
                               </span>
                             </div>
@@ -663,7 +663,7 @@ export function ChatMessage({
                                 {att.name}
                               </span>
                               <span
-                                className={`text-[10px] font-mono ${
+                                className={`text-2xs font-mono ${
                                   isMd
                                     ? "text-blue-600/80 font-medium"
                                     : "text-zinc-400"
@@ -681,7 +681,7 @@ export function ChatMessage({
               );
             })()}
 
-            <div className="text-[14.5px] leading-relaxed select-text font-normal whitespace-pre-wrap">
+            <div className="text-sm leading-relaxed select-text font-normal whitespace-pre-wrap">
               {message.content}
             </div>
           </div>
@@ -787,8 +787,8 @@ export function ChatMessage({
 
       <div className="max-w-3xl mx-auto flex space-x-3.5">
         {/* Assistant Avatar */}
-        <div className="w-7 h-7 rounded-full bg-[#F4F4F6] flex items-center justify-center shrink-0 mt-0.5 text-zinc-800 shadow-2xs">
-          <Sparkles className="w-3.5 h-3.5 text-zinc-700" />
+        <div className="w-7 h-7 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center shrink-0 mt-0.5 text-zinc-800 dark:text-zinc-200 shadow-2xs">
+          <Sparkles className="w-3.5 h-3.5 text-zinc-700 dark:text-zinc-300" />
         </div>
 
         {/* Message Content Container */}
@@ -809,7 +809,7 @@ export function ChatMessage({
               <div className="flex items-center space-x-1.5 text-xs font-semibold text-blue-900">
                 <Sparkles className="w-3.5 h-3.5 text-blue-600" />
                 <span>Verified Sources</span>
-                <span className="px-1.5 py-0.2 rounded-full bg-blue-100/90 text-[10px] font-bold text-blue-800">
+                <span className="px-1.5 py-0.2 rounded-full bg-blue-100/90 text-2xs font-bold text-blue-800">
                   {(message.metadata?.ragSources as RagSourceItem[]).length}
                 </span>
               </div>
@@ -843,7 +843,7 @@ export function ChatMessage({
                         {src.filename}
                       </span>
                       {src.page_number && (
-                        <span className="px-1 py-0.2 rounded text-[10px] bg-blue-50 text-blue-700 font-mono font-semibold">
+                        <span className="px-1 py-0.2 rounded text-2xs bg-blue-50 text-blue-700 font-mono font-semibold">
                           p. {src.page_number}
                         </span>
                       )}
@@ -857,7 +857,7 @@ export function ChatMessage({
           {/* Markdown Rendered Body */}
           <div
             ref={contentRef}
-            className={`text-[15px] select-text ${
+            className={`text-base select-text ${
               message.isError ? "text-rose-700" : "text-zinc-800"
             } leading-[1.8] break-words`}
           >
@@ -983,7 +983,7 @@ export function ChatMessage({
                     variant="outline"
                     size="sm"
                     onClick={onRetry}
-                    className="h-6 px-2 text-[11px] text-zinc-700 hover:text-zinc-950 border-zinc-200 flex items-center space-x-1 shadow-2xs cursor-pointer"
+                    className="h-6 px-2 text-2xs text-zinc-700 hover:text-zinc-950 border-zinc-200 flex items-center space-x-1 shadow-2xs cursor-pointer"
                     title="Retry generation"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
@@ -1013,7 +1013,7 @@ export function ChatMessage({
             onClick={() => setViewingRagSnippet(null)}
           >
             <div
-              className="bg-white w-full max-w-2xl max-h-[80vh] rounded-2xl shadow-2xl border border-zinc-200 flex flex-col overflow-hidden animate-in zoom-in-98 duration-150"
+              className="bg-white w-full max-w-2xl max-h-[80vh] rounded-2xl shadow-modal border border-zinc-200 flex flex-col overflow-hidden animate-in zoom-in-98 duration-150"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="px-5 py-3 border-b border-zinc-100 flex items-center justify-between bg-zinc-50/80">
@@ -1028,7 +1028,7 @@ export function ChatMessage({
                     </span>
                   )}
                   {viewingRagSnippet.page_number && (
-                    <span className="px-1.5 py-0.5 rounded text-[10px] bg-blue-100 text-blue-800 font-mono font-semibold">
+                    <span className="px-1.5 py-0.5 rounded text-2xs bg-blue-100 text-blue-800 font-mono font-semibold">
                       Page {viewingRagSnippet.page_number}
                     </span>
                   )}

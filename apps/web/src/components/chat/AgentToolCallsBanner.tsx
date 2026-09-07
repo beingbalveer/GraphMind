@@ -85,7 +85,7 @@ export function AgentToolCallsBanner({ toolCalls }: AgentToolCallsBannerProps) {
           </span>
         </div>
 
-        <div className="flex items-center space-x-1.5 text-zinc-400 text-[11px]">
+        <div className="flex items-center space-x-1.5 text-zinc-400 text-2xs">
           <span>{isExpanded ? "Hide" : "Details"}</span>
           {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
         </div>
@@ -106,13 +106,13 @@ export function AgentToolCallsBanner({ toolCalls }: AgentToolCallsBannerProps) {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                     {getToolIcon(tc.name)}
-                    <span className="font-semibold text-zinc-900 font-mono text-[11.5px]">
+                    <span className="font-semibold text-zinc-900 font-mono text-2xs">
                       {tc.name}
                     </span>
                   </div>
 
                   <span
-                    className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${
+                    className={`text-2xs px-1.5 py-0.5 rounded font-medium ${
                       isRun
                         ? "bg-amber-100 text-amber-800"
                         : isErr
@@ -126,14 +126,14 @@ export function AgentToolCallsBanner({ toolCalls }: AgentToolCallsBannerProps) {
 
                 {/* Arguments */}
                 {tc.arguments && Object.keys(tc.arguments).length > 0 && (
-                  <div className="text-[11px] text-zinc-600 font-mono bg-zinc-100/80 px-2 py-1 rounded">
+                  <div className="text-2xs text-zinc-600 font-mono bg-zinc-100/80 px-2 py-1 rounded">
                     {JSON.stringify(tc.arguments)}
                   </div>
                 )}
 
                 {/* Result snippet */}
                 {tc.result && (
-                  <div className="text-[11px] text-zinc-500 font-mono bg-white px-2 py-1 rounded border border-zinc-200/50 max-h-24 overflow-y-auto whitespace-pre-wrap">
+                  <div className="text-2xs text-zinc-500 font-mono bg-white px-2 py-1 rounded border border-zinc-200/50 max-h-24 overflow-y-auto whitespace-pre-wrap">
                     {tc.result}
                   </div>
                 )}

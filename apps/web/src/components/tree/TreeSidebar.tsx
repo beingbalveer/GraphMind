@@ -84,7 +84,7 @@ function TreeNodeItem({
         <div className="flex-1 min-w-0">
           {node.highlightedContext && (
             <div
-              className={`text-[10.5px] truncate font-medium ${
+              className={`text-2xs truncate font-medium ${
                 isActive ? "text-zinc-300" : "text-zinc-500"
               }`}
             >
@@ -99,7 +99,7 @@ function TreeNodeItem({
         {/* Children count badge */}
         {children.length > 1 && (
           <span
-            className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono shrink-0 ${
+            className={`text-2xs px-1.5 py-0.2 rounded-full font-mono shrink-0 ${
               isActive
                 ? "bg-zinc-800 text-zinc-300"
                 : "bg-zinc-200/80 text-zinc-600"
@@ -162,7 +162,7 @@ export function TreeSidebar({
           <span className="font-semibold text-xs tracking-tight text-zinc-900">
             Conversation Tree
           </span>
-          <span className="text-[10.5px] px-1.5 py-0.5 rounded-full bg-zinc-100 text-zinc-600 font-mono">
+          <span className="text-2xs px-1.5 py-0.5 rounded-full bg-zinc-100 text-zinc-600 font-mono">
             {totalNodes} {totalNodes === 1 ? "node" : "nodes"}
           </span>
         </div>
@@ -191,7 +191,7 @@ export function TreeSidebar({
       </div>
 
       {/* Footer Info */}
-      <div className="p-3 border-t border-zinc-200/80 bg-zinc-50/50 text-[11px] text-zinc-500 flex items-center justify-between">
+      <div className="p-3 border-t border-zinc-200/80 bg-zinc-50/50 text-2xs text-zinc-500 flex items-center justify-between">
         <span>Click any node to switch branch view</span>
       </div>
     </aside>

@@ -16,6 +16,9 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeHighlight from "rehype-highlight";
 import rehypeKatex from "rehype-katex";
+import { formatBytes } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Modal } from "@/components/ui/modal";
 
 interface CodeViewerModalProps {
   isOpen: boolean;
@@ -25,14 +28,6 @@ interface CodeViewerModalProps {
   language?: string;
   sizeBytes?: number;
   downloadUrl?: string;
-}
-
-function formatBytes(bytes?: number): string {
-  if (!bytes || bytes === 0) return "";
-  const k = 1024;
-  const sizes = ["B", "KB", "MB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
 }
 
 export function CodeViewerModal({
@@ -58,15 +53,6 @@ export function CodeViewerModal({
     setViewMode(isMarkdown ? "preview" : "raw");
   }, [filename, isMarkdown]);
 
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose]);
-
   if (!isOpen) return null;
 
   const handleCopy = async () => {
@@ -75,7 +61,7 @@ export function CodeViewerModal({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // ignore
+      // fallback
     }
   };
 
@@ -93,241 +79,141 @@ export function CodeViewerModal({
     URL.revokeObjectURL(url);
   };
 
+  const lines = content.split("\n");
   const inferredLang =
-    language || filename.split(".").pop()?.toLowerCase() || "text";
+    language ||
+    filename.split(".").pop() ||
+    (isMarkdown ? "markdown" : "text");
 
   return (
-    <div
-      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 animate-in fade-in-50 duration-150"
-      onClick={onClose}
-    >
-      <div
-        className="bg-white w-full max-w-5xl h-[88vh] rounded-2xl shadow-2xl border border-zinc-200/90 flex flex-col overflow-hidden animate-in zoom-in-98 duration-150"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="px-5 py-3 border-b border-zinc-100 flex items-center justify-between shrink-0 select-none bg-zinc-50/80">
-          <div className="flex items-center space-x-2.5 min-w-0 pr-4">
-            <div
-              className={`p-1.5 rounded-lg border shrink-0 ${
+    <Modal isOpen={isOpen} onClose={onClose} size="full" className="max-w-5xl h-[90vh]">
+      {/* Header */}
+      <div className="px-5 py-3 border-b border-zinc-100 flex items-center justify-between shrink-0 select-none bg-zinc-50/80">
+        <div className="flex items-center gap-2.5 min-w-0 pr-4">
+          <div
+            className={`p-1.5 rounded-lg border ${
+              isMarkdown
+                ? "bg-blue-50 border-blue-200/80 text-blue-600"
+                : "bg-emerald-50 border-emerald-200/80 text-emerald-600"
+            }`}
+          >
+            {isMarkdown ? (
+              <FileText className="w-4 h-4" />
+            ) : (
+              <FileCode className="w-4 h-4" />
+            )}
+          </div>
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-sm font-semibold text-zinc-900 truncate">
+              {filename}
+            </span>
+            <span
+              className={`px-1.5 py-0.5 rounded text-2xs font-bold uppercase border ${
                 isMarkdown
-                  ? "bg-blue-50 border-blue-200/80 text-blue-600"
-                  : "bg-emerald-50 border-emerald-200/80 text-emerald-600"
+                  ? "bg-blue-100 text-blue-800 border-blue-200/80"
+                  : "bg-emerald-100 text-emerald-800 border-emerald-200/80"
               }`}
             >
-              {isMarkdown ? (
-                <FileText className="w-4 h-4" />
-              ) : (
-                <FileCode className="w-4 h-4" />
-              )}
-            </div>
-            <div className="flex items-center space-x-2 min-w-0">
-              <span className="text-sm font-semibold text-zinc-950 truncate font-mono">
-                {filename}
+              {isMarkdown ? "MARKDOWN" : inferredLang.toUpperCase()}
+            </span>
+            {sizeBytes && (
+              <span className="text-xs text-zinc-400 font-mono hidden sm:inline">
+                ({formatBytes(sizeBytes)})
               </span>
-              <span
-                className={`px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase border font-mono ${
-                  isMarkdown
-                    ? "bg-blue-100 text-blue-800 border-blue-200/80"
-                    : "bg-emerald-100 text-emerald-800 border-emerald-200/80"
-                }`}
-              >
-                {isMarkdown ? "MARKDOWN" : inferredLang.toUpperCase()}
-              </span>
-              {sizeBytes && (
-                <span className="text-xs text-zinc-400 font-mono hidden sm:inline">
-                  ({formatBytes(sizeBytes)})
-                </span>
-              )}
-            </div>
-          </div>
-
-          <div className="flex items-center space-x-2 shrink-0">
-            {/* Markdown Preview / Source Toggle */}
-            {isMarkdown && (
-              <div className="flex items-center bg-zinc-200/70 p-0.5 rounded-lg text-xs font-medium mr-1">
-                <button
-                  type="button"
-                  onClick={() => setViewMode("preview")}
-                  className={`px-2.5 py-1 rounded-md transition-all flex items-center space-x-1.5 cursor-pointer ${
-                    viewMode === "preview"
-                      ? "bg-white text-zinc-950 shadow-2xs font-semibold"
-                      : "text-zinc-600 hover:text-zinc-900"
-                  }`}
-                >
-                  <Eye className="w-3.5 h-3.5" />
-                  <span>Preview</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setViewMode("raw")}
-                  className={`px-2.5 py-1 rounded-md transition-all flex items-center space-x-1.5 cursor-pointer ${
-                    viewMode === "raw"
-                      ? "bg-white text-zinc-950 shadow-2xs font-semibold"
-                      : "text-zinc-600 hover:text-zinc-900"
-                  }`}
-                >
-                  <Code className="w-3.5 h-3.5" />
-                  <span>Source</span>
-                </button>
-              </div>
             )}
-
-            <button
-              type="button"
-              onClick={handleCopy}
-              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-white border border-zinc-200/90 hover:bg-zinc-50 text-zinc-700 text-xs font-medium transition-colors shadow-2xs cursor-pointer"
-              title="Copy file contents"
-            >
-              {copied ? (
-                <>
-                  <Check className="w-3.5 h-3.5 text-emerald-600" />
-                  <span className="text-emerald-700 font-semibold">Copied</span>
-                </>
-              ) : (
-                <>
-                  <Copy className="w-3.5 h-3.5 text-zinc-500" />
-                  <span>Copy</span>
-                </>
-              )}
-            </button>
-
-            <button
-              type="button"
-              onClick={handleDownload}
-              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-white border border-zinc-200/90 hover:bg-zinc-50 text-zinc-700 text-xs font-medium transition-colors shadow-2xs cursor-pointer"
-              title="Download file"
-            >
-              <Download className="w-3.5 h-3.5 text-zinc-500" />
-              <span>Download</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={onClose}
-              className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-800 hover:bg-zinc-100 transition-colors cursor-pointer ml-1"
-              title="Close (Esc)"
-            >
-              <X className="w-4 h-4" />
-            </button>
           </div>
         </div>
 
-        {/* Content Body */}
-        {viewMode === "preview" ? (
-          <div className="flex-1 overflow-auto p-6 sm:p-10 bg-white select-text">
-            <div className="max-w-4xl mx-auto">
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Markdown Preview / Source Toggle */}
+          {isMarkdown && (
+            <div className="flex items-center bg-zinc-200/70 p-0.5 rounded-lg text-xs font-medium mr-1">
+              <button
+                type="button"
+                onClick={() => setViewMode("preview")}
+                className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1.5 cursor-pointer ${
+                  viewMode === "preview"
+                    ? "bg-white text-zinc-950 shadow-xs font-semibold"
+                    : "text-zinc-600 hover:text-zinc-900"
+                }`}
+              >
+                <Eye className="w-3.5 h-3.5" />
+                <span>Preview</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("raw")}
+                className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1.5 cursor-pointer ${
+                  viewMode === "raw"
+                    ? "bg-white text-zinc-950 shadow-xs font-semibold"
+                    : "text-zinc-600 hover:text-zinc-900"
+                }`}
+              >
+                <Code className="w-3.5 h-3.5" />
+                <span>Source</span>
+              </button>
+            </div>
+          )}
+
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleCopy}
+            title="Copy file contents"
+          >
+            {copied ? (
+              <>
+                <Check className="w-3.5 h-3.5 text-emerald-600 mr-1" />
+                <span className="text-emerald-700 font-semibold">Copied</span>
+              </>
+            ) : (
+              <>
+                <Copy className="w-3.5 h-3.5 text-zinc-500 mr-1" />
+                <span>Copy</span>
+              </>
+            )}
+          </Button>
+
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleDownload}
+            title="Download file"
+          >
+            <Download className="w-3.5 h-3.5 mr-1" />
+            <span>Download</span>
+          </Button>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-colors cursor-pointer ml-1"
+            title="Close (Esc)"
+            aria-label="Close dialog"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Code Viewer Body */}
+      <div className="flex-1 bg-zinc-950 overflow-auto text-zinc-200 font-mono text-xs flex flex-col min-h-0">
+        {isMarkdown && viewMode === "preview" ? (
+          <div className="p-6 sm:p-8 bg-white text-zinc-900 font-sans flex-1 overflow-y-auto">
+            <div className="max-w-3xl mx-auto prose prose-zinc prose-sm sm:prose-base dark:prose-invert">
               <ReactMarkdown
                 remarkPlugins={[remarkGfm, remarkMath]}
-                rehypePlugins={[rehypeKatex, rehypeHighlight]}
+                rehypePlugins={[rehypeHighlight, rehypeKatex]}
                 components={{
-                  h1({ children }) {
-                    return (
-                      <h1 className="text-2xl sm:text-3xl font-bold text-zinc-950 mt-6 mb-4 pb-2 border-b border-zinc-200/80 tracking-tight first:mt-0">
-                        {children}
-                      </h1>
-                    );
-                  },
-                  h2({ children }) {
-                    return (
-                      <h2 className="text-xl sm:text-2xl font-semibold text-zinc-900 mt-6 mb-3 pb-1 border-b border-zinc-100 tracking-tight">
-                        {children}
-                      </h2>
-                    );
-                  },
-                  h3({ children }) {
-                    return (
-                      <h3 className="text-lg font-semibold text-zinc-800 mt-5 mb-2">
-                        {children}
-                      </h3>
-                    );
-                  },
-                  p({ children }) {
-                    return (
-                      <p className="mb-4 text-zinc-800 leading-[1.8] text-[15px]">
-                        {children}
-                      </p>
-                    );
-                  },
-                  ul({ children }) {
-                    return (
-                      <ul className="list-disc list-inside space-y-1.5 mb-4 pl-1 text-zinc-800 text-[15px]">
-                        {children}
-                      </ul>
-                    );
-                  },
-                  ol({ children }) {
-                    return (
-                      <ol className="list-decimal list-inside space-y-1.5 mb-4 pl-1 text-zinc-800 text-[15px]">
-                        {children}
-                      </ol>
-                    );
-                  },
-                  li({ children }) {
-                    return <li className="leading-relaxed">{children}</li>;
-                  },
-                  blockquote({ children }) {
-                    return (
-                      <blockquote className="border-l-4 border-indigo-500 pl-4 italic text-zinc-700 my-4 bg-indigo-50/40 py-2 rounded-r-lg">
-                        {children}
-                      </blockquote>
-                    );
-                  },
-                  table({ children }) {
-                    return (
-                      <div className="my-5 overflow-x-auto rounded-xl border border-zinc-200 shadow-2xs">
-                        <table className="w-full text-left text-xs border-collapse divide-y divide-zinc-200">
-                          {children}
-                        </table>
-                      </div>
-                    );
-                  },
-                  thead({ children }) {
-                    return (
-                      <thead className="bg-zinc-50 text-zinc-900 font-semibold">
-                        {children}
-                      </thead>
-                    );
-                  },
-                  tbody({ children }) {
-                    return (
-                      <tbody className="divide-y divide-zinc-100 bg-white">
-                        {children}
-                      </tbody>
-                    );
-                  },
-                  tr({ children }) {
-                    return (
-                      <tr className="hover:bg-zinc-50/50 transition-colors">
-                        {children}
-                      </tr>
-                    );
-                  },
-                  th({ children }) {
-                    return (
-                      <th className="px-4 py-3 font-semibold text-zinc-900">
-                        {children}
-                      </th>
-                    );
-                  },
-                  td({ children }) {
-                    return (
-                      <td className="px-4 py-2.5 text-zinc-700 whitespace-pre-wrap leading-relaxed">
-                        {children}
-                      </td>
-                    );
-                  },
-                  hr() {
-                    return <hr className="my-6 border-zinc-200" />;
-                  },
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  code({ children, className, ...props }: any) {
+                  code({ className, children, ...props }) {
                     const match = /language-(\w+)/.exec(className || "");
                     const isInline = !match;
                     if (isInline) {
                       return (
                         <code
-                          className="px-1.5 py-0.5 rounded-md bg-zinc-100 border border-zinc-200/80 text-zinc-900 font-mono text-[13.5px] font-medium"
+                          className="px-1.5 py-0.5 rounded-md bg-zinc-100 border border-zinc-200/80 text-zinc-900 font-mono text-xs font-medium"
                           {...props}
                         >
                           {children}
@@ -335,8 +221,8 @@ export function CodeViewerModal({
                       );
                     }
                     return (
-                      <div className="my-4 rounded-xl overflow-hidden border border-zinc-800 bg-[#1e2227] text-zinc-100 font-mono text-[13px] leading-relaxed shadow-xs">
-                        <div className="px-4 py-2 bg-[#181b1f] border-b border-zinc-800/80 text-[11.5px] text-zinc-400 font-medium flex items-center justify-between select-none">
+                      <div className="my-4 rounded-xl overflow-hidden border border-zinc-800 bg-code-bg text-zinc-100 font-mono text-xs leading-relaxed shadow-xs">
+                        <div className="px-4 py-2 bg-code-header-bg border-b border-zinc-800/80 text-xs text-zinc-400 font-medium flex items-center justify-between select-none">
                           <span className="lowercase font-mono text-zinc-400">
                             {match[1]}
                           </span>
@@ -358,15 +244,41 @@ export function CodeViewerModal({
             </div>
           </div>
         ) : (
-          <div className="flex-1 overflow-auto p-4 sm:p-6 bg-zinc-50/60 select-text">
-            <div className="rounded-xl border border-zinc-200/80 bg-white p-5 font-mono text-[13px] leading-relaxed text-zinc-800 overflow-x-auto shadow-2xs">
-              <pre className="!bg-transparent !p-0 !m-0 whitespace-pre font-mono">
-                <code>{content}</code>
-              </pre>
+          <div className="flex flex-1 overflow-auto min-h-0">
+            {/* Line numbers gutter */}
+            <div className="py-4 pl-4 pr-3 select-none text-right text-zinc-600 font-mono text-xs bg-zinc-900/60 border-r border-zinc-800/80 shrink-0 min-w-[3.5rem]">
+              {lines.map((_, i) => (
+                <div key={i} className="leading-6">
+                  {i + 1}
+                </div>
+              ))}
             </div>
+
+            {/* Raw code content */}
+            <pre className="p-4 overflow-auto flex-1 font-mono text-xs leading-6 text-zinc-200 whitespace-pre tab-4 select-text">
+              <code>{content}</code>
+            </pre>
           </div>
         )}
       </div>
-    </div>
+
+      {/* Footer bar */}
+      <div className="px-5 py-2 border-t border-zinc-800 bg-zinc-900 text-xs text-zinc-400 flex items-center justify-between shrink-0 select-none">
+        <div className="flex items-center gap-2">
+          <span>{lines.length} lines</span>
+          <span>•</span>
+          <span>{content.length.toLocaleString()} characters</span>
+          {inferredLang && (
+            <>
+              <span>•</span>
+              <span className="uppercase font-medium text-zinc-300">
+                {inferredLang}
+              </span>
+            </>
+          )}
+        </div>
+        <div className="text-zinc-400 text-xs">UTF-8</div>
+      </div>
+    </Modal>
   );
 }

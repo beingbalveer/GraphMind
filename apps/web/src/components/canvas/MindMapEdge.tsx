@@ -47,7 +47,9 @@ export const MindMapEdge = memo(function MindMapEdge({
         markerEnd={markerEnd}
         style={{
           ...style,
-          stroke: isActive ? "#18181b" : "#d4d4d8",
+          stroke: isActive
+            ? "var(--canvas-edge-active, #18181b)"
+            : "var(--canvas-edge, #d4d4d8)",
           strokeWidth: isActive ? 2 : 1.5,
           strokeDasharray: isStreaming ? "5,5" : undefined,
           animation: isStreaming ? "dashdraw 0.6s linear infinite" : undefined,

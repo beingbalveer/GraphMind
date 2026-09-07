@@ -94,14 +94,14 @@ function SingleQuizCard({
             <span>Interactive Quiz</span>
           </span>
           {item.concept && (
-            <span className="text-[11.5px] font-medium text-zinc-600 bg-zinc-100 px-2 py-0.5 rounded-md truncate max-w-[200px]">
+            <span className="text-2xs font-medium text-zinc-600 bg-zinc-100 px-2 py-0.5 rounded-md truncate max-w-[200px]">
               {item.concept}
             </span>
           )}
         </div>
 
         {totalQuestions && totalQuestions > 1 && questionIndex !== undefined && (
-          <span className="text-[11px] font-medium text-zinc-400">
+          <span className="text-2xs font-medium text-zinc-400">
             {questionIndex + 1} of {totalQuestions}
           </span>
         )}
@@ -143,7 +143,7 @@ function SingleQuizCard({
               className={`w-full flex items-start text-left p-3 rounded-xl border text-xs transition-all duration-150 cursor-pointer disabled:cursor-default ${btnStyles}`}
             >
               <div
-                className={`w-5 h-5 rounded-md flex items-center justify-center font-bold text-[11px] shrink-0 mr-3 mt-0.5 transition-colors ${
+                className={`w-5 h-5 rounded-md flex items-center justify-center font-bold text-2xs shrink-0 mr-3 mt-0.5 transition-colors ${
                   isAnswered && isSelected
                     ? isCorrect
                       ? "bg-emerald-600 text-white"
@@ -194,12 +194,12 @@ function SingleQuizCard({
             </div>
 
             {item.explanation && (
-              <p className="text-[12px] opacity-90">{item.explanation}</p>
+              <p className="text-xs opacity-90">{item.explanation}</p>
             )}
 
             {/* Profile update confirmation */}
             {workspaceId && item.concept && (
-              <div className="flex items-center space-x-1 text-[11px] pt-1 font-medium text-purple-700">
+              <div className="flex items-center space-x-1 text-2xs pt-1 font-medium text-purple-700">
                 <Sparkles className="w-3 h-3 text-purple-500" />
                 <span>
                   {isUpdatingProfile

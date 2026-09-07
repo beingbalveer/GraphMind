@@ -56,9 +56,9 @@ interface LogoBadgeProps {
  */
 export function LogoBadge({ size = "md", className = "" }: LogoBadgeProps) {
   const sizeClasses = {
-    sm: "w-6 h-6 rounded-md bg-zinc-100/90 border border-zinc-200/80 text-zinc-900",
-    md: "w-8 h-8 rounded-lg bg-zinc-100/90 border border-zinc-200/80 text-zinc-900",
-    lg: "w-11 h-11 rounded-xl bg-zinc-100/90 border border-zinc-200/80 text-zinc-900",
+    sm: "w-6 h-6 rounded-md bg-zinc-100/90 border border-zinc-200/80 text-zinc-900 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-100",
+    md: "w-8 h-8 rounded-lg bg-zinc-100/90 border border-zinc-200/80 text-zinc-900 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-100",
+    lg: "w-11 h-11 rounded-xl bg-zinc-100/90 border border-zinc-200/80 text-zinc-900 dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-100",
   };
 
   const iconSizes = {
@@ -71,7 +71,7 @@ export function LogoBadge({ size = "md", className = "" }: LogoBadgeProps) {
     <div
       className={`flex items-center justify-center shadow-2xs shrink-0 ${sizeClasses[size]} ${className}`}
     >
-      <GraphMindIcon size={iconSizes[size]} className="text-zinc-900" />
+      <GraphMindIcon size={iconSizes[size]} className="text-zinc-900 dark:text-zinc-100" />
     </div>
   );
 }

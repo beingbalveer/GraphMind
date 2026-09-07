@@ -86,7 +86,7 @@ export const ThreadGraphNode = memo(function ThreadGraphNode({
                 : "bg-sky-500 text-white ring-4 ring-sky-500/30 shadow-[0_0_12px_rgba(14,165,233,0.4)]"
               : isRoot
               ? "bg-zinc-900 text-white border border-zinc-800"
-              : "bg-white text-zinc-800 hover:bg-zinc-50 border border-zinc-300 shadow-2xs"
+              : "bg-white text-zinc-800 hover:bg-zinc-50 border border-zinc-300 shadow-xs"
           }`}
         >
           {isStreaming ? (
@@ -99,9 +99,9 @@ export const ThreadGraphNode = memo(function ThreadGraphNode({
         </div>
 
         {/* Floating Tooltip on Hover in Orb Mode */}
-        <div className="absolute left-1/2 -top-8 -translate-x-1/2 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-150 bg-zinc-900 text-white text-[11px] font-medium px-2.5 py-1 rounded-lg whitespace-nowrap shadow-md z-40 max-w-[200px] truncate flex items-center space-x-1.5">
+        <div className="absolute left-1/2 -top-8 -translate-x-1/2 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-150 bg-zinc-900 text-white text-2xs font-medium px-2.5 py-1 rounded-lg whitespace-nowrap shadow-md z-40 max-w-[200px] truncate flex items-center space-x-1.5">
           <span>{thread.title}</span>
-          <span className="text-[10px] text-zinc-400 font-mono">({messageCount})</span>
+          <span className="text-2xs text-zinc-400 font-mono">({messageCount})</span>
         </div>
 
         <Handle
@@ -120,7 +120,7 @@ export const ThreadGraphNode = memo(function ThreadGraphNode({
 
   return (
     <div
-      className={`group relative flex flex-col min-w-[180px] max-w-[260px] p-2.5 rounded-2xl border transition-all duration-150 select-none cursor-pointer shadow-2xs ${
+      className={`group relative flex flex-col min-w-[180px] max-w-[260px] p-2.5 rounded-2xl border transition-all duration-150 select-none cursor-pointer shadow-xs ${
         isStreaming
           ? "bg-white border-zinc-900 ring-2 ring-zinc-900/20 shadow-md animate-pulse z-20"
           : isActive
@@ -141,7 +141,7 @@ export const ThreadGraphNode = memo(function ThreadGraphNode({
       {/* Heatmap Mastery Pill */}
       {isHeatmapMode && masteryInfo && (
         <div
-          className={`flex items-center justify-between px-2 py-0.5 mb-2 rounded-lg text-[10px] font-semibold border select-none ${
+          className={`flex items-center justify-between px-2 py-0.5 mb-2 rounded-lg text-2xs font-semibold border select-none ${
             masteryInfo.level === "mastered"
               ? "bg-emerald-50 text-emerald-800 border-emerald-200/80"
               : masteryInfo.level === "quizzed"
@@ -198,7 +198,7 @@ export const ThreadGraphNode = memo(function ThreadGraphNode({
               {thread.title}
             </span>
             {thread.highlightedContext && thread.highlightedContext !== thread.title && (
-              <span className="text-[10px] text-zinc-400 font-medium truncate block leading-tight">
+              <span className="text-2xs text-zinc-400 font-medium truncate block leading-tight">
                 {thread.highlightedContext}
               </span>
             )}
@@ -208,7 +208,7 @@ export const ThreadGraphNode = memo(function ThreadGraphNode({
         {/* Message Count Badge & Branch Menu Action */}
         <div className="flex items-center space-x-1.5 shrink-0">
           <div
-            className="px-2 py-0.5 rounded-full bg-zinc-100 border border-zinc-200/80 text-[10px] font-mono text-zinc-600 font-medium"
+            className="px-2 py-0.5 rounded-full bg-zinc-100 border border-zinc-200/80 text-2xs font-mono text-zinc-600 font-medium"
             title={`${messageCount} messages in this thread`}
           >
             {messageCount} msg{messageCount > 1 ? "s" : ""}
@@ -256,12 +256,12 @@ export const ThreadGraphNode = memo(function ThreadGraphNode({
       {isDetailed && (
         <div className="mt-2 pt-2 border-t border-zinc-100 space-y-1">
           {thread.highlightedContext && (
-            <div className="text-[10px] text-zinc-500 italic truncate">
+            <div className="text-2xs text-zinc-500 italic truncate">
               &ldquo;{thread.highlightedContext}&rdquo;
             </div>
           )}
           {lastMessage && (
-            <div className="text-[11px] text-zinc-600 line-clamp-2 leading-relaxed font-sans">
+            <div className="text-2xs text-zinc-600 line-clamp-2 leading-relaxed font-sans">
               <span className="font-semibold text-zinc-800 mr-1">
                 {lastMessage.role === "user" ? "You:" : "AI:"}
               </span>

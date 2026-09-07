@@ -192,7 +192,7 @@ export function CommandPalette({
           {/* Matching Node Search Results */}
           {matchingNodes.length > 0 && (
             <div className="space-y-0.5 mb-2">
-              <div className="px-3 py-1 text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">
+              <div className="px-3 py-1 text-2xs font-semibold text-zinc-400 uppercase tracking-wider">
                 Conversation Nodes
               </div>
               {matchingNodes.map((node, index) => {
@@ -213,7 +213,7 @@ export function CommandPalette({
                     }`}
                   >
                     <div className="flex items-center space-x-2 min-w-0">
-                      <span className={`text-[10px] font-mono shrink-0 ${isSelected ? "text-zinc-300" : "text-zinc-400"}`}>
+                      <span className={`text-2xs font-mono shrink-0 ${isSelected ? "text-zinc-300" : "text-zinc-400"}`}>
                         {node.role}
                       </span>
                       <span className="truncate">
@@ -230,7 +230,7 @@ export function CommandPalette({
 
           {/* Quick Actions List */}
           <div className="space-y-0.5">
-            <div className="px-3 py-1 text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">
+            <div className="px-3 py-1 text-2xs font-semibold text-zinc-400 uppercase tracking-wider">
               Actions
             </div>
             {commandActions.map((cmd, index) => {
@@ -255,7 +255,7 @@ export function CommandPalette({
                     <span>{cmd.label}</span>
                   </div>
                   <kbd
-                    className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${
+                    className={`text-2xs font-mono px-1.5 py-0.5 rounded border ${
                       isSelected
                         ? "bg-zinc-800 border-zinc-700 text-zinc-300"
                         : "bg-zinc-100 border-zinc-200 text-zinc-500"
@@ -270,7 +270,7 @@ export function CommandPalette({
         </div>
 
         {/* Footer info */}
-        <div className="px-4 py-2 bg-zinc-50 border-t border-zinc-200/80 flex items-center justify-between text-[11px] text-zinc-500">
+        <div className="px-4 py-2 bg-zinc-50 border-t border-zinc-200/80 flex items-center justify-between text-xs text-zinc-500">
           <div className="flex items-center space-x-2">
             <span>Navigate with <kbd className="font-mono">↑</kbd> <kbd className="font-mono">↓</kbd></span>
             <span>•</span>

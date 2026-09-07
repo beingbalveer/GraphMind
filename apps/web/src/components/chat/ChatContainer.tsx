@@ -1120,15 +1120,15 @@ export function ChatContainer({
                             onClick={() => {
                               handleSendMessage(item.prompt);
                             }}
-                            className="p-3 rounded-xl bg-[#F8F9FA] hover:bg-zinc-100/80 text-left transition-all duration-150 group cursor-pointer shadow-2xs"
+                            className="p-3 rounded-xl bg-background-secondary hover:bg-zinc-100/80 text-left transition-all duration-150 group cursor-pointer shadow-xs"
                           >
-                            <div className="w-6 h-6 rounded-md bg-white shadow-2xs flex items-center justify-center mb-2 text-zinc-700 group-hover:text-zinc-950 transition-colors">
+                            <div className="w-6 h-6 rounded-md bg-white shadow-xs flex items-center justify-center mb-2 text-zinc-700 group-hover:text-zinc-950 transition-colors">
                               <Icon className="w-3.5 h-3.5" />
                             </div>
                             <h3 className="text-xs font-semibold text-zinc-800 group-hover:text-zinc-950 mb-1 leading-snug">
                               {item.title}
                             </h3>
-                            <p className="text-[11px] text-zinc-500 line-clamp-2 leading-relaxed">
+                            <p className="text-xs text-zinc-500 line-clamp-2 leading-relaxed">
                               {item.subtitle}
                             </p>
                           </button>

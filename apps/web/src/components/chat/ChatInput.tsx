@@ -23,6 +23,7 @@ import { MenuCard, MenuItem } from "@/components/ui/menu";
 import { BranchContext } from "@/hooks/useChatStream";
 import { FileAttachment } from "@graphmind/shared";
 import { uploadWorkspaceFile } from "@/lib/workspaceApi";
+import { formatBytes } from "@/lib/utils";
 import { FileLibraryModal } from "../library/FileLibraryModal";
 
 interface ChatInputProps {
@@ -49,14 +50,6 @@ const DOC_EXTENSIONS = new Set([
   "pdf", "txt", "md", "markdown", "csv", "tsv", "log", "env", "ini", "cfg", "conf", "xml",
 ]);
 
-function formatBytes(bytes: number, decimals = 1): string {
-  if (bytes === 0) return "0 B";
-  const k = 1024;
-  const dm = decimals < 0 ? 0 : decimals;
-  const sizes = ["B", "KB", "MB", "GB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
-}
 
 interface SlashCommand {
   id: string | null;
@@ -375,7 +368,7 @@ export function ChatInput({
         className={`relative bg-white rounded-2xl transition-all p-2.5 flex flex-col space-y-2 border-0 ${
           isDragOver
             ? "bg-blue-50/30 shadow-lg ring-2 ring-blue-200"
-            : "shadow-[0_4px_24px_-4px_rgba(0,0,0,0.08)] hover:shadow-[0_6px_28px_-4px_rgba(0,0,0,0.11)] focus-within:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.14)]"
+            : "shadow-md hover:shadow-lg focus-within:shadow-xl"
         }`}
       >
         {/* Floating Slash Command Autocomplete Menu */}
@@ -397,7 +390,7 @@ export function ChatInput({
                     }}
                   >
                     <div className="flex items-center space-x-2">
-                      <span className="font-mono text-[12px] text-zinc-400 font-normal">
+                      <span className="font-mono text-xs text-zinc-400 font-normal">
                         {cmd.command}
                       </span>
                       <span className="font-medium text-zinc-900">{cmd.label}</span>
@@ -411,7 +404,7 @@ export function ChatInput({
 
         {/* Active Branch Context Pill */}
         {activeBranch && (
-          <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-[#F4F4F6] text-xs text-zinc-700 animate-in fade-in-50 slide-in-from-bottom-1 duration-150">
+          <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-background-tertiary text-xs text-zinc-700 animate-in fade-in-50 slide-in-from-bottom-1 duration-150">
             <div className="flex items-center space-x-1.5 min-w-0 pr-2">
               <GitBranch className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
               <span className="font-semibold text-zinc-900 shrink-0">Sub-topic:</span>
@@ -489,9 +482,9 @@ export function ChatInput({
                     <span className="text-xs font-medium text-zinc-900 truncate" title={att.name}>
                       {att.name}
                     </span>
-                    <div className="flex items-center space-x-1.5 text-[10px] text-zinc-500 font-mono">
+                    <div className="flex items-center space-x-1.5 text-2xs text-zinc-500 font-mono">
                       {isPdf && (
-                        <span className="font-bold text-red-600 bg-red-50 px-1 rounded text-[9px]">
+                        <span className="font-bold text-red-600 bg-red-50 px-1 rounded text-2xs">
                           PDF
                         </span>
                       )}
@@ -533,7 +526,7 @@ export function ChatInput({
           }
           rows={1}
           disabled={isStreaming}
-          className="w-full px-2 py-1.5 text-[15.5px] text-zinc-900 placeholder-zinc-400 bg-transparent resize-none outline-none font-normal max-h-48 leading-relaxed"
+          className="w-full px-2 py-1.5 text-base text-zinc-900 placeholder-zinc-400 bg-transparent resize-none outline-none font-normal max-h-48 leading-relaxed"
         />
 
         {/* Action Bar */}
@@ -651,7 +644,7 @@ export function ChatInput({
 
             {/* Active Mode Compact Chip */}
             {selectedSkill && (
-              <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded-xl bg-[#F4F4F6] text-xs text-zinc-800 shadow-2xs animate-in fade-in-50 zoom-in-95 duration-150 select-none">
+              <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded-xl bg-background-tertiary text-xs text-zinc-800 shadow-2xs animate-in fade-in-50 zoom-in-95 duration-150 select-none">
                 {selectedSkill === "deep_research" ? (
                   <Compass className="w-3.5 h-3.5 text-zinc-700 shrink-0 stroke-[1.75]" />
                 ) : selectedSkill === "code_architect" ? (

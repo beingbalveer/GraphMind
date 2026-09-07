@@ -30,18 +30,18 @@ export function SettingRow({
       } ${className}`}
     >
       <div className="space-y-0.5 max-w-sm sm:pr-4">
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center gap-2">
           <label className="text-xs font-semibold text-zinc-900 leading-tight block">
             {label}
           </label>
           {badge && (
-            <span className="text-[10px] font-medium text-amber-700 bg-amber-50/90 border border-amber-200/70 px-1.5 py-0.2 rounded-md">
+            <span className="text-2xs font-medium text-amber-700 bg-amber-50/90 border border-amber-200/70 px-1.5 py-0.5 rounded-md">
               {badge}
             </span>
           )}
         </div>
         {description && (
-          <p className="text-[11.5px] text-zinc-500 leading-relaxed">
+          <p className="text-xs text-zinc-500 leading-relaxed">
             {description}
           </p>
         )}
@@ -52,7 +52,6 @@ export function SettingRow({
     </div>
   );
 }
-
 
 interface SettingSectionProps {
   title: string;
@@ -74,12 +73,12 @@ export function SettingSection({
           {title}
         </h3>
         {description && (
-          <p className="text-[11.5px] text-zinc-500 mt-0.5 leading-relaxed">
+          <p className="text-xs text-zinc-500 mt-0.5 leading-relaxed">
             {description}
           </p>
         )}
       </div>
-      <div className="rounded-xl border border-zinc-200/70 bg-white p-3.5 shadow-2xs divide-y divide-zinc-100">
+      <div className="rounded-xl border border-zinc-200/70 bg-white p-3.5 shadow-xs divide-y divide-zinc-100">
         {children}
       </div>
     </div>

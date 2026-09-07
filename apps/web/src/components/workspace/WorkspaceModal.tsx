@@ -12,6 +12,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Modal } from "@/components/ui/modal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   WorkspaceItem,
@@ -91,14 +92,8 @@ export function WorkspaceModal({
   if (!isOpen) return null;
 
   return (
-    <div
-      onClick={onClose}
-      className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150 select-none font-sans"
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-lg bg-white rounded-2xl border border-zinc-200/90 shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-150"
-      >
+    <>
+      <Modal isOpen={isOpen} onClose={onClose} size="lg">
         {/* Header */}
         <div className="h-14 px-5 border-b border-zinc-200/80 flex items-center justify-between shrink-0 bg-zinc-50/70">
           <div className="flex items-center space-x-2.5">
@@ -107,7 +102,7 @@ export function WorkspaceModal({
             </div>
             <div>
               <h3 className="font-semibold text-sm text-zinc-900 leading-tight">Workspaces</h3>
-              <p className="text-[11px] text-zinc-500">Manage and persist your knowledge trees</p>
+              <p className="text-xs text-zinc-500">Manage and persist your knowledge trees</p>
             </div>
           </div>
 
@@ -125,7 +120,7 @@ export function WorkspaceModal({
           <div className="p-3.5 rounded-xl bg-zinc-50 border border-zinc-200/80 flex items-center justify-between">
             <div>
               <div className="text-xs font-semibold text-zinc-900">Export Knowledge Graph</div>
-              <div className="text-[11px] text-zinc-500">Download for Obsidian or backup</div>
+              <div className="text-xs text-zinc-500">Download for Obsidian or backup</div>
             </div>
             <div className="flex items-center space-x-1.5">
               <Button
@@ -199,7 +194,7 @@ export function WorkspaceModal({
 
           {/* Workspaces List */}
           <div className="space-y-1.5">
-            <div className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider px-1">
+            <div className="text-2xs font-semibold text-zinc-400 uppercase tracking-wider px-1">
               Your Workspaces ({workspaces.length})
             </div>
 
@@ -234,18 +229,18 @@ export function WorkspaceModal({
                           {ws.name}
                         </span>
                         {isActive && (
-                          <span className="inline-flex items-center space-x-0.5 text-[10px] px-1.5 py-0.2 rounded-full bg-zinc-900 text-white font-medium">
+                          <span className="inline-flex items-center space-x-0.5 text-2xs px-1.5 py-0.2 rounded-full bg-zinc-900 text-white font-medium">
                             <Check className="w-2.5 h-2.5" />
                             <span>Active</span>
                           </span>
                         )}
                       </div>
                       {ws.description && (
-                        <p className="text-[11px] text-zinc-500 truncate mt-0.5">
+                        <p className="text-xs text-zinc-500 truncate mt-0.5">
                           {ws.description}
                         </p>
                       )}
-                      <div className="text-[10px] text-zinc-400 mt-1">
+                      <div className="text-2xs text-zinc-400 mt-1">
                         {ws.nodeCount} {ws.nodeCount === 1 ? "node" : "nodes"} • Updated{" "}
                         {new Date(ws.updatedAt).toLocaleDateString()}
                       </div>
@@ -265,7 +260,7 @@ export function WorkspaceModal({
             )}
           </div>
         </div>
-      </div>
+      </Modal>
 
       {/* Common Reusable Confirm Dialog for Workspace Deletion */}
       <ConfirmDialog
@@ -277,6 +272,6 @@ export function WorkspaceModal({
         confirmText="Delete"
         variant="destructive"
       />
-    </div>
+    </>
   );
 }

@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import { LogoBadge } from "@/components/ui/Logo";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
-import { safeGetItem, safeSetItem } from "@/lib/storage";
+import { useResizableSidebar } from "@/hooks/useResizableSidebar";
 
 interface ChatSidebarProps {
   isOpen: boolean;
@@ -67,54 +67,14 @@ export function ChatSidebar({
   // Track which chat's dropdown is open so we keep the button visible while open
   const [openMenuChatId, setOpenMenuChatId] = useState<string | null>(null);
 
-  // Resizable sidebar width with local storage persistence
-  const [width, setWidth] = useState<number>(() => {
-    const saved = safeGetItem("graphmind_sidebar_width_v1");
-    if (saved) {
-      const parsed = parseInt(saved, 10);
-      if (!isNaN(parsed) && parsed >= MIN_WIDTH && parsed <= MAX_WIDTH) {
-        return parsed;
-      }
-    }
-    return DEFAULT_WIDTH;
+  const { width, isResizing, startResizing, resetWidth } = useResizableSidebar({
+    storageKey: "graphmind_sidebar_width_v1",
+    defaultWidth: DEFAULT_WIDTH,
+    minWidth: MIN_WIDTH,
+    maxWidth: MAX_WIDTH,
+    side: "left",
   });
 
-  const [isResizing, setIsResizing] = useState(false);
-  const isResizingRef = useRef(false);
-
-  const startResizing = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsResizing(true);
-    isResizingRef.current = true;
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
-  }, []);
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isResizingRef.current) return;
-      const newWidth = Math.min(Math.max(e.clientX, MIN_WIDTH), MAX_WIDTH);
-      setWidth(newWidth);
-    };
-
-    const handleMouseUp = () => {
-      if (isResizingRef.current) {
-        isResizingRef.current = false;
-        setIsResizing(false);
-        document.body.style.cursor = "";
-        document.body.style.userSelect = "";
-        safeSetItem("graphmind_sidebar_width_v1", width.toString());
-      }
-    };
-
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
-
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [width]);
 
   const filteredChats = useMemo(() => {
     const list = !searchQuery.trim()
@@ -164,7 +124,7 @@ export function ChatSidebar({
       <aside
         suppressHydrationWarning
         style={{ width: isOpen ? `${width}px` : `${COLLAPSED_WIDTH}px` }}
-        className={`fixed md:static inset-y-0 left-0 z-40 flex flex-col bg-[#F8F9FA] select-none relative overflow-hidden shrink-0 border-r border-zinc-200/80 ${
+        className={`fixed md:static inset-y-0 left-0 z-40 flex flex-col bg-background-secondary select-none relative overflow-hidden shrink-0 border-r border-zinc-200/80 ${
           isOpen
             ? "translate-x-0"
             : "-translate-x-full md:translate-x-0"
@@ -261,7 +221,7 @@ export function ChatSidebar({
         <div className="flex-1 overflow-y-auto overflow-x-hidden p-1 space-y-1">
           {isOpen ? (
             <>
-              <div className="px-3 pt-2 pb-1 text-[11px] font-medium text-zinc-400 tracking-wider uppercase">
+              <div className="px-3 pt-2 pb-1 text-2xs font-medium text-zinc-400 tracking-wider uppercase">
                 Conversations
               </div>
 
@@ -407,10 +367,7 @@ export function ChatSidebar({
         {isOpen && (
           <div
             onMouseDown={startResizing}
-            onDoubleClick={() => {
-              setWidth(DEFAULT_WIDTH);
-              safeSetItem("graphmind_sidebar_width_v1", DEFAULT_WIDTH.toString());
-            }}
+            onDoubleClick={resetWidth}
             className="absolute top-0 -right-1 w-2 h-full cursor-col-resize z-50 bg-transparent"
             title="Drag to resize sidebar (double-click to reset)"
           />

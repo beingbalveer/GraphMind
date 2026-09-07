@@ -570,7 +570,7 @@ export function SidePeekBranchSheet({
 
             {/* Depth Counter Badge */}
             {historyStack.length > 1 && (
-              <span className="text-[10px] font-mono text-zinc-400 px-1.5 py-0.5 rounded-md bg-zinc-100 border border-zinc-200/60 ml-0.5">
+              <span className="text-2xs font-mono text-zinc-400 px-1.5 py-0.5 rounded-md bg-zinc-100 border border-zinc-200/60 ml-0.5">
                 {historyIndex + 1}/{historyStack.length}
               </span>
             )}
@@ -755,7 +755,7 @@ export function SidePeekBranchSheet({
                   <h3 className="text-xs font-semibold text-zinc-900">
                     Explore &ldquo;{displayContext}&rdquo;
                   </h3>
-                  <span className="text-[10px] text-zinc-400 font-medium">Quick Starters</span>
+                  <span className="text-2xs text-zinc-400 font-medium">Quick Starters</span>
                 </div>
 
                 {/* 2-Column Quick Starter Grid */}
@@ -777,7 +777,7 @@ export function SidePeekBranchSheet({
                             {item.title}
                           </h4>
                         </div>
-                        <p className="text-[11px] text-zinc-500 line-clamp-2 leading-relaxed">
+                        <p className="text-2xs text-zinc-500 line-clamp-2 leading-relaxed">
                           {item.desc}
                         </p>
                       </button>

@@ -142,7 +142,7 @@ export function treeToGraph(
         type: MarkerType.ArrowClosed,
         width: 14,
         height: 14,
-        color: edge.isActive ? "#18181b" : "#d4d4d8",
+        color: edge.isActive ? "var(--canvas-edge-active, #18181b)" : "var(--canvas-edge, #d4d4d8)",
       },
     });
   }

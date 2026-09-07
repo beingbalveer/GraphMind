@@ -7,7 +7,7 @@ export function MenuCard({ className, children, ...props }: MenuCardProps) {
   return (
     <div
       className={cn(
-        "rounded-2xl bg-white border border-zinc-200/60 shadow-[0_6px_30px_rgba(0,0,0,0.1),0_1px_3px_rgba(0,0,0,0.06)] p-1.5 text-zinc-950 flex flex-col space-y-0.5",
+        "rounded-2xl bg-white border border-zinc-200/60 shadow-lg p-1.5 text-zinc-950 flex flex-col gap-0.5",
         className
       )}
       {...props}
@@ -37,7 +37,7 @@ export function MenuItem({
     <button
       type="button"
       className={cn(
-        "relative flex w-full cursor-pointer select-none items-center justify-between rounded-xl px-3.5 py-2 text-[13.5px] font-normal outline-none transition-colors group text-left",
+        "relative flex w-full cursor-pointer select-none items-center justify-between rounded-xl px-3.5 py-2 text-sm font-normal outline-none transition-colors group text-left",
         variant === "destructive"
           ? "text-rose-600 hover:bg-rose-50 hover:text-rose-700 active:bg-rose-100"
           : active
@@ -67,7 +67,7 @@ export function MenuHeader({ className, children, ...props }: MenuHeaderProps) {
   return (
     <div
       className={cn(
-        "px-4 pt-2 pb-1 text-[11px] font-semibold text-zinc-400 uppercase tracking-wider select-none",
+        "px-4 pt-2 pb-1 text-2xs font-semibold text-zinc-400 uppercase tracking-wider select-none",
         className
       )}
       {...props}

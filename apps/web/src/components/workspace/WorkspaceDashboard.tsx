@@ -2,10 +2,11 @@
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, LayoutGrid, Clock, MessageSquare } from "lucide-react";
+import { Plus, LayoutGrid, Clock, MessageSquare, Loader2 } from "lucide-react";
 import { fetchWorkspaces, createWorkspace, WorkspaceItem } from "@/lib/workspaceApi";
 import { buildWorkspaceUrl } from "@/lib/urls";
 import { LogoBadge } from "@/components/ui/Logo";
+import { Button } from "@/components/ui/button";
 
 export function WorkspaceDashboard() {
   const router = useRouter();
@@ -36,7 +37,7 @@ export function WorkspaceDashboard() {
   if (loading) {
     return (
       <div className="min-h-screen w-full flex items-center justify-center bg-zinc-50/50">
-        <div className="flex flex-col items-center space-y-4">
+        <div className="flex flex-col items-center gap-4">
           <LogoBadge size="lg" />
           <div className="text-sm text-zinc-500 font-medium animate-pulse">Loading workspaces...</div>
         </div>
@@ -47,9 +48,9 @@ export function WorkspaceDashboard() {
   return (
     <div className="min-h-screen w-full bg-zinc-50/50 flex flex-col">
       <header className="h-14 border-b border-zinc-200/80 bg-white/80 backdrop-blur-md px-6 flex items-center justify-between shrink-0">
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center gap-2">
           <LogoBadge size="sm" />
-          <span className="font-semibold text-zinc-950 text-[14px] tracking-tight">
+          <span className="font-semibold text-zinc-950 text-sm tracking-tight">
             GraphMind
           </span>
         </div>
@@ -62,14 +63,19 @@ export function WorkspaceDashboard() {
               <LayoutGrid className="w-6 h-6 text-zinc-400" />
               Your Workspaces
             </h1>
-            <button
+            <Button
               onClick={handleCreateWorkspace}
               disabled={isCreating}
-              className="flex items-center space-x-1.5 px-4 py-2 rounded-lg bg-zinc-900 text-sm font-medium text-white hover:bg-zinc-800 transition-colors disabled:opacity-50 cursor-pointer"
+              variant="default"
+              size="default"
             >
-              <Plus className="w-4 h-4" />
+              {isCreating ? (
+                <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+              ) : (
+                <Plus className="w-4 h-4 mr-1.5" />
+              )}
               <span>New Workspace</span>
-            </button>
+            </Button>
           </div>
 
           {workspaces.length === 0 ? (
@@ -81,14 +87,19 @@ export function WorkspaceDashboard() {
               <p className="text-zinc-500 mb-6 max-w-sm">
                 Create your first workspace to start mapping your knowledge in a spatial graph.
               </p>
-              <button
+              <Button
                 onClick={handleCreateWorkspace}
                 disabled={isCreating}
-                className="flex items-center space-x-1.5 px-4 py-2 rounded-lg bg-zinc-900 text-sm font-medium text-white hover:bg-zinc-800 transition-colors cursor-pointer"
+                variant="default"
+                size="default"
               >
-                <Plus className="w-4 h-4" />
+                {isCreating ? (
+                  <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                ) : (
+                  <Plus className="w-4 h-4 mr-1.5" />
+                )}
                 <span>Create Workspace</span>
-              </button>
+              </Button>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

@@ -1,14 +1,53 @@
 "use client";
 
 import React, { forwardRef } from "react";
+import { cva, type VariantProps } from "class-variance-authority";
+import { cn } from "@/lib/utils";
 
-export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+const inputVariants = cva(
+  "w-full rounded-lg border text-xs transition-all placeholder:text-zinc-400 focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:opacity-50",
+  {
+    variants: {
+      variant: {
+        default:
+          "border-zinc-200/90 bg-zinc-50/50 text-zinc-900 focus:bg-white focus:border-zinc-400 focus:ring-zinc-200/80",
+        ghost:
+          "border-transparent bg-transparent text-zinc-900 focus:bg-zinc-50/80 focus:border-zinc-200 focus:ring-zinc-200/50",
+      },
+      inputSize: {
+        sm: "h-7.5 px-2.5 text-xs",
+        default: "h-8.5 px-3 text-xs",
+        lg: "h-10 px-3.5 text-sm",
+      },
+    },
+    defaultVariants: {
+      variant: "default",
+      inputSize: "default",
+    },
+  }
+);
+
+export interface InputProps
+  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "size">,
+    VariantProps<typeof inputVariants> {
   startIcon?: React.ReactNode;
   endIcon?: React.ReactNode;
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ className = "", startIcon, endIcon, disabled, type = "text", ...props }, ref) => {
+  (
+    {
+      className,
+      variant,
+      inputSize,
+      startIcon,
+      endIcon,
+      disabled,
+      type = "text",
+      ...props
+    },
+    ref
+  ) => {
     return (
       <div className="relative flex items-center w-full">
         {startIcon && (
@@ -20,9 +59,12 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           ref={ref}
           type={type}
           disabled={disabled}
-          className={`w-full h-8.5 rounded-lg border border-zinc-200/90 bg-zinc-50/50 px-3 text-xs text-zinc-900 placeholder-zinc-400 transition-all focus:bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-50 ${
-            startIcon ? "pl-8" : ""
-          } ${endIcon ? "pr-8" : ""} ${className}`}
+          className={cn(
+            inputVariants({ variant, inputSize }),
+            startIcon && "pl-8",
+            endIcon && "pr-8",
+            className
+          )}
           {...props}
         />
         {endIcon && (
@@ -36,3 +78,4 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
 );
 
 Input.displayName = "Input";
+export { inputVariants };

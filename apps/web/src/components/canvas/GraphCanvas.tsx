@@ -364,34 +364,36 @@ function FlowCanvas({
           variant={BackgroundVariant.Dots}
           gap={18}
           size={1.2}
-          color="#d4d4d8"
+          color="var(--canvas-edge, #d4d4d8)"
         />
         <Controls
           showInteractive={false}
-          className="bg-white border border-zinc-200 shadow-md rounded-xl overflow-hidden p-0.5 text-zinc-700"
+          className="bg-white border border-zinc-200 shadow-sm rounded-xl overflow-hidden p-0.5 text-zinc-700"
         />
         {showMinimap && (
           <MiniMap
             nodeStrokeWidth={2}
             nodeColor={(node) => {
               const data = node.data as ThreadNodeData;
-              return data?.thread?.isActive ? "#18181b" : "#e4e4e7";
+              return data?.thread?.isActive
+                ? "var(--canvas-edge-active, #18181b)"
+                : "var(--border, #e4e4e7)";
             }}
-            className="bg-white/95 border border-zinc-200/90 shadow-md rounded-xl overflow-hidden hidden sm:block"
+            className="bg-white/95 border border-zinc-200/90 shadow-sm rounded-xl overflow-hidden hidden sm:block"
           />
         )}
       </ReactFlow>
 
       {/* Floating Canvas Camera & Layout Toolbar */}
       <div
-        className={`absolute top-4 z-20 flex items-center space-x-1 p-1 bg-white border border-zinc-200/70 rounded-2xl select-none transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+        className={`absolute top-4 z-20 flex items-center gap-1 p-1 bg-white border border-zinc-200/70 rounded-2xl select-none transition-all duration-200 ${
           isSidePeekOpen
             ? "right-4 sm:right-[496px] md:right-[556px] lg:right-[596px]"
             : "right-4"
         }`}
       >
         {/* LOD Mode Indicator Badge */}
-        <div className="px-2.5 py-1 rounded-xl bg-zinc-100 text-[11px] font-medium text-zinc-800 capitalize">
+        <div className="px-2.5 py-1 rounded-xl bg-zinc-100 text-xs font-medium text-zinc-800 capitalize">
           {zoomMode === "orb" ? "🌌 Galaxy View" : zoomMode === "detailed" ? "🔍 Focus View" : "📄 Thread Tree"}
         </div>
         <div className="w-px h-4 bg-zinc-200/80 mx-0.5" />
@@ -486,41 +488,41 @@ function FlowCanvas({
 
       {/* Floating Heatmap Legend */}
       {isHeatmapMode && (
-        <div className="absolute bottom-4 left-4 z-20 bg-white/95 backdrop-blur-xs border border-zinc-200/80 rounded-2xl p-3 shadow-md select-none text-[11px] animate-in fade-in slide-in-from-bottom-2 duration-150 space-y-2 max-w-[220px]">
+        <div className="absolute bottom-4 left-4 z-20 bg-white/95 backdrop-blur-xs border border-zinc-200/80 rounded-2xl p-3 shadow-md select-none text-xs animate-in fade-in slide-in-from-bottom-2 duration-150 space-y-2 max-w-[220px]">
           <div className="flex items-center justify-between text-xs font-semibold text-zinc-900 pb-1 border-b border-zinc-100">
-            <span className="flex items-center space-x-1.5">
+            <span className="flex items-center gap-1.5">
               <Flame className="w-3.5 h-3.5 text-purple-600" />
               <span>Mastery Heatmap</span>
             </span>
           </div>
           <div className="space-y-1.5 text-zinc-700">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-1.5">
+              <div className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
                 <span>Mastered</span>
               </div>
-              <span className="font-mono text-[10px] text-zinc-400">≥80%</span>
+              <span className="font-mono text-2xs text-zinc-400">≥80%</span>
             </div>
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-1.5">
+              <div className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-purple-500 shrink-0" />
                 <span>Quizzed</span>
               </div>
-              <span className="font-mono text-[10px] text-zinc-400">50-79%</span>
+              <span className="font-mono text-2xs text-zinc-400">50-79%</span>
             </div>
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-1.5">
+              <div className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-sky-500 shrink-0" />
                 <span>Explored</span>
               </div>
-              <span className="font-mono text-[10px] text-zinc-400">&gt;0%</span>
+              <span className="font-mono text-2xs text-zinc-400">&gt;0%</span>
             </div>
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-1.5">
+              <div className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
                 <span>Stale</span>
               </div>
-              <span className="font-mono text-[10px] text-zinc-400">Needs Review</span>
+              <span className="font-mono text-2xs text-zinc-400">Needs Review</span>
             </div>
           </div>
         </div>

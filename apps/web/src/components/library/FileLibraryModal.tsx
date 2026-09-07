@@ -22,6 +22,9 @@ import {
   deleteWorkspaceFile,
   resolveFileUrl,
 } from "@/lib/workspaceApi";
+import { formatBytes } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Modal } from "@/components/ui/modal";
 import { CodeViewerModal } from "../chat/CodeViewerModal";
 import { PdfViewerModal } from "../chat/PdfViewerModal";
 import { TableViewerModal } from "../chat/TableViewerModal";
@@ -31,15 +34,6 @@ interface FileLibraryModalProps {
   onClose: () => void;
   workspaceId: string;
   onSelectFile?: (file: FileAttachment) => void;
-}
-
-function formatBytes(bytes: number, decimals = 1): string {
-  if (bytes === 0) return "0 Bytes";
-  const k = 1024;
-  const dm = decimals < 0 ? 0 : decimals;
-  const sizes = ["Bytes", "KB", "MB", "GB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
 }
 
 export function FileLibraryModal({
@@ -130,55 +124,57 @@ export function FileLibraryModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in-50 duration-150">
-      <div className="bg-white w-full max-w-4xl h-[640px] max-h-[90vh] rounded-2xl shadow-xl border border-zinc-200/90 flex flex-col overflow-hidden animate-in zoom-in-98 duration-150">
+    <>
+      <Modal isOpen={isOpen} onClose={onClose} size="4xl" className="h-[640px] max-h-[90vh]">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-zinc-100 flex items-center justify-between shrink-0">
-          <div className="flex items-center space-x-2.5">
-            <div className="p-2 rounded-xl bg-zinc-100 border border-zinc-200/80 text-zinc-700">
-              <FolderOpen className="w-4 h-4" />
-            </div>
-            <div>
-              <div className="flex items-center space-x-2">
-                <h2 className="text-base font-semibold text-zinc-950">Workspace File Library</h2>
-                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-zinc-100 text-zinc-600 border border-zinc-200/80">
-                  {files.length}
-                </span>
-              </div>
-              <p className="text-xs text-zinc-500">
-                Persistent assets, code files, and documents stored in this workspace.
-              </p>
-            </div>
+      <div className="px-6 py-4 border-b border-zinc-100 flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-2.5">
+          <div className="p-2 rounded-xl bg-zinc-100 border border-zinc-200/80 text-zinc-700">
+            <FolderOpen className="w-4 h-4" />
           </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-base font-semibold text-zinc-950">Workspace File Library</h2>
+              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-zinc-100 text-zinc-600 border border-zinc-200/80">
+                {files.length}
+              </span>
+            </div>
+            <p className="text-xs text-zinc-500">
+              Persistent assets, code files, and documents stored in this workspace.
+            </p>
+          </div>
+        </div>
 
-          <div className="flex items-center space-x-2">
-            <input
-              type="file"
-              ref={fileInputRef}
-              multiple
-              accept="image/*,application/pdf,.pdf,.csv,.tsv,.xlsx,.jsonl,.ndjson,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,text/tab-separated-values,.txt,.md,.markdown,.py,.js,.jsx,.ts,.tsx,.json,.yaml,.yml,.toml,.sql,.html,.css,.scss,.sh,.bash,.zsh,.rs,.go,.c,.cpp,.h,.hpp,.java,.kt,.rb,.php,.cs,.swift,.dockerfile,.graphql,.proto,.vue,.svelte,.xml,.env,.log"
-              className="hidden"
-              onChange={handleUpload}
-            />
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isUploading}
-              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-medium transition-colors shadow-2xs cursor-pointer disabled:opacity-50"
-            >
-              {isUploading ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : (
-                <Upload className="w-3.5 h-3.5" />
-              )}
-              <span>Upload Files</span>
-            </button>
+        <div className="flex items-center gap-2">
+          <input
+            type="file"
+            ref={fileInputRef}
+            multiple
+            accept="image/*,application/pdf,.pdf,.csv,.tsv,.xlsx,.jsonl,.ndjson,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,text/tab-separated-values,.txt,.md,.markdown,.py,.js,.jsx,.ts,.tsx,.json,.yaml,.yml,.toml,.sql,.html,.css,.scss,.sh,.bash,.zsh,.rs,.go,.c,.cpp,.h,.hpp,.java,.kt,.rb,.php,.cs,.swift,.dockerfile,.graphql,.proto,.vue,.svelte,.xml,.env,.log"
+            className="hidden"
+            onChange={handleUpload}
+          />
+          <Button
+            type="button"
+            variant="default"
+            size="sm"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploading}
+          >
+            {isUploading ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" />
+            ) : (
+              <Upload className="w-3.5 h-3.5 mr-1" />
+            )}
+            <span>Upload Files</span>
+          </Button>
 
-            <button
-              type="button"
-              onClick={onClose}
-              className="p-1.5 rounded-xl text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-colors cursor-pointer"
-            >
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1.5 rounded-xl text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-colors cursor-pointer"
+            aria-label="Close dialog"
+          >
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -335,35 +331,35 @@ export function FileLibraryModal({
                         />
                       ) : isPdf ? (
                         <div className="w-full h-full p-3 bg-red-50/60 text-zinc-700 flex flex-col justify-between select-none border-b border-red-100">
-                          <div className="flex items-center justify-between text-[11px]">
-                            <span className="font-bold text-red-600 bg-red-100/80 border border-red-200/60 px-1.5 py-0.5 rounded text-[10px]">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-bold text-red-600 bg-red-100/80 border border-red-200/60 px-1.5 py-0.5 rounded text-2xs">
                               PDF
                             </span>
                             <FileText className="w-4 h-4 text-red-600" />
                           </div>
-                          <div className="text-[11px] text-zinc-600 line-clamp-3 leading-snug font-sans">
+                          <div className="text-xs text-zinc-600 line-clamp-3 leading-snug font-sans">
                             {file.extractedText
                               ? file.extractedText.slice(0, 120)
                               : "PDF document stored in workspace library."}
                           </div>
-                          <div className="text-[10px] text-red-600 font-medium">
+                          <div className="text-2xs text-red-600 font-medium">
                             Click to view PDF
                           </div>
                         </div>
                       ) : isTabular ? (
                         <div className="w-full h-full p-3 bg-emerald-50/70 text-zinc-700 flex flex-col justify-between select-none border-b border-emerald-100">
-                          <div className="flex items-center justify-between text-[11px]">
-                            <span className="font-bold text-emerald-700 bg-emerald-100/90 border border-emerald-200/80 px-1.5 py-0.5 rounded text-[10px] uppercase">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-bold text-emerald-700 bg-emerald-100/90 border border-emerald-200/80 px-1.5 py-0.5 rounded text-2xs uppercase">
                               {(file.metadata?.format as string) || file.name.split(".").pop() || "TABLE"}
                             </span>
                             <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
                           </div>
-                          <div className="text-[11px] text-zinc-600 font-mono line-clamp-3 leading-snug">
+                          <div className="text-xs text-zinc-600 font-mono line-clamp-3 leading-snug">
                             {file.extractedText
                               ? file.extractedText.slice(0, 120)
                               : "Tabular spreadsheet dataset stored in workspace library."}
                           </div>
-                          <div className="text-[10px] text-emerald-700 font-medium">
+                          <div className="text-2xs text-emerald-700 font-medium">
                             {file.metadata?.row_count !== undefined
                               ? `${(file.metadata.row_count as number).toLocaleString()} rows · Explore`
                               : "Click to explore table"}
@@ -371,24 +367,24 @@ export function FileLibraryModal({
                         </div>
                       ) : isMd ? (
                         <div className="w-full h-full p-3 bg-blue-50/60 text-zinc-700 flex flex-col justify-between select-none border-b border-blue-100">
-                          <div className="flex items-center justify-between text-[11px]">
-                            <span className="font-bold text-blue-700 bg-blue-100/90 border border-blue-200/80 px-1.5 py-0.5 rounded text-[10px] uppercase">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-bold text-blue-700 bg-blue-100/90 border border-blue-200/80 px-1.5 py-0.5 rounded text-2xs uppercase">
                               MD
                             </span>
                             <FileText className="w-4 h-4 text-blue-600" />
                           </div>
-                          <div className="text-[11px] text-zinc-600 line-clamp-3 leading-snug font-sans">
+                          <div className="text-xs text-zinc-600 line-clamp-3 leading-snug font-sans">
                             {file.extractedText
                               ? file.extractedText.slice(0, 120)
                               : "Markdown document stored in workspace library."}
                           </div>
-                          <div className="text-[10px] text-blue-600 font-medium">
+                          <div className="text-2xs text-blue-600 font-medium">
                             Click to preview markdown
                           </div>
                         </div>
                       ) : (
                         <div className="w-full h-full p-3 bg-zinc-900 text-zinc-300 flex flex-col justify-between select-none">
-                          <div className="flex items-center justify-between text-[11px] text-zinc-400">
+                          <div className="flex items-center justify-between text-xs text-zinc-400">
                             <span className="font-mono uppercase font-semibold text-emerald-400">
                               {file.name.split(".").pop() || "txt"}
                             </span>
@@ -398,19 +394,19 @@ export function FileLibraryModal({
                               <FileText className="w-3.5 h-3.5 text-zinc-500" />
                             )}
                           </div>
-                          <div className="font-mono text-[10.5px] leading-tight text-zinc-400 overflow-hidden line-clamp-4 select-none opacity-80">
+                          <div className="font-mono text-2xs leading-tight text-zinc-400 overflow-hidden line-clamp-4 select-none opacity-80">
                             {file.extractedText
                               ? file.extractedText.slice(0, 150)
                               : "// File uploaded to library"}
                           </div>
-                          <div className="text-[10px] text-zinc-500 font-mono">
+                          <div className="text-2xs text-zinc-500 font-mono">
                             Click to view code
                           </div>
                         </div>
                       )}
 
                       {/* Top-Right Floating Action Cluster */}
-                      <div className="absolute top-2 right-2 z-10 flex items-center space-x-0.5 p-0.5 rounded-xl bg-white/95 backdrop-blur-md border border-zinc-200/80 shadow-[0_2px_8px_rgba(0,0,0,0.06)] opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                      <div className="absolute top-2 right-2 z-10 flex items-center space-x-0.5 p-0.5 rounded-xl bg-white/95 backdrop-blur-md border border-zinc-200/80 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity duration-150">
                         <button
                           type="button"
                           onClick={(e) => {
@@ -455,9 +451,9 @@ export function FileLibraryModal({
                       <p className="text-xs font-medium text-zinc-900 truncate" title={file.name}>
                         {file.name}
                       </p>
-                      <div className="flex items-center justify-between text-[11px] text-zinc-400 mt-1">
+                      <div className="flex items-center justify-between text-xs text-zinc-400 mt-1">
                         <span>{formatBytes(file.sizeBytes)}</span>
-                        <span className="uppercase text-[10px] font-mono tracking-wider text-zinc-500">
+                        <span className="uppercase text-2xs font-mono tracking-wider text-zinc-500">
                           {file.fileCategory || "file"}
                         </span>
                       </div>
@@ -468,7 +464,7 @@ export function FileLibraryModal({
             </div>
           )}
         </div>
-      </div>
+      </Modal>
 
       {/* Full Resolution Image Lightbox */}
       {previewFile && (
@@ -547,6 +543,6 @@ export function FileLibraryModal({
           sizeBytes={viewingTabularFile.sizeBytes}
         />
       )}
-    </div>
+    </>
   );
 }

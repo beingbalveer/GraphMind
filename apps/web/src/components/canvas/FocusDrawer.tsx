@@ -103,7 +103,7 @@ export function FocusDrawer({
                 ? `Branch: "${node.highlightedContext}"`
                 : "Conversation Thread"}
             </span>
-            <span className="text-[10px] text-zinc-400 font-mono">
+            <span className="text-2xs text-zinc-400 font-mono">
               {threadMessages.length} message{threadMessages.length > 1 ? "s" : ""}
             </span>
           </div>
