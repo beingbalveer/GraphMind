@@ -12,8 +12,12 @@ import {
   Plus,
   FolderOpen,
   MessageSquare,
+  PanelLeft,
+  PanelLeftClose,
 } from "lucide-react";
 import { ChatItem } from "@/lib/workspaceApi";
+import { Button } from "@/components/ui/button";
+import { LogoBadge } from "@/components/ui/Logo";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { safeGetItem, safeSetItem } from "@/lib/storage";
@@ -162,38 +166,74 @@ export function ChatSidebar({
       <aside
         suppressHydrationWarning
         style={{ width: isOpen ? `${width}px` : `${COLLAPSED_WIDTH}px` }}
-        className={`fixed md:static inset-y-0 left-0 z-40 flex flex-col bg-[#F8F9FA] select-none relative overflow-hidden ${
+        className={`fixed md:static inset-y-0 left-0 z-40 flex flex-col bg-[#F8F9FA] select-none relative overflow-hidden shrink-0 border-r border-zinc-200/80 ${
           isOpen
             ? "translate-x-0"
             : "-translate-x-full md:translate-x-0"
         } ${isResizing ? "transition-none" : "transition-[width,transform] duration-200 ease-in-out"}`}
       >
-        {/* Top Header: Search row */}
-        <div className="h-12 flex items-center shrink-0 bg-transparent overflow-hidden">
-          <div
-            className="w-14 h-12 flex items-center justify-center shrink-0 cursor-pointer"
-            onClick={() => {
-              if (!isOpen) onToggle();
-            }}
-            title="Search chats..."
-          >
-            <Search className="w-4 h-4 text-zinc-400 hover:text-zinc-700 transition-colors shrink-0" />
-          </div>
-
-          <div
-            className={`flex-1 pr-3 transition-opacity duration-200 ${
-              isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
-            }`}
-          >
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search chats..."
-              className="w-full py-1.5 px-2.5 rounded-lg border-0 bg-white text-xs text-zinc-800 placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-900/15 transition-all shadow-2xs"
-            />
-          </div>
+        {/* Top Header: Standardized to h-13 with border-b, matching Navbar exactly */}
+        <div className="h-13 px-3 flex items-center justify-between shrink-0 bg-white border-b border-zinc-200/80 overflow-hidden">
+          {isOpen ? (
+            <>
+              <div className="flex items-center space-x-2 min-w-0">
+                <LogoBadge size="sm" />
+                <span className="text-xs font-semibold text-zinc-900 truncate tracking-tight">
+                  GraphMind
+                </span>
+              </div>
+              <Button
+                variant="ghost"
+                size="iconSm"
+                onClick={onToggle}
+                className="h-8 w-8 text-zinc-400 hover:text-zinc-950 cursor-pointer shrink-0"
+                title="Collapse sidebar (⌘B)"
+              >
+                <PanelLeftClose className="w-4 h-4" />
+              </Button>
+            </>
+          ) : (
+            <div className="w-full flex items-center justify-center">
+              <Button
+                variant="ghost"
+                size="iconSm"
+                onClick={onToggle}
+                className="h-8 w-8 text-zinc-500 hover:text-zinc-950 cursor-pointer"
+                title="Expand sidebar (⌘B)"
+              >
+                <PanelLeft className="w-4 h-4" />
+              </Button>
+            </div>
+          )}
         </div>
+
+        {/* Search row */}
+        {isOpen ? (
+          <div className="px-2 pt-2.5 pb-1 shrink-0">
+            <div className="relative flex items-center">
+              <Search className="w-3.5 h-3.5 absolute left-2.5 text-zinc-400 pointer-events-none" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search chats..."
+                className="w-full pl-8 pr-2.5 py-1.5 rounded-lg border border-zinc-200/80 bg-white text-xs text-zinc-800 placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-900/15 transition-all shadow-2xs"
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="p-1 flex justify-center shrink-0">
+            <Button
+              variant="ghost"
+              size="iconSm"
+              onClick={onToggle}
+              className="h-8 w-8 text-zinc-400 hover:text-zinc-700"
+              title="Search chats..."
+            >
+              <Search className="w-4 h-4" />
+            </Button>
+          </div>
+        )}
 
         {/* Quick Navigation Items: New Chat & Library */}
         <div className="py-1 px-1.5 space-y-0.5 shrink-0 overflow-hidden">

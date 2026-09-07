@@ -85,7 +85,7 @@ export function RightSidebar({
       <aside
         suppressHydrationWarning
         style={{ width: isOpen ? `${width}px` : "0px" }}
-        className={`fixed md:static inset-y-0 right-0 z-40 flex flex-col bg-[#F8F9FA] select-none relative overflow-hidden shrink-0 ${
+        className={`fixed md:static inset-y-0 right-0 z-40 flex flex-col bg-[#F8F9FA] select-none relative overflow-hidden shrink-0 border-l border-zinc-200/80 ${
           isOpen ? "translate-x-0" : "translate-x-full md:translate-x-0"
         } ${isResizing ? "transition-none" : "transition-[width,transform] duration-200 ease-in-out"}`}
       >
@@ -100,10 +100,10 @@ export function RightSidebar({
           </div>
         )}
 
-        {/* Top Header */}
-        <div className="h-13 px-3 sm:px-4 flex items-center justify-between shrink-0 bg-transparent overflow-hidden">
+        {/* Top Header: Standardized to h-13 with border-b, matching Navbar exactly */}
+        <div className="h-13 px-3.5 sm:px-4 flex items-center justify-between shrink-0 bg-white border-b border-zinc-200/80 overflow-hidden">
           <div className="flex items-center space-x-2 min-w-0">
-            <Sparkles className="w-4 h-4 text-zinc-600 shrink-0" />
+            <Sparkles className="w-4 h-4 text-zinc-700 shrink-0" />
             <h2 className="text-xs font-semibold text-zinc-900 truncate tracking-tight">
               {title}
             </h2>
@@ -121,7 +121,7 @@ export function RightSidebar({
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 overflow-y-auto p-4 flex flex-col min-w-0">
+        <div className="flex-1 overflow-y-auto p-3.5 sm:p-4 flex flex-col min-w-0 bg-[#F8F9FA]">
           {children ? (
             children
           ) : (
