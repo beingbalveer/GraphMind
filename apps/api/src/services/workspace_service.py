@@ -1,3 +1,4 @@
+from collections import deque
 from typing import Any, Dict, List, Optional, Tuple
 
 import structlog
@@ -193,9 +194,9 @@ class WorkspaceService:
             # Filter to only the nodes and edges in the specified chat tree
             subtree_ids = set()
             if root_id in node_map:
-                queue = [root_id]
+                queue = deque([root_id])
                 while queue:
-                    curr_id = queue.pop(0)
+                    curr_id = queue.popleft()
                     subtree_ids.add(curr_id)
                     for child_id in tree_children_map.get(curr_id, []):
                         queue.append(child_id)

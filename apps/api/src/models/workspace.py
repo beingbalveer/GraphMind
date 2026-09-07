@@ -10,6 +10,7 @@ from sqlalchemy import (
     DateTime,
     Float,
     ForeignKey,
+    Index,
     Integer,
     String,
     Table,
@@ -93,6 +94,7 @@ node_concepts = Table(
         primary_key=True,
     ),
     Column("created_at", DateTime(timezone=True), default=_utc_now),
+    Index("idx_node_concepts_concept_id", "concept_id"),
 )
 
 
@@ -102,6 +104,9 @@ class NodeModel(Base):
     """
 
     __tablename__ = "nodes"
+    __table_args__ = (
+        Index("idx_nodes_workspace_created", "workspace_id", "created_at"),
+    )
 
     id: Mapped[str] = mapped_column(
         String(64),
@@ -316,6 +321,9 @@ class ConceptModel(Base):
     """
 
     __tablename__ = "workspace_concepts"
+    __table_args__ = (
+        Index("idx_concepts_workspace_created", "workspace_id", "created_at"),
+    )
 
     id: Mapped[str] = mapped_column(
         String(64),

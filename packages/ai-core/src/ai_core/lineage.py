@@ -16,16 +16,20 @@ def estimate_tokens(text: str) -> int:
 def get_ancestor_nodes(tree: ConversationTree, node_id: str) -> List[TreeNode]:
     """
     Traverse from target node_id back to root, returning ordered list [Root, ..., TargetNode].
+    Optimized to O(N) linear time with cycle protection.
     """
     path: List[TreeNode] = []
     current: Optional[TreeNode] = tree.get_node(node_id)
+    visited = set()
 
-    while current is not None:
-        path.insert(0, current)
+    while current is not None and current.id not in visited:
+        visited.add(current.id)
+        path.append(current)
         if current.parent_id is None:
             break
         current = tree.get_node(current.parent_id)
 
+    path.reverse()
     return path
 
 
@@ -40,6 +44,7 @@ def budget_lineage_messages(
       2. High Priority: Direct Parent Response (second-to-last message)
       3. Anchor Priority: Root Prompt (first message)
     Fills remaining budget with intermediate messages in recency order.
+    Optimized to O(N) linear time.
     """
     if not messages:
         return []
@@ -65,18 +70,19 @@ def budget_lineage_messages(
 
     # Intermediate messages between root and direct_parent
     intermediates = messages[1:-2]
-    selected_intermediates: List[ChatMessage] = []
+    selected_intermediates_rev: List[ChatMessage] = []
 
     # Iterate backwards from most recent intermediate to oldest
     for msg in reversed(intermediates):
         cost = estimate_tokens(msg.content)
         if cost <= budget_remaining:
-            selected_intermediates.insert(0, msg)
+            selected_intermediates_rev.append(msg)
             budget_remaining -= cost
         else:
             break
 
-    return [root_prompt] + selected_intermediates + [direct_parent, new_prompt]
+    selected_intermediates_rev.reverse()
+    return [root_prompt] + selected_intermediates_rev + [direct_parent, new_prompt]
 
 
 def resolve_conversation_lineage(

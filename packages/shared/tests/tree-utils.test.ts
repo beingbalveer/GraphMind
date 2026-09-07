@@ -526,5 +526,34 @@ describe("ConversationTree Utilities", () => {
     expect(isolatedSiblings).toHaveLength(1);
     expect(isolatedSiblings[0].id).toBe(speedUser.id);
   });
+
+  it("benchmarks getAncestorPath performance on 1,000 nodes in sub-10ms", () => {
+    let tree = createConversationTree({
+      role: "user",
+      content: "Root question for scale benchmark",
+    });
+
+    let currentParentId = tree.rootNodeId;
+    const totalNodes = 1000;
+
+    for (let i = 1; i < totalNodes; i++) {
+      const result = addChildNode(tree, {
+        parentId: currentParentId,
+        role: i % 2 === 1 ? "assistant" : "user",
+        content: `Synthetic node ${i} content`,
+      });
+      tree = result.tree;
+      currentParentId = result.node.id;
+    }
+
+    const start = performance.now();
+    const ancestors = getAncestorPath(tree, currentParentId);
+    const elapsed = performance.now() - start;
+
+    expect(ancestors).toHaveLength(totalNodes);
+    expect(ancestors[0].id).toBe(tree.rootNodeId);
+    expect(ancestors[ancestors.length - 1].id).toBe(currentParentId);
+    expect(elapsed).toBeLessThan(10.0);
+  });
 });
 

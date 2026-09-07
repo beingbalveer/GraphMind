@@ -64,7 +64,15 @@ export function treeToGraph(
 
   // Build tree hierarchy layout mapping
   const threadMap = new Map<string, ConversationThread>();
-  threads.forEach((t) => threadMap.set(t.id, t));
+  const parentToChildren = new Map<string, ConversationThread[]>();
+  threads.forEach((t) => {
+    threadMap.set(t.id, t);
+    if (t.parentThreadId) {
+      const existing = parentToChildren.get(t.parentThreadId) || [];
+      existing.push(t);
+      parentToChildren.set(t.parentThreadId, existing);
+    }
+  });
 
   let leafCounter = 0;
   const positions = new Map<string, { x: number; y: number }>();
@@ -73,7 +81,7 @@ export function treeToGraph(
     const thread = threadMap.get(threadId);
     if (!thread) return 0;
 
-    const childThreads = threads.filter((t) => t.parentThreadId === threadId);
+    const childThreads = parentToChildren.get(threadId) || [];
 
     if (childThreads.length === 0) {
       const x = depth * 320;

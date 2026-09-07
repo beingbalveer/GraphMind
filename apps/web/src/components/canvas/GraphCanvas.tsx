@@ -241,8 +241,8 @@ function FlowCanvas({
     else setZoomMode("capsule");
   }, [zoom]);
 
-  // Compute Thread Nodes & Branch Edges
-  const { initialNodes, initialEdges } = useMemo(() => {
+  // Compute Thread Nodes & Branch Edges (Optimized single-pass memoization)
+  const { currentNodes, currentEdges } = useMemo(() => {
     const raw = treeToGraph(tree, {
       activeNodeId: tree?.activeNodeId,
       isStreaming,
@@ -253,27 +253,17 @@ function FlowCanvas({
       cutoffTimestamp,
     });
     const layouted = getLayoutedElements(raw.nodes, raw.edges, direction);
-    return { initialNodes: layouted.nodes, initialEdges: layouted.edges };
+    return { currentNodes: layouted.nodes, currentEdges: layouted.edges };
   }, [tree, isStreaming, zoomMode, direction, onDeleteBranch, masteryMap, isHeatmapMode, cutoffTimestamp]);
 
-  const [nodes, setNodes, onNodesChange] = useNodesState<Node<ThreadNodeData>>(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node<ThreadNodeData>>(currentNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(currentEdges);
 
-  // Synchronize graph nodes and edges whenever tree, zoomMode, direction, heatmap, or cutoffTimestamp updates
+  // Synchronize graph nodes and edges whenever memoized elements change
   useEffect(() => {
-    const raw = treeToGraph(tree, {
-      activeNodeId: tree?.activeNodeId,
-      isStreaming,
-      zoomMode,
-      onDeleteThread: onDeleteBranch,
-      masteryMap,
-      isHeatmapMode,
-      cutoffTimestamp,
-    });
-    const layouted = getLayoutedElements(raw.nodes, raw.edges, direction);
-    setNodes(layouted.nodes);
-    setEdges(layouted.edges);
-  }, [tree, isStreaming, zoomMode, direction, onDeleteBranch, masteryMap, isHeatmapMode, cutoffTimestamp, setNodes, setEdges]);
+    setNodes(currentNodes);
+    setEdges(currentEdges);
+  }, [currentNodes, currentEdges, setNodes, setEdges]);
 
   // Center camera on a specific thread node
   const centerOnNode = useCallback(
@@ -550,7 +540,7 @@ function FlowCanvas({
             setIsReplayMode(false);
             setIsPlaying(false);
           }}
-          visibleNodeCount={initialNodes.length}
+          visibleNodeCount={nodes.length}
           totalNodeCount={Object.keys(tree?.nodes || {}).length}
           masteredConceptCount={
             masterySummary?.concepts.filter((c) => c.masteryLevel === "mastered").length || 0

@@ -150,19 +150,17 @@ export function extractConversationThreads(
         const mainlineChildIndex = children.findIndex((c) => !c.highlightedContext);
         const mainlineChild = mainlineChildIndex !== -1 ? children[mainlineChildIndex] : null;
 
+        const branchingParentId = currentNode.id;
         for (let i = 0; i < children.length; i++) {
           const child = children[i];
-          if (child === mainlineChild) {
-            // Mainline continuation of this thread!
-            currentNode = child;
-          } else {
+          if (child !== mainlineChild) {
             // Child Thread branch!
-            const childThreadId = buildThread(child.id, threadId, currentNode.id);
+            const childThreadId = buildThread(child.id, threadId, branchingParentId);
 
             const isEdgeActive = Boolean(
               activeNodeId &&
               (activeNodeId === child.id ||
-                tree!.nodes[activeNodeId]?.parentId === currentNode.id)
+                tree!.nodes[activeNodeId]?.parentId === branchingParentId)
             );
 
             edges.push({
@@ -176,9 +174,7 @@ export function extractConversationThreads(
           }
         }
 
-        if (!mainlineChild) {
-          currentNode = null;
-        }
+        currentNode = mainlineChild;
       }
     }
 

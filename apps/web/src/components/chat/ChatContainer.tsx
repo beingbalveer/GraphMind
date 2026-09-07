@@ -8,7 +8,6 @@ import {
   getNodeChildren,
   getBranchLinearLeafNode,
   getAncestorPath,
-  TreeNode,
   FileAttachment,
 } from "@graphmind/shared";
 
@@ -86,7 +85,6 @@ export function ChatContainer({
     streamingNodeId,
     error,
     activeBranch,
-    setBranchContext,
     clearBranchContext,
     switchBranch,
     clearError,
@@ -868,7 +866,7 @@ export function ChatContainer({
     });
 
     return steps;
-  }, [tree, activeMessages, activeLineage]);
+  }, [tree, activeLineage]);
 
   const handleEditUserMessage = useCallback(
     async (userNodeId: string, newContent: string) => {

@@ -144,13 +144,16 @@ export function getAncestorPath(
 ): TreeNode[] {
   const path: TreeNode[] = [];
   let current: TreeNode | undefined = tree.nodes[nodeId];
+  const visited = new Set<string>();
 
-  while (current) {
-    path.unshift(current);
+  while (current && !visited.has(current.id)) {
+    visited.add(current.id);
+    path.push(current);
     if (!current.parentId) break;
     current = tree.nodes[current.parentId];
   }
 
+  path.reverse();
   return path;
 }
 

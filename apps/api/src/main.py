@@ -69,7 +69,25 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
                         "ON workspace_file_chunks USING gin (to_tsvector('english', enriched_content));"
                     )
                 )
-        logger.info("Database schema, pgvector extension, and hybrid search indexes initialized successfully")
+                await conn.execute(
+                    text(
+                        "CREATE INDEX IF NOT EXISTS idx_nodes_embedding_hnsw "
+                        "ON nodes USING hnsw (embedding vector_cosine_ops);"
+                    )
+                )
+                await conn.execute(
+                    text(
+                        "CREATE INDEX IF NOT EXISTS idx_nodes_workspace_created "
+                        "ON nodes (workspace_id, created_at);"
+                    )
+                )
+                await conn.execute(
+                    text(
+                        "CREATE INDEX IF NOT EXISTS idx_concepts_workspace_created "
+                        "ON workspace_concepts (workspace_id, created_at);"
+                    )
+                )
+        logger.info("Database schema, pgvector extension, and performance indexes initialized successfully")
     except Exception as e:
         logger.warning("Database synchronization deferred or failed", error=str(e))
 
