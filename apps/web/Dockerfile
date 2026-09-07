@@ -11,7 +11,7 @@ COPY apps/web/ /app/apps/web/
 
 RUN pnpm install --frozen-lockfile
 
-RUN pnpm --filter @graphmind/web build
+RUN pnpm build
 
 EXPOSE 3000
 

@@ -1,6 +1,6 @@
 [project]
 name = "graphmind-workspace"
-version = "0.1.0"
+version = "1.0.0"
 description = "GraphMind - AI-native Knowledge Workspace"
 authors = [{ name = "GraphMind Team" }]
 requires-python = ">=3.12"

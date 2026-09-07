@@ -16,7 +16,7 @@ members = [
 
 [[package]]
 name = "ai-core"
-version = "0.1.0"
+version = "1.0.0"
 source = { editable = "packages/ai-core" }
 dependencies = [
     { name = "anthropic" },
@@ -580,7 +580,7 @@ wheels = [
 
 [[package]]
 name = "graphmind-api"
-version = "0.1.0"
+version = "1.0.0"
 source = { editable = "apps/api" }
 dependencies = [
     { name = "ai-core" },
@@ -621,7 +621,7 @@ requires-dist = [
 
 [[package]]
 name = "graphmind-workspace"
-version = "0.1.0"
+version = "1.0.0"
 source = { virtual = "." }
 
 [package.dev-dependencies]

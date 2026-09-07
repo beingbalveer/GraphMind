@@ -42,10 +42,18 @@ services:
     ports:
       - "8300:8300"
     environment:
+      - HOST=0.0.0.0
+      - PORT=8300
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-graphmind}:${POSTGRES_PASSWORD:-graphmind_secret}@postgres:5432/${POSTGRES_DB:-graphmind_db}
       - REDIS_URL=redis://redis:6379/0
+      - DEFAULT_PROVIDER=${DEFAULT_PROVIDER:-gemini}
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434/v1}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       postgres:
         condition: service_healthy

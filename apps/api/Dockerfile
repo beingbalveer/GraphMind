@@ -21,10 +21,11 @@ WORKDIR /app
 # Copy installed venv and code
 COPY --from=builder /app/.venv /app/.venv
 COPY --from=builder /app/apps/api/src /app/src
+COPY --from=builder /app/apps/api/skills /app/skills
 
 ENV PATH="/app/.venv/bin:$PATH"
 ENV PYTHONPATH="/app/src"
 
-EXPOSE 8000
+EXPOSE 8300
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8300"]

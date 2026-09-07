@@ -15,7 +15,7 @@ Assuming a focused pace of **~2 hours/day** (approx. **10 – 14 engineering hou
 | **Phase 3** | **Spatial Graph Canvas** | 2D React Flow canvas, node cards, Dagre auto-layout, mindmap layout, LOD, Focus Drawer. | **Completed** ✅ | [`phase-03-spatial-graph-canvas.md`](./phases/phase-03-spatial-graph-canvas.md) |
 | **Phase 4** | **Workspace Persistence** | PostgreSQL + async SQLAlchemy, Alembic migrations, debounced viewport sync, demo workspace seed. | **Completed** ✅ | [`phase-04-persistence-workspaces.md`](./phases/phase-04-persistence-workspaces.md) |
 | **Phase 5** | **Semantic Graph & Discovery** | `pgvector` embeddings, multimodal file library (PDF, Code, Tables), in-app modal viewers, vector search. | **Completed** ✅ | [`phase-05-semantic-graph-discovery.md`](./phases/phase-05-semantic-graph-discovery.md) |
-| **Phase 6** | **Knowledge Evolution & Agents** | Autonomous tool loop, graph-native tools, web grounding, system skills (Code Architect, Deep Research, Quiz Master). | **In Progress** 🚀 | [`phase-06-multi-agent-knowledge-evolution.md`](./phases/phase-06-multi-agent-knowledge-evolution.md) |
+| **Phase 6** | **Knowledge Evolution & Agents** | Autonomous tool loop, graph-native tools, web grounding, system skills, knowledge state modeling & curator. | **Completed** ✅ | [`phase-06-multi-agent-knowledge-evolution.md`](./phases/phase-06-multi-agent-knowledge-evolution.md) |
 
 **Total Estimated Duration:** **16 – 22 Weeks** (~4 to 5.5 Months) of structured, production-grade engineering.
 
