@@ -13,7 +13,9 @@ import {
   RotateCcw,
   Eye,
   EyeOff,
-  ChevronDown,
+  Cpu,
+  Bot,
+  Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
@@ -42,42 +44,50 @@ interface SettingsModalProps {
   initialTab?: SettingsTabId;
 }
 
-const PROVIDER_OPTIONS: Array<{ id: LLMProvider; label: string }> = [
-  { id: "gemini", label: "Google Gemini" },
-  { id: "anthropic", label: "Anthropic Claude" },
-  { id: "openai", label: "OpenAI" },
-  { id: "deepseek", label: "DeepSeek" },
-  { id: "ollama", label: "Ollama (Local)" },
-  { id: "mock", label: "Mock Mode" },
+interface ProviderMeta {
+  id: LLMProvider;
+  name: string;
+  tagline: string;
+  badge?: string;
+  icon: React.ComponentType<{ className?: string }>;
+}
+
+const PROVIDER_METAS: ProviderMeta[] = [
+  { id: "gemini", name: "Google Gemini", tagline: "Fast multi-modal & reasoning", badge: "Recommended", icon: Sparkles },
+  { id: "anthropic", name: "Anthropic Claude", tagline: "High-intelligence reasoning & code", icon: Bot },
+  { id: "openai", name: "OpenAI GPT", tagline: "Industry standard models", icon: Cpu },
+  { id: "deepseek", name: "DeepSeek", tagline: "Open reasoning models (R1 & V3)", icon: Zap },
+  { id: "ollama", name: "Ollama", tagline: "Local inference without cloud keys", icon: Sliders },
+  { id: "mock", name: "Mock Engine", tagline: "Zero-latency offline test stream", icon: Info },
 ];
 
-const MODELS_BY_PROVIDER: Record<LLMProvider, Array<{ id: string; name: string }>> = {
+const MODELS_BY_PROVIDER: Record<LLMProvider, Array<{ id: string; name: string; desc?: string }>> = {
   gemini: [
-    { id: "gemini-2.5-flash", name: "Gemini 2.5 Flash" },
-    { id: "gemini-2.5-pro", name: "Gemini 2.5 Pro" },
-    { id: "gemini-2.0-flash", name: "Gemini 2.0 Flash" },
+    { id: "gemini-2.5-flash", name: "Gemini 2.5 Flash", desc: "Default ultra-fast responsive model" },
+    { id: "gemini-2.5-pro", name: "Gemini 2.5 Pro", desc: "Complex reasoning & deep logic" },
+    { id: "gemini-2.0-flash", name: "Gemini 2.0 Flash", desc: "High-throughput fallback" },
   ],
   openai: [
-    { id: "gpt-4o", name: "GPT-4o" },
-    { id: "gpt-4o-mini", name: "GPT-4o Mini" },
-    { id: "o3-mini", name: "o3-mini" },
+    { id: "gpt-4o", name: "GPT-4o", desc: "Flagship omni intelligence" },
+    { id: "gpt-4o-mini", name: "GPT-4o Mini", desc: "Fast & lightweight" },
+    { id: "o3-mini", name: "o3-mini", desc: "STEM & math reasoning" },
   ],
   anthropic: [
-    { id: "claude-3-7-sonnet", name: "Claude 3.7 Sonnet" },
-    { id: "claude-3-5-sonnet", name: "Claude 3.5 Sonnet" },
-    { id: "claude-3-5-haiku", name: "Claude 3.5 Haiku" },
+    { id: "claude-3-7-sonnet", name: "Claude 3.7 Sonnet", desc: "Hybrid reasoning architecture" },
+    { id: "claude-3-5-sonnet", name: "Claude 3.5 Sonnet", desc: "Exceptional coding & nuance" },
+    { id: "claude-3-5-haiku", name: "Claude 3.5 Haiku", desc: "High-speed lightweight Claude" },
   ],
   deepseek: [
-    { id: "deepseek-reasoner", name: "DeepSeek R1" },
-    { id: "deepseek-chat", name: "DeepSeek V3" },
+    { id: "deepseek-reasoner", name: "DeepSeek R1", desc: "Chain-of-thought open reasoning" },
+    { id: "deepseek-chat", name: "DeepSeek V3", desc: "General chat & generation" },
   ],
   ollama: [
-    { id: "deepseek-r1", name: "DeepSeek R1 (Local)" },
-    { id: "llama3.3", name: "Llama 3.3" },
-    { id: "qwen2.5-coder", name: "Qwen 2.5 Coder" },
-    { id: "mistral", name: "Mistral" },
+    { id: "deepseek-r1", name: "DeepSeek R1 (Local)", desc: "Local Ollama tag" },
+    { id: "llama3.3", name: "Llama 3.3", desc: "Meta open foundation" },
+    { id: "qwen2.5-coder", name: "Qwen 2.5 Coder", desc: "Targeted code generation" },
+    { id: "mistral", name: "Mistral", desc: "General 7B instruction model" },
   ],
-  mock: [{ id: "mock-stream", name: "Mock Stream Engine" }],
+  mock: [{ id: "mock-stream", name: "Mock Stream Engine", desc: "Simulated token stream" }],
 };
 
 export function SettingsModal({
@@ -188,178 +198,210 @@ export function SettingsModal({
 
   const navSections: NavSection[] = [
     {
-      title: "Settings",
+      title: "Configuration",
       items: [
         { id: "models", label: "Models & AI", icon: Sparkles },
+        { id: "workspaces", label: "Workspaces", icon: FolderGit2 },
         { id: "general", label: "General", icon: Sliders, badge: "Roadmap" },
         { id: "appearance", label: "Appearance", icon: Palette, badge: "Roadmap" },
-        { id: "workspaces", label: "Workspaces", icon: FolderGit2 },
       ],
     },
     {
-      title: "Shortcuts & Info",
+      title: "Reference",
       items: [
-        { id: "shortcuts", label: "Keyboard Shortcuts", icon: Keyboard },
-        { id: "about", label: "About GraphMind", icon: Info },
+        { id: "shortcuts", label: "Shortcuts", icon: Keyboard },
+        { id: "about", label: "About", icon: Info },
       ],
     },
   ];
-
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
       size="4xl"
-      className="h-[600px] flex-col sm:flex-row"
+      className="h-[620px] max-h-[92vh] flex-col sm:flex-row p-0 overflow-hidden border-border-subtle shadow-modal"
     >
-        {/* Left Sidebar Navigation */}
-        <aside className="w-full sm:w-56 bg-background-secondary border-r border-border flex flex-col shrink-0 p-3 select-none">
-          <div className="px-3 py-2.5 mb-1">
-            <h2 className="text-xs font-semibold text-foreground tracking-tight">
-              Settings
-            </h2>
-          </div>
+      {/* Left Sidebar Navigation */}
+      <aside className="w-full sm:w-56 bg-background-secondary border-r border-border-subtle flex flex-col shrink-0 p-3 select-none">
+        <div className="h-13 px-3 flex items-center shrink-0 border-b border-border-subtle/80 mb-2">
+          <h2 className="text-sm font-semibold text-foreground tracking-tight">
+            Settings
+          </h2>
+        </div>
 
-          <div className="flex-1 overflow-y-auto space-y-4 pr-1">
-            {navSections.map((sec) => (
-              <div key={sec.title} className="space-y-1">
-                <span className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider px-3">
-                  {sec.title}
-                </span>
-                <div className="space-y-0.5 mt-1">
-                  {sec.items.map((item) => {
-                    const isSelected = activeTab === item.id;
-                    const Icon = item.icon;
+        <div className="flex-1 overflow-y-auto space-y-4 pr-1">
+          {navSections.map((sec) => (
+            <div key={sec.title} className="space-y-1">
+              <span className="text-2xs font-semibold text-foreground-muted uppercase tracking-wider px-3">
+                {sec.title}
+              </span>
+              <div className="space-y-0.5 mt-1">
+                {sec.items.map((item) => {
+                  const isSelected = activeTab === item.id;
+                  const Icon = item.icon;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setActiveTab(item.id)}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all text-left cursor-pointer ${
+                        isSelected
+                          ? "bg-surface text-foreground font-semibold shadow-xs border border-border"
+                          : "text-foreground-muted hover:bg-surface-hover hover:text-foreground border border-transparent"
+                      }`}
+                    >
+                      <div className="flex items-center space-x-2.5 min-w-0">
+                        <Icon
+                          className={`w-4 h-4 shrink-0 ${
+                            isSelected ? "text-foreground" : "text-foreground-muted"
+                          }`}
+                        />
+                        <span className="truncate">{item.label}</span>
+                      </div>
+                      {item.badge && (
+                        <span className="text-2xs font-medium text-amber-700 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded-md shrink-0">
+                          {item.badge}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Footer Version Info */}
+        <div className="pt-2.5 border-t border-border-subtle px-3 py-1 flex items-center justify-between text-2xs text-foreground-muted">
+          <span>GraphMind</span>
+          <span className="font-mono text-2xs text-foreground-muted/80">v0.1.0</span>
+        </div>
+      </aside>
+
+      {/* Right Detail Content Area */}
+      <main className="flex-1 flex flex-col min-w-0 bg-background overflow-hidden">
+        {/* Standardized Header: h-13 with border-b */}
+        <div className="h-13 px-6 border-b border-border-subtle flex items-center justify-between shrink-0 bg-surface">
+          <div>
+            <h1 className="text-sm font-semibold text-foreground tracking-tight">
+              {activeTab === "models" && "Models & AI"}
+              {activeTab === "workspaces" && "Workspaces & Data"}
+              {activeTab === "general" && "General Settings"}
+              {activeTab === "appearance" && "Appearance & UI"}
+              {activeTab === "shortcuts" && "Keyboard Shortcuts"}
+              {activeTab === "about" && "About GraphMind"}
+            </h1>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="size-8 rounded-lg flex items-center justify-center text-foreground-muted hover:text-foreground hover:bg-surface-hover transition-colors cursor-pointer"
+            title="Close (Esc)"
+            aria-label="Close"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Content Scrollable Body */}
+        <div className="p-6 overflow-y-auto space-y-6 flex-1 text-sm text-foreground">
+          {/* 1. MODELS TAB */}
+          {activeTab === "models" && (
+            <div className="space-y-6">
+              {/* Provider Selection Cards */}
+              <div className="space-y-2.5">
+                <div>
+                  <h3 className="text-xs font-semibold text-foreground tracking-tight">
+                    AI Provider
+                  </h3>
+                  <p className="text-xs text-foreground-muted mt-0.5">
+                    Select the AI model engine and authentication method.
+                  </p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {PROVIDER_METAS.map((p) => {
+                    const isSelected = selectedProvider === p.id;
+                    const Icon = p.icon;
                     return (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => setActiveTab(item.id)}
-                        className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all text-left cursor-pointer ${
+                      <div
+                        key={p.id}
+                        onClick={() => handleProviderSelect(p.id)}
+                        className={`p-3 rounded-xl border text-left cursor-pointer transition-all flex items-start space-x-3 select-none ${
                           isSelected
-                            ? "bg-surface text-foreground font-semibold shadow-xs border border-border/60"
-                            : "text-muted-foreground hover:bg-surface-hover hover:text-foreground"
+                            ? "bg-surface border-foreground/30 shadow-xs ring-1 ring-foreground/20"
+                            : "bg-surface border-border-subtle hover:border-border hover:bg-surface-hover"
                         }`}
                       >
-                        <div className="flex items-center space-x-2.5 min-w-0">
-                          <Icon
-                            className={`w-4 h-4 shrink-0 ${
-                              isSelected ? "text-foreground" : "text-muted-foreground"
-                            }`}
-                          />
-                          <span className="truncate">{item.label}</span>
+                        <div
+                          className={`size-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
+                            isSelected
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-muted text-foreground-muted"
+                          }`}
+                        >
+                          <Icon className="w-4 h-4" />
                         </div>
-                        {item.badge && (
-                          <span className="text-2xs font-medium text-amber-700 bg-amber-50 dark:bg-amber-950/40 dark:text-amber-400 border border-amber-200/60 dark:border-amber-900 px-1.5 py-0.5 rounded-md shrink-0">
-                            {item.badge}
-                          </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-semibold text-foreground tracking-tight">
+                              {p.name}
+                            </span>
+                            {p.badge && (
+                              <span className="text-2xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.2 rounded">
+                                {p.badge}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-2xs text-foreground-muted truncate mt-0.5">
+                            {p.tagline}
+                          </p>
+                        </div>
+                        {isSelected && (
+                          <div className="size-4 rounded-full bg-primary text-primary-foreground flex items-center justify-center shrink-0 mt-1">
+                            <Check className="w-2.5 h-2.5" />
+                          </div>
                         )}
-                      </button>
+                      </div>
                     );
                   })}
                 </div>
               </div>
-            ))}
-          </div>
 
-
-          {/* Footer User / Version Badge */}
-          <div className="pt-2 border-t border-border px-3 py-1 flex items-center justify-between text-2xs text-muted-foreground">
-            <span>GraphMind v0.1.0</span>
-            <span className="font-mono">Web</span>
-          </div>
-        </aside>
-
-        {/* Right Detail Content Area */}
-        <main className="flex-1 flex flex-col min-w-0 bg-surface">
-          {/* Content Header with Close Button */}
-          <div className="px-6 py-4 border-b border-border flex items-center justify-between shrink-0">
-            <div>
-              <h1 className="text-base font-semibold text-foreground tracking-tight">
-                {activeTab === "models" && "Models & AI"}
-                {activeTab === "general" && "General Settings"}
-                {activeTab === "appearance" && "Appearance & UI"}
-                {activeTab === "workspaces" && "Workspaces"}
-                {activeTab === "shortcuts" && "Keyboard Shortcuts"}
-                {activeTab === "about" && "About GraphMind"}
-              </h1>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {activeTab === "models" && "Configure LLM providers, BYOK API keys, and generation parameters."}
-                {activeTab === "general" && "Configure agent execution, streaming delivery, and behavior."}
-                {activeTab === "appearance" && "Customize themes, font sizes, and layout density."}
-                {activeTab === "workspaces" && "Manage connected workspaces and storage engines."}
-                {activeTab === "shortcuts" && "Quick reference for power-user shortcuts."}
-                {activeTab === "about" && "GraphMind spatial reasoning and hierarchical AI workspace."}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={onClose}
-              className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
-              title="Close (Esc)"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Content Scrollable Body */}
-          <div className="p-6 overflow-y-auto space-y-6 flex-1 text-sm text-foreground">
-            {/* 1. MODELS TAB */}
-            {activeTab === "models" && (
-              <div className="space-y-5">
-                <SettingSection title="AI Provider & Authentication">
+              {/* Provider Authentication Details */}
+              <SettingSection title="Authentication & Key Config">
+                {selectedProvider === "gemini" && (
                   <SettingRow
-                    label="Provider"
-                    description="Select which AI ecosystem powers inference."
+                    label="Gemini API Key"
+                    description="Optional BYOK. Stored locally in your browser to override the server key."
                   >
-                    <div className="relative w-full sm:w-64">
-                      <select
-                        value={selectedProvider}
-                        onChange={(e) => handleProviderSelect(e.target.value as LLMProvider)}
-                        className="w-full px-3 py-1.5 rounded-lg border border-border bg-surface text-xs font-medium text-foreground shadow-2xs hover:border-border-hover focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 cursor-pointer appearance-none pr-8 transition-colors"
-                      >
-                        {PROVIDER_OPTIONS.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.label}
-                          </option>
-                        ))}
-                      </select>
-                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-muted-foreground">
-                        <ChevronDown className="w-3.5 h-3.5" />
-                      </div>
-                    </div>
-                  </SettingRow>
-
-                  {selectedProvider === "gemini" && (
-                    <SettingRow
-                      label="Gemini API Key"
-                      description="Optional. Stored locally in your browser to override server key."
-                    >
+                    <div className="w-full sm:w-72">
                       <Input
                         type={showGeminiKey ? "text" : "password"}
                         value={geminiApiKey}
                         onChange={(e) => setGeminiApiKey(e.target.value)}
-                        placeholder="AIzaSy... (uses server key by default)"
+                        placeholder="AIzaSy... (uses server key if blank)"
                         className="font-mono text-2xs"
                         endIcon={
                           <button
                             type="button"
                             onClick={() => setShowGeminiKey((prev) => !prev)}
-                            className="p-1 hover:text-zinc-700 cursor-pointer"
+                            className="p-1 text-foreground-muted hover:text-foreground cursor-pointer"
                           >
                             {showGeminiKey ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                           </button>
                         }
                       />
-                    </SettingRow>
-                  )}
+                    </div>
+                  </SettingRow>
+                )}
 
-                  {selectedProvider === "openai" && (
-                    <SettingRow
-                      label="OpenAI API Key"
-                      description="Required for OpenAI models. Stored locally in your browser."
-                    >
+                {selectedProvider === "openai" && (
+                  <SettingRow
+                    label="OpenAI API Key"
+                    description="Required for OpenAI models. Stored strictly in local browser storage."
+                  >
+                    <div className="w-full sm:w-72">
                       <Input
                         type={showOpenAiKey ? "text" : "password"}
                         value={openaiApiKey}
@@ -370,20 +412,22 @@ export function SettingsModal({
                           <button
                             type="button"
                             onClick={() => setShowOpenAiKey((prev) => !prev)}
-                            className="p-1 hover:text-zinc-700 cursor-pointer"
+                            className="p-1 text-foreground-muted hover:text-foreground cursor-pointer"
                           >
                             {showOpenAiKey ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                           </button>
                         }
                       />
-                    </SettingRow>
-                  )}
+                    </div>
+                  </SettingRow>
+                )}
 
-                  {selectedProvider === "anthropic" && (
-                    <SettingRow
-                      label="Anthropic API Key"
-                      description="Required for Claude 3.7 / 3.5 Sonnet. Stored locally in your browser."
-                    >
+                {selectedProvider === "anthropic" && (
+                  <SettingRow
+                    label="Anthropic API Key"
+                    description="Required for Claude models. Stored strictly in local browser storage."
+                  >
+                    <div className="w-full sm:w-72">
                       <Input
                         type={showAnthropicKey ? "text" : "password"}
                         value={anthropicApiKey}
@@ -394,20 +438,22 @@ export function SettingsModal({
                           <button
                             type="button"
                             onClick={() => setShowAnthropicKey((prev) => !prev)}
-                            className="p-1 hover:text-zinc-700 cursor-pointer"
+                            className="p-1 text-foreground-muted hover:text-foreground cursor-pointer"
                           >
                             {showAnthropicKey ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                           </button>
                         }
                       />
-                    </SettingRow>
-                  )}
+                    </div>
+                  </SettingRow>
+                )}
 
-                  {selectedProvider === "deepseek" && (
-                    <SettingRow
-                      label="DeepSeek API Key"
-                      description="Required for DeepSeek R1 & V3. Stored locally in your browser."
-                    >
+                {selectedProvider === "deepseek" && (
+                  <SettingRow
+                    label="DeepSeek API Key"
+                    description="Required for DeepSeek R1 & V3 models. Stored locally."
+                  >
+                    <div className="w-full sm:w-72">
                       <Input
                         type={showDeepseekKey ? "text" : "password"}
                         value={deepseekApiKey}
@@ -418,20 +464,22 @@ export function SettingsModal({
                           <button
                             type="button"
                             onClick={() => setShowDeepseekKey((prev) => !prev)}
-                            className="p-1 hover:text-zinc-700 cursor-pointer"
+                            className="p-1 text-foreground-muted hover:text-foreground cursor-pointer"
                           >
                             {showDeepseekKey ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                           </button>
                         }
                       />
-                    </SettingRow>
-                  )}
+                    </div>
+                  </SettingRow>
+                )}
 
-                  {selectedProvider === "ollama" && (
-                    <SettingRow
-                      label="Ollama Server URL"
-                      description="Local or remote Ollama HTTP endpoint. No cloud key needed."
-                    >
+                {selectedProvider === "ollama" && (
+                  <SettingRow
+                    label="Ollama Server URL"
+                    description="Local or remote Ollama HTTP endpoint. No cloud key required."
+                  >
+                    <div className="w-full sm:w-72">
                       <Input
                         type="text"
                         value={ollamaBaseUrl}
@@ -439,271 +487,280 @@ export function SettingsModal({
                         placeholder="http://localhost:11434/v1"
                         className="font-mono text-2xs"
                       />
-                    </SettingRow>
-                  )}
-
-                  {selectedProvider === "mock" && (
-                    <SettingRow
-                      label="Mock Mode"
-                      description="Offline zero-latency test mode."
-                    >
-                      <span className="text-xs text-zinc-500 italic">
-                        No API key or network connection required.
-                      </span>
-                    </SettingRow>
-                  )}
-                </SettingSection>
-
-                <SettingSection title="Inference & Model Parameters">
-                  <SettingRow
-                    label="Active Model"
-                    description={`Foundation model for ${selectedProvider.toUpperCase()}`}
-                    align="top"
-                  >
-                    <div className="space-y-2 w-full sm:w-80">
-                      <div className="flex flex-wrap gap-1.5">
-                        {MODELS_BY_PROVIDER[selectedProvider].map((m) => {
-                          const isSelected = selectedModel === m.id;
-                          return (
-                            <button
-                              key={m.id}
-                              type="button"
-                              onClick={() => setSelectedModel(m.id)}
-                              className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-all cursor-pointer ${
-                                isSelected
-                                  ? "border-blue-300 bg-blue-50/50 text-blue-950 font-semibold ring-1 ring-blue-400/20"
-                                  : "border-zinc-200 bg-zinc-50/50 hover:bg-zinc-100/70 text-zinc-700"
-                              }`}
-                            >
-                              {m.name}
-                            </button>
-                          );
-                        })}
-                      </div>
-                      {selectedProvider === "ollama" && (
-                        <div className="pt-1">
-                          <Input
-                            value={selectedModel}
-                            onChange={(e) => setSelectedModel(e.target.value)}
-                            placeholder="Or enter custom tag (e.g. deepseek-r1:14b)"
-                            className="font-mono text-2xs"
-                          />
-                        </div>
-                      )}
                     </div>
                   </SettingRow>
-
-                  <SettingRow
-                    label="Temperature"
-                    description="Controls randomness: 0.0 (Precise / Code) ↔ 1.0 (Creative)."
-                  >
-                    <div className="flex items-center space-x-3 w-48">
-                      <input
-                        type="range"
-                        min="0.0"
-                        max="1.0"
-                        step="0.05"
-                        value={temperature}
-                        onChange={(e) => setTemperature(parseFloat(e.target.value))}
-                        className="w-full h-1 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-zinc-800"
-                      />
-                      <span className="font-mono text-xs font-semibold text-zinc-800 w-8 text-right">
-                        {temperature.toFixed(2)}
-                      </span>
-                    </div>
-                  </SettingRow>
-
-                  <SettingRow
-                    label="System Instructions"
-                    description="Custom system prompt injected into the AI context."
-                    align="top"
-                  >
-                    <textarea
-                      value={systemPrompt}
-                      onChange={(e) => setSystemPrompt(e.target.value)}
-                      placeholder="e.g. You are a senior software architect. Provide direct and focused explanations..."
-                      rows={3}
-                      className="w-full sm:w-80 p-2.5 rounded-lg border border-zinc-200/90 text-xs text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 bg-zinc-50/50 resize-none leading-relaxed"
-                    />
-                  </SettingRow>
-                </SettingSection>
-              </div>
-            )}
-
-            {/* 2. GENERAL TAB */}
-            {activeTab === "general" && (
-              <div className="space-y-5">
-                <SettingSection title="Streaming & Execution">
-                  <SettingRow
-                    label="Stream Token Speed"
-                    badge="Coming soon"
-                    description="Controls token pacing during live streaming."
-                    disabled
-                  >
-                    <SegmentedTabs
-                      items={[
-                        { id: "fast", label: "Instant / Fast" },
-                        { id: "natural", label: "Natural Typing" },
-                      ]}
-                      value={streamSpeed}
-                      onChange={(val) => setStreamSpeed(val as "fast" | "natural")}
-                      size="sm"
-                    />
-                  </SettingRow>
-
-                  <SettingRow
-                    label="Auto-scroll to Bottom"
-                    badge="Coming soon"
-                    description="Automatically scroll view during response generation."
-                    disabled
-                  >
-                    <Switch checked={autoScroll} onCheckedChange={setAutoScroll} disabled />
-                  </SettingRow>
-
-                  <SettingRow
-                    label="LaTeX & Math Formula Rendering"
-                    badge="Coming soon"
-                    description="Render KaTeX mathematical equations and symbols."
-                    disabled
-                  >
-                    <Switch checked={enableLatex} onCheckedChange={setEnableLatex} disabled />
-                  </SettingRow>
-                </SettingSection>
-              </div>
-            )}
-
-            {/* 3. APPEARANCE TAB */}
-            {activeTab === "appearance" && (
-              <div className="space-y-5">
-                <SettingSection title="Theme & Display">
-                  <SettingRow
-                    label="Interface Theme"
-                    badge="Coming soon"
-                    description="Select application color appearance."
-                    disabled
-                  >
-                    <SegmentedTabs
-                      items={[
-                        { id: "light", label: "Light (Default)" },
-                        { id: "dark", label: "Dark" },
-                      ]}
-                      value="light"
-                      onChange={() => {}}
-                      size="sm"
-                    />
-                  </SettingRow>
-
-                  <SettingRow
-                    label="Compact Message Density"
-                    badge="Coming soon"
-                    description="Reduce padding and spacing between chat message bubbles."
-                    disabled
-                  >
-                    <Switch checked={compactDensity} onCheckedChange={setCompactDensity} disabled />
-                  </SettingRow>
-                </SettingSection>
-              </div>
-            )}
-
-
-            {/* 4. WORKSPACES TAB */}
-            {activeTab === "workspaces" && (
-              <div className="space-y-5">
-                <SettingSection title="Active Workspace">
-                  <SettingRow
-                    label="Current Workspace"
-                    description={currentWorkspace?.description || "Primary workspace vault for conversation trees."}
-                  >
-                    <span className="font-semibold text-xs text-zinc-900 bg-zinc-100 px-2.5 py-1 rounded-md">
-                      {currentWorkspace?.name || "Main Workspace"}
-                    </span>
-                  </SettingRow>
-                  <SettingRow
-                    label="Database Persistence"
-                    description="Conversations and branch nodes are saved in PostgreSQL."
-                  >
-                    <span className="text-2xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                      Connected
-                    </span>
-                  </SettingRow>
-                </SettingSection>
-              </div>
-            )}
-
-            {/* 5. KEYBOARD SHORTCUTS TAB */}
-            {activeTab === "shortcuts" && (
-              <div className="space-y-5">
-                <SettingSection title="Keyboard Navigation">
-                  <SettingRow label="Open Command Palette" description="Global search across all nodes and chats">
-                    <kbd className="px-2 py-1 bg-zinc-100 border border-zinc-200 rounded text-xs font-mono text-zinc-700">⌘K</kbd>
-                  </SettingRow>
-                  <SettingRow label="Start New Chat" description="Clear context and begin fresh root conversation">
-                    <kbd className="px-2 py-1 bg-zinc-100 border border-zinc-200 rounded text-xs font-mono text-zinc-700">⌘N</kbd>
-                  </SettingRow>
-                  <SettingRow label="Send Prompt" description="Submit message to active branch">
-                    <kbd className="px-2 py-1 bg-zinc-100 border border-zinc-200 rounded text-xs font-mono text-zinc-700">Enter</kbd>
-                  </SettingRow>
-                  <SettingRow label="New Line in Chat" description="Insert newline without sending">
-                    <kbd className="px-2 py-1 bg-zinc-100 border border-zinc-200 rounded text-xs font-mono text-zinc-700">Shift + Enter</kbd>
-                  </SettingRow>
-                  <SettingRow label="Close Modals & Drawers" description="Dismiss open dialogs and overlays">
-                    <kbd className="px-2 py-1 bg-zinc-100 border border-zinc-200 rounded text-xs font-mono text-zinc-700">Esc</kbd>
-                  </SettingRow>
-                </SettingSection>
-              </div>
-            )}
-
-            {/* 6. ABOUT TAB */}
-            {activeTab === "about" && (
-              <div className="space-y-5">
-                <SettingSection title="About GraphMind">
-                  <SettingRow label="Version" description="GraphMind Cognitive AI Architecture">
-                    <span className="font-mono text-xs text-zinc-700">v0.1.0-beta</span>
-                  </SettingRow>
-                  <SettingRow label="Engine" description="Next.js 15 App Router · FastAPI · PostgreSQL">
-                    <span className="text-xs text-zinc-600">Phase 2 Branching</span>
-                  </SettingRow>
-                </SettingSection>
-              </div>
-            )}
-          </div>
-
-          {/* Modal Footer Actions */}
-          <div className="px-6 py-3.5 bg-surface-secondary/40 border-t border-border flex items-center justify-between shrink-0">
-            <button
-              type="button"
-              onClick={handleReset}
-              className="flex items-center space-x-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-              title="Reset to default settings"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>Reset to defaults</span>
-            </button>
-
-            <div className="flex items-center space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onClose}
-              >
-                Cancel
-              </Button>
-              <Button
-                size="sm"
-                onClick={handleSave}
-              >
-                {savedFeedback ? (
-                  <>
-                    <Check className="w-3.5 h-3.5 text-emerald-400 mr-1" />
-                    <span>Saved!</span>
-                  </>
-                ) : (
-                  <span>Save changes</span>
                 )}
-              </Button>
+
+                {selectedProvider === "mock" && (
+                  <SettingRow
+                    label="Mock Engine Status"
+                    description="Simulated zero-latency streaming mode."
+                  >
+                    <span className="text-xs text-foreground-muted italic">
+                      Zero credentials or network access required.
+                    </span>
+                  </SettingRow>
+                )}
+              </SettingSection>
+
+              {/* Inference Parameters */}
+              <SettingSection title="Inference & Model Parameters">
+                <SettingRow
+                  label="Active Model"
+                  description="Selected foundation model for inference."
+                  align="top"
+                >
+                  <div className="space-y-2 w-full sm:w-80">
+                    <div className="flex flex-wrap gap-1.5">
+                      {MODELS_BY_PROVIDER[selectedProvider].map((m) => {
+                        const isSelected = selectedModel === m.id;
+                        return (
+                          <button
+                            key={m.id}
+                            type="button"
+                            onClick={() => setSelectedModel(m.id)}
+                            className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-all cursor-pointer ${
+                              isSelected
+                                ? "bg-primary text-primary-foreground border-primary font-semibold shadow-xs"
+                                : "bg-surface border-border-subtle hover:border-border text-foreground hover:bg-surface-hover"
+                            }`}
+                          >
+                            {m.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {selectedProvider === "ollama" && (
+                      <div className="pt-1">
+                        <Input
+                          value={selectedModel}
+                          onChange={(e) => setSelectedModel(e.target.value)}
+                          placeholder="Custom tag (e.g. deepseek-r1:14b)"
+                          className="font-mono text-2xs"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </SettingRow>
+
+                <SettingRow
+                  label="Temperature"
+                  description="Randomness: 0.0 (Strict / Code) ↔ 1.0 (Creative)."
+                >
+                  <div className="flex items-center space-x-3 w-48">
+                    <input
+                      type="range"
+                      min="0.0"
+                      max="1.0"
+                      step="0.05"
+                      value={temperature}
+                      onChange={(e) => setTemperature(parseFloat(e.target.value))}
+                      className="w-full h-1 bg-border rounded-lg appearance-none cursor-pointer accent-primary"
+                    />
+                    <span className="font-mono text-xs font-semibold text-foreground w-8 text-right">
+                      {temperature.toFixed(2)}
+                    </span>
+                  </div>
+                </SettingRow>
+
+                <SettingRow
+                  label="System Instructions"
+                  description="Custom system prompt injected into the AI context."
+                  align="top"
+                >
+                  <textarea
+                    value={systemPrompt}
+                    onChange={(e) => setSystemPrompt(e.target.value)}
+                    placeholder="e.g. You are a senior software architect. Provide direct and focused explanations..."
+                    rows={3}
+                    className="w-full sm:w-80 p-2.5 rounded-xl border border-border text-xs text-foreground placeholder:text-foreground-muted/60 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 bg-surface resize-none leading-relaxed transition-colors shadow-2xs"
+                  />
+                </SettingRow>
+              </SettingSection>
             </div>
+          )}
+
+          {/* 2. WORKSPACES TAB */}
+          {activeTab === "workspaces" && (
+            <div className="space-y-5">
+              <SettingSection title="Workspace & Storage Vault">
+                <SettingRow
+                  label="Current Workspace"
+                  description={currentWorkspace?.description || "Primary workspace vault for conversation trees."}
+                >
+                  <span className="font-semibold text-xs text-foreground bg-muted px-2.5 py-1 rounded-md border border-border-subtle">
+                    {currentWorkspace?.name || "Main Workspace"}
+                  </span>
+                </SettingRow>
+                <SettingRow
+                  label="Database Persistence"
+                  description="Conversations and branch nodes are saved to PostgreSQL."
+                >
+                  <span className="text-2xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                    Connected
+                  </span>
+                </SettingRow>
+              </SettingSection>
+            </div>
+          )}
+
+          {/* 3. GENERAL TAB */}
+          {activeTab === "general" && (
+            <div className="space-y-5">
+              <SettingSection title="Streaming & Execution">
+                <SettingRow
+                  label="Stream Token Speed"
+                  badge="Roadmap"
+                  description="Controls token pacing during live streaming."
+                  disabled
+                >
+                  <SegmentedTabs
+                    items={[
+                      { id: "fast", label: "Instant" },
+                      { id: "natural", label: "Natural" },
+                    ]}
+                    value={streamSpeed}
+                    onChange={(val) => setStreamSpeed(val as "fast" | "natural")}
+                    size="sm"
+                  />
+                </SettingRow>
+
+                <SettingRow
+                  label="Auto-scroll to Bottom"
+                  badge="Roadmap"
+                  description="Automatically follow streaming chat output."
+                  disabled
+                >
+                  <Switch checked={autoScroll} onCheckedChange={setAutoScroll} disabled />
+                </SettingRow>
+
+                <SettingRow
+                  label="KaTeX LaTeX Math Rendering"
+                  badge="Roadmap"
+                  description="Render mathematical equations and formula expressions."
+                  disabled
+                >
+                  <Switch checked={enableLatex} onCheckedChange={setEnableLatex} disabled />
+                </SettingRow>
+              </SettingSection>
+            </div>
+          )}
+
+          {/* 4. APPEARANCE TAB */}
+          {activeTab === "appearance" && (
+            <div className="space-y-5">
+              <SettingSection title="Theme & Display">
+                <SettingRow
+                  label="Interface Appearance"
+                  badge="Roadmap"
+                  description="Select application color scheme."
+                  disabled
+                >
+                  <SegmentedTabs
+                    items={[
+                      { id: "light", label: "Light" },
+                      { id: "dark", label: "Dark" },
+                    ]}
+                    value="light"
+                    onChange={() => {}}
+                    size="sm"
+                  />
+                </SettingRow>
+
+                <SettingRow
+                  label="Compact Message Density"
+                  badge="Roadmap"
+                  description="Reduce vertical padding in chat stream."
+                  disabled
+                >
+                  <Switch checked={compactDensity} onCheckedChange={setCompactDensity} disabled />
+                </SettingRow>
+              </SettingSection>
+            </div>
+          )}
+
+          {/* 5. KEYBOARD SHORTCUTS TAB */}
+          {activeTab === "shortcuts" && (
+            <div className="space-y-5">
+              <SettingSection title="Global Hotkeys">
+                <SettingRow label="Command Palette" description="Search chats, branches, and execute commands">
+                  <kbd className="px-2 py-1 bg-muted border border-border rounded-md text-xs font-mono text-foreground">⌘K</kbd>
+                </SettingRow>
+                <SettingRow label="Toggle Left Sidebar" description="Collapse or expand the sidebar rail">
+                  <kbd className="px-2 py-1 bg-muted border border-border rounded-md text-xs font-mono text-foreground">⌘B</kbd>
+                </SettingRow>
+                <SettingRow label="Start New Chat" description="Open fresh thread in current workspace">
+                  <kbd className="px-2 py-1 bg-muted border border-border rounded-md text-xs font-mono text-foreground">⌘N</kbd>
+                </SettingRow>
+                <SettingRow label="Open Settings" description="Configure models and preferences">
+                  <kbd className="px-2 py-1 bg-muted border border-border rounded-md text-xs font-mono text-foreground">⌘,</kbd>
+                </SettingRow>
+                <SettingRow label="Send Message" description="Submit prompt in active chat branch">
+                  <kbd className="px-2 py-1 bg-muted border border-border rounded-md text-xs font-mono text-foreground">Enter</kbd>
+                </SettingRow>
+                <SettingRow label="New Line" description="Insert linebreak without sending message">
+                  <kbd className="px-2 py-1 bg-muted border border-border rounded-md text-xs font-mono text-foreground">Shift + Enter</kbd>
+                </SettingRow>
+                <SettingRow label="Dismiss Modal / Drawer" description="Close active overlay dialog">
+                  <kbd className="px-2 py-1 bg-muted border border-border rounded-md text-xs font-mono text-foreground">Esc</kbd>
+                </SettingRow>
+              </SettingSection>
+            </div>
+          )}
+
+          {/* 6. ABOUT TAB */}
+          {activeTab === "about" && (
+            <div className="space-y-5">
+              <SettingSection title="GraphMind Architecture">
+                <SettingRow label="Version" description="GraphMind Spatial AI Platform">
+                  <span className="font-mono text-xs text-foreground bg-muted px-2 py-0.5 rounded border border-border-subtle">
+                    v0.1.0-beta
+                  </span>
+                </SettingRow>
+                <SettingRow label="Framework" description="Next.js 15 App Router · Tailwind CSS · FastAPI">
+                  <span className="text-xs text-foreground-muted">Phase 2 Branching</span>
+                </SettingRow>
+              </SettingSection>
+            </div>
+          )}
+        </div>
+
+        {/* Modal Footer Actions: Standardized */}
+        <div className="h-13 px-6 bg-background-secondary/60 border-t border-border-subtle flex items-center justify-between shrink-0">
+          <button
+            type="button"
+            onClick={handleReset}
+            className="flex items-center space-x-1.5 text-xs text-foreground-muted hover:text-foreground transition-colors cursor-pointer"
+            title="Reset to default settings"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>Reset to defaults</span>
+          </button>
+
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onClose}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleSave}
+            >
+              {savedFeedback ? (
+                <>
+                  <Check className="w-3.5 h-3.5 text-emerald-400 mr-1" />
+                  <span>Saved!</span>
+                </>
+              ) : (
+                <span>Save changes</span>
+              )}
+            </Button>
           </div>
-        </main>
+        </div>
+      </main>
     </Modal>
   );
 }
