@@ -100,7 +100,7 @@ function LoginForm() {
         window.google.accounts.id.renderButton(googleButtonRef.current, {
           theme: "outline",
           size: "large",
-          width: "360",
+          width: "340",
           text: "continue_with",
           shape: "rectangular",
         });
@@ -147,30 +147,24 @@ function LoginForm() {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-zinc-50/80 text-zinc-900 px-4 py-12 relative overflow-hidden">
+    <div className="min-h-screen w-full flex flex-col items-center justify-center bg-zinc-50/70 bg-[radial-gradient(#e4e4e7_1px,transparent_1px)] [background-size:20px_20px] text-zinc-900 px-4 py-12 relative select-none">
       <Script
         src="https://accounts.google.com/gsi/client"
         strategy="afterInteractive"
         onLoad={initGoogleAuth}
       />
 
-      {/* Subtle Ambient Brand Glow */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[550px] bg-sky-100/60 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 left-1/3 w-[450px] h-[450px] bg-indigo-100/50 rounded-full blur-3xl" />
-      </div>
-
-      <div className="w-full max-w-md z-10">
+      <div className="w-full max-w-[390px] z-10">
         {/* Card Container */}
-        <div className="bg-white border border-zinc-200/80 shadow-xl shadow-zinc-950/5 rounded-2xl p-7 sm:p-8 space-y-6">
+        <div className="bg-white border border-zinc-200/90 shadow-sm rounded-2xl p-6 sm:p-7 space-y-5">
           {/* Brand Header */}
-          <div className="flex flex-col items-center text-center space-y-2">
-            <LogoBadge size="lg" className="mb-1" />
-            <h1 className="text-xl font-bold tracking-tight text-zinc-950">
-              Welcome to GraphMind
+          <div className="flex flex-col items-center text-center space-y-1.5 pb-1">
+            <LogoBadge size="md" className="mb-1.5 shadow-2xs" />
+            <h1 className="text-lg font-bold tracking-tight text-zinc-950">
+              {mode === "signin" ? "Welcome back" : "Create your account"}
             </h1>
-            <p className="text-xs text-zinc-500 max-w-xs leading-relaxed">
-              AI-native knowledge workspace where thinking expands into structured graphs.
+            <p className="text-xs text-zinc-500 max-w-[280px] leading-relaxed">
+              Branching AI workspace for structured thinking and knowledge maps.
             </p>
           </div>
 
@@ -190,26 +184,21 @@ function LoginForm() {
 
           {/* Error Alert Banner */}
           {errorMsg && (
-            <div className="flex items-start gap-2.5 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs leading-relaxed animate-in fade-in">
+            <div className="flex items-start gap-2 p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs leading-relaxed animate-in fade-in">
               <AlertCircle className="w-4 h-4 shrink-0 text-rose-500 mt-0.5" />
               <span>{errorMsg}</span>
             </div>
           )}
 
           {/* Google Sign-In Section */}
-          <div className="space-y-3">
-            <div className="flex justify-center">
-              <div
-                ref={googleButtonRef}
-                className="w-full flex justify-center min-h-[40px]"
-              />
-            </div>
-
-            {!googleClientReady && (
+          <div>
+            {googleClientReady ? (
+              <div ref={googleButtonRef} className="w-full flex justify-center" />
+            ) : (
               <Button
                 type="button"
                 variant="outline"
-                size="lg"
+                size="default"
                 onClick={() => {
                   if (!process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID) {
                     setErrorMsg(
@@ -219,9 +208,9 @@ function LoginForm() {
                     initGoogleAuth();
                   }
                 }}
-                className="w-full flex items-center justify-center gap-2.5 cursor-pointer font-medium text-xs"
+                className="w-full h-9 flex items-center justify-center gap-2 cursor-pointer font-medium text-xs text-zinc-700 hover:text-zinc-950 border-zinc-200"
               >
-                <svg className="w-4 h-4" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
                   <path
                     fill="#4285F4"
                     d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -243,33 +232,35 @@ function LoginForm() {
               </Button>
             )}
 
-            <div className="relative flex items-center justify-center">
-              <div className="border-t border-zinc-200 w-full" />
-              <span className="bg-white px-3 text-[11px] text-zinc-400 uppercase tracking-wider font-medium">
-                or with email
+            {/* Symmetrical Centered Divider */}
+            <div className="relative flex items-center my-4.5">
+              <div className="grow border-t border-zinc-200" />
+              <span className="shrink-0 px-3 text-[10px] uppercase tracking-wider text-zinc-400 font-medium">
+                or continue with email
               </span>
+              <div className="grow border-t border-zinc-200" />
             </div>
           </div>
 
           {/* Email / Password Form */}
           <form onSubmit={handleSubmit} className="space-y-3.5">
             {mode === "register" && (
-              <div className="space-y-1.5">
+              <div className="space-y-1">
                 <label className="block text-xs font-medium text-zinc-700">
-                  Full Name (optional)
+                  Full Name <span className="text-zinc-400 font-normal">(optional)</span>
                 </label>
                 <Input
                   type="text"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   placeholder="Ada Lovelace"
-                  startIcon={<User className="w-4 h-4" />}
-                  inputSize="lg"
+                  startIcon={<User className="w-3.5 h-3.5" />}
+                  inputSize="default"
                 />
               </div>
             )}
 
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <label className="block text-xs font-medium text-zinc-700">
                 Email Address
               </label>
@@ -279,19 +270,19 @@ function LoginForm() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="name@example.com"
-                startIcon={<Mail className="w-4 h-4" />}
-                inputSize="lg"
+                startIcon={<Mail className="w-3.5 h-3.5" />}
+                inputSize="default"
               />
             </div>
 
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <div className="flex items-center justify-between">
                 <label className="block text-xs font-medium text-zinc-700">
                   Password
                 </label>
                 {mode === "register" && (
-                  <span className="text-[11px] text-zinc-400">
-                    Min 8 characters
+                  <span className="text-[10px] text-zinc-400 font-normal">
+                    Min 8 chars
                   </span>
                 )}
               </div>
@@ -301,17 +292,17 @@ function LoginForm() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                startIcon={<Lock className="w-4 h-4" />}
-                inputSize="lg"
+                startIcon={<Lock className="w-3.5 h-3.5" />}
+                inputSize="default"
                 endIcon={
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="text-zinc-400 hover:text-zinc-600 cursor-pointer transition-colors"
+                    className="text-zinc-400 hover:text-zinc-600 cursor-pointer transition-colors p-1"
                     tabIndex={-1}
                     aria-label={showPassword ? "Hide password" : "Show password"}
                   >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                   </button>
                 }
               />
@@ -320,18 +311,18 @@ function LoginForm() {
             <Button
               type="submit"
               disabled={isSubmitting}
-              size="lg"
-              className="w-full font-semibold cursor-pointer mt-1"
+              size="default"
+              className="w-full h-9 font-medium cursor-pointer mt-1"
             >
               {isSubmitting ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  <Loader2 className="w-3.5 h-3.5 animate-spin mr-2" />
                   <span>Processing...</span>
                 </>
               ) : (
                 <>
                   <span>{mode === "signin" ? "Sign In" : "Create Account"}</span>
-                  <ArrowRight className="w-4 h-4 ml-1.5" />
+                  <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
                 </>
               )}
             </Button>
@@ -339,22 +330,22 @@ function LoginForm() {
 
           {/* Quick Demo Credentials Fill */}
           <div className="pt-2 border-t border-zinc-100 flex items-center justify-between text-xs">
-            <span className="text-zinc-500">Need instant access?</span>
+            <span className="text-zinc-400 text-[11px]">Need instant access?</span>
             <Button
               type="button"
               variant="ghost"
               size="sm"
               onClick={fillDemoAdmin}
-              className="cursor-pointer text-zinc-600 hover:text-zinc-950 font-medium h-auto py-1 px-2"
+              className="cursor-pointer text-zinc-600 hover:text-zinc-950 font-medium h-auto py-1 px-2 text-xs"
             >
-              <Sparkles className="w-3.5 h-3.5 text-amber-500 mr-1.5" />
+              <Sparkles className="w-3 h-3 text-amber-500 mr-1.5" />
               <span>Fill Admin Demo</span>
             </Button>
           </div>
         </div>
 
         {/* Footer Note */}
-        <div className="text-center mt-6 text-xs text-zinc-400">
+        <div className="text-center mt-6 text-[11px] text-zinc-400">
           Protected by same-origin encrypted sessions and workspace RBAC.
         </div>
       </div>
@@ -367,7 +358,7 @@ export default function LoginPage() {
     <Suspense
       fallback={
         <div className="min-h-screen w-full flex items-center justify-center bg-zinc-50 text-zinc-500 text-xs">
-          <Loader2 className="w-5 h-5 animate-spin mr-2" />
+          <Loader2 className="w-4 h-4 animate-spin mr-2" />
           Loading authentication...
         </div>
       }

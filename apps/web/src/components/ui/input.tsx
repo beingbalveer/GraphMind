@@ -61,8 +61,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           disabled={disabled}
           className={cn(
             inputVariants({ variant, inputSize }),
-            startIcon && "pl-8",
-            endIcon && "pr-8",
+            startIcon && "pl-9",
+            endIcon && "pr-9",
             className
           )}
           {...props}
