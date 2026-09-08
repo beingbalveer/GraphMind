@@ -46,9 +46,53 @@ export interface SendMessageOptions {
 
 import { safeGetItem, safeSetItem, safeRemoveItem } from "@/lib/storage";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8300";
-
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
 const STORAGE_KEY = "graphmind_tree_state";
+
+async function fetchChatStream(
+  payload: Record<string, any>,
+  signal: AbortSignal
+): Promise<{ response: Response; body: ReadableStream<Uint8Array> }> {
+  let response = await fetch(`${API_BASE_URL}/api/v1/chat/stream`, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+    signal,
+  });
+
+  if (response.status === 401) {
+    const refreshRes = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
+      method: "POST",
+      credentials: "include",
+    }).catch(() => null);
+
+    if (refreshRes && refreshRes.ok) {
+      response = await fetch(`${API_BASE_URL}/api/v1/chat/stream`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+        signal,
+      });
+    } else {
+      if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
+        window.location.href = `/login?next=${encodeURIComponent(window.location.pathname)}`;
+      }
+      throw new Error("Session expired. Please sign in again.");
+    }
+  }
+
+  if (!response.ok || !response.body) {
+    throw new Error(`Server returned HTTP ${response.status}: ${response.statusText}`);
+  }
+
+  return { response, body: response.body };
+}
 
 export function useChatStream() {
   const [tree, setTree] = useState<ConversationTree | null>(null);
@@ -398,22 +442,9 @@ export function useChatStream() {
         };
 
 
-        const response = await fetch(`${API_BASE_URL}/api/v1/chat/stream`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-          signal: abortController.signal,
-        });
+        const { body } = await fetchChatStream(payload, abortController.signal);
 
-        if (!response.ok || !response.body) {
-          throw new Error(
-            `Server returned HTTP ${response.status}: ${response.statusText}`
-          );
-        }
-
-        const reader = response.body.getReader();
+        const reader = body.getReader();
         const decoder = new TextDecoder();
         
         let lineBuffer = "";
@@ -647,22 +678,9 @@ export function useChatStream() {
           model,
         };
 
-        const response = await fetch(`${API_BASE_URL}/api/v1/chat/stream`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-          signal: abortController.signal,
-        });
+        const { body } = await fetchChatStream(payload, abortController.signal);
 
-        if (!response.ok || !response.body) {
-          throw new Error(
-            `Server returned HTTP ${response.status}: ${response.statusText}`
-          );
-        }
-
-        const reader = response.body.getReader();
+        const reader = body.getReader();
         const decoder = new TextDecoder();
         let lineBuffer = "";
 
@@ -809,22 +827,9 @@ export function useChatStream() {
           model,
         };
 
-        const response = await fetch(`${API_BASE_URL}/api/v1/chat/stream`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-          signal: abortController.signal,
-        });
+        const { body } = await fetchChatStream(payload, abortController.signal);
 
-        if (!response.ok || !response.body) {
-          throw new Error(
-            `Server returned HTTP ${response.status}: ${response.statusText}`
-          );
-        }
-
-        const reader = response.body.getReader();
+        const reader = body.getReader();
         const decoder = new TextDecoder();
         let lineBuffer = "";
 

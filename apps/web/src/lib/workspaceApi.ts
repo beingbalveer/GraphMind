@@ -10,9 +10,9 @@ import {
   WorkspaceMasterySummary,
   WorkspaceTimelineResponse,
 } from "@graphmind/shared";
+import { apiFetch } from "./apiClient";
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8300";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
 
 export interface WorkspaceItem {
@@ -159,12 +159,7 @@ export function snapshotToTree(snapshot: GraphSnapshotResponse): ConversationTre
 
 export async function fetchWorkspaces(): Promise<WorkspaceItem[]> {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/v1/workspaces?limit=50`, {
-      method: "GET",
-      headers: { "Content-Type": "application/json" },
-    });
-    if (!res.ok) throw new Error("Failed to fetch workspaces");
-    const data: WorkspaceListResponse = await res.json();
+    const data = await apiFetch<WorkspaceListResponse>("/workspaces?limit=50");
     return data.workspaces;
   } catch (err) {
     console.warn("Could not fetch workspaces from API, using local storage:", err);
@@ -176,32 +171,21 @@ export async function createWorkspace(
   name: string,
   description?: string
 ): Promise<WorkspaceItem> {
-  const res = await fetch(`${API_BASE_URL}/api/v1/workspaces`, {
+  return apiFetch<WorkspaceItem>("/workspaces", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name, description }),
   });
-  if (!res.ok) throw new Error("Failed to create workspace");
-  return res.json();
 }
 
 export async function seedDemoWorkspace(): Promise<{ workspaceId: string; initialChatId: string }> {
-  const res = await fetch(`${API_BASE_URL}/api/v1/workspaces/seed`, {
+  return apiFetch<{ workspaceId: string; initialChatId: string }>("/workspaces/seed", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
   });
-  if (!res.ok) throw new Error("Failed to seed demo workspace");
-  return res.json();
 }
 
 export async function fetchWorkspaceChats(workspaceId: string): Promise<ChatItem[]> {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/v1/workspaces/${workspaceId}/chats`, {
-      method: "GET",
-      headers: { "Content-Type": "application/json" },
-    });
-    if (!res.ok) return [];
-    const data: ChatListResponse = await res.json();
+    const data = await apiFetch<ChatListResponse>(`/workspaces/${workspaceId}/chats`);
     return data.chats;
   } catch (err) {
     console.warn("Could not fetch chats for workspace:", err);
@@ -227,9 +211,8 @@ export async function addNodeToWorkspace(
   payload: CreateNodePayload
 ): Promise<GraphSnapshotNode | null> {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/v1/workspaces/${workspaceId}/nodes`, {
+    return await apiFetch<GraphSnapshotNode>(`/workspaces/${workspaceId}/nodes`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         id: payload.id,
         parentId: payload.parentId || null,
@@ -243,8 +226,6 @@ export async function addNodeToWorkspace(
         metadata: payload.metadata || {},
       }),
     });
-    if (!res.ok) return null;
-    return res.json();
   } catch (err) {
     console.warn("Failed to persist node to workspace:", err);
     return null;
@@ -256,16 +237,9 @@ export async function deleteWorkspaceBranch(
   nodeId: string
 ): Promise<boolean> {
   try {
-    const res = await fetch(
-      `${API_BASE_URL}/api/v1/workspaces/${workspaceId}/nodes/${nodeId}`,
-      {
-        method: "DELETE",
-      }
-    );
-    if (!res.ok) {
-      console.error(`Failed to delete branch ${nodeId}`);
-      return false;
-    }
+    await apiFetch(`/workspaces/${workspaceId}/nodes/${nodeId}`, {
+      method: "DELETE",
+    });
     return true;
   } catch (error) {
     console.error("Failed to delete branch:", error);
@@ -279,15 +253,11 @@ export async function updateWorkspaceNodeMetadata(
   metadata: Record<string, unknown>
 ): Promise<boolean> {
   try {
-    const res = await fetch(
-      `${API_BASE_URL}/api/v1/workspaces/${workspaceId}/nodes/${nodeId}`,
-      {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ metadata }),
-      }
-    );
-    return res.ok;
+    await apiFetch(`/workspaces/${workspaceId}/nodes/${nodeId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ metadata }),
+    });
+    return true;
   } catch {
     return false;
   }
@@ -299,34 +269,25 @@ export async function updateWorkspaceNodeContent(
   content: string
 ): Promise<boolean> {
   try {
-    const res = await fetch(
-      `${API_BASE_URL}/api/v1/workspaces/${workspaceId}/nodes/${nodeId}`,
-      {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content }),
-      }
-    );
-    return res.ok;
+    await apiFetch(`/workspaces/${workspaceId}/nodes/${nodeId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ content }),
+    });
+    return true;
   } catch {
     return false;
   }
 }
-
-
 
 export async function deleteWorkspaceChat(
   workspaceId: string,
   chatRootId: string
 ): Promise<boolean> {
   try {
-    const res = await fetch(
-      `${API_BASE_URL}/api/v1/workspaces/${workspaceId}/chats/${chatRootId}`,
-      {
-        method: "DELETE",
-      }
-    );
-    return res.ok;
+    await apiFetch(`/workspaces/${workspaceId}/chats/${chatRootId}`, {
+      method: "DELETE",
+    });
+    return true;
   } catch {
     return false;
   }
@@ -338,15 +299,11 @@ export async function renameWorkspaceChat(
   newTitle: string
 ): Promise<boolean> {
   try {
-    const res = await fetch(
-      `${API_BASE_URL}/api/v1/workspaces/${workspaceId}/chats/${chatRootId}`,
-      {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: newTitle }),
-      }
-    );
-    return res.ok;
+    await apiFetch(`/workspaces/${workspaceId}/chats/${chatRootId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ title: newTitle }),
+    });
+    return true;
   } catch {
     return false;
   }
@@ -358,15 +315,11 @@ export async function togglePinWorkspaceChat(
   pinned: boolean
 ): Promise<boolean> {
   try {
-    const res = await fetch(
-      `${API_BASE_URL}/api/v1/workspaces/${workspaceId}/chats/${chatRootId}`,
-      {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ pinned }),
-      }
-    );
-    return res.ok;
+    await apiFetch(`/workspaces/${workspaceId}/chats/${chatRootId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ pinned }),
+    });
+    return true;
   } catch {
     return false;
   }
@@ -378,15 +331,10 @@ export async function fetchGraphSnapshot(
   rootId?: string
 ): Promise<GraphSnapshotResponse | null> {
   try {
-    const url = rootId
-      ? `${API_BASE_URL}/api/v1/workspaces/${workspaceId}/graph?root_id=${encodeURIComponent(rootId)}`
-      : `${API_BASE_URL}/api/v1/workspaces/${workspaceId}/graph`;
-    const res = await fetch(url, {
-      method: "GET",
-      headers: { "Content-Type": "application/json" },
-    });
-    if (!res.ok) return null;
-    return res.json();
+    const endpoint = rootId
+      ? `/workspaces/${workspaceId}/graph?root_id=${encodeURIComponent(rootId)}`
+      : `/workspaces/${workspaceId}/graph`;
+    return await apiFetch<GraphSnapshotResponse>(endpoint);
   } catch {
     return null;
   }
@@ -397,15 +345,11 @@ export async function saveGraphDelta(
   delta: GraphDeltaPayload
 ): Promise<boolean> {
   try {
-    const res = await fetch(
-      `${API_BASE_URL}/api/v1/workspaces/${workspaceId}/delta`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(delta),
-      }
-    );
-    return res.ok;
+    await apiFetch(`/workspaces/${workspaceId}/delta`, {
+      method: "POST",
+      body: JSON.stringify(delta),
+    });
+    return true;
   } catch {
     return false;
   }
@@ -413,13 +357,10 @@ export async function saveGraphDelta(
 
 export async function deleteWorkspace(workspaceId: string): Promise<boolean> {
   try {
-    const res = await fetch(
-      `${API_BASE_URL}/api/v1/workspaces/${workspaceId}`,
-      {
-        method: "DELETE",
-      }
-    );
-    return res.ok;
+    await apiFetch(`/workspaces/${workspaceId}`, {
+      method: "DELETE",
+    });
+    return true;
   } catch {
     return false;
   }
@@ -433,18 +374,13 @@ export async function uploadWorkspaceFile(
     const formData = new FormData();
     formData.append("file", file);
 
-    const res = await fetch(
-      `${API_BASE_URL}/api/v1/workspaces/${workspaceId}/files/upload`,
+    const data = await apiFetch<Record<string, any>>(
+      `/workspaces/${workspaceId}/files/upload`,
       {
         method: "POST",
         body: formData,
       }
     );
-    if (!res.ok) {
-      console.warn("File upload failed:", res.statusText);
-      return null;
-    }
-    const data = await res.json();
     const resolvedUrl = data.url
       ? (data.url.startsWith("http") ? data.url : `${API_BASE_URL}${data.url}`)
       : undefined;
@@ -478,11 +414,9 @@ export async function fetchWorkspaceFiles(
 ): Promise<FileAttachment[]> {
   try {
     const query = category ? `?category=${encodeURIComponent(category)}` : "";
-    const res = await fetch(
-      `${API_BASE_URL}/api/v1/workspaces/${workspaceId}/files${query}`
+    const files = await apiFetch<FileAttachment[]>(
+      `/workspaces/${workspaceId}/files${query}`
     );
-    if (!res.ok) return [];
-    const files: FileAttachment[] = await res.json();
     return files.map((f) => ({
       ...f,
       url: f.url ? resolveFileUrl(f.url) : resolveFileUrl(`/api/v1/workspaces/${workspaceId}/files/${f.id}/download`),
@@ -498,13 +432,10 @@ export async function deleteWorkspaceFile(
   fileId: string
 ): Promise<boolean> {
   try {
-    const res = await fetch(
-      `${API_BASE_URL}/api/v1/workspaces/${workspaceId}/files/${fileId}`,
-      {
-        method: "DELETE",
-      }
-    );
-    return res.ok;
+    await apiFetch(`/workspaces/${workspaceId}/files/${fileId}`, {
+      method: "DELETE",
+    });
+    return true;
   } catch {
     return false;
   }
@@ -519,11 +450,9 @@ export async function getWorkspaceMastery(
   stalenessDays: number = 14
 ): Promise<WorkspaceMasterySummary | null> {
   try {
-    const res = await fetch(
-      `${API_BASE_URL}/api/v1/workspaces/${workspaceId}/mastery?staleness_days=${stalenessDays}`
+    return await apiFetch<WorkspaceMasterySummary>(
+      `/workspaces/${workspaceId}/mastery?staleness_days=${stalenessDays}`
     );
-    if (!res.ok) return null;
-    return await res.json();
   } catch (err) {
     console.warn("Error fetching workspace mastery summary:", err);
     return null;
@@ -535,11 +464,9 @@ export async function listWorkspaceConcepts(
   limit: number = 100
 ): Promise<Concept[]> {
   try {
-    const res = await fetch(
-      `${API_BASE_URL}/api/v1/workspaces/${workspaceId}/concepts?limit=${limit}`
+    return await apiFetch<Concept[]>(
+      `/workspaces/${workspaceId}/concepts?limit=${limit}`
     );
-    if (!res.ok) return [];
-    return await res.json();
   } catch (err) {
     console.warn("Error listing workspace concepts:", err);
     return [];
@@ -551,16 +478,13 @@ export async function createWorkspaceConcept(
   data: ConceptCreateInput
 ): Promise<Concept | null> {
   try {
-    const res = await fetch(
-      `${API_BASE_URL}/api/v1/workspaces/${workspaceId}/concepts`,
+    return await apiFetch<Concept>(
+      `/workspaces/${workspaceId}/concepts`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       }
     );
-    if (!res.ok) return null;
-    return await res.json();
   } catch (err) {
     console.warn("Error creating workspace concept:", err);
     return null;
@@ -573,16 +497,13 @@ export async function updateWorkspaceConcept(
   data: ConceptUpdateInput
 ): Promise<Concept | null> {
   try {
-    const res = await fetch(
-      `${API_BASE_URL}/api/v1/workspaces/${workspaceId}/concepts/${conceptId}`,
+    return await apiFetch<Concept>(
+      `/workspaces/${workspaceId}/concepts/${conceptId}`,
       {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       }
     );
-    if (!res.ok) return null;
-    return await res.json();
   } catch (err) {
     console.warn("Error updating workspace concept:", err);
     return null;
@@ -595,16 +516,13 @@ export async function linkNodeConcepts(
   conceptIds: string[]
 ): Promise<Concept[]> {
   try {
-    const res = await fetch(
-      `${API_BASE_URL}/api/v1/workspaces/${workspaceId}/nodes/${nodeId}/concepts`,
+    return await apiFetch<Concept[]>(
+      `/workspaces/${workspaceId}/nodes/${nodeId}/concepts`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ conceptIds }),
       }
     );
-    if (!res.ok) return [];
-    return await res.json();
   } catch (err) {
     console.warn("Error linking node concepts:", err);
     return [];
@@ -616,11 +534,9 @@ export async function getNodeConcepts(
   nodeId: string
 ): Promise<Concept[]> {
   try {
-    const res = await fetch(
-      `${API_BASE_URL}/api/v1/workspaces/${workspaceId}/nodes/${nodeId}/concepts`
+    return await apiFetch<Concept[]>(
+      `/workspaces/${workspaceId}/nodes/${nodeId}/concepts`
     );
-    if (!res.ok) return [];
-    return await res.json();
   } catch (err) {
     console.warn("Error getting node concepts:", err);
     return [];
@@ -632,11 +548,9 @@ export async function getWorkspaceKnowledgeGaps(
   stalenessDays: number = 14
 ): Promise<GapAnalysisResponse | null> {
   try {
-    const res = await fetch(
-      `${API_BASE_URL}/api/v1/workspaces/${workspaceId}/curator/gaps?staleness_days=${stalenessDays}`
+    return await apiFetch<GapAnalysisResponse>(
+      `/workspaces/${workspaceId}/curator/gaps?staleness_days=${stalenessDays}`
     );
-    if (!res.ok) return null;
-    return await res.json();
   } catch (err) {
     console.warn("Error fetching knowledge gaps:", err);
     return null;
@@ -649,16 +563,13 @@ export async function adoptKnowledgeGap(
   initialMasteryLevel: string = "unexplored"
 ): Promise<Concept | null> {
   try {
-    const res = await fetch(
-      `${API_BASE_URL}/api/v1/workspaces/${workspaceId}/curator/gaps/${encodeURIComponent(gapId)}/adopt`,
+    return await apiFetch<Concept>(
+      `/workspaces/${workspaceId}/curator/gaps/${encodeURIComponent(gapId)}/adopt`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ initialMasteryLevel }),
       }
     );
-    if (!res.ok) return null;
-    return await res.json();
   } catch (err) {
     console.warn("Error adopting knowledge gap:", err);
     return null;
@@ -670,11 +581,9 @@ export async function getNextTopicRecommendations(
   limit: number = 3
 ): Promise<NextTopicsResponse | null> {
   try {
-    const res = await fetch(
-      `${API_BASE_URL}/api/v1/workspaces/${workspaceId}/curator/next-topics?limit=${limit}`
+    return await apiFetch<NextTopicsResponse>(
+      `/workspaces/${workspaceId}/curator/next-topics?limit=${limit}`
     );
-    if (!res.ok) return null;
-    return await res.json();
   } catch (err) {
     console.warn("Error fetching next topic recommendations:", err);
     return null;
@@ -685,11 +594,9 @@ export async function getWorkspaceTimeline(
   workspaceId: string
 ): Promise<WorkspaceTimelineResponse | null> {
   try {
-    const res = await fetch(
-      `${API_BASE_URL}/api/v1/workspaces/${workspaceId}/curator/timeline`
+    return await apiFetch<WorkspaceTimelineResponse>(
+      `/workspaces/${workspaceId}/curator/timeline`
     );
-    if (!res.ok) return null;
-    return await res.json();
   } catch (err) {
     console.warn("Error fetching workspace timeline:", err);
     return null;
