@@ -11,20 +11,22 @@ from sqlalchemy.ext.asyncio import AsyncSession
 logger = structlog.get_logger()
 
 
-async def seed_demo_workspace(session: AsyncSession) -> Tuple[str, str]:
+async def seed_demo_workspace(
+    session: AsyncSession, owner_id: str = "usr_default_admin"
+) -> Tuple[str, str]:
     """
     Creates the 'GraphMind Workspace' demo workspace with pre-populated multi-agent
     conversations, spatial branches, technical concepts, and mastery states.
     Returns (workspace_id, chat1_root_node_id).
     """
-    logger.info("Seeding comprehensive multi-agent demo workspace...")
+    logger.info("Seeding comprehensive multi-agent demo workspace...", owner_id=owner_id)
 
     # 1. Create the Workspace
     ws_data = WorkspaceCreate(
         name="GraphMind Workspace",
         description="Interactive showcase of Multi-Agent Workflows, Spatial Mind Maps, and Knowledge Evolution.",
     )
-    workspace = await WorkspaceService.create_workspace(session, ws_data)
+    workspace = await WorkspaceService.create_workspace(session, ws_data, owner_id=owner_id)
     ws_id = workspace.id
 
     # 2. Define Node Data Generator Helpers

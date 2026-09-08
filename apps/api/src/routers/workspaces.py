@@ -1,7 +1,14 @@
 from typing import Any, Dict, Optional
 
 from database import get_db
+from dependencies import (
+    get_optional_user,
+    require_workspace_read,
+    require_workspace_write,
+)
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from models.user import User
+from models.workspace import Workspace
 from schemas.workspace import (
     ChatListResponse,
     GraphDeltaUpdateRequest,
@@ -25,28 +32,35 @@ router = APIRouter(prefix="/workspaces", tags=["Workspaces & Persistence"])
 async def list_workspaces(
     limit: int = Query(default=50, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
+    current_user: Optional[User] = Depends(get_optional_user),
     db: AsyncSession = Depends(get_db),
 ) -> WorkspaceListResponse:
     """
-    List all workspaces ordered by last modified.
+    List all workspaces accessible to current user ordered by last modified.
     """
-    workspaces, total = await WorkspaceService.list_workspaces(db, limit, offset)
+    user_id = current_user.id if current_user else None
+    workspaces, total = await WorkspaceService.list_workspaces(
+        db, limit=limit, offset=offset, user_id=user_id
+    )
     return WorkspaceListResponse(workspaces=workspaces, total=total)
 
 
 @router.post("", response_model=WorkspaceResponse, status_code=status.HTTP_201_CREATED)
 async def create_workspace(
     data: WorkspaceCreate,
+    current_user: Optional[User] = Depends(get_optional_user),
     db: AsyncSession = Depends(get_db),
 ) -> WorkspaceResponse:
     """
-    Create a new workspace for persistent knowledge trees.
+    Create a new workspace with ownership scoped to current user.
     """
-    return await WorkspaceService.create_workspace(db, data)
+    owner_id = current_user.id if current_user else "usr_default_admin"
+    return await WorkspaceService.create_workspace(db, data, owner_id=owner_id)
 
 
 @router.post("/seed", response_model=Dict[str, str], status_code=status.HTTP_201_CREATED)
 async def seed_demo_workspace(
+    current_user: Optional[User] = Depends(get_optional_user),
     db: AsyncSession = Depends(get_db),
 ) -> Dict[str, str]:
     """
@@ -55,17 +69,19 @@ async def seed_demo_workspace(
     """
     from services.seed_service import seed_demo_workspace as seed_svc
 
-    ws_id, chat_id = await seed_svc(db)
+    owner_id = current_user.id if current_user else "usr_default_admin"
+    ws_id, chat_id = await seed_svc(db, owner_id=owner_id)
     return {"workspaceId": ws_id, "initialChatId": chat_id}
 
 
 @router.get("/{workspace_id}", response_model=WorkspaceResponse)
 async def get_workspace(
     workspace_id: str,
+    _auth_ws: Workspace = Depends(require_workspace_read),
     db: AsyncSession = Depends(get_db),
 ) -> WorkspaceResponse:
     """
-    Get workspace metadata by ID.
+    Get workspace metadata by ID (read permission required).
     """
     ws = await WorkspaceService.get_workspace(db, workspace_id)
     if not ws:
@@ -80,10 +96,11 @@ async def get_workspace(
 async def update_workspace(
     workspace_id: str,
     data: WorkspaceUpdate,
+    _auth_ws: Workspace = Depends(require_workspace_write),
     db: AsyncSession = Depends(get_db),
 ) -> WorkspaceResponse:
     """
-    Update workspace metadata or viewport position.
+    Update workspace metadata or viewport position (write permission required).
     """
     ws = await WorkspaceService.update_workspace(db, workspace_id, data)
     if not ws:
@@ -97,10 +114,11 @@ async def update_workspace(
 @router.delete("/{workspace_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_workspace(
     workspace_id: str,
+    _auth_ws: Workspace = Depends(require_workspace_write),
     db: AsyncSession = Depends(get_db),
 ) -> None:
     """
-    Delete a workspace and all of its associated nodes and edges.
+    Delete a workspace and all of its associated nodes and edges (write permission required).
     """
     deleted = await WorkspaceService.delete_workspace(db, workspace_id)
     if not deleted:
@@ -113,17 +131,12 @@ async def delete_workspace(
 @router.get("/{workspace_id}/chats", response_model=ChatListResponse)
 async def list_workspace_chats(
     workspace_id: str,
+    _auth_ws: Workspace = Depends(require_workspace_read),
     db: AsyncSession = Depends(get_db),
 ) -> ChatListResponse:
     """
-    List all distinct conversation trees (chats) belonging to a workspace.
+    List all distinct conversation trees (chats) belonging to a workspace (read permission required).
     """
-    ws = await WorkspaceService.get_workspace(db, workspace_id)
-    if not ws:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Workspace '{workspace_id}' not found",
-        )
     chats = await WorkspaceService.list_workspace_chats(db, workspace_id)
     return ChatListResponse(
         workspace_id=workspace_id,
@@ -136,10 +149,11 @@ async def list_workspace_chats(
 async def delete_chat_tree(
     workspace_id: str,
     chat_root_id: str,
+    _auth_ws: Workspace = Depends(require_workspace_write),
     db: AsyncSession = Depends(get_db),
 ) -> None:
     """
-    Delete a conversation tree (chat) and all its branched responses from a workspace.
+    Delete a conversation tree (chat) and all its branched responses from a workspace (write permission required).
     """
     deleted = await WorkspaceService.delete_chat(db, workspace_id, chat_root_id)
     if not deleted:
@@ -154,10 +168,11 @@ async def update_chat_tree(
     workspace_id: str,
     chat_root_id: str,
     body: Dict[str, Any],
+    _auth_ws: Workspace = Depends(require_workspace_write),
     db: AsyncSession = Depends(get_db),
 ) -> Dict[str, Any]:
     """
-    Update a conversation tree's metadata (title and/or pinned state) on its root node.
+    Update a conversation tree's metadata (title and/or pinned state) on its root node (write permission required).
     Body: { "title"?: string, "pinned"?: boolean }
     """
     title = body.get("title")
@@ -187,10 +202,11 @@ async def update_chat_tree(
 async def delete_branch(
     workspace_id: str,
     node_id: str,
+    _auth_ws: Workspace = Depends(require_workspace_write),
     db: AsyncSession = Depends(get_db),
 ) -> None:
     """
-    Delete a specific node and all its recursive descendants.
+    Delete a specific node and all its recursive descendants (write permission required).
     """
     deleted = await WorkspaceService.delete_branch(db, workspace_id, node_id)
     if not deleted:
@@ -206,10 +222,11 @@ async def get_graph_snapshot(
     root_id: Optional[str] = Query(
         default=None, description="Optional root node ID to filter a single chat tree"
     ),
+    _auth_ws: Workspace = Depends(require_workspace_read),
     db: AsyncSession = Depends(get_db),
 ) -> GraphSnapshotResponse:
     """
-    Retrieve graph topology (nodes, edges, viewport) for a workspace or single chat tree.
+    Retrieve graph topology (nodes, edges, viewport) for a workspace (read permission required).
     """
     snapshot = await WorkspaceService.get_graph_snapshot(db, workspace_id, root_id)
     if not snapshot:
@@ -226,17 +243,12 @@ async def get_graph_snapshot(
 async def add_node_to_workspace(
     workspace_id: str,
     data: NodeCreate,
+    _auth_ws: Workspace = Depends(require_workspace_write),
     db: AsyncSession = Depends(get_db),
 ) -> NodeResponse:
     """
-    Add a conversation node to a workspace.
+    Add a conversation node to a workspace (write permission required).
     """
-    ws = await WorkspaceService.get_workspace(db, workspace_id)
-    if not ws:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Workspace '{workspace_id}' not found",
-        )
     return await WorkspaceService.add_node_and_edge(db, workspace_id, data)
 
 
@@ -247,10 +259,11 @@ async def update_node(
     workspace_id: str,
     node_id: str,
     body: Dict[str, Any],
+    _auth_ws: Workspace = Depends(require_workspace_write),
     db: AsyncSession = Depends(get_db),
 ) -> NodeResponse:
     """
-    Update a conversation node's metadata (e.g. title, pinned) or content.
+    Update a conversation node's metadata or content (write permission required).
     """
     node = await WorkspaceService.update_node(db, workspace_id, node_id, body)
     if not node:
@@ -265,17 +278,12 @@ async def update_node(
 async def save_graph_delta(
     workspace_id: str,
     delta: GraphDeltaUpdateRequest,
+    _auth_ws: Workspace = Depends(require_workspace_write),
     db: AsyncSession = Depends(get_db),
 ) -> Dict[str, Any]:
     """
-    Apply debounced delta updates (viewport camera changes and moved node coordinates).
+    Apply debounced delta updates (viewport camera changes and moved node coordinates) (write permission required).
     """
-    ws = await WorkspaceService.get_workspace(db, workspace_id)
-    if not ws:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Workspace '{workspace_id}' not found",
-        )
     await WorkspaceService.apply_graph_delta(db, workspace_id, delta)
     return {"status": "ok", "workspace_id": workspace_id}
 
@@ -284,18 +292,12 @@ async def save_graph_delta(
 async def search_workspace_semantic(
     workspace_id: str,
     data: SemanticSearchRequest,
+    _auth_ws: Workspace = Depends(require_workspace_read),
     db: AsyncSession = Depends(get_db),
 ) -> Dict[str, Any]:
     """
-    Execute pgvector cosine similarity search across all embedded nodes in this workspace.
+    Execute pgvector cosine similarity search across all embedded nodes (read permission required).
     """
-    ws = await WorkspaceService.get_workspace(db, workspace_id)
-    if not ws:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Workspace '{workspace_id}' not found",
-        )
-
     semantic_service = SemanticService()
     matches = await semantic_service.search_workspace_nodes(
         db=db,
@@ -317,18 +319,12 @@ async def discover_cross_branch_links(
     workspace_id: str,
     min_similarity: float = Query(default=0.75, ge=0.0, le=1.0),
     limit: int = Query(default=10, ge=1, le=50),
+    _auth_ws: Workspace = Depends(require_workspace_read),
     db: AsyncSession = Depends(get_db),
 ) -> Dict[str, Any]:
     """
-    Discover cross-branch semantic connection opportunities across disparate turns.
+    Discover cross-branch semantic connection opportunities (read permission required).
     """
-    ws = await WorkspaceService.get_workspace(db, workspace_id)
-    if not ws:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Workspace '{workspace_id}' not found",
-        )
-
     semantic_service = SemanticService()
     links = await semantic_service.discover_cross_branch_links(
         db=db,

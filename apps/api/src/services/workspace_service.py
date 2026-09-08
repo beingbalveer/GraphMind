@@ -14,7 +14,7 @@ from schemas.workspace import (
     WorkspaceResponse,
     WorkspaceUpdate,
 )
-from sqlalchemy import func, select, text
+from sqlalchemy import func, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -24,22 +24,36 @@ logger = structlog.get_logger()
 class WorkspaceService:
     @staticmethod
     async def list_workspaces(
-        session: AsyncSession, limit: int = 50, offset: int = 0
+        session: AsyncSession,
+        limit: int = 50,
+        offset: int = 0,
+        user_id: Optional[str] = None,
     ) -> Tuple[List[WorkspaceResponse], int]:
         """
-        List all workspaces ordered by most recently updated.
+        List workspaces accessible to the user ordered by most recently updated.
         """
+        from models.user import WorkspaceMember
+
+        stmt_filter = None
+        if user_id:
+            stmt_filter = or_(
+                Workspace.owner_id == user_id,
+                Workspace.id.in_(
+                    select(WorkspaceMember.workspace_id).where(WorkspaceMember.user_id == user_id)
+                ),
+            )
+
         total_stmt = select(func.count(Workspace.id))
+        if stmt_filter is not None:
+            total_stmt = total_stmt.where(stmt_filter)
         total_res = await session.execute(total_stmt)
         total = total_res.scalar_one()
 
-        stmt = (
-            select(Workspace)
-            .options(selectinload(Workspace.nodes))
-            .order_by(Workspace.updated_at.desc())
-            .limit(limit)
-            .offset(offset)
-        )
+        stmt = select(Workspace).options(selectinload(Workspace.nodes))
+        if stmt_filter is not None:
+            stmt = stmt.where(stmt_filter)
+        stmt = stmt.order_by(Workspace.updated_at.desc()).limit(limit).offset(offset)
+
         result = await session.execute(stmt)
         workspaces = result.scalars().all()
 
@@ -60,18 +74,30 @@ class WorkspaceService:
         return responses, total
 
     @staticmethod
-    async def create_workspace(session: AsyncSession, data: WorkspaceCreate) -> WorkspaceResponse:
+    async def create_workspace(
+        session: AsyncSession,
+        data: WorkspaceCreate,
+        owner_id: str = "usr_default_admin",
+    ) -> WorkspaceResponse:
         """
-        Create a new workspace.
+        Create a new workspace and establish owner membership invariant.
         """
+        from models.user import WorkspaceMember
+
         ws = Workspace(
             name=data.name,
             description=data.description,
+            owner_id=owner_id,
         )
         session.add(ws)
         await session.flush()
+
+        member = WorkspaceMember(workspace_id=ws.id, user_id=owner_id, role="owner")
+        session.add(member)
+        await session.flush()
+
         await session.refresh(ws)
-        logger.info("Workspace created", workspace_id=ws.id, name=ws.name)
+        logger.info("Workspace created", workspace_id=ws.id, name=ws.name, owner_id=owner_id)
         return WorkspaceResponse.model_validate(ws)
 
     @staticmethod

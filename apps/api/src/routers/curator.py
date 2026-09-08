@@ -1,5 +1,7 @@
 from database import get_db
+from dependencies import require_workspace_read, require_workspace_write
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from models.workspace import Workspace
 from schemas.curator import (
     AdoptGapRequest,
     GapAnalysisResponse,
@@ -17,12 +19,12 @@ router = APIRouter(prefix="/workspaces/{workspace_id}/curator", tags=["Knowledge
 async def get_workspace_knowledge_gaps(
     workspace_id: str,
     staleness_days: int = Query(default=14, ge=1, le=365),
+    _auth_ws: Workspace = Depends(require_workspace_read),
     db: AsyncSession = Depends(get_db),
 ) -> GapAnalysisResponse:
     """
     Perform gap analysis comparing the workspace's explored concepts against the
-    domain dependency graph. Identifies missing and weak prerequisites, providing
-    actionable educational rationales.
+    domain dependency graph (read permission required).
     """
     try:
         return await CuratorService.analyze_workspace_gaps(
@@ -39,6 +41,7 @@ async def adopt_knowledge_gap(
     workspace_id: str,
     gap_id: str,
     payload: AdoptGapRequest = AdoptGapRequest(),
+    _auth_ws: Workspace = Depends(require_workspace_write),
     db: AsyncSession = Depends(get_db),
 ) -> ConceptResponse:
     """
@@ -60,11 +63,11 @@ async def adopt_knowledge_gap(
 async def get_next_topic_recommendations(
     workspace_id: str,
     limit: int = Query(default=3, ge=1, le=10),
+    _auth_ws: Workspace = Depends(require_workspace_read),
     db: AsyncSession = Depends(get_db),
 ) -> NextTopicsResponse:
     """
-    Recommend the next best topics to learn based on the learner's completed prerequisites,
-    active domains, and cross-domain synergies.
+    Recommend the next best topics to learn (read permission required).
     """
     try:
         return await CuratorService.recommend_next_topics(
@@ -79,11 +82,11 @@ async def get_next_topic_recommendations(
 @router.get("/timeline", response_model=WorkspaceTimelineResponse)
 async def get_workspace_timeline(
     workspace_id: str,
+    _auth_ws: Workspace = Depends(require_workspace_read),
     db: AsyncSession = Depends(get_db),
 ) -> WorkspaceTimelineResponse:
     """
-    Retrieve the chronological evolution history of the workspace, including
-    node creations, branch splits, and concept mastery milestones.
+    Retrieve the chronological evolution history of the workspace (read permission required).
     """
     try:
         return await CuratorService.get_workspace_timeline(db, workspace_id=workspace_id)

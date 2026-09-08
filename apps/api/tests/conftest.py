@@ -13,4 +13,12 @@ async def init_test_db() -> AsyncGenerator[None, None]:
         if is_postgres:
             await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
         await conn.run_sync(Base.metadata.create_all)
+        if is_postgres:
+            await conn.execute(
+                text(
+                    "INSERT INTO users (id, email, full_name, provider, token_version, is_active, created_at, updated_at) "
+                    "VALUES ('usr_default_admin', 'dev@graphmind.local', 'Default Admin', 'local', 1, true, NOW(), NOW()) "
+                    "ON CONFLICT (id) DO NOTHING;"
+                )
+            )
     yield

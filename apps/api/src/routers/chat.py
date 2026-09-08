@@ -18,6 +18,7 @@ from ai_core import (
 )
 from config import get_settings
 from database import get_session_factory
+from dependencies import get_optional_user, require_workspace_write
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -448,6 +449,13 @@ async def stream_chat(
     resolved_base_url = body.base_url or (
         settings.OLLAMA_BASE_URL if resolved_provider == "ollama" else None
     )
+
+    if body.workspace_id:
+        factory = get_session_factory()
+        async with factory() as session:
+            user = await get_optional_user(request, session)
+            if user:
+                await require_workspace_write(body.workspace_id, user, session)
 
     logger.info(
         "Received chat stream request",

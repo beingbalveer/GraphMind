@@ -1,7 +1,9 @@
 from typing import Any, Dict, List
 
 from database import get_db
+from dependencies import require_workspace_read, require_workspace_write
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from models.workspace import Workspace
 from schemas.mastery import (
     ConceptCreate,
     ConceptResponse,
@@ -19,10 +21,11 @@ router = APIRouter(prefix="/workspaces/{workspace_id}", tags=["Knowledge Mastery
 async def get_workspace_mastery(
     workspace_id: str,
     staleness_days: int = Query(default=14, ge=1, le=365),
+    _auth_ws: Workspace = Depends(require_workspace_read),
     db: AsyncSession = Depends(get_db),
 ) -> WorkspaceMasterySummary:
     """
-    Retrieve the full knowledge profile, concept breakdown, and mastery scores for a workspace.
+    Retrieve the full knowledge profile, concept breakdown, and mastery scores for a workspace (read permission required).
     """
     return await MasteryService.get_workspace_mastery_summary(
         db,
@@ -36,10 +39,11 @@ async def list_workspace_concepts(
     workspace_id: str,
     limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
+    _auth_ws: Workspace = Depends(require_workspace_read),
     db: AsyncSession = Depends(get_db),
 ) -> List[ConceptResponse]:
     """
-    List concepts tracked in a workspace.
+    List concepts tracked in a workspace (read permission required).
     """
     return await MasteryService.get_workspace_concepts(
         db,
@@ -53,6 +57,7 @@ async def list_workspace_concepts(
 async def create_or_get_concept(
     workspace_id: str,
     data: ConceptCreate,
+    _auth_ws: Workspace = Depends(require_workspace_write),
     db: AsyncSession = Depends(get_db),
 ) -> ConceptResponse:
     """
@@ -68,10 +73,11 @@ async def create_or_get_concept(
 async def get_concept(
     workspace_id: str,
     concept_id: str,
+    _auth_ws: Workspace = Depends(require_workspace_read),
     db: AsyncSession = Depends(get_db),
 ) -> ConceptResponse:
     """
-    Get a single concept by ID.
+    Get a single concept by ID (read permission required).
     """
     concept = await MasteryService.get_concept(db, concept_id=concept_id)
     if not concept or concept.workspace_id != workspace_id:
@@ -87,10 +93,11 @@ async def update_concept(
     workspace_id: str,
     concept_id: str,
     data: ConceptUpdate,
+    _auth_ws: Workspace = Depends(require_workspace_write),
     db: AsyncSession = Depends(get_db),
 ) -> ConceptResponse:
     """
-    Update concept metadata, confidence score, or log quiz feedback.
+    Update concept metadata, confidence score, or log quiz feedback (write permission required).
     """
     concept = await MasteryService.get_concept(db, concept_id=concept_id)
     if not concept or concept.workspace_id != workspace_id:
@@ -111,10 +118,11 @@ async def update_concept(
 async def delete_concept(
     workspace_id: str,
     concept_id: str,
+    _auth_ws: Workspace = Depends(require_workspace_write),
     db: AsyncSession = Depends(get_db),
 ) -> Dict[str, Any]:
     """
-    Delete a concept from the workspace.
+    Delete a concept from the workspace (write permission required).
     """
     concept = await MasteryService.get_concept(db, concept_id=concept_id)
     if not concept or concept.workspace_id != workspace_id:
@@ -131,10 +139,11 @@ async def link_node_concepts(
     workspace_id: str,
     node_id: str,
     data: NodeConceptsLinkRequest,
+    _auth_ws: Workspace = Depends(require_workspace_write),
     db: AsyncSession = Depends(get_db),
 ) -> List[ConceptResponse]:
     """
-    Associate one or more concepts with a specific conversation node.
+    Associate one or more concepts with a specific conversation node (write permission required).
     """
     try:
         return await MasteryService.link_node_concepts(
@@ -150,6 +159,7 @@ async def link_node_concepts(
 async def get_node_concepts(
     workspace_id: str,
     node_id: str,
+    _auth_ws: Workspace = Depends(require_workspace_read),
     db: AsyncSession = Depends(get_db),
 ) -> List[ConceptResponse]:
     """

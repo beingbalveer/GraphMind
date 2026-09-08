@@ -4,8 +4,10 @@ from typing import Any, Dict, List, Optional
 import structlog
 from anyio import Path as AsyncPath
 from database import get_db
+from dependencies import require_workspace_read, require_workspace_write
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from fastapi.responses import FileResponse
+from models.workspace import Workspace
 from pydantic import BaseModel, ConfigDict
 from pydantic.alias_generators import to_camel
 from services.file_service import file_service
@@ -60,10 +62,11 @@ def _to_file_response(file_rec: Any) -> WorkspaceFileResponse:
 async def upload_file(
     workspace_id: str,
     file: UploadFile = File(...),
+    _auth_ws: Workspace = Depends(require_workspace_write),
     db: AsyncSession = Depends(get_db),
 ) -> WorkspaceFileResponse:
     """
-    Upload an image or document asset to the workspace file library.
+    Upload an image or document asset to the workspace file library (write permission required).
     """
     try:
         content = await file.read()
@@ -108,10 +111,11 @@ async def list_files(
     ),
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
+    _auth_ws: Workspace = Depends(require_workspace_read),
     db: AsyncSession = Depends(get_db),
 ) -> List[WorkspaceFileResponse]:
     """
-    Retrieve all uploaded files stored in this workspace library.
+    Retrieve all uploaded files stored in this workspace library (read permission required).
     """
     files = await file_service.list_files(
         db=db,
@@ -131,10 +135,11 @@ async def list_files(
 async def get_file_metadata(
     workspace_id: str,
     file_id: str,
+    _auth_ws: Workspace = Depends(require_workspace_read),
     db: AsyncSession = Depends(get_db),
 ) -> WorkspaceFileResponse:
     """
-    Get file metadata details.
+    Get file metadata details (read permission required).
     """
     file_rec = await file_service.get_file(db, workspace_id, file_id)
     if not file_rec:
@@ -156,10 +161,11 @@ async def download_file(
         default=False,
         description="Whether to force attachment download vs inline display",
     ),
+    _auth_ws: Workspace = Depends(require_workspace_read),
     db: AsyncSession = Depends(get_db),
 ) -> FileResponse:
     """
-    Serve raw file content directly with appropriate Content-Type and Disposition.
+    Serve raw file content directly with appropriate Content-Type and Disposition (read permission required).
     """
     file_rec = await file_service.get_file(db, workspace_id, file_id)
     if not file_rec:
@@ -191,10 +197,11 @@ async def download_file(
 async def delete_file(
     workspace_id: str,
     file_id: str,
+    _auth_ws: Workspace = Depends(require_workspace_write),
     db: AsyncSession = Depends(get_db),
 ) -> Dict[str, Any]:
     """
-    Delete a file asset and its underlying storage file.
+    Delete a file asset and its underlying storage file (write permission required).
     """
     deleted = await file_service.delete_file(db, workspace_id, file_id)
     if not deleted:

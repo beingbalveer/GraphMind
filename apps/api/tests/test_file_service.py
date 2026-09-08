@@ -93,8 +93,9 @@ async def test_workspace_file_upload_nonexistent_workspace() -> None:
             "/api/v1/workspaces/ws_nonexistent_99999/files/upload",
             files=files,
         )
-        assert resp.status_code == 400
-        assert "not found" in resp.json()["error"]["message"].lower()
+        assert resp.status_code in (400, 404)
+        detail = resp.json().get("detail", "") or resp.json().get("error", {}).get("message", "")
+        assert "not found" in detail.lower()
 
 
 @pytest.mark.asyncio
