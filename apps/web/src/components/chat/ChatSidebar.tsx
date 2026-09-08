@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
-  Search,
   MoreHorizontal,
   Pin,
   PinOff,
@@ -17,7 +16,6 @@ import {
 } from "lucide-react";
 import { ChatItem } from "@/lib/workspaceApi";
 import { LogoBadge } from "@/components/ui/Logo";
-import { Input } from "@/components/ui/input";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { useResizableSidebar } from "@/hooks/useResizableSidebar";
@@ -99,7 +97,6 @@ export function ChatSidebar({
   onNewChat,
   onOpenFileLibrary,
 }: ChatSidebarProps) {
-  const [searchQuery, setSearchQuery] = useState("");
   const [deletingChatId, setDeletingChatId] = useState<string | null>(null);
   const [renamingChatId, setRenamingChatId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
@@ -123,16 +120,9 @@ export function ChatSidebar({
     });
   }, [chats]);
 
-  const filteredChats = useMemo(() => {
-    if (!searchQuery.trim()) return sortedChats;
-    const query = searchQuery.toLowerCase().trim();
-    return sortedChats.filter((c) => (c.title || "").toLowerCase().includes(query));
-  }, [sortedChats, searchQuery]);
-
   const chatGroups = useMemo(() => {
-    if (searchQuery.trim()) return [];
     return groupChatsByDate(sortedChats);
-  }, [sortedChats, searchQuery]);
+  }, [sortedChats]);
 
   // Auto-focus rename input when triggered
   useEffect(() => {
@@ -309,36 +299,25 @@ export function ChatSidebar({
           )}
         </div>
 
-        {/* Assistant-ui ThreadList Actions: New Thread & Search */}
+        {/* Assistant-ui ThreadList Actions: New Thread */}
         <div className="px-2 pt-2 pb-1 space-y-1.5 shrink-0">
           {isOpen ? (
-            <>
-              {onNewChat && (
-                <button
-                  type="button"
-                  onClick={onNewChat}
-                  className="h-8.5 w-full flex items-center justify-between px-2.5 rounded-xl text-xs font-medium text-foreground border border-border bg-surface hover:bg-surface-hover shadow-2xs transition-colors cursor-pointer group"
-                  title="New chat (⌘N)"
-                >
-                  <div className="flex items-center gap-2">
-                    <Plus className="w-4 h-4 text-foreground-muted group-hover:text-foreground transition-colors" />
-                    <span>New Thread</span>
-                  </div>
-                  <kbd className="text-2xs text-foreground-muted font-sans border border-border px-1 py-0.5 rounded bg-muted group-hover:text-foreground">
-                    ⌘N
-                  </kbd>
-                </button>
-              )}
-
-              <Input
-                type="search"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search threads..."
-                startIcon={<Search className="w-3.5 h-3.5" />}
-                inputSize="sm"
-              />
-            </>
+            onNewChat && (
+              <button
+                type="button"
+                onClick={onNewChat}
+                className="h-8.5 w-full flex items-center justify-between px-2.5 rounded-xl text-xs font-medium text-foreground border border-border bg-surface hover:bg-surface-hover shadow-2xs transition-colors cursor-pointer group"
+                title="New chat (⌘N)"
+              >
+                <div className="flex items-center gap-2">
+                  <Plus className="w-4 h-4 text-foreground-muted group-hover:text-foreground transition-colors" />
+                  <span>New Thread</span>
+                </div>
+                <kbd className="text-2xs text-foreground-muted font-sans border border-border px-1 py-0.5 rounded bg-muted group-hover:text-foreground">
+                  ⌘N
+                </kbd>
+              </button>
+            )
           ) : (
             <div className="flex flex-col items-center gap-1">
               {onNewChat && (
@@ -351,14 +330,6 @@ export function ChatSidebar({
                   <Plus className="size-4" />
                 </button>
               )}
-              <button
-                type="button"
-                onClick={onToggle}
-                className="size-8 rounded-md flex items-center justify-center text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200/60 transition-colors cursor-pointer"
-                title="Search threads..."
-              >
-                <Search className="size-4" />
-              </button>
             </div>
           )}
         </div>
@@ -366,38 +337,19 @@ export function ChatSidebar({
         {/* Assistant-ui ThreadList Content */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden px-2 py-1 space-y-0.5">
           {isOpen ? (
-            searchQuery.trim() ? (
-              /* Search results mode */
-              <>
-                <div className="px-2.5 pt-2 pb-1 text-xs font-medium text-zinc-400">
-                  Search Results
-                </div>
-                {filteredChats.length === 0 ? (
-                  <div className="py-6 px-2.5 text-center text-sm text-zinc-400">
-                    No threads found
-                  </div>
-                ) : (
-                  filteredChats.map(renderChatItem)
-                )}
-              </>
+            chatGroups.length === 0 ? (
+              <div className="py-6 px-2.5 text-center text-sm text-zinc-400">
+                No threads yet
+              </div>
             ) : (
-              /* Grouped Mode (Today, Yesterday, Earlier) */
-              <>
-                {chatGroups.length === 0 ? (
-                  <div className="py-6 px-2.5 text-center text-sm text-zinc-400">
-                    No threads yet
+              chatGroups.map((group) => (
+                <div key={group.label} className="space-y-0.5 pt-2 first:pt-0">
+                  <div className="px-2.5 py-1 text-xs font-medium text-zinc-400">
+                    {group.label}
                   </div>
-                ) : (
-                  chatGroups.map((group) => (
-                    <div key={group.label} className="space-y-0.5 pt-2 first:pt-0">
-                      <div className="px-2.5 py-1 text-xs font-medium text-zinc-400">
-                        {group.label}
-                      </div>
-                      {group.chats.map(renderChatItem)}
-                    </div>
-                  ))
-                )}
-              </>
+                  {group.chats.map(renderChatItem)}
+                </div>
+              ))
             )
           ) : (
             <div className="flex flex-col items-center pt-1 space-y-1">
