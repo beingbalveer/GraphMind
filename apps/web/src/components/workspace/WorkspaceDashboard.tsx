@@ -7,6 +7,7 @@ import { fetchWorkspaces, createWorkspace, WorkspaceItem } from "@/lib/workspace
 import { buildWorkspaceUrl } from "@/lib/urls";
 import { LogoBadge } from "@/components/ui/Logo";
 import { Button } from "@/components/ui/button";
+import { UserMenu } from "@/components/layout/UserMenu";
 
 export function WorkspaceDashboard() {
   const router = useRouter();
@@ -54,6 +55,7 @@ export function WorkspaceDashboard() {
             GraphMind
           </span>
         </div>
+        <UserMenu />
       </header>
 
       <main className="flex-1 overflow-auto">

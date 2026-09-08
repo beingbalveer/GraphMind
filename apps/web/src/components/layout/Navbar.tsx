@@ -1,19 +1,17 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React from "react";
 import {
   MessageSquare,
   LayoutGrid,
   PanelLeft,
   PanelRight,
   ChevronDown,
-  LogOut,
-  User as UserIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { LogoBadge } from "@/components/ui/Logo";
-import { useAuth } from "@/context/AuthContext";
+import { UserMenu } from "@/components/layout/UserMenu";
 
 export type ViewMode = "chat" | "canvas";
 
@@ -54,24 +52,6 @@ export function Navbar({
   onToggleRightSidebar,
   onNewChat: _onNewChat,
 }: NavbarProps) {
-  const { user, logout } = useAuth();
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const profileRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
-        setIsProfileOpen(false);
-      }
-    }
-    if (isProfileOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [isProfileOpen]);
-
   return (
     <header className="h-13 bg-white px-3 sm:px-5 flex items-center justify-between z-30 shrink-0 select-none border-b border-zinc-200/80">
       {/* Top Left: Sidebar Toggle + Workspace Switcher */}
@@ -170,63 +150,7 @@ export function Navbar({
         )}
 
         {/* User Profile / Logout Dropdown */}
-        {user ? (
-          <div className="relative ml-1" ref={profileRef}>
-            <button
-              type="button"
-              onClick={() => setIsProfileOpen(!isProfileOpen)}
-              className="flex items-center gap-1.5 p-0.5 rounded-full hover:bg-zinc-100 transition cursor-pointer"
-              title={user.fullName || user.email}
-              aria-label="User profile menu"
-            >
-              {user.avatarUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={user.avatarUrl}
-                  alt={user.fullName || user.email}
-                  className="w-7 h-7 rounded-full object-cover ring-1 ring-zinc-300"
-                />
-              ) : (
-                <div className="w-7 h-7 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-bold ring-1 ring-indigo-200">
-                  {(user.fullName?.[0] || user.email[0]).toUpperCase()}
-                </div>
-              )}
-            </button>
-
-            {isProfileOpen && (
-              <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-zinc-200 py-1.5 z-50 animate-in fade-in zoom-in-95">
-                <div className="px-3.5 py-2 border-b border-zinc-100">
-                  <p className="text-xs font-semibold text-zinc-900 truncate">
-                    {user.fullName || "User"}
-                  </p>
-                  <p className="text-[11px] text-zinc-500 truncate">{user.email}</p>
-                  <span className="inline-block mt-1 px-1.5 py-0.5 text-[9px] font-medium bg-zinc-100 text-zinc-600 rounded capitalize">
-                    {user.provider} account
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    setIsProfileOpen(false);
-                    await logout();
-                  }}
-                  className="w-full flex items-center gap-2 px-3.5 py-2 text-xs text-red-600 hover:bg-red-50 transition cursor-pointer font-medium"
-                >
-                  <LogOut className="w-3.5 h-3.5" />
-                  <span>Sign Out</span>
-                </button>
-              </div>
-            )}
-          </div>
-        ) : (
-          <Link
-            href="/login"
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-zinc-700 hover:text-zinc-950 hover:bg-zinc-100 rounded-lg transition ml-1"
-          >
-            <UserIcon className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Sign In</span>
-          </Link>
-        )}
+        <UserMenu />
       </div>
     </header>
   );
