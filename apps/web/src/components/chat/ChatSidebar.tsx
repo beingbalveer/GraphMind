@@ -9,7 +9,6 @@ import {
   Trash2,
   Settings,
   Plus,
-  PanelLeftClose,
   PanelLeft,
   FolderOpen,
   MessageSquare,
@@ -278,7 +277,7 @@ export function ChatSidebar({
                 title="Collapse sidebar (⌘B)"
                 aria-label="Collapse sidebar"
               >
-                <PanelLeftClose className="w-4 h-4" />
+                <PanelLeft className="w-4 h-4" />
               </button>
             </>
           ) : (
