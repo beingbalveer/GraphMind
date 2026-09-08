@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Sparkles, StickyNote } from "lucide-react";
+import { Sparkles, StickyNote, PanelRight } from "lucide-react";
 import { useResizableSidebar } from "@/hooks/useResizableSidebar";
 
 interface RightSidebarProps {
@@ -43,7 +43,7 @@ export function RightSidebar({
       <aside
         suppressHydrationWarning
         style={{ width: isOpen ? `${width}px` : "0px" }}
-        className={`fixed md:static inset-y-0 right-0 z-40 flex flex-col bg-background-secondary select-none relative overflow-hidden shrink-0 border-l border-border ${
+        className={`fixed md:static inset-y-0 right-0 z-40 flex flex-col bg-background-secondary select-none relative overflow-hidden shrink-0 border-l border-border-subtle ${
           isOpen ? "translate-x-0" : "translate-x-full md:translate-x-0"
         } ${isResizing ? "transition-none" : "transition-[width,transform] duration-200 ease-in-out"}`}
       >
@@ -59,13 +59,21 @@ export function RightSidebar({
         )}
 
         {/* Top Header: Standardized to h-13 with border-b, matching Navbar exactly */}
-        <div className="h-13 px-4 flex items-center shrink-0 bg-surface border-b border-border overflow-hidden">
+        <div className="h-13 px-4 flex items-center justify-between shrink-0 bg-surface border-b border-border-subtle overflow-hidden">
           <div className="flex items-center space-x-2 min-w-0">
             <Sparkles className="w-4 h-4 text-zinc-700 shrink-0" />
             <h2 className="text-sm font-semibold text-zinc-900 truncate tracking-tight">
               {title}
             </h2>
           </div>
+          <button
+            onClick={onToggle}
+            className="size-8 rounded-lg flex items-center justify-center text-foreground-muted hover:text-foreground hover:bg-surface-hover transition-colors cursor-pointer shrink-0"
+            title="Collapse right panel"
+            aria-label="Collapse right panel"
+          >
+            <PanelRight className="w-4 h-4" />
+          </button>
         </div>
 
         {/* Content Area */}

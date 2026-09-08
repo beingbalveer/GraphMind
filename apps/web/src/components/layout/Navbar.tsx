@@ -114,19 +114,15 @@ export function Navbar({
           />
         )}
 
-        {/* Right Sidebar Toggle */}
-        {onToggleRightSidebar && (
+        {/* Right Sidebar Toggle (Only show when right panel is closed; when open, collapse button is in the panel header) */}
+        {!isRightSidebarOpen && onToggleRightSidebar && (
           <Button
             variant="ghost"
             size="iconSm"
             onClick={onToggleRightSidebar}
-            className={`h-8 w-8 cursor-pointer transition-colors ${
-              isRightSidebarOpen
-                ? "text-zinc-950 bg-zinc-100"
-                : "text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100"
-            }`}
-            title="Toggle right panel"
-            aria-label="Toggle right panel"
+            className="h-8 w-8 cursor-pointer transition-colors text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100"
+            title="Open right panel"
+            aria-label="Open right panel"
           >
             <PanelRight className="w-4 h-4 stroke-[1.75]" />
           </Button>
