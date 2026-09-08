@@ -154,10 +154,10 @@ export function ChatSidebar({
       <div
         key={chat.id}
         onClick={() => !isRenaming && onSelectChat(chat)}
-        className={`group relative flex h-8.5 items-center rounded-md transition-colors cursor-pointer select-none font-normal ${
+        className={`group relative flex h-8 items-center px-2.5 rounded-lg transition-colors cursor-pointer select-none text-sm font-normal ${
           isActive
-            ? "bg-muted text-foreground"
-            : "text-muted-foreground hover:bg-surface-hover hover:text-foreground"
+            ? "bg-surface-hover text-foreground font-normal"
+            : "text-foreground-muted hover:bg-surface-hover/70 hover:text-foreground"
         }`}
       >
         {isRenaming ? (
@@ -172,21 +172,18 @@ export function ChatSidebar({
               if (e.key === "Enter") commitRename();
               if (e.key === "Escape") setRenamingChatId(null);
             }}
-            className="h-7 w-full mx-1 bg-white border border-zinc-300 rounded px-2 text-sm text-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-900/20 shadow-2xs"
+            className="h-7 w-full mx-1 bg-surface border border-border rounded px-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary/20 shadow-2xs"
             autoFocus
             onClick={(e) => e.stopPropagation()}
           />
         ) : (
           <>
-            {/* Title trigger with pe-8 on hover so title never overlaps 3 dots */}
-            <div className="flex h-full min-w-0 flex-1 items-center px-2.5 text-start text-sm outline-none group-hover:pe-8 transition-[padding]">
-              {chat.pinned && (
-                <Pin className="size-3.5 text-zinc-400 shrink-0 me-1.5 rotate-45" />
-              )}
+            {/* Title trigger with pe-7 on hover so title never overlaps 3 dots */}
+            <div className="flex h-full min-w-0 flex-1 items-center text-start outline-none group-hover:pe-7 transition-[padding]">
               <span className="min-w-0 flex-1 truncate">{chat.title || "New Chat"}</span>
             </div>
 
-            {/* Assistant-ui style 3-dots trigger button */}
+            {/* Subtle 3-dots trigger button (only visible on hover or when open) */}
             <div
               className={`absolute end-1.5 top-1/2 -translate-y-1/2 transition-opacity ${
                 openMenuChatId === chat.id
@@ -199,7 +196,7 @@ export function ChatSidebar({
                 trigger={
                   <button
                     type="button"
-                    className="size-6 rounded-md flex items-center justify-center text-zinc-400 hover:text-zinc-700 hover:bg-zinc-200/70 transition-colors"
+                    className="size-6 rounded-md flex items-center justify-center text-foreground-muted hover:text-foreground hover:bg-surface-hover transition-colors"
                     title="More options"
                   >
                     <MoreHorizontal className="size-3.5" />
@@ -257,8 +254,8 @@ export function ChatSidebar({
           isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         } ${isResizing ? "transition-none" : "transition-[width,transform] duration-200 ease-in-out"}`}
       >
-        {/* Assistant-ui Sidebar Header */}
-        <div className="h-13 px-3 flex items-center justify-between shrink-0 border-b border-border overflow-hidden">
+        {/* Sidebar Header */}
+        <div className="h-13 px-3 flex items-center justify-between shrink-0 overflow-hidden">
           {isOpen ? (
             <>
               <div className="flex items-center gap-2.5 min-w-0">
@@ -299,23 +296,21 @@ export function ChatSidebar({
           )}
         </div>
 
-        {/* Assistant-ui ThreadList Actions: New Thread */}
-        <div className="px-2 pt-2 pb-1 space-y-1.5 shrink-0">
+        {/* ThreadList Action: New chat */}
+        <div className="px-2 pt-1 pb-1 shrink-0">
           {isOpen ? (
             onNewChat && (
               <button
                 type="button"
                 onClick={onNewChat}
-                className="h-8.5 w-full flex items-center justify-between px-2.5 rounded-xl text-xs font-medium text-foreground border border-border bg-surface hover:bg-surface-hover shadow-2xs transition-colors cursor-pointer group"
+                className="h-9 w-full flex items-center gap-2.5 px-2.5 rounded-lg text-sm font-normal text-foreground hover:bg-surface-hover transition-colors cursor-pointer group"
                 title="New chat (⌘N)"
               >
-                <div className="flex items-center gap-2">
-                  <Plus className="w-4 h-4 text-foreground-muted group-hover:text-foreground transition-colors" />
-                  <span>New Thread</span>
-                </div>
-                <kbd className="text-2xs text-foreground-muted font-sans border border-border px-1 py-0.5 rounded bg-muted group-hover:text-foreground">
+                <Plus className="w-4 h-4 text-foreground-muted group-hover:text-foreground transition-colors shrink-0" />
+                <span className="flex-1 text-left truncate">New chat</span>
+                <span className="text-2xs text-foreground-muted opacity-0 group-hover:opacity-100 transition-opacity font-mono">
                   ⌘N
-                </kbd>
+                </span>
               </button>
             )
           ) : (
@@ -324,7 +319,7 @@ export function ChatSidebar({
                 <button
                   type="button"
                   onClick={onNewChat}
-                  className="size-8 rounded-md flex items-center justify-center text-zinc-600 hover:text-zinc-950 hover:bg-zinc-200/60 transition-colors cursor-pointer"
+                  className="size-8 rounded-lg flex items-center justify-center text-foreground-muted hover:text-foreground hover:bg-surface-hover transition-colors cursor-pointer"
                   title="New chat (⌘N)"
                 >
                   <Plus className="size-4" />
@@ -334,17 +329,17 @@ export function ChatSidebar({
           )}
         </div>
 
-        {/* Assistant-ui ThreadList Content */}
+        {/* ThreadList Content */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden px-2 py-1 space-y-0.5">
           {isOpen ? (
             chatGroups.length === 0 ? (
-              <div className="py-6 px-2.5 text-center text-sm text-zinc-400">
-                No threads yet
+              <div className="py-8 px-2.5 text-center text-xs text-foreground-muted">
+                No conversations yet
               </div>
             ) : (
               chatGroups.map((group) => (
-                <div key={group.label} className="space-y-0.5 pt-2 first:pt-0">
-                  <div className="px-2.5 py-1 text-xs font-medium text-zinc-400">
+                <div key={group.label} className="space-y-0.5 pt-3.5 first:pt-1">
+                  <div className="px-2.5 pb-1 text-2xs font-semibold text-foreground-muted/70 uppercase tracking-wider select-none">
                     {group.label}
                   </div>
                   {group.chats.map(renderChatItem)}
@@ -356,29 +351,29 @@ export function ChatSidebar({
               <button
                 type="button"
                 onClick={onToggle}
-                className="size-8 rounded-md flex items-center justify-center text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200/60 transition-colors cursor-pointer relative"
+                className="size-8 rounded-lg flex items-center justify-center text-foreground-muted hover:text-foreground hover:bg-surface-hover transition-colors cursor-pointer relative"
                 title={`Threads (${chats.length})`}
               >
                 <MessageSquare className="size-4" />
                 {chats.length > 0 && (
-                  <span className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-blue-500" />
+                  <span className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-primary" />
                 )}
               </button>
             </div>
           )}
         </div>
 
-        {/* Assistant-ui Sidebar Footer */}
-        <div className="border-t border-zinc-200/60 p-2 shrink-0 overflow-hidden space-y-0.5">
+        {/* Sidebar Footer */}
+        <div className="p-2 shrink-0 overflow-hidden space-y-0.5">
           {onOpenFileLibrary && (
             isOpen ? (
               <button
                 type="button"
                 onClick={onOpenFileLibrary}
-                className="h-8.5 w-full flex items-center gap-2.5 px-2.5 rounded-md text-sm font-medium text-zinc-700 hover:text-zinc-950 hover:bg-zinc-100 transition-colors cursor-pointer"
+                className="h-8.5 w-full flex items-center gap-2.5 px-2.5 rounded-lg text-sm font-normal text-foreground-muted hover:text-foreground hover:bg-surface-hover transition-colors cursor-pointer"
                 title="Workspace File Library"
               >
-                <FolderOpen className="size-4 text-zinc-500 shrink-0" />
+                <FolderOpen className="size-4 text-foreground-muted shrink-0" />
                 <span className="truncate">File Library</span>
               </button>
             ) : (
@@ -386,7 +381,7 @@ export function ChatSidebar({
                 <button
                   type="button"
                   onClick={onOpenFileLibrary}
-                  className="size-8 rounded-md flex items-center justify-center text-zinc-500 hover:text-zinc-900 hover:bg-zinc-200/60 transition-colors cursor-pointer"
+                  className="size-8 rounded-lg flex items-center justify-center text-foreground-muted hover:text-foreground hover:bg-surface-hover transition-colors cursor-pointer"
                   title="Workspace File Library"
                 >
                   <FolderOpen className="size-4" />
@@ -400,10 +395,10 @@ export function ChatSidebar({
               <button
                 type="button"
                 onClick={onOpenSettings}
-                className="h-8.5 w-full flex items-center gap-2.5 px-2.5 rounded-md text-sm font-medium text-zinc-700 hover:text-zinc-950 hover:bg-zinc-100 transition-colors cursor-pointer"
+                className="h-8.5 w-full flex items-center gap-2.5 px-2.5 rounded-lg text-sm font-normal text-foreground-muted hover:text-foreground hover:bg-surface-hover transition-colors cursor-pointer"
                 title="Settings (⌘,)"
               >
-                <Settings className="size-4 text-zinc-500 shrink-0" />
+                <Settings className="size-4 text-foreground-muted shrink-0" />
                 <span className="truncate">Settings</span>
               </button>
             ) : (
@@ -411,7 +406,7 @@ export function ChatSidebar({
                 <button
                   type="button"
                   onClick={onOpenSettings}
-                  className="size-8 rounded-md flex items-center justify-center text-zinc-500 hover:text-zinc-950 hover:bg-zinc-200/60 transition-colors cursor-pointer"
+                  className="size-8 rounded-lg flex items-center justify-center text-foreground-muted hover:text-foreground hover:bg-surface-hover transition-colors cursor-pointer"
                   title="Settings (⌘,)"
                 >
                   <Settings className="size-4" />
