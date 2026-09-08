@@ -538,12 +538,12 @@ export function SidePeekBranchSheet({
 
       {/* Sliding Sheet Container */}
       <aside
-        className={`fixed inset-y-0 right-0 z-40 w-full sm:w-[480px] md:w-[540px] lg:w-[580px] bg-white border-l border-zinc-200/90 shadow-2xl flex flex-col font-sans select-text transform transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-transform ${
+        className={`fixed inset-y-0 right-0 z-40 w-full sm:w-[480px] md:w-[540px] lg:w-[580px] bg-surface border-l border-border shadow-2xl flex flex-col font-sans select-text transform transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-transform ${
           isVisible ? "translate-x-0" : "translate-x-full pointer-events-none"
         }`}
       >
         {/* Top Bar: History Navigation + Excerpt Title Badge + Actions */}
-        <div className="h-11 px-3 sm:px-4 border-b border-zinc-100 flex items-center justify-between shrink-0 bg-white/95 backdrop-blur-md select-none">
+        <div className="h-13 px-3 sm:px-4 border-b border-border flex items-center justify-between shrink-0 bg-surface/95 backdrop-blur-md select-none">
           {/* Left: Back / Forward History Navigation Buttons */}
           <div className="flex items-center space-x-1 shrink-0">
             <Button
@@ -551,7 +551,7 @@ export function SidePeekBranchSheet({
               size="iconSm"
               disabled={!canGoBack}
               onClick={onNavigateBack}
-              className="h-7 w-7 text-zinc-600 hover:text-zinc-950 disabled:opacity-30 disabled:hover:text-zinc-600 cursor-pointer"
+              className="h-7 w-7 text-muted-foreground hover:text-foreground disabled:opacity-30 cursor-pointer"
               title="Go back (⌘[)"
             >
               <ChevronLeft className="w-4 h-4" />
@@ -562,7 +562,7 @@ export function SidePeekBranchSheet({
               size="iconSm"
               disabled={!canGoForward}
               onClick={onNavigateForward}
-              className="h-7 w-7 text-zinc-600 hover:text-zinc-950 disabled:opacity-30 disabled:hover:text-zinc-600 cursor-pointer"
+              className="h-7 w-7 text-muted-foreground hover:text-foreground disabled:opacity-30 cursor-pointer"
               title="Go forward (⌘])"
             >
               <ChevronRight className="w-4 h-4" />
@@ -570,15 +570,15 @@ export function SidePeekBranchSheet({
 
             {/* Depth Counter Badge */}
             {historyStack.length > 1 && (
-              <span className="text-2xs font-mono text-zinc-400 px-1.5 py-0.5 rounded-md bg-zinc-100 border border-zinc-200/60 ml-0.5">
+              <span className="text-2xs font-mono text-muted-foreground px-1.5 py-0.5 rounded-md bg-muted border border-border ml-0.5">
                 {historyIndex + 1}/{historyStack.length}
               </span>
             )}
           </div>
 
           {/* Center: Branch Context Badge */}
-          <div className="flex items-center space-x-1.5 min-w-0 mx-2 px-2 py-0.5 rounded-lg bg-zinc-100/90 border border-zinc-200/80 text-zinc-800">
-            <GitBranch className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+          <div className="flex items-center space-x-1.5 min-w-0 mx-2 px-2 py-0.5 rounded-lg bg-muted border border-border text-foreground">
+            <GitBranch className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
             <span className="text-xs font-semibold truncate max-w-[140px] sm:max-w-[200px]">
               {displayContext}
             </span>
@@ -599,19 +599,19 @@ export function SidePeekBranchSheet({
               onClick={() => {
                 if (activeLeafNodeId) onPromoteToPrimary(activeLeafNodeId);
               }}
-              className="h-7 w-7 text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100 disabled:opacity-30 cursor-pointer"
+              className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted disabled:opacity-30 cursor-pointer"
               title="Make this the primary chat (Open full view)"
             >
               <Maximize2 className="w-3.5 h-3.5" />
             </Button>
 
-            <div className="w-px h-3.5 bg-zinc-200 mx-0.5" />
+            <div className="w-px h-3.5 bg-border mx-0.5" />
 
             <Button
               variant="ghost"
               size="iconSm"
               onClick={onClose}
-              className="h-7 w-7 text-zinc-400 hover:text-zinc-950 hover:bg-zinc-100 cursor-pointer"
+              className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer"
               title="Close side peek (Esc)"
             >
               <X className="w-4 h-4" />
@@ -620,7 +620,7 @@ export function SidePeekBranchSheet({
         </div>
 
         {/* Sub-Header Sibling Sub-Branch Tabs Bar (Material Design M3) */}
-        <div className="h-10 px-2 sm:px-3 border-b border-zinc-200 flex items-center justify-between shrink-0 bg-white select-none overflow-x-auto no-scrollbar">
+        <div className="h-10 px-2 sm:px-3 border-b border-border flex items-center justify-between shrink-0 bg-surface select-none overflow-x-auto no-scrollbar">
           <div className="flex items-center h-full space-x-0.5 min-w-0 pr-2">
             {siblingTabs.map((tab) => {
               const isActive = !isDraftingNewTab && (tab.leafId === activeLeafNodeId || tab.rootId === currentNodeId);
@@ -745,17 +745,17 @@ export function SidePeekBranchSheet({
         {/* Messages Scroll Area or New Tab Starter View */}
         <div
           ref={scrollRef}
-          className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-2 bg-white"
+          className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-2 bg-surface"
         >
           {isDraftingNewTab ? (
             /* Blank Draft Tab Starter View */
             <div className="flex-1 flex flex-col justify-center max-w-xl mx-auto py-6 space-y-4 animate-in fade-in duration-150">
-              <div className="rounded-2xl border border-zinc-200/90 bg-zinc-50/50 p-4 shadow-2xs space-y-3.5">
-                <div className="flex items-center justify-between border-b border-zinc-200/60 pb-2.5">
-                  <h3 className="text-xs font-semibold text-zinc-900">
+              <div className="rounded-2xl border border-border bg-surface-secondary/40 p-4 shadow-2xs space-y-3.5">
+                <div className="flex items-center justify-between border-b border-border/80 pb-2.5">
+                  <h3 className="text-xs font-semibold text-foreground">
                     Explore &ldquo;{displayContext}&rdquo;
                   </h3>
-                  <span className="text-2xs text-zinc-400 font-medium">Quick Starters</span>
+                  <span className="text-2xs text-muted-foreground font-medium">Quick Starters</span>
                 </div>
 
                 {/* 2-Column Quick Starter Grid */}
@@ -767,17 +767,17 @@ export function SidePeekBranchSheet({
                         key={idx}
                         type="button"
                         onClick={() => handleQuickPrompt(item.prompt)}
-                        className="p-2.5 rounded-xl border border-zinc-200/80 bg-white hover:bg-zinc-50 hover:border-zinc-300 text-left transition-all duration-150 group cursor-pointer shadow-2xs"
+                        className="p-2.5 rounded-xl border border-border bg-surface hover:bg-muted text-left transition-all duration-150 group cursor-pointer shadow-2xs"
                       >
                         <div className="flex items-center space-x-2 mb-1">
-                          <div className="p-1 rounded bg-zinc-100 text-zinc-700 group-hover:text-zinc-950">
+                          <div className="p-1 rounded bg-muted text-foreground group-hover:text-foreground">
                             <Icon className="w-3 h-3" />
                           </div>
-                          <h4 className="text-xs font-semibold text-zinc-900 leading-snug">
+                          <h4 className="text-xs font-semibold text-foreground leading-snug">
                             {item.title}
                           </h4>
                         </div>
-                        <p className="text-2xs text-zinc-500 line-clamp-2 leading-relaxed">
+                        <p className="text-2xs text-muted-foreground line-clamp-2 leading-relaxed">
                           {item.desc}
                         </p>
                       </button>
@@ -827,7 +827,7 @@ export function SidePeekBranchSheet({
         </div>
 
         {/* Interactive In-Sheet Chat Input Bar */}
-        <div className="p-3 sm:p-4 border-t border-zinc-200/80 bg-white shrink-0">
+        <div className="p-3 sm:p-4 border-t border-border bg-surface shrink-0">
           <form onSubmit={handleSubmit} className="relative flex items-center">
             <input
               ref={inputRef}
@@ -840,12 +840,12 @@ export function SidePeekBranchSheet({
                   : `Reply to "${displayContext}"...`
               }
               disabled={isStreaming}
-              className="w-full pl-3.5 pr-10 py-2.5 rounded-xl border border-zinc-200 bg-white text-xs sm:text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-900 shadow-2xs disabled:bg-zinc-50 transition-all"
+              className="w-full pl-3.5 pr-10 py-2.5 rounded-xl border border-border bg-surface text-xs sm:text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 shadow-2xs disabled:bg-muted transition-all"
             />
             <button
               type="submit"
               disabled={!inputPrompt.trim() || isStreaming}
-              className="absolute right-1.5 p-1.5 rounded-lg bg-zinc-900 text-white hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer shadow-2xs"
+              className="absolute right-1.5 p-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer shadow-2xs"
               title={isDraftingNewTab ? "Start new branch exploration" : "Send follow-up in this branch"}
             >
               {isStreaming ? (

@@ -5,6 +5,7 @@ import { X, Download, FileText } from "lucide-react";
 import { formatBytes } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
+import { Badge } from "@/components/ui/badge";
 
 interface PdfViewerModalProps {
   isOpen: boolean;
@@ -47,25 +48,21 @@ export function PdfViewerModal({
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="full" className="max-w-5xl h-[90vh]">
       {/* Header */}
-      <div className="px-5 py-3 border-b border-zinc-100 flex items-center justify-between shrink-0 select-none bg-zinc-50/80">
+      <div className="h-13 px-5 border-b border-border flex items-center justify-between shrink-0 select-none bg-surface">
         <div className="flex items-center gap-2.5 min-w-0 pr-4">
-          <div className="p-1.5 rounded-lg bg-red-50 border border-red-200/80 text-red-600">
+          <div className="p-1.5 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200/80 dark:border-red-900 text-red-600">
             <FileText className="w-4 h-4" />
           </div>
           <div className="flex items-center gap-2 min-w-0">
-            <span className="text-sm font-semibold text-zinc-900 truncate">
+            <span className="text-sm font-semibold text-foreground truncate">
               {filename}
             </span>
-            <span className="px-1.5 py-0.5 rounded text-2xs font-bold bg-red-100 text-red-700">
-              PDF
-            </span>
+            <Badge variant="destructive">PDF</Badge>
             {initialPage && (
-              <span className="px-1.5 py-0.5 rounded text-2xs font-semibold bg-zinc-200/70 text-zinc-800">
-                Page {initialPage}
-              </span>
+              <Badge variant="secondary">Page {initialPage}</Badge>
             )}
             {sizeBytes && (
-              <span className="text-xs text-zinc-400 font-mono hidden sm:inline">
+              <span className="text-xs text-muted-foreground font-mono hidden sm:inline">
                 ({formatBytes(sizeBytes)})
               </span>
             )}
@@ -87,7 +84,7 @@ export function PdfViewerModal({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-colors cursor-pointer ml-1"
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer ml-1"
             title="Close (Esc)"
             aria-label="Close dialog"
           >

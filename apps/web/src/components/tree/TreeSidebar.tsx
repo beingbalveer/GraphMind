@@ -99,10 +99,10 @@ function TreeNodeItem({
         {/* Children count badge */}
         {children.length > 1 && (
           <span
-            className={`text-2xs px-1.5 py-0.2 rounded-full font-mono shrink-0 ${
+            className={`text-2xs px-1.5 py-0.5 rounded-full font-mono shrink-0 ${
               isActive
-                ? "bg-zinc-800 text-zinc-300"
-                : "bg-zinc-200/80 text-zinc-600"
+                ? "bg-primary-foreground/20 text-primary-foreground"
+                : "bg-muted text-foreground-muted"
             }`}
             title={`${children.length} branch pathways`}
           >
@@ -153,16 +153,16 @@ export function TreeSidebar({
 
   return (
     <aside
-      className={`fixed inset-y-0 left-0 z-40 w-72 bg-white border-r border-zinc-200/90 shadow-xl sm:shadow-none sm:static flex flex-col animate-in slide-in-from-left duration-200 select-none`}
+      className="fixed inset-y-0 left-0 z-40 w-72 bg-background-secondary text-foreground border-r border-border shadow-xl sm:shadow-none sm:static flex flex-col animate-in slide-in-from-left duration-200 select-none"
     >
       {/* Sidebar Header */}
-      <div className="h-13 px-4 border-b border-zinc-200/80 flex items-center justify-between shrink-0">
+      <div className="h-13 px-4 border-b border-border flex items-center justify-between shrink-0">
         <div className="flex items-center space-x-2">
-          <Layers className="w-4 h-4 text-zinc-700" />
-          <span className="font-semibold text-xs tracking-tight text-zinc-900">
+          <Layers className="w-4 h-4 text-foreground-muted" />
+          <span className="font-semibold text-xs tracking-tight text-foreground">
             Conversation Tree
           </span>
-          <span className="text-2xs px-1.5 py-0.5 rounded-full bg-zinc-100 text-zinc-600 font-mono">
+          <span className="text-2xs px-1.5 py-0.5 rounded-full bg-muted text-foreground-muted font-mono">
             {totalNodes} {totalNodes === 1 ? "node" : "nodes"}
           </span>
         </div>
@@ -171,7 +171,7 @@ export function TreeSidebar({
           variant="ghost"
           size="iconSm"
           onClick={onClose}
-          className="text-zinc-400 hover:text-zinc-900 h-7 w-7"
+          className="text-foreground-muted hover:text-foreground h-7 w-7"
           title="Close Tree Sidebar"
         >
           <X className="w-3.5 h-3.5" />
@@ -191,7 +191,7 @@ export function TreeSidebar({
       </div>
 
       {/* Footer Info */}
-      <div className="p-3 border-t border-zinc-200/80 bg-zinc-50/50 text-2xs text-zinc-500 flex items-center justify-between">
+      <div className="p-3 border-t border-border bg-surface/50 text-2xs text-foreground-muted flex items-center justify-between">
         <span>Click any node to switch branch view</span>
       </div>
     </aside>

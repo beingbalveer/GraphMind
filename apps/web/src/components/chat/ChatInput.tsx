@@ -365,10 +365,10 @@ export function ChatInput({
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className={`relative bg-white rounded-2xl transition-all p-2.5 flex flex-col space-y-2 border-0 ${
+        className={`relative bg-surface rounded-2xl transition-all p-2.5 flex flex-col space-y-2 border border-border/80 ${
           isDragOver
-            ? "bg-blue-50/30 shadow-lg ring-2 ring-blue-200"
-            : "shadow-md hover:shadow-lg focus-within:shadow-xl"
+            ? "bg-blue-50/30 dark:bg-blue-950/20 shadow-lg ring-2 ring-blue-400/50"
+            : "shadow-md hover:shadow-lg focus-within:shadow-xl focus-within:border-border"
         }`}
       >
         {/* Floating Slash Command Autocomplete Menu */}
@@ -526,7 +526,7 @@ export function ChatInput({
           }
           rows={1}
           disabled={isStreaming}
-          className="w-full px-2 py-1.5 text-base text-zinc-900 placeholder-zinc-400 bg-transparent resize-none outline-none font-normal max-h-48 leading-relaxed"
+          className="w-full px-2 py-1.5 text-base text-foreground placeholder-muted-foreground bg-transparent resize-none outline-none font-normal max-h-48 leading-relaxed"
         />
 
         {/* Action Bar */}
@@ -689,7 +689,7 @@ export function ChatInput({
               <button
                 type="submit"
                 disabled={!canSubmit}
-                className="h-7 w-7 rounded-full bg-zinc-900 text-white hover:bg-zinc-800 disabled:bg-zinc-200 disabled:text-zinc-400 flex items-center justify-center transition-colors shadow-xs cursor-pointer disabled:cursor-not-allowed"
+                className="h-7 w-7 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground flex items-center justify-center transition-colors shadow-xs cursor-pointer disabled:cursor-not-allowed"
                 title="Send message"
               >
                 {isUploading ? (

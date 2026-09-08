@@ -18,6 +18,7 @@ import {
 import { formatBytes } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
+import { Input } from "@/components/ui/input";
 
 interface TableViewerModalProps {
   isOpen: boolean;
@@ -337,10 +338,9 @@ export function TableViewerModal({
       </div>
 
       {/* Toolbar: Search & Pagination summary */}
-      <div className="px-5 py-2.5 bg-white border-b border-zinc-100 flex items-center justify-between gap-4 shrink-0 text-xs select-none">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none" />
-          <input
+      <div className="px-5 py-2.5 bg-surface border-b border-border flex items-center justify-between gap-4 shrink-0 text-xs select-none">
+        <div className="flex-1 max-w-sm">
+          <Input
             type="text"
             value={searchQuery}
             onChange={(e) => {
@@ -348,7 +348,8 @@ export function TableViewerModal({
               setCurrentPage(1);
             }}
             placeholder="Filter table rows..."
-            className="w-full pl-8.5 pr-3 py-1.5 bg-zinc-50 border border-zinc-200/90 rounded-lg text-xs text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-900 focus:bg-white transition-all"
+            startIcon={<Search className="w-3.5 h-3.5" />}
+            inputSize="sm"
           />
         </div>
 

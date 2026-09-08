@@ -43,7 +43,7 @@ export function UserMenu() {
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 p-1 rounded-full hover:bg-zinc-100 transition cursor-pointer"
+        className="flex items-center gap-2 p-1 rounded-full hover:bg-surface-hover transition cursor-pointer"
         title={user.fullName || user.email}
         aria-label="User profile menu"
       >
@@ -52,23 +52,23 @@ export function UserMenu() {
           <img
             src={user.avatarUrl}
             alt={user.fullName || user.email}
-            className="w-7 h-7 rounded-full object-cover ring-1 ring-zinc-300"
+            className="w-7 h-7 rounded-full object-cover ring-1 ring-border"
           />
         ) : (
-          <div className="w-7 h-7 rounded-full bg-zinc-900 text-white flex items-center justify-center text-xs font-bold shadow-2xs">
+          <div className="w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold shadow-2xs">
             {initial}
           </div>
         )}
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-zinc-200/90 py-1.5 z-50 animate-in fade-in zoom-in-95">
-          <div className="px-3.5 py-2.5 border-b border-zinc-100">
-            <p className="text-xs font-semibold text-zinc-900 truncate">
+        <div className="absolute right-0 mt-2 w-56 bg-surface rounded-2xl shadow-lg border border-border py-1.5 z-50 animate-in fade-in zoom-in-95">
+          <div className="px-3.5 py-2.5 border-b border-border-subtle">
+            <p className="text-xs font-semibold text-foreground truncate">
               {user.fullName || "User"}
             </p>
-            <p className="text-[11px] text-zinc-500 truncate">{user.email}</p>
-            <span className="inline-block mt-1 px-1.5 py-0.5 text-[9px] font-medium bg-zinc-100 text-zinc-600 rounded capitalize">
+            <p className="text-2xs text-foreground-muted truncate">{user.email}</p>
+            <span className="inline-block mt-1 px-1.5 py-0.5 text-2xs font-medium bg-muted text-foreground-muted rounded-full capitalize">
               {user.provider} account
             </span>
           </div>
@@ -78,7 +78,7 @@ export function UserMenu() {
               setIsOpen(false);
               await logout();
             }}
-            className="w-full flex items-center gap-2 px-3.5 py-2 text-xs text-rose-600 hover:bg-rose-50 transition cursor-pointer font-medium"
+            className="w-full flex items-center gap-2 px-3.5 py-2 text-xs text-destructive hover:bg-destructive-bg transition cursor-pointer font-medium"
           >
             <LogOut className="w-3.5 h-3.5" />
             <span>Sign Out</span>

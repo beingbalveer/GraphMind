@@ -1,3 +1,4 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
 
 @source "../**/*.{js,ts,jsx,tsx,mdx}";
@@ -5,16 +6,36 @@
 @source "../../../packages/**/*.{js,ts,jsx,tsx}";
 
 @theme {
+  --color-background: var(--background);
   --color-background-secondary: var(--background-secondary);
   --color-background-tertiary: var(--background-tertiary);
   --color-surface: var(--surface);
   --color-surface-hover: var(--surface-hover);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-foreground: var(--foreground);
   --color-foreground-muted: var(--foreground-muted);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
   --color-border-subtle: var(--border-subtle);
   --color-canvas-edge: var(--canvas-edge);
   --color-canvas-edge-active: var(--canvas-edge-active);
   --color-code-bg: var(--code-bg);
   --color-code-header-bg: var(--code-header-bg);
+  --color-code-foreground: var(--code-foreground);
+  --color-success: var(--success);
+  --color-success-bg: var(--success-bg);
+  --color-warning: var(--warning);
+  --color-warning-bg: var(--warning-bg);
+  --color-destructive: var(--destructive);
+  --color-destructive-bg: var(--destructive-bg);
+  --color-info: var(--info);
+  --color-info-bg: var(--info-bg);
+  --shadow-modal: var(--shadow-modal);
+  --shadow-2xs: var(--shadow-2xs);
   --text-2xs: 0.625rem;
 }
 
@@ -147,7 +168,7 @@
   body {
     background-color: var(--background);
     color: var(--foreground);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;

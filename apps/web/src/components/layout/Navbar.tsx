@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { LogoBadge } from "@/components/ui/Logo";
 import { UserMenu } from "@/components/layout/UserMenu";
 
@@ -53,7 +54,7 @@ export function Navbar({
   onNewChat: _onNewChat,
 }: NavbarProps) {
   return (
-    <header className="h-13 bg-white px-3 sm:px-5 flex items-center justify-between z-30 shrink-0 select-none border-b border-zinc-200/80">
+    <header className="h-13 bg-surface text-foreground px-3 sm:px-5 flex items-center justify-between z-30 shrink-0 select-none border-b border-border">
       {/* Top Left: Sidebar Toggle + Workspace Switcher */}
       <div className="flex items-center gap-2 shrink-0">
         {onToggleSidebar && (
@@ -61,7 +62,7 @@ export function Navbar({
             variant="ghost"
             size="iconSm"
             onClick={onToggleSidebar}
-            className="h-8 w-8 text-zinc-600 hover:text-zinc-950 cursor-pointer -ml-1"
+            className="-ml-1"
             title="Toggle sidebar (⌘B)"
             aria-label="Toggle sidebar"
           >
@@ -73,13 +74,13 @@ export function Navbar({
           <button
             type="button"
             onClick={onOpenWorkspaceModal}
-            className="flex items-center gap-1.5 px-2 py-1 rounded-xl hover:bg-zinc-100 text-zinc-900 text-xs font-semibold max-w-[200px] sm:max-w-[240px] truncate transition-colors cursor-pointer group"
+            className="flex items-center gap-1.5 px-2 py-1 rounded-xl hover:bg-surface-hover text-foreground text-xs font-semibold max-w-[200px] sm:max-w-[240px] truncate transition-colors cursor-pointer group"
             title="Click to switch or manage workspaces"
             aria-label="Switch or manage workspaces"
           >
             <LogoBadge size="sm" />
             <span className="truncate">{workspaceName}</span>
-            <ChevronDown className="w-3 h-3 text-zinc-400 group-hover:text-zinc-700 transition-colors shrink-0" />
+            <ChevronDown className="w-3 h-3 text-foreground-muted group-hover:text-foreground transition-colors shrink-0" />
           </button>
         ) : (
           <Link
@@ -87,7 +88,7 @@ export function Navbar({
             className="flex items-center gap-1.5 hover:opacity-80 transition-opacity"
           >
             <LogoBadge size="sm" />
-            <span className="font-semibold text-zinc-950 text-sm tracking-tight hidden sm:inline">
+            <span className="font-semibold text-foreground text-sm tracking-tight hidden sm:inline">
               {workspaceName}
             </span>
           </Link>
@@ -101,34 +102,17 @@ export function Navbar({
 
       {/* Right: View Mode Toggle */}
       <div className="flex items-center gap-2 shrink-0">
-        {/* Toggle Mode Pill Button */}
+        {/* Toggle Mode Segmented Tabs */}
         {onViewModeChange && (
-          <div className="flex items-center p-1 bg-zinc-100/70 rounded-2xl gap-0.5">
-            <button
-              type="button"
-              onClick={() => onViewModeChange("chat")}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
-                viewMode === "chat"
-                  ? "bg-white text-zinc-950 font-medium shadow-xs"
-                  : "text-zinc-600 hover:text-zinc-950 hover:bg-white/50 font-normal"
-              }`}
-            >
-              <MessageSquare className="w-4 h-4 stroke-[1.75]" />
-              <span className="hidden sm:inline">Chat</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => onViewModeChange("canvas")}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
-                viewMode === "canvas"
-                  ? "bg-white text-zinc-950 font-medium shadow-xs"
-                  : "text-zinc-600 hover:text-zinc-950 hover:bg-white/50 font-normal"
-              }`}
-            >
-              <LayoutGrid className="w-4 h-4 stroke-[1.75]" />
-              <span className="hidden sm:inline">Canvas</span>
-            </button>
-          </div>
+          <SegmentedTabs
+            value={viewMode}
+            onChange={(val) => onViewModeChange(val as ViewMode)}
+            size="sm"
+            items={[
+              { id: "chat", label: "Chat", icon: MessageSquare },
+              { id: "canvas", label: "Canvas", icon: LayoutGrid },
+            ]}
+          />
         )}
 
         {/* Right Sidebar Toggle */}

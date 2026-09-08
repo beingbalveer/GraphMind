@@ -132,17 +132,6 @@ export function SettingsModal({
     }
   }, [isOpen, config]);
 
-  // Handle ESC key to close
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && isOpen) {
-        onClose();
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose]);
-
   if (!isOpen) return null;
 
   const handleProviderSelect = (providerId: LLMProvider) => {
@@ -225,9 +214,9 @@ export function SettingsModal({
       className="h-[600px] flex-col sm:flex-row"
     >
         {/* Left Sidebar Navigation */}
-        <aside className="w-full sm:w-56 bg-zinc-50/80 border-r border-zinc-200/70 flex flex-col shrink-0 p-3 select-none">
+        <aside className="w-full sm:w-56 bg-background-secondary border-r border-border flex flex-col shrink-0 p-3 select-none">
           <div className="px-3 py-2.5 mb-1">
-            <h2 className="text-xs font-semibold text-zinc-900 tracking-tight">
+            <h2 className="text-xs font-semibold text-foreground tracking-tight">
               Settings
             </h2>
           </div>
@@ -235,7 +224,7 @@ export function SettingsModal({
           <div className="flex-1 overflow-y-auto space-y-4 pr-1">
             {navSections.map((sec) => (
               <div key={sec.title} className="space-y-1">
-                <span className="text-2xs font-semibold text-zinc-400 uppercase tracking-wider px-3">
+                <span className="text-2xs font-semibold text-muted-foreground uppercase tracking-wider px-3">
                   {sec.title}
                 </span>
                 <div className="space-y-0.5 mt-1">
@@ -249,20 +238,20 @@ export function SettingsModal({
                         onClick={() => setActiveTab(item.id)}
                         className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all text-left cursor-pointer ${
                           isSelected
-                            ? "bg-zinc-200/70 text-zinc-950 font-semibold"
-                            : "text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900"
+                            ? "bg-surface text-foreground font-semibold shadow-xs border border-border/60"
+                            : "text-muted-foreground hover:bg-surface-hover hover:text-foreground"
                         }`}
                       >
                         <div className="flex items-center space-x-2.5 min-w-0">
                           <Icon
                             className={`w-4 h-4 shrink-0 ${
-                              isSelected ? "text-zinc-900" : "text-zinc-500"
+                              isSelected ? "text-foreground" : "text-muted-foreground"
                             }`}
                           />
                           <span className="truncate">{item.label}</span>
                         </div>
                         {item.badge && (
-                          <span className="text-2xs font-medium text-amber-700 bg-amber-50 border border-amber-200/60 px-1.5 py-0.2 rounded-md shrink-0">
+                          <span className="text-2xs font-medium text-amber-700 bg-amber-50 dark:bg-amber-950/40 dark:text-amber-400 border border-amber-200/60 dark:border-amber-900 px-1.5 py-0.5 rounded-md shrink-0">
                             {item.badge}
                           </span>
                         )}
@@ -276,18 +265,18 @@ export function SettingsModal({
 
 
           {/* Footer User / Version Badge */}
-          <div className="pt-2 border-t border-zinc-200/60 px-3 py-1 flex items-center justify-between text-2xs text-zinc-400">
+          <div className="pt-2 border-t border-border px-3 py-1 flex items-center justify-between text-2xs text-muted-foreground">
             <span>GraphMind v0.1.0</span>
             <span className="font-mono">Web</span>
           </div>
         </aside>
 
         {/* Right Detail Content Area */}
-        <main className="flex-1 flex flex-col min-w-0 bg-white">
+        <main className="flex-1 flex flex-col min-w-0 bg-surface">
           {/* Content Header with Close Button */}
-          <div className="px-6 py-4 border-b border-zinc-100 flex items-center justify-between shrink-0">
+          <div className="px-6 py-4 border-b border-border flex items-center justify-between shrink-0">
             <div>
-              <h1 className="text-base font-semibold text-zinc-950 tracking-tight">
+              <h1 className="text-base font-semibold text-foreground tracking-tight">
                 {activeTab === "models" && "Models & AI"}
                 {activeTab === "general" && "General Settings"}
                 {activeTab === "appearance" && "Appearance & UI"}
@@ -295,7 +284,7 @@ export function SettingsModal({
                 {activeTab === "shortcuts" && "Keyboard Shortcuts"}
                 {activeTab === "about" && "About GraphMind"}
               </h1>
-              <p className="text-xs text-zinc-500 mt-0.5">
+              <p className="text-xs text-muted-foreground mt-0.5">
                 {activeTab === "models" && "Configure LLM providers, BYOK API keys, and generation parameters."}
                 {activeTab === "general" && "Configure agent execution, streaming delivery, and behavior."}
                 {activeTab === "appearance" && "Customize themes, font sizes, and layout density."}
@@ -307,7 +296,7 @@ export function SettingsModal({
             <button
               type="button"
               onClick={onClose}
-              className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
               title="Close (Esc)"
             >
               <X className="w-4 h-4" />
@@ -315,7 +304,7 @@ export function SettingsModal({
           </div>
 
           {/* Content Scrollable Body */}
-          <div className="p-6 overflow-y-auto space-y-6 flex-1 text-sm text-zinc-800">
+          <div className="p-6 overflow-y-auto space-y-6 flex-1 text-sm text-foreground">
             {/* 1. MODELS TAB */}
             {activeTab === "models" && (
               <div className="space-y-5">
@@ -328,7 +317,7 @@ export function SettingsModal({
                       <select
                         value={selectedProvider}
                         onChange={(e) => handleProviderSelect(e.target.value as LLMProvider)}
-                        className="w-full px-3 py-1.5 rounded-lg border border-zinc-200/90 bg-white text-xs font-medium text-zinc-800 shadow-2xs hover:border-zinc-300 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 cursor-pointer appearance-none pr-8 transition-colors"
+                        className="w-full px-3 py-1.5 rounded-lg border border-border bg-surface text-xs font-medium text-foreground shadow-2xs hover:border-border-hover focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 cursor-pointer appearance-none pr-8 transition-colors"
                       >
                         {PROVIDER_OPTIONS.map((p) => (
                           <option key={p.id} value={p.id}>
@@ -336,7 +325,7 @@ export function SettingsModal({
                           </option>
                         ))}
                       </select>
-                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-zinc-400">
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-muted-foreground">
                         <ChevronDown className="w-3.5 h-3.5" />
                       </div>
                     </div>
@@ -680,11 +669,11 @@ export function SettingsModal({
           </div>
 
           {/* Modal Footer Actions */}
-          <div className="px-6 py-3.5 bg-zinc-50/70 border-t border-zinc-100 flex items-center justify-between shrink-0">
+          <div className="px-6 py-3.5 bg-surface-secondary/40 border-t border-border flex items-center justify-between shrink-0">
             <button
               type="button"
               onClick={handleReset}
-              className="flex items-center space-x-1.5 text-xs text-zinc-400 hover:text-zinc-700 transition-colors cursor-pointer"
+              className="flex items-center space-x-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
               title="Reset to default settings"
             >
               <RotateCcw className="w-3.5 h-3.5" />
@@ -696,14 +685,12 @@ export function SettingsModal({
                 variant="outline"
                 size="sm"
                 onClick={onClose}
-                className="text-xs text-zinc-600 hover:text-zinc-900 h-8 px-3 rounded-lg"
               >
                 Cancel
               </Button>
               <Button
                 size="sm"
                 onClick={handleSave}
-                className="text-xs bg-zinc-900 text-white hover:bg-zinc-800 h-8 px-4 rounded-lg shadow-xs cursor-pointer"
               >
                 {savedFeedback ? (
                   <>

@@ -62,7 +62,7 @@ export function Modal({
       <div
         onClick={(e) => e.stopPropagation()}
         className={cn(
-          "w-full bg-white rounded-2xl border border-zinc-200/90 shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-150",
+          "w-full bg-surface text-foreground rounded-2xl border border-border shadow-modal overflow-hidden flex flex-col animate-in zoom-in-95 duration-150",
           sizeClasses[size],
           className
         )}
@@ -93,22 +93,22 @@ export function ModalHeader({
   return (
     <div
       className={cn(
-        "h-14 px-5 border-b border-zinc-200/80 flex items-center justify-between shrink-0 bg-zinc-50/70",
+        "h-13 px-4 sm:px-5 border-b border-border flex items-center justify-between shrink-0 bg-surface/90 backdrop-blur-xs",
         className
       )}
     >
       <div className="flex items-center gap-2.5 min-w-0">
         {icon && (
-          <div className="w-7 h-7 rounded-lg bg-zinc-100 border border-zinc-200/90 text-zinc-800 flex items-center justify-center shadow-xs shrink-0">
+          <div className="w-7 h-7 rounded-lg bg-muted border border-border text-foreground flex items-center justify-center shadow-xs shrink-0">
             {icon}
           </div>
         )}
         <div className="min-w-0">
-          <h3 className="font-semibold text-sm text-zinc-900 leading-tight truncate">
+          <h3 className="font-semibold text-sm text-foreground leading-tight truncate">
             {title}
           </h3>
           {description && (
-            <p className="text-xs text-zinc-500 truncate">{description}</p>
+            <p className="text-xs text-foreground-muted truncate">{description}</p>
           )}
         </div>
       </div>
@@ -119,7 +119,7 @@ export function ModalHeader({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-zinc-200/60 transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg text-foreground-muted hover:text-foreground hover:bg-surface-hover transition-colors cursor-pointer"
             title="Close"
             aria-label="Close dialog"
           >
@@ -153,7 +153,7 @@ export function ModalFooter({ children, className = "" }: ModalFooterProps) {
   return (
     <div
       className={cn(
-        "px-5 py-3 border-t border-zinc-200/80 flex items-center justify-end gap-2 bg-zinc-50/50 shrink-0",
+        "px-5 py-3 border-t border-border flex items-center justify-end gap-2 bg-background-secondary/50 shrink-0",
         className
       )}
     >

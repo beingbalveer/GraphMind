@@ -5,19 +5,19 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const inputVariants = cva(
-  "w-full rounded-lg border text-xs transition-all placeholder:text-zinc-400 focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:opacity-50",
+  "w-full rounded-xl border text-xs transition-all placeholder:text-foreground-muted/60 focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:opacity-50",
   {
     variants: {
       variant: {
         default:
-          "border-zinc-200/90 bg-zinc-50/50 text-zinc-900 focus:bg-white focus:border-zinc-400 focus:ring-zinc-200/80",
+          "border-border bg-surface text-foreground focus:bg-surface focus:border-primary focus:ring-primary/20 shadow-2xs",
         ghost:
-          "border-transparent bg-transparent text-zinc-900 focus:bg-zinc-50/80 focus:border-zinc-200 focus:ring-zinc-200/50",
+          "border-transparent bg-transparent text-foreground focus:bg-surface-hover focus:border-border focus:ring-primary/10",
       },
       inputSize: {
-        sm: "h-7.5 px-2.5 text-xs",
-        default: "h-8.5 px-3 text-xs",
-        lg: "h-10 px-3.5 text-sm",
+        sm: "h-7.5 px-2.5 text-xs rounded-lg",
+        default: "h-8.5 px-3 text-xs rounded-xl",
+        lg: "h-10 px-3.5 text-sm rounded-xl",
       },
     },
     defaultVariants: {

@@ -489,7 +489,7 @@ export function MasteryPanel({
                               ? "secondary"
                               : "outline"
                           }
-                          className="rounded-full px-2 py-0.2 text-2xs font-medium"
+                          className="rounded-full px-2 py-0.5 text-2xs font-medium capitalize"
                         >
                           {c.masteryLevel}
                         </Badge>

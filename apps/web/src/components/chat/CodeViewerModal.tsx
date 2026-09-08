@@ -19,6 +19,8 @@ import rehypeKatex from "rehype-katex";
 import { formatBytes } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
+import { SegmentedTabs } from "@/components/ui/segmented-tabs";
+import { Badge } from "@/components/ui/badge";
 
 interface CodeViewerModalProps {
   isOpen: boolean;
@@ -88,13 +90,13 @@ export function CodeViewerModal({
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="full" className="max-w-5xl h-[90vh]">
       {/* Header */}
-      <div className="px-5 py-3 border-b border-zinc-100 flex items-center justify-between shrink-0 select-none bg-zinc-50/80">
+      <div className="h-13 px-5 border-b border-border flex items-center justify-between shrink-0 select-none bg-surface">
         <div className="flex items-center gap-2.5 min-w-0 pr-4">
           <div
             className={`p-1.5 rounded-lg border ${
               isMarkdown
-                ? "bg-blue-50 border-blue-200/80 text-blue-600"
-                : "bg-emerald-50 border-emerald-200/80 text-emerald-600"
+                ? "bg-blue-50 border-blue-200/80 text-blue-600 dark:bg-blue-950/40 dark:border-blue-900"
+                : "bg-emerald-50 border-emerald-200/80 text-emerald-600 dark:bg-emerald-950/40 dark:border-emerald-900"
             }`}
           >
             {isMarkdown ? (
@@ -104,20 +106,14 @@ export function CodeViewerModal({
             )}
           </div>
           <div className="flex items-center gap-2 min-w-0">
-            <span className="text-sm font-semibold text-zinc-900 truncate">
+            <span className="text-sm font-semibold text-foreground truncate">
               {filename}
             </span>
-            <span
-              className={`px-1.5 py-0.5 rounded text-2xs font-bold uppercase border ${
-                isMarkdown
-                  ? "bg-blue-100 text-blue-800 border-blue-200/80"
-                  : "bg-emerald-100 text-emerald-800 border-emerald-200/80"
-              }`}
-            >
+            <Badge variant={isMarkdown ? "info" : "success"}>
               {isMarkdown ? "MARKDOWN" : inferredLang.toUpperCase()}
-            </span>
+            </Badge>
             {sizeBytes && (
-              <span className="text-xs text-zinc-400 font-mono hidden sm:inline">
+              <span className="text-xs text-muted-foreground font-mono hidden sm:inline">
                 ({formatBytes(sizeBytes)})
               </span>
             )}
@@ -127,32 +123,15 @@ export function CodeViewerModal({
         <div className="flex items-center gap-2 shrink-0">
           {/* Markdown Preview / Source Toggle */}
           {isMarkdown && (
-            <div className="flex items-center bg-zinc-200/70 p-0.5 rounded-lg text-xs font-medium mr-1">
-              <button
-                type="button"
-                onClick={() => setViewMode("preview")}
-                className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1.5 cursor-pointer ${
-                  viewMode === "preview"
-                    ? "bg-white text-zinc-950 shadow-xs font-semibold"
-                    : "text-zinc-600 hover:text-zinc-900"
-                }`}
-              >
-                <Eye className="w-3.5 h-3.5" />
-                <span>Preview</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode("raw")}
-                className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1.5 cursor-pointer ${
-                  viewMode === "raw"
-                    ? "bg-white text-zinc-950 shadow-xs font-semibold"
-                    : "text-zinc-600 hover:text-zinc-900"
-                }`}
-              >
-                <Code className="w-3.5 h-3.5" />
-                <span>Source</span>
-              </button>
-            </div>
+            <SegmentedTabs
+              value={viewMode}
+              onChange={(val) => setViewMode(val as "preview" | "raw")}
+              size="sm"
+              items={[
+                { id: "preview", label: "Preview", icon: Eye },
+                { id: "raw", label: "Source", icon: Code },
+              ]}
+            />
           )}
 
           <Button
@@ -189,7 +168,7 @@ export function CodeViewerModal({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-colors cursor-pointer ml-1"
+            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer ml-1"
             title="Close (Esc)"
             aria-label="Close dialog"
           >
@@ -201,7 +180,7 @@ export function CodeViewerModal({
       {/* Code Viewer Body */}
       <div className="flex-1 bg-zinc-950 overflow-auto text-zinc-200 font-mono text-xs flex flex-col min-h-0">
         {isMarkdown && viewMode === "preview" ? (
-          <div className="p-6 sm:p-8 bg-white text-zinc-900 font-sans flex-1 overflow-y-auto">
+          <div className="p-6 sm:p-8 bg-surface text-foreground font-sans flex-1 overflow-y-auto">
             <div className="max-w-3xl mx-auto prose prose-zinc prose-sm sm:prose-base dark:prose-invert">
               <ReactMarkdown
                 remarkPlugins={[remarkGfm, remarkMath]}
@@ -213,7 +192,7 @@ export function CodeViewerModal({
                     if (isInline) {
                       return (
                         <code
-                          className="px-1.5 py-0.5 rounded-md bg-zinc-100 border border-zinc-200/80 text-zinc-900 font-mono text-xs font-medium"
+                          className="px-1.5 py-0.5 rounded-md bg-muted border border-border text-foreground font-mono text-xs font-medium"
                           {...props}
                         >
                           {children}

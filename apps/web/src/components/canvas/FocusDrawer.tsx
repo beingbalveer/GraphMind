@@ -85,12 +85,12 @@ export function FocusDrawer({
 
   return (
     <aside
-      className="fixed inset-y-0 right-0 z-40 w-full sm:w-[480px] md:w-[540px] bg-white border-l border-zinc-200/90 shadow-2xl flex flex-col animate-in slide-in-from-right duration-250 font-sans select-text"
+      className="fixed inset-y-0 right-0 z-40 w-full sm:w-[480px] md:w-[540px] bg-surface border-l border-border shadow-2xl flex flex-col animate-in slide-in-from-right duration-250 font-sans select-text"
     >
       {/* Drawer Top Header */}
-      <div className="h-14 px-5 border-b border-zinc-200/80 flex items-center justify-between shrink-0 bg-white/95 backdrop-blur-md">
+      <div className="h-13 px-4 sm:px-5 border-b border-border flex items-center justify-between shrink-0 bg-surface/95 backdrop-blur-md">
         <div className="flex items-center space-x-2.5 min-w-0">
-          <div className="w-6 h-6 rounded-lg bg-zinc-900 text-white flex items-center justify-center shrink-0 text-xs shadow-2xs">
+          <div className="w-6 h-6 rounded-lg bg-primary text-primary-foreground flex items-center justify-center shrink-0 text-xs shadow-2xs">
             {node.highlightedContext ? (
               <GitBranch className="w-3.5 h-3.5 text-emerald-400" />
             ) : (
@@ -98,12 +98,12 @@ export function FocusDrawer({
             )}
           </div>
           <div className="min-w-0">
-            <span className="font-semibold text-xs tracking-tight text-zinc-900 truncate block">
+            <span className="font-semibold text-xs tracking-tight text-foreground truncate block">
               {node.highlightedContext
                 ? `Branch: "${node.highlightedContext}"`
                 : "Conversation Thread"}
             </span>
-            <span className="text-2xs text-zinc-400 font-mono">
+            <span className="text-2xs text-muted-foreground font-mono">
               {threadMessages.length} message{threadMessages.length > 1 ? "s" : ""}
             </span>
           </div>
@@ -119,7 +119,7 @@ export function FocusDrawer({
             variant="ghost"
             size="iconSm"
             onClick={onClose}
-            className="h-7 w-7 text-zinc-400 hover:text-zinc-900 cursor-pointer"
+            className="h-7 w-7 text-muted-foreground hover:text-foreground cursor-pointer"
             title="Close Focus Drawer (Esc)"
           >
             <X className="w-4 h-4" />
@@ -128,7 +128,7 @@ export function FocusDrawer({
       </div>
 
       {/* Drawer Scrollable Content Body with Full Markdown Rendering using global ChatMessage */}
-      <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-1 bg-white">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-1 bg-surface">
         {(() => {
           const lastUserIndex = threadMessages.map((m) => m.role).lastIndexOf("user");
           const lastAssistantIndex = threadMessages.map((m) => m.role).lastIndexOf("assistant");
@@ -171,7 +171,7 @@ export function FocusDrawer({
 
 
       {/* In-Drawer Follow-up Prompt Bar */}
-      <div className="p-4 border-t border-zinc-200/80 bg-white shrink-0">
+      <div className="p-4 border-t border-border bg-surface shrink-0">
         <form onSubmit={handleSubmitFollowUp} className="relative flex items-center">
           <input
             type="text"
@@ -179,12 +179,12 @@ export function FocusDrawer({
             onChange={(e) => setDrawerPrompt(e.target.value)}
             placeholder="Ask follow-up in this thread..."
             disabled={isStreaming}
-            className="w-full pl-3.5 pr-10 py-2.5 rounded-xl border border-zinc-200 bg-white text-xs sm:text-sm text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-900 shadow-2xs disabled:bg-zinc-50"
+            className="w-full pl-3.5 pr-10 py-2.5 rounded-xl border border-border bg-surface text-xs sm:text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 shadow-2xs disabled:bg-muted"
           />
           <button
             type="submit"
             disabled={!drawerPrompt.trim() || isStreaming}
-            className="absolute right-1.5 p-1.5 rounded-lg bg-zinc-900 text-white hover:bg-zinc-800 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+            className="absolute right-1.5 p-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
             title="Send follow-up"
           >
             {isStreaming ? (

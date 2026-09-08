@@ -30,6 +30,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
+import { Modal, ModalHeader, ModalBody } from "@/components/ui/modal";
 import { useTextSelection } from "@/hooks/useTextSelection";
 import { SelectionTooltip } from "./SelectionTooltip";
 import { CodeViewerModal } from "./CodeViewerModal";
@@ -496,7 +497,7 @@ export function ChatMessage({
           )}
 
           {/* Bubble */}
-          <div className="max-w-2xl rounded-2xl bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 px-4.5 py-3 border-0 shadow-2xs">
+          <div className="max-w-2xl rounded-2xl bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 px-4 sm:px-5 py-3 border-0 shadow-2xs">
             {message.highlightedContext && (
               <div className="text-2xs font-medium text-emerald-800 bg-emerald-50 border border-emerald-200/80 rounded-md px-2 py-0.5 mb-2 inline-flex items-center gap-1.5 shadow-2xs">
                 <GitBranch className="w-3 h-3 text-emerald-600 shrink-0" />
@@ -809,7 +810,7 @@ export function ChatMessage({
               <div className="flex items-center space-x-1.5 text-xs font-semibold text-blue-900">
                 <Sparkles className="w-3.5 h-3.5 text-blue-600" />
                 <span>Verified Sources</span>
-                <span className="px-1.5 py-0.2 rounded-full bg-blue-100/90 text-2xs font-bold text-blue-800">
+                <span className="px-1.5 py-0.5 rounded-full bg-blue-100/90 text-2xs font-bold text-blue-800">
                   {(message.metadata?.ragSources as RagSourceItem[]).length}
                 </span>
               </div>
@@ -843,7 +844,7 @@ export function ChatMessage({
                         {src.filename}
                       </span>
                       {src.page_number && (
-                        <span className="px-1 py-0.2 rounded text-2xs bg-blue-50 text-blue-700 font-mono font-semibold">
+                        <span className="px-1 py-0.5 rounded text-2xs bg-blue-50 text-blue-700 font-mono font-semibold">
                           p. {src.page_number}
                         </span>
                       )}
@@ -1008,44 +1009,31 @@ export function ChatMessage({
 
         {/* Snippet Viewer Modal for Grounded Sources */}
         {viewingRagSnippet && (
-          <div
-            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 animate-in fade-in-50 duration-150"
-            onClick={() => setViewingRagSnippet(null)}
+          <Modal
+            isOpen={Boolean(viewingRagSnippet)}
+            onClose={() => setViewingRagSnippet(null)}
+            size="2xl"
           >
-            <div
-              className="bg-white w-full max-w-2xl max-h-[80vh] rounded-2xl shadow-modal border border-zinc-200 flex flex-col overflow-hidden animate-in zoom-in-98 duration-150"
-              onClick={(e) => e.stopPropagation()}
+            <ModalHeader
+              title={viewingRagSnippet.filename}
+              description={
+                viewingRagSnippet.section_header
+                  ? `§ ${viewingRagSnippet.section_header}`
+                  : undefined
+              }
+              icon={<FileText className="w-4 h-4 text-blue-600" />}
+              onClose={() => setViewingRagSnippet(null)}
             >
-              <div className="px-5 py-3 border-b border-zinc-100 flex items-center justify-between bg-zinc-50/80">
-                <div className="flex items-center space-x-2">
-                  <FileText className="w-4 h-4 text-blue-600" />
-                  <span className="text-sm font-semibold text-zinc-900">
-                    {viewingRagSnippet.filename}
-                  </span>
-                  {viewingRagSnippet.section_header && (
-                    <span className="text-xs text-zinc-500 font-medium">
-                      § {viewingRagSnippet.section_header}
-                    </span>
-                  )}
-                  {viewingRagSnippet.page_number && (
-                    <span className="px-1.5 py-0.5 rounded text-2xs bg-blue-100 text-blue-800 font-mono font-semibold">
-                      Page {viewingRagSnippet.page_number}
-                    </span>
-                  )}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setViewingRagSnippet(null)}
-                  className="p-1 rounded-lg text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-              <div className="p-5 overflow-y-auto font-mono text-xs text-zinc-800 whitespace-pre-wrap leading-relaxed bg-zinc-50/40">
-                {viewingRagSnippet.snippet || "No snippet content available."}
-              </div>
-            </div>
-          </div>
+              {viewingRagSnippet.page_number && (
+                <span className="px-1.5 py-0.5 rounded text-2xs bg-blue-100 text-blue-800 font-mono font-semibold">
+                  Page {viewingRagSnippet.page_number}
+                </span>
+              )}
+            </ModalHeader>
+            <ModalBody className="p-5 font-mono text-xs text-foreground whitespace-pre-wrap leading-relaxed bg-background-secondary/30 max-h-[70vh]">
+              {viewingRagSnippet.snippet || "No snippet content available."}
+            </ModalBody>
+          </Modal>
         )}
       </div>
     </div>

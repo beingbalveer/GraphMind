@@ -35,7 +35,7 @@ export function RightSidebar({
       {isOpen && (
         <div
           onClick={onToggle}
-          className="fixed inset-0 z-30 bg-black/20 backdrop-blur-2xs md:hidden"
+          className="fixed inset-0 z-30 bg-black/40 backdrop-blur-xs md:hidden"
         />
       )}
 
@@ -43,7 +43,7 @@ export function RightSidebar({
       <aside
         suppressHydrationWarning
         style={{ width: isOpen ? `${width}px` : "0px" }}
-        className={`fixed md:static inset-y-0 right-0 z-40 flex flex-col bg-background-secondary select-none relative overflow-hidden shrink-0 border-l border-zinc-200/80 ${
+        className={`fixed md:static inset-y-0 right-0 z-40 flex flex-col bg-background-secondary select-none relative overflow-hidden shrink-0 border-l border-border ${
           isOpen ? "translate-x-0" : "translate-x-full md:translate-x-0"
         } ${isResizing ? "transition-none" : "transition-[width,transform] duration-200 ease-in-out"}`}
       >
@@ -51,15 +51,15 @@ export function RightSidebar({
         {isOpen && (
           <div
             onMouseDown={startResizing}
-            className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-zinc-300 transition-colors z-50 group"
+            className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-muted transition-colors z-50 group"
             title="Drag to resize panel"
           >
-            <div className="w-0.5 h-8 bg-zinc-300 rounded-full mx-auto my-auto opacity-0 group-hover:opacity-100 transition-opacity absolute inset-y-0 left-0" />
+            <div className="w-0.5 h-8 bg-border rounded-full mx-auto my-auto opacity-0 group-hover:opacity-100 transition-opacity absolute inset-y-0 left-0" />
           </div>
         )}
 
         {/* Top Header: Standardized to h-13 with border-b, matching Navbar exactly */}
-        <div className="h-13 px-4 flex items-center shrink-0 bg-white border-b border-zinc-200/80 overflow-hidden">
+        <div className="h-13 px-4 flex items-center shrink-0 bg-surface border-b border-border overflow-hidden">
           <div className="flex items-center space-x-2 min-w-0">
             <Sparkles className="w-4 h-4 text-zinc-700 shrink-0" />
             <h2 className="text-sm font-semibold text-zinc-900 truncate tracking-tight">

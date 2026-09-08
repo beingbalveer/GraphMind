@@ -85,7 +85,7 @@ function SingleQuizCard({
   };
 
   return (
-    <div className="rounded-2xl border border-zinc-200/90 bg-white p-4.5 my-4 shadow-2xs select-none transition-all">
+    <div className="rounded-2xl border border-border bg-surface p-4 sm:p-5 my-4 shadow-2xs select-none transition-all">
       {/* Quiz Card Header */}
       <div className="flex items-center justify-between gap-2 mb-3">
         <div className="flex items-center space-x-2 min-w-0">

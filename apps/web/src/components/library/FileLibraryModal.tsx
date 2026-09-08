@@ -25,6 +25,8 @@ import {
 import { formatBytes } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
+import { SegmentedTabs } from "@/components/ui/segmented-tabs";
+import { Input } from "@/components/ui/input";
 import { CodeViewerModal } from "../chat/CodeViewerModal";
 import { PdfViewerModal } from "../chat/PdfViewerModal";
 import { TableViewerModal } from "../chat/TableViewerModal";
@@ -181,77 +183,28 @@ export function FileLibraryModal({
         </div>
 
         {/* Toolbar: Category Filters + Search */}
-        <div className="px-6 py-3 border-b border-zinc-100 flex items-center justify-between gap-4 bg-zinc-50/50 shrink-0">
-          <div className="flex items-center space-x-1.5">
-            <button
-              type="button"
-              onClick={() => setSelectedCategory("all")}
-              className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                selectedCategory === "all"
-                  ? "bg-white text-zinc-950 shadow-2xs border border-zinc-200 font-semibold"
-                  : "text-zinc-600 hover:text-zinc-950"
-              }`}
-            >
-              All
-            </button>
-            <button
-              type="button"
-              onClick={() => setSelectedCategory("image")}
-              className={`flex items-center space-x-1 px-3 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                selectedCategory === "image"
-                  ? "bg-white text-zinc-950 shadow-2xs border border-zinc-200 font-semibold"
-                  : "text-zinc-600 hover:text-zinc-950"
-              }`}
-            >
-              <ImageIcon className="w-3 h-3 text-zinc-500" />
-              <span>Images</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setSelectedCategory("tabular")}
-              className={`flex items-center space-x-1 px-3 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                selectedCategory === "tabular"
-                  ? "bg-white text-zinc-950 shadow-2xs border border-zinc-200 font-semibold"
-                  : "text-zinc-600 hover:text-zinc-950"
-              }`}
-            >
-              <FileSpreadsheet className="w-3 h-3 text-emerald-600" />
-              <span>Tabular</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setSelectedCategory("code")}
-              className={`flex items-center space-x-1 px-3 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                selectedCategory === "code"
-                  ? "bg-white text-zinc-950 shadow-2xs border border-zinc-200 font-semibold"
-                  : "text-zinc-600 hover:text-zinc-950"
-              }`}
-            >
-              <Code className="w-3 h-3 text-emerald-600" />
-              <span>Code</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setSelectedCategory("document")}
-              className={`flex items-center space-x-1 px-3 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                selectedCategory === "document"
-                  ? "bg-white text-zinc-950 shadow-2xs border border-zinc-200 font-semibold"
-                  : "text-zinc-600 hover:text-zinc-950"
-              }`}
-            >
-              <FileText className="w-3 h-3 text-blue-600" />
-              <span>Docs</span>
-            </button>
-          </div>
+        <div className="px-6 py-3 border-b border-border flex flex-col sm:flex-row items-center justify-between gap-3 bg-background-secondary/50 shrink-0">
+          <SegmentedTabs
+            value={selectedCategory}
+            onChange={(val) => setSelectedCategory(val)}
+            size="sm"
+            items={[
+              { id: "all", label: "All" },
+              { id: "image", label: "Images", icon: ImageIcon },
+              { id: "tabular", label: "Tabular", icon: FileSpreadsheet },
+              { id: "code", label: "Code", icon: Code },
+              { id: "document", label: "Docs", icon: FileText },
+            ]}
+          />
 
-          <div className="relative w-64">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400" />
-            <input
+          <div className="w-full sm:w-64">
+            <Input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search files..."
-              className="w-full pl-8 pr-3 py-1.5 rounded-lg border border-zinc-200/90 bg-white text-xs text-zinc-900 placeholder-zinc-400 outline-none focus:border-zinc-400 shadow-2xs"
+              startIcon={<Search className="w-3.5 h-3.5" />}
+              inputSize="sm"
             />
           </div>
         </div>

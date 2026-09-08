@@ -6,13 +6,13 @@ import {
   Plus,
   Trash2,
   Check,
-  X,
   FileCode2,
   FileText,
   Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Modal } from "@/components/ui/modal";
+import { Modal, ModalHeader, ModalBody } from "@/components/ui/modal";
+import { Input } from "@/components/ui/input";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   WorkspaceItem,
@@ -94,33 +94,21 @@ export function WorkspaceModal({
   return (
     <>
       <Modal isOpen={isOpen} onClose={onClose} size="lg">
-        {/* Header */}
-        <div className="h-14 px-5 border-b border-zinc-200/80 flex items-center justify-between shrink-0 bg-zinc-50/70">
-          <div className="flex items-center space-x-2.5">
-            <div className="w-7 h-7 rounded-lg bg-zinc-100 border border-zinc-200/90 text-zinc-800 flex items-center justify-center shadow-2xs">
-              <FolderGit2 className="w-4 h-4 text-zinc-600" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-sm text-zinc-900 leading-tight">Workspaces</h3>
-              <p className="text-xs text-zinc-500">Manage and persist your knowledge trees</p>
-            </div>
-          </div>
-
-          <button
-            onClick={onClose}
-            className="p-1 rounded-md text-zinc-400 hover:text-zinc-900 cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+        {/* Standardized Header */}
+        <ModalHeader
+          title="Workspaces"
+          description="Manage and persist your knowledge trees"
+          icon={<FolderGit2 className="w-4 h-4 text-foreground-muted" />}
+          onClose={onClose}
+        />
 
         {/* Content Body */}
-        <div className="p-5 space-y-4 max-h-[420px] overflow-y-auto">
+        <ModalBody className="space-y-4 max-h-[420px]">
           {/* Active Workspace Export Actions */}
-          <div className="p-3.5 rounded-xl bg-zinc-50 border border-zinc-200/80 flex items-center justify-between">
+          <div className="p-3.5 rounded-xl bg-muted/60 border border-border flex items-center justify-between">
             <div>
-              <div className="text-xs font-semibold text-zinc-900">Export Knowledge Graph</div>
-              <div className="text-xs text-zinc-500">Download for Obsidian or backup</div>
+              <div className="text-xs font-semibold text-foreground">Export Knowledge Graph</div>
+              <div className="text-xs text-foreground-muted">Download for Obsidian or backup</div>
             </div>
             <div className="flex items-center space-x-1.5">
               <Button
@@ -130,7 +118,7 @@ export function WorkspaceModal({
                 className="h-7 text-xs flex items-center space-x-1"
                 title="Export Obsidian Markdown"
               >
-                <FileText className="w-3.5 h-3.5 text-zinc-500" />
+                <FileText className="w-3.5 h-3.5 text-foreground-muted" />
                 <span>Markdown</span>
               </Button>
               <Button
@@ -140,7 +128,7 @@ export function WorkspaceModal({
                 className="h-7 text-xs flex items-center space-x-1"
                 title="Export JSON Graph"
               >
-                <FileCode2 className="w-3.5 h-3.5 text-zinc-500" />
+                <FileCode2 className="w-3.5 h-3.5 text-foreground-muted" />
                 <span>JSON</span>
               </Button>
             </div>
@@ -148,22 +136,22 @@ export function WorkspaceModal({
 
           {/* New Workspace Button / Form */}
           {isCreating ? (
-            <form onSubmit={handleCreate} className="p-3.5 rounded-xl border border-zinc-300 bg-white space-y-2.5">
-              <div className="text-xs font-semibold text-zinc-900">Create New Workspace</div>
-              <input
+            <form onSubmit={handleCreate} className="p-3.5 rounded-xl border border-border bg-surface space-y-2.5 shadow-2xs">
+              <div className="text-xs font-semibold text-foreground">Create New Workspace</div>
+              <Input
                 type="text"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 placeholder="Workspace Title (e.g. Distributed Systems)"
                 autoFocus
-                className="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-200 focus:outline-none focus:ring-1 focus:ring-zinc-900"
+                inputSize="sm"
               />
-              <input
+              <Input
                 type="text"
                 value={newDesc}
                 onChange={(e) => setNewDesc(e.target.value)}
                 placeholder="Optional description"
-                className="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-200 focus:outline-none focus:ring-1 focus:ring-zinc-900"
+                inputSize="sm"
               />
               <div className="flex items-center justify-end space-x-2 pt-1">
                 <Button
@@ -229,7 +217,7 @@ export function WorkspaceModal({
                           {ws.name}
                         </span>
                         {isActive && (
-                          <span className="inline-flex items-center space-x-0.5 text-2xs px-1.5 py-0.2 rounded-full bg-zinc-900 text-white font-medium">
+                          <span className="inline-flex items-center space-x-0.5 text-2xs px-1.5 py-0.5 rounded-full bg-primary text-primary-foreground font-medium">
                             <Check className="w-2.5 h-2.5" />
                             <span>Active</span>
                           </span>
@@ -259,7 +247,7 @@ export function WorkspaceModal({
               })
             )}
           </div>
-        </div>
+        </ModalBody>
       </Modal>
 
       {/* Common Reusable Confirm Dialog for Workspace Deletion */}
