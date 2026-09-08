@@ -156,8 +156,8 @@ export function ChatSidebar({
         onClick={() => !isRenaming && onSelectChat(chat)}
         className={`group relative flex h-8 items-center px-2.5 rounded-lg transition-colors cursor-pointer select-none text-sm font-normal ${
           isActive
-            ? "bg-black/5 dark:bg-white/10 text-foreground font-normal"
-            : "text-foreground/85 hover:bg-black/5 dark:hover:bg-white/5 hover:text-foreground"
+            ? "bg-black/[0.035] dark:bg-white/[0.08] text-foreground font-normal"
+            : "text-foreground/85 hover:bg-black/[0.025] dark:hover:bg-white/[0.04] hover:text-foreground"
         }`}
       >
         {isRenaming ? (
@@ -250,7 +250,7 @@ export function ChatSidebar({
       <aside
         suppressHydrationWarning
         style={{ width: isOpen ? `${width}px` : `${COLLAPSED_WIDTH}px` }}
-        className={`fixed md:static inset-y-0 left-0 z-40 flex flex-col bg-background-secondary select-none relative overflow-hidden shrink-0 border-r border-border ${
+        className={`fixed md:static inset-y-0 left-0 z-40 flex flex-col bg-background-secondary select-none relative overflow-hidden shrink-0 border-r border-border-subtle ${
           isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         } ${isResizing ? "transition-none" : "transition-[width,transform] duration-200 ease-in-out"}`}
       >

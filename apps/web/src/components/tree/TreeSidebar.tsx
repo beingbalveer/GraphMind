@@ -51,7 +51,7 @@ function TreeNodeItem({
         style={{ paddingLeft: `${Math.min(depth * 14 + 10, 120)}px` }}
         className={`w-full text-left py-2 pr-3 rounded-lg flex items-start space-x-2 transition-all group cursor-pointer text-xs font-normal ${
           isActive
-            ? "bg-primary text-primary-foreground shadow-xs"
+            ? "bg-primary text-primary-foreground"
             : isOnActivePath
             ? "bg-muted/90 text-foreground"
             : "text-muted-foreground hover:bg-surface-hover hover:text-foreground"
@@ -153,10 +153,10 @@ export function TreeSidebar({
 
   return (
     <aside
-      className="fixed inset-y-0 left-0 z-40 w-72 bg-background-secondary text-foreground border-r border-border shadow-xl sm:shadow-none sm:static flex flex-col animate-in slide-in-from-left duration-200 select-none"
+      className="fixed inset-y-0 left-0 z-40 w-72 bg-background-secondary text-foreground border-r border-border-subtle sm:static flex flex-col animate-in slide-in-from-left duration-200 select-none"
     >
       {/* Sidebar Header */}
-      <div className="h-13 px-4 border-b border-border flex items-center justify-between shrink-0">
+      <div className="h-13 px-4 border-b border-border-subtle flex items-center justify-between shrink-0">
         <div className="flex items-center space-x-2">
           <Layers className="w-4 h-4 text-foreground-muted" />
           <span className="font-semibold text-xs tracking-tight text-foreground">
