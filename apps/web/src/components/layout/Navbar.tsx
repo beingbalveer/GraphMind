@@ -62,7 +62,7 @@ export function Navbar({
             variant="ghost"
             size="iconSm"
             onClick={onToggleSidebar}
-            className="-ml-1"
+            className="-ml-1 md:hidden"
             title="Open sidebar (⌘B)"
             aria-label="Open sidebar"
           >
