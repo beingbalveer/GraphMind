@@ -5,6 +5,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Script from "next/script";
 import { useAuth } from "@/context/AuthContext";
 import { LogoBadge } from "@/components/ui/Logo";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import {
   Mail,
   Lock,
@@ -63,7 +66,7 @@ function LoginForm() {
 
   const googleButtonRef = useRef<HTMLDivElement | null>(null);
 
-  // If already authenticated, forward to next path
+  // If already authenticated, redirect to next path
   useEffect(() => {
     if (user) {
       router.replace(nextPath);
@@ -144,69 +147,51 @@ function LoginForm() {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-zinc-950 text-zinc-100 px-4 py-8 relative overflow-hidden">
+    <div className="min-h-screen w-full flex items-center justify-center bg-zinc-50/80 text-zinc-900 px-4 py-12 relative overflow-hidden">
       <Script
         src="https://accounts.google.com/gsi/client"
         strategy="afterInteractive"
         onLoad={initGoogleAuth}
       />
 
-      {/* Subtle Background Lattice Glow */}
+      {/* Subtle Ambient Brand Glow */}
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[550px] bg-sky-500/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-1/4 left-1/3 w-[450px] h-[450px] bg-indigo-500/10 rounded-full blur-3xl" />
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[550px] bg-sky-100/60 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 left-1/3 w-[450px] h-[450px] bg-indigo-100/50 rounded-full blur-3xl" />
       </div>
 
       <div className="w-full max-w-md z-10">
         {/* Card Container */}
-        <div className="bg-zinc-900/90 border border-zinc-800/80 backdrop-blur-xl rounded-2xl shadow-2xl p-6 sm:p-8 space-y-6">
-          {/* Header */}
+        <div className="bg-white border border-zinc-200/80 shadow-xl shadow-zinc-950/5 rounded-2xl p-7 sm:p-8 space-y-6">
+          {/* Brand Header */}
           <div className="flex flex-col items-center text-center space-y-2">
-            <LogoBadge size="lg" className="mb-2 ring-1 ring-zinc-700/50" />
-            <h1 className="text-2xl font-bold tracking-tight text-white">
+            <LogoBadge size="lg" className="mb-1" />
+            <h1 className="text-xl font-bold tracking-tight text-zinc-950">
               Welcome to GraphMind
             </h1>
-            <p className="text-sm text-zinc-400 max-w-xs">
+            <p className="text-xs text-zinc-500 max-w-xs leading-relaxed">
               AI-native knowledge workspace where thinking expands into structured graphs.
             </p>
           </div>
 
-          {/* Mode Switcher Tabs */}
-          <div className="flex items-center p-1 bg-zinc-950/60 border border-zinc-800/60 rounded-xl">
-            <button
-              type="button"
-              onClick={() => {
-                setMode("signin");
-                setErrorMsg(null);
-              }}
-              className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
-                mode === "signin"
-                  ? "bg-zinc-800 text-white shadow-sm"
-                  : "text-zinc-400 hover:text-zinc-200"
-              }`}
-            >
-              Sign In
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setMode("register");
-                setErrorMsg(null);
-              }}
-              className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all cursor-pointer ${
-                mode === "register"
-                  ? "bg-zinc-800 text-white shadow-sm"
-                  : "text-zinc-400 hover:text-zinc-200"
-              }`}
-            >
-              Create Account
-            </button>
-          </div>
+          {/* Mode Switcher Segmented Tabs */}
+          <SegmentedTabs
+            value={mode}
+            onChange={(val) => {
+              setMode(val as "signin" | "register");
+              setErrorMsg(null);
+            }}
+            items={[
+              { id: "signin", label: "Sign In" },
+              { id: "register", label: "Create Account" },
+            ]}
+            className="w-full flex [&>button]:flex-1"
+          />
 
-          {/* Error Banner */}
+          {/* Error Alert Banner */}
           {errorMsg && (
-            <div className="flex items-start gap-2.5 p-3 rounded-xl bg-red-950/40 border border-red-800/50 text-red-200 text-xs leading-relaxed animate-in fade-in">
-              <AlertCircle className="w-4 h-4 shrink-0 text-red-400 mt-0.5" />
+            <div className="flex items-start gap-2.5 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs leading-relaxed animate-in fade-in">
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-500 mt-0.5" />
               <span>{errorMsg}</span>
             </div>
           )}
@@ -221,8 +206,10 @@ function LoginForm() {
             </div>
 
             {!googleClientReady && (
-              <button
+              <Button
                 type="button"
+                variant="outline"
+                size="lg"
                 onClick={() => {
                   if (!process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID) {
                     setErrorMsg(
@@ -232,7 +219,7 @@ function LoginForm() {
                     initGoogleAuth();
                   }
                 }}
-                className="w-full flex items-center justify-center gap-2.5 py-2.5 px-4 bg-zinc-800/80 hover:bg-zinc-800 text-zinc-200 border border-zinc-700/60 rounded-xl text-xs font-medium transition-colors cursor-pointer"
+                className="w-full flex items-center justify-center gap-2.5 cursor-pointer font-medium text-xs"
               >
                 <svg className="w-4 h-4" viewBox="0 0 24 24">
                   <path
@@ -253,120 +240,121 @@ function LoginForm() {
                   />
                 </svg>
                 <span>Continue with Google</span>
-              </button>
+              </Button>
             )}
 
             <div className="relative flex items-center justify-center">
-              <div className="border-t border-zinc-800 w-full" />
-              <span className="bg-zinc-900 px-3 text-[11px] text-zinc-500 uppercase tracking-wider font-medium">
+              <div className="border-t border-zinc-200 w-full" />
+              <span className="bg-white px-3 text-[11px] text-zinc-400 uppercase tracking-wider font-medium">
                 or with email
               </span>
             </div>
           </div>
 
           {/* Email / Password Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-3.5">
             {mode === "register" && (
               <div className="space-y-1.5">
-                <label className="block text-xs font-medium text-zinc-300">
+                <label className="block text-xs font-medium text-zinc-700">
                   Full Name (optional)
                 </label>
-                <div className="relative">
-                  <User className="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="text"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    placeholder="Ada Lovelace"
-                    className="w-full bg-zinc-950/70 border border-zinc-800 text-zinc-100 rounded-xl pl-9 pr-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-zinc-600 transition"
-                  />
-                </div>
+                <Input
+                  type="text"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="Ada Lovelace"
+                  startIcon={<User className="w-4 h-4" />}
+                  inputSize="lg"
+                />
               </div>
             )}
 
             <div className="space-y-1.5">
-              <label className="block text-xs font-medium text-zinc-300">
+              <label className="block text-xs font-medium text-zinc-700">
                 Email Address
               </label>
-              <div className="relative">
-                <Mail className="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@example.com"
-                  className="w-full bg-zinc-950/70 border border-zinc-800 text-zinc-100 rounded-xl pl-9 pr-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-zinc-600 transition"
-                />
-              </div>
+              <Input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="name@example.com"
+                startIcon={<Mail className="w-4 h-4" />}
+                inputSize="lg"
+              />
             </div>
 
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <label className="block text-xs font-medium text-zinc-300">
+                <label className="block text-xs font-medium text-zinc-700">
                   Password
                 </label>
                 {mode === "register" && (
-                  <span className="text-[10px] text-zinc-500">
+                  <span className="text-[11px] text-zinc-400">
                     Min 8 characters
                   </span>
                 )}
               </div>
-              <div className="relative">
-                <Lock className="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type={showPassword ? "text" : "password"}
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full bg-zinc-950/70 border border-zinc-800 text-zinc-100 rounded-xl pl-9 pr-9 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-zinc-600 transition"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 cursor-pointer"
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
+              <Input
+                type={showPassword ? "text" : "password"}
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                startIcon={<Lock className="w-4 h-4" />}
+                inputSize="lg"
+                endIcon={
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="text-zinc-400 hover:text-zinc-600 cursor-pointer transition-colors"
+                    tabIndex={-1}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                }
+              />
             </div>
 
-            <button
+            <Button
               type="submit"
               disabled={isSubmitting}
-              className="w-full py-2.5 px-4 bg-white hover:bg-zinc-200 text-zinc-950 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition cursor-pointer shadow-sm disabled:opacity-50"
+              size="lg"
+              className="w-full font-semibold cursor-pointer mt-1"
             >
               {isSubmitting ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
                   <span>Processing...</span>
                 </>
               ) : (
                 <>
                   <span>{mode === "signin" ? "Sign In" : "Create Account"}</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
+                  <ArrowRight className="w-4 h-4 ml-1.5" />
                 </>
               )}
-            </button>
+            </Button>
           </form>
 
           {/* Quick Demo Credentials Fill */}
-          <div className="pt-2 border-t border-zinc-800/80 flex items-center justify-between text-xs">
+          <div className="pt-2 border-t border-zinc-100 flex items-center justify-between text-xs">
             <span className="text-zinc-500">Need instant access?</span>
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="sm"
               onClick={fillDemoAdmin}
-              className="flex items-center gap-1.5 text-zinc-400 hover:text-white font-medium cursor-pointer transition-colors"
+              className="cursor-pointer text-zinc-600 hover:text-zinc-950 font-medium h-auto py-1 px-2"
             >
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              <Sparkles className="w-3.5 h-3.5 text-amber-500 mr-1.5" />
               <span>Fill Admin Demo</span>
-            </button>
+            </Button>
           </div>
         </div>
 
         {/* Footer Note */}
-        <div className="text-center mt-6 text-xs text-zinc-500">
+        <div className="text-center mt-6 text-xs text-zinc-400">
           Protected by same-origin encrypted sessions and workspace RBAC.
         </div>
       </div>
@@ -378,7 +366,7 @@ export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen w-full flex items-center justify-center bg-zinc-950 text-zinc-400 text-xs">
+        <div className="min-h-screen w-full flex items-center justify-center bg-zinc-50 text-zinc-500 text-xs">
           <Loader2 className="w-5 h-5 animate-spin mr-2" />
           Loading authentication...
         </div>
