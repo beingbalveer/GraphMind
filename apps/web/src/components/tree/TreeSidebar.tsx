@@ -49,12 +49,12 @@ function TreeNodeItem({
         type="button"
         onClick={() => onSelectNode(node.id)}
         style={{ paddingLeft: `${Math.min(depth * 14 + 10, 120)}px` }}
-        className={`w-full text-left py-2 pr-3 rounded-lg flex items-start space-x-2 transition-all group cursor-pointer text-xs ${
+        className={`w-full text-left py-2 pr-3 rounded-lg flex items-start space-x-2 transition-all group cursor-pointer text-xs font-normal ${
           isActive
-            ? "bg-zinc-900 text-white font-semibold shadow-xs"
+            ? "bg-primary text-primary-foreground shadow-xs"
             : isOnActivePath
-            ? "bg-zinc-100/90 text-zinc-900 font-medium"
-            : "text-zinc-600 hover:bg-zinc-100/70 hover:text-zinc-900"
+            ? "bg-muted/90 text-foreground"
+            : "text-muted-foreground hover:bg-surface-hover hover:text-foreground"
         }`}
       >
         {/* Node Icon */}
@@ -84,8 +84,8 @@ function TreeNodeItem({
         <div className="flex-1 min-w-0">
           {node.highlightedContext && (
             <div
-              className={`text-2xs truncate font-medium ${
-                isActive ? "text-zinc-300" : "text-zinc-500"
+              className={`text-2xs truncate font-normal ${
+                isActive ? "text-primary-foreground/80" : "text-muted-foreground"
               }`}
             >
               &ldquo;{node.highlightedContext}&rdquo;

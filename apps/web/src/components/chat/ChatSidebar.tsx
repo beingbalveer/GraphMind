@@ -164,10 +164,10 @@ export function ChatSidebar({
       <div
         key={chat.id}
         onClick={() => !isRenaming && onSelectChat(chat)}
-        className={`group relative flex h-8.5 items-center rounded-md transition-colors cursor-pointer select-none ${
+        className={`group relative flex h-8.5 items-center rounded-md transition-colors cursor-pointer select-none font-normal ${
           isActive
-            ? "bg-zinc-100 text-zinc-950 font-medium"
-            : "text-zinc-700 hover:bg-zinc-100/80 hover:text-zinc-950"
+            ? "bg-muted text-foreground"
+            : "text-muted-foreground hover:bg-surface-hover hover:text-foreground"
         }`}
       >
         {isRenaming ? (
