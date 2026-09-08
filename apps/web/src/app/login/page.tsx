@@ -12,7 +12,6 @@ import {
   ArrowRight,
   AlertCircle,
   Loader2,
-  CheckCircle2,
   Eye,
   EyeOff,
   Sparkles,
