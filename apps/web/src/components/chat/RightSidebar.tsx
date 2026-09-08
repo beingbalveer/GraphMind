@@ -18,7 +18,7 @@ const MAX_WIDTH = 560;
 export function RightSidebar({
   isOpen,
   onToggle,
-  title = "Panel",
+  title: _title = "Panel",
   children,
 }: RightSidebarProps) {
   const { width, isResizing, startResizing } = useResizableSidebar({
@@ -58,18 +58,13 @@ export function RightSidebar({
           </div>
         )}
 
-        {/* Top Header: Standardized to h-13 with border-b, matching Navbar exactly */}
-        <div className="h-13 px-4 flex items-center justify-between shrink-0 bg-surface border-b border-border-subtle overflow-hidden">
-          <div className="flex items-center space-x-2 min-w-0">
-            <h2 className="text-sm font-semibold text-zinc-900 truncate tracking-tight">
-              {title}
-            </h2>
-          </div>
+        {/* Top Actions: Seamlessly integrated with no dividing border or separate header box */}
+        <div className="h-13 px-3 flex items-center justify-end shrink-0 w-full">
           <button
             onClick={onToggle}
             className="size-8 rounded-lg flex items-center justify-center text-foreground-muted hover:text-foreground hover:bg-surface-hover transition-colors cursor-pointer shrink-0"
-            title="Collapse right panel"
-            aria-label="Collapse right panel"
+            title="Collapse panel"
+            aria-label="Collapse panel"
           >
             <PanelRight className="w-4 h-4" />
           </button>
