@@ -1,8 +1,21 @@
+import re
 from datetime import datetime
-from typing import Optional
+from typing import Annotated, Optional
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field
 from pydantic.alias_generators import to_camel
+
+EMAIL_REGEX = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+def validate_email_format(v: str) -> str:
+    cleaned = str(v).strip().lower()
+    if not EMAIL_REGEX.match(cleaned):
+        raise ValueError("Invalid email address format")
+    return cleaned
+
+
+Email = Annotated[str, BeforeValidator(validate_email_format)]
 
 
 class BaseAuthSchema(BaseModel):
@@ -26,7 +39,7 @@ class RegisterRequest(BaseAuthSchema):
     Payload for email/password registration.
     """
 
-    email: EmailStr = Field(description="User email address")
+    email: Email = Field(description="User email address")
     password: str = Field(min_length=8, max_length=128, description="Password (at least 8 characters)")
     full_name: Optional[str] = Field(default=None, max_length=255, description="User full display name")
 
@@ -36,7 +49,7 @@ class LoginRequest(BaseAuthSchema):
     Payload for email/password authentication.
     """
 
-    email: EmailStr = Field(description="User email address")
+    email: Email = Field(description="User email address")
     password: str = Field(min_length=1, max_length=128, description="User password")
 
 

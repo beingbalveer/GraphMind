@@ -114,7 +114,14 @@ export async function apiFetch<T = unknown>(
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    const detail = errorData.detail || errorData.error?.message || response.statusText;
+    const validationMsg =
+      errorData.error?.details?.[0]?.msg ||
+      (Array.isArray(errorData.detail) ? errorData.detail[0]?.msg : null);
+    const detail =
+      validationMsg ||
+      (typeof errorData.detail === "string" ? errorData.detail : null) ||
+      errorData.error?.message ||
+      response.statusText;
     throw new ApiError(response.status, detail);
   }
 

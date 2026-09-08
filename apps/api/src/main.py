@@ -91,12 +91,19 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
                 await conn.execute(
                     text("ALTER TABLE workspaces ADD COLUMN IF NOT EXISTS owner_id VARCHAR(64);")
                 )
+                from services.auth_service import hash_password
+
+                admin_hp = hash_password("admin123456")
                 await conn.execute(
                     text(
-                        "INSERT INTO users (id, email, full_name, provider, token_version, is_active, created_at, updated_at) "
-                        "VALUES ('usr_default_admin', 'dev@graphmind.local', 'Default Admin', 'local', 1, true, NOW(), NOW()) "
-                        "ON CONFLICT (id) DO NOTHING;"
-                    )
+                        "INSERT INTO users (id, email, hashed_password, full_name, provider, token_version, is_active, created_at, updated_at) "
+                        "VALUES ('usr_default_admin', 'admin@graphmind.dev', :hp, 'Default Admin', 'local', 1, true, NOW(), NOW()) "
+                        "ON CONFLICT (id) DO UPDATE SET "
+                        "email = EXCLUDED.email, "
+                        "hashed_password = EXCLUDED.hashed_password, "
+                        "is_active = true;"
+                    ),
+                    {"hp": admin_hp},
                 )
                 await conn.execute(
                     text("UPDATE workspaces SET owner_id = 'usr_default_admin' WHERE owner_id IS NULL;")

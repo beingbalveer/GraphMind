@@ -16,9 +16,12 @@ async def init_test_db() -> AsyncGenerator[None, None]:
         if is_postgres:
             await conn.execute(
                 text(
-                    "INSERT INTO users (id, email, full_name, provider, token_version, is_active, created_at, updated_at) "
-                    "VALUES ('usr_default_admin', 'dev@graphmind.local', 'Default Admin', 'local', 1, true, NOW(), NOW()) "
-                    "ON CONFLICT (id) DO NOTHING;"
+                    "INSERT INTO users (id, email, hashed_password, full_name, provider, token_version, is_active, created_at, updated_at) "
+                    "VALUES ('usr_default_admin', 'admin@graphmind.dev', '$2b$12$HSNk1SzzUFFI.tQ/Khb9Ke38ugvdfZ8Z86I58ySKqJk7pI1eliBkW', 'Default Admin', 'local', 1, true, NOW(), NOW()) "
+                    "ON CONFLICT (id) DO UPDATE SET "
+                    "email = EXCLUDED.email, "
+                    "hashed_password = EXCLUDED.hashed_password, "
+                    "is_active = true;"
                 )
             )
     yield

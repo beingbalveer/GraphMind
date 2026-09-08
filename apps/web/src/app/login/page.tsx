@@ -140,7 +140,7 @@ function LoginForm() {
   };
 
   const fillDemoAdmin = () => {
-    setEmail("admin@graphmind.local");
+    setEmail("admin@graphmind.dev");
     setPassword("admin123456");
     setMode("signin");
     setErrorMsg(null);
