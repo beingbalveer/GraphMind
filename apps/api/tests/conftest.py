@@ -24,4 +24,11 @@ async def init_test_db() -> AsyncGenerator[None, None]:
                     "is_active = true;"
                 )
             )
-    yield
+    try:
+        yield
+    finally:
+        async with engine.begin() as conn:
+            # Purge test workspaces while preserving the real primary workspace
+            await conn.execute(text("DELETE FROM workspaces WHERE id != 'ws_52b50904606a';"))
+            # Purge test users while preserving the default admin user
+            await conn.execute(text("DELETE FROM users WHERE id != 'usr_default_admin';"))
