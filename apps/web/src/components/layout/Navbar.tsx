@@ -12,7 +12,6 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { LogoBadge } from "@/components/ui/Logo";
-import { UserMenu } from "@/components/layout/UserMenu";
 
 export type ViewMode = "chat" | "canvas";
 
@@ -132,9 +131,6 @@ export function Navbar({
             <PanelRight className="w-4 h-4 stroke-[1.75]" />
           </Button>
         )}
-
-        {/* User Profile / Logout Dropdown */}
-        <UserMenu />
       </div>
     </header>
   );

@@ -18,6 +18,7 @@ import { LogoBadge } from "@/components/ui/Logo";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { useResizableSidebar } from "@/hooks/useResizableSidebar";
+import { UserMenu } from "@/components/layout/UserMenu";
 
 interface ChatSidebarProps {
   isOpen: boolean;
@@ -249,7 +250,7 @@ export function ChatSidebar({
       <aside
         suppressHydrationWarning
         style={{ width: isOpen ? `${width}px` : `${COLLAPSED_WIDTH}px` }}
-        className={`fixed md:static inset-y-0 left-0 z-40 flex flex-col bg-background-secondary select-none relative overflow-hidden shrink-0 border-r border-border-subtle ${
+        className={`fixed md:static inset-y-0 left-0 z-40 flex flex-col bg-background-secondary select-none relative shrink-0 border-r border-border-subtle ${
           isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         } ${isResizing ? "transition-none" : "transition-[width,transform] duration-200 ease-in-out"}`}
       >
@@ -295,23 +296,36 @@ export function ChatSidebar({
           )}
         </div>
 
-        {/* ThreadList Action: New chat */}
-        <div className="px-2 pt-1 pb-1 shrink-0">
+        {/* Actions: New chat & Library */}
+        <div className="px-2 pt-1 pb-1 shrink-0 space-y-0.5">
           {isOpen ? (
-            onNewChat && (
-              <button
-                type="button"
-                onClick={onNewChat}
-                className="h-9 w-full flex items-center gap-2.5 px-2.5 rounded-lg text-sm font-normal text-foreground hover:bg-surface-hover transition-colors cursor-pointer group"
-                title="New chat (⌘N)"
-              >
-                <Plus className="w-4 h-4 text-foreground-muted group-hover:text-foreground transition-colors shrink-0" />
-                <span className="flex-1 text-left truncate">New chat</span>
-                <span className="text-2xs text-foreground-muted opacity-0 group-hover:opacity-100 transition-opacity font-mono">
-                  ⌘N
-                </span>
-              </button>
-            )
+            <>
+              {onNewChat && (
+                <button
+                  type="button"
+                  onClick={onNewChat}
+                  className="h-9 w-full flex items-center gap-2.5 px-2.5 rounded-lg text-sm font-normal text-foreground hover:bg-surface-hover transition-colors cursor-pointer group"
+                  title="New chat (⌘N)"
+                >
+                  <Plus className="w-4 h-4 text-foreground-muted group-hover:text-foreground transition-colors shrink-0" />
+                  <span className="flex-1 text-left truncate">New chat</span>
+                  <span className="text-2xs text-foreground-muted opacity-0 group-hover:opacity-100 transition-opacity font-mono">
+                    ⌘N
+                  </span>
+                </button>
+              )}
+              {onOpenFileLibrary && (
+                <button
+                  type="button"
+                  onClick={onOpenFileLibrary}
+                  className="h-9 w-full flex items-center gap-2.5 px-2.5 rounded-lg text-sm font-normal text-foreground-muted hover:text-foreground hover:bg-surface-hover transition-colors cursor-pointer"
+                  title="Workspace File Library"
+                >
+                  <FolderOpen className="w-4 h-4 text-foreground-muted shrink-0" />
+                  <span className="truncate">File Library</span>
+                </button>
+              )}
+            </>
           ) : (
             <div className="flex flex-col items-center gap-1">
               {onNewChat && (
@@ -322,6 +336,16 @@ export function ChatSidebar({
                   title="New chat (⌘N)"
                 >
                   <Plus className="size-4" />
+                </button>
+              )}
+              {onOpenFileLibrary && (
+                <button
+                  type="button"
+                  onClick={onOpenFileLibrary}
+                  className="size-8 rounded-lg flex items-center justify-center text-foreground-muted hover:text-foreground hover:bg-surface-hover transition-colors cursor-pointer"
+                  title="Workspace File Library"
+                >
+                  <FolderOpen className="size-4" />
                 </button>
               )}
             </div>
@@ -363,31 +387,8 @@ export function ChatSidebar({
         </div>
 
         {/* Sidebar Footer */}
-        <div className="p-2 shrink-0 overflow-hidden space-y-0.5">
-          {onOpenFileLibrary && (
-            isOpen ? (
-              <button
-                type="button"
-                onClick={onOpenFileLibrary}
-                className="h-8.5 w-full flex items-center gap-2.5 px-2.5 rounded-lg text-sm font-normal text-foreground-muted hover:text-foreground hover:bg-surface-hover transition-colors cursor-pointer"
-                title="Workspace File Library"
-              >
-                <FolderOpen className="size-4 text-foreground-muted shrink-0" />
-                <span className="truncate">File Library</span>
-              </button>
-            ) : (
-              <div className="flex justify-center">
-                <button
-                  type="button"
-                  onClick={onOpenFileLibrary}
-                  className="size-8 rounded-lg flex items-center justify-center text-foreground-muted hover:text-foreground hover:bg-surface-hover transition-colors cursor-pointer"
-                  title="Workspace File Library"
-                >
-                  <FolderOpen className="size-4" />
-                </button>
-              </div>
-            )
-          )}
+        <div className="p-2 shrink-0 space-y-0.5 relative">
+          <UserMenu collapsed={!isOpen} placement="top" />
 
           {onOpenSettings && (
             isOpen ? (
