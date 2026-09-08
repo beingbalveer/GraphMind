@@ -44,9 +44,11 @@ export function UserMenu({ collapsed = false, placement = "bottom" }: UserMenuPr
     return (
       <Link
         href="/login"
-        className="h-8.5 w-full flex items-center gap-2.5 px-2.5 rounded-lg text-sm font-normal text-foreground-muted hover:text-foreground hover:bg-surface-hover transition-colors cursor-pointer"
+        className="h-9 w-full flex items-center gap-2 rounded-lg text-sm font-normal text-foreground-muted hover:text-foreground hover:bg-surface-hover transition-colors cursor-pointer"
       >
-        <UserIcon className="w-4 h-4 shrink-0" />
+        <div className="size-8 rounded-lg flex items-center justify-center shrink-0">
+          <UserIcon className="w-4 h-4" />
+        </div>
         <span className="truncate">Sign In</span>
       </Link>
     );
@@ -88,22 +90,24 @@ export function UserMenu({ collapsed = false, placement = "bottom" }: UserMenuPr
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          className="h-8.5 w-full flex items-center gap-2.5 px-2.5 rounded-lg text-sm font-normal text-foreground hover:bg-surface-hover transition-colors cursor-pointer group"
+          className="h-9 w-full flex items-center gap-2 rounded-lg text-sm font-normal text-foreground hover:bg-surface-hover transition-colors cursor-pointer group"
           title={user.fullName || user.email}
           aria-label="User profile menu"
         >
-          {user.avatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={user.avatarUrl}
-              alt={user.fullName || user.email}
-              className="w-5.5 h-5.5 rounded-full object-cover ring-1 ring-border shrink-0"
-            />
-          ) : (
-            <div className="w-5.5 h-5.5 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-2xs font-semibold shrink-0 shadow-2xs">
-              {initial}
-            </div>
-          )}
+          <div className="size-8 rounded-lg flex items-center justify-center shrink-0">
+            {user.avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={user.avatarUrl}
+                alt={user.fullName || user.email}
+                className="w-6 h-6 rounded-full object-cover ring-1 ring-border"
+              />
+            ) : (
+              <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-semibold shadow-2xs">
+                {initial}
+              </div>
+            )}
+          </div>
           <span className="flex-1 text-left truncate text-foreground font-normal">
             {user.fullName || user.email}
           </span>
