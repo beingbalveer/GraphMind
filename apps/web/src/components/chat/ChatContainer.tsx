@@ -16,6 +16,7 @@ import { ChatInput } from "./ChatInput";
 import { BranchBreadcrumbs, BreadcrumbStep } from "./BranchBreadcrumbs";
 
 import { ChatSidebar } from "./ChatSidebar";
+import { RightSidebar } from "./RightSidebar";
 import { GraphCanvas } from "../canvas/GraphCanvas";
 import { CommandPalette } from "../canvas/CommandPalette";
 import { WorkspaceModal } from "../workspace/WorkspaceModal";
@@ -105,6 +106,18 @@ export function ChatContainer({
   const [isModelConfigOpen, setIsModelConfigOpen] = useState(false);
   const [isFileLibraryOpen, setIsFileLibraryOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isRightSidebarOpen, setIsRightSidebarOpen] = useState<boolean>(() => {
+    const saved = safeGetItem("graphmind_right_sidebar_open_v1");
+    return saved === "true";
+  });
+
+  const handleToggleRightSidebar = useCallback(() => {
+    setIsRightSidebarOpen((prev) => {
+      const next = !prev;
+      safeSetItem("graphmind_right_sidebar_open_v1", String(next));
+      return next;
+    });
+  }, []);
 
   // Centralized Model & AI Generation Configuration (BYOK)
   const {
@@ -1029,6 +1042,8 @@ export function ChatContainer({
 
           isSidebarOpen={isSidebarOpen}
           onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
+          isRightSidebarOpen={isRightSidebarOpen}
+          onToggleRightSidebar={handleToggleRightSidebar}
           onNewChat={handleNewChat}
           onClearChat={() => {
             clearMessages();
@@ -1224,6 +1239,12 @@ export function ChatContainer({
           />
         </div>
       </div>
+
+      {/* Right Sidebar: Clean Blank Panel */}
+      <RightSidebar
+        isOpen={isRightSidebarOpen}
+        onToggle={handleToggleRightSidebar}
+      />
 
       {/* Global Command Palette (⌘K) */}
       <CommandPalette

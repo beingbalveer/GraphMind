@@ -5,6 +5,7 @@ import {
   MessageSquare,
   LayoutGrid,
   PanelLeft,
+  PanelRight,
   ChevronDown,
 } from "lucide-react";
 import Link from "next/link";
@@ -28,6 +29,8 @@ interface NavbarProps {
   syncStatus?: "saved" | "syncing" | "offline";
   isSidebarOpen?: boolean;
   onToggleSidebar?: () => void;
+  isRightSidebarOpen?: boolean;
+  onToggleRightSidebar?: () => void;
   onNewChat?: () => void;
 }
 
@@ -45,6 +48,8 @@ export function Navbar({
   syncStatus: _syncStatus = "saved",
   isSidebarOpen = true,
   onToggleSidebar,
+  isRightSidebarOpen = false,
+  onToggleRightSidebar,
   onNewChat: _onNewChat,
 }: NavbarProps) {
   return (
@@ -107,6 +112,20 @@ export function Navbar({
               { id: "canvas", label: "Canvas", icon: LayoutGrid },
             ]}
           />
+        )}
+
+        {/* Right Sidebar Toggle (Only show when right panel is closed; when open, collapse button is in the panel header) */}
+        {!isRightSidebarOpen && onToggleRightSidebar && (
+          <Button
+            variant="ghost"
+            size="iconSm"
+            onClick={onToggleRightSidebar}
+            className="h-8 w-8 cursor-pointer transition-colors text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100"
+            title="Open right panel"
+            aria-label="Open right panel"
+          >
+            <PanelRight className="w-4 h-4 stroke-[1.75]" />
+          </Button>
         )}
       </div>
     </header>
