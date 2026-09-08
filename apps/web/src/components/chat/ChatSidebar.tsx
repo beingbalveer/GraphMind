@@ -12,6 +12,7 @@ import {
   PanelLeft,
   FolderOpen,
   MessageSquare,
+  ChevronDown,
 } from "lucide-react";
 import { ChatItem } from "@/lib/workspaceApi";
 import { LogoBadge } from "@/components/ui/Logo";
@@ -92,7 +93,7 @@ export function ChatSidebar({
   onDeleteChat,
   onRenameChat,
   onTogglePinChat,
-  onOpenWorkspaceModal: _onOpenWorkspaceModal,
+  onOpenWorkspaceModal,
   onOpenSettings,
   onNewChat,
   onOpenFileLibrary,
@@ -254,7 +255,7 @@ export function ChatSidebar({
           isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         } ${isResizing ? "transition-none" : "transition-[width,transform] duration-200 ease-in-out"}`}
       >
-        {/* Sidebar Header */}
+        {/* Sidebar Header: Toggle button + GraphMind Icon & Workspace Name */}
         <div className="h-13 px-3 flex items-center shrink-0 w-full">
           <button
             type="button"
@@ -266,18 +267,29 @@ export function ChatSidebar({
             <PanelLeft className="w-4 h-4" />
           </button>
 
-          <div className={`flex items-center gap-2 min-w-0 pl-2.5 transition-opacity duration-150 ${isOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
-            <div className="w-7 h-7 rounded-lg bg-primary text-primary-foreground flex items-center justify-center shrink-0 shadow-2xs">
-              <LogoBadge size="sm" />
-            </div>
-            <div className="flex flex-col min-w-0 leading-tight">
-              <span className="text-sm font-semibold text-foreground tracking-tight truncate">
-                GraphMind
-              </span>
-              <span className="text-2xs text-foreground-muted truncate">
-                {workspaceName}
-              </span>
-            </div>
+          <div className={`flex items-center min-w-0 pl-2 transition-opacity duration-150 ${isOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
+            {onOpenWorkspaceModal ? (
+              <button
+                type="button"
+                onClick={onOpenWorkspaceModal}
+                className="flex items-center gap-2 px-1.5 py-1 -ml-1 rounded-lg hover:bg-surface-hover text-foreground transition-colors cursor-pointer group min-w-0"
+                title="Switch or manage workspaces"
+                aria-label="Switch or manage workspaces"
+              >
+                <LogoBadge size="sm" />
+                <span className="text-sm font-semibold text-foreground tracking-tight truncate max-w-[140px]">
+                  {workspaceName}
+                </span>
+                <ChevronDown className="w-3.5 h-3.5 text-foreground-muted group-hover:text-foreground transition-colors shrink-0" />
+              </button>
+            ) : (
+              <div className="flex items-center gap-2 min-w-0">
+                <LogoBadge size="sm" />
+                <span className="text-sm font-semibold text-foreground tracking-tight truncate max-w-[150px]">
+                  {workspaceName}
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
