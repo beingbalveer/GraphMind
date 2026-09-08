@@ -20,6 +20,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { useResizableSidebar } from "@/hooks/useResizableSidebar";
 import { UserMenu } from "@/components/layout/UserMenu";
+import Link from "next/link";
 
 interface ChatSidebarProps {
   isOpen: boolean;
@@ -267,28 +268,33 @@ export function ChatSidebar({
             <PanelLeft className="w-4 h-4" />
           </button>
 
-          <div className={`flex items-center min-w-0 pl-2 transition-opacity duration-150 ${isOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
+          <div className={`flex items-center gap-1.5 min-w-0 pl-2 transition-opacity duration-150 ${isOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
+            <Link
+              href="/"
+              className="flex items-center justify-center rounded-lg hover:opacity-85 transition-opacity shrink-0 cursor-pointer"
+              title="GraphMind Home"
+              aria-label="Go to GraphMind Home"
+            >
+              <LogoBadge size="sm" />
+            </Link>
+
             {onOpenWorkspaceModal ? (
               <button
                 type="button"
                 onClick={onOpenWorkspaceModal}
-                className="flex items-center gap-2 px-1.5 py-1 -ml-1 rounded-lg hover:bg-surface-hover text-foreground transition-colors cursor-pointer group min-w-0"
+                className="flex items-center gap-1 px-1.5 py-1 rounded-lg hover:bg-surface-hover text-foreground transition-colors cursor-pointer group min-w-0"
                 title="Switch or manage workspaces"
                 aria-label="Switch or manage workspaces"
               >
-                <LogoBadge size="sm" />
-                <span className="text-sm font-semibold text-foreground tracking-tight truncate max-w-[140px]">
+                <span className="text-sm font-semibold text-foreground tracking-tight truncate max-w-[135px]">
                   {workspaceName}
                 </span>
                 <ChevronDown className="w-3.5 h-3.5 text-foreground-muted group-hover:text-foreground transition-colors shrink-0" />
               </button>
             ) : (
-              <div className="flex items-center gap-2 min-w-0">
-                <LogoBadge size="sm" />
-                <span className="text-sm font-semibold text-foreground tracking-tight truncate max-w-[150px]">
-                  {workspaceName}
-                </span>
-              </div>
+              <span className="text-sm font-semibold text-foreground tracking-tight truncate max-w-[145px] px-1.5 py-1">
+                {workspaceName}
+              </span>
             )}
           </div>
         </div>
