@@ -34,9 +34,24 @@ class Settings(BaseSettings):
             "http://127.0.0.1:3300",
             "http://localhost:3000",
             "http://127.0.0.1:3000",
-            "*",
         ],
-        description="Allowed CORS origins",
+        description="Allowed CORS origins (strictly restricted when credentials enabled)",
+    )
+
+    # Authentication & Security configuration
+    JWT_SECRET_KEY: str = Field(
+        default="dev-secret-change-in-production-min-32-chars-long",
+        description="Secret key for signing access & refresh JWT tokens",
+    )
+    JWT_ALGORITHM: str = Field(default="HS256", description="JWT signing algorithm")
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = Field(
+        default=60, description="Access token expiration time in minutes"
+    )
+    REFRESH_TOKEN_EXPIRE_DAYS: int = Field(
+        default=30, description="Refresh token expiration time in days"
+    )
+    GOOGLE_CLIENT_ID: Optional[str] = Field(
+        default=None, description="Google OAuth 2.0 Web Client ID"
     )
 
     # AI Provider configuration

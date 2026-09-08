@@ -1,3 +1,4 @@
+from models.user import User, WorkspaceMember
 from models.workspace import (
     ConceptModel,
     EdgeModel,
@@ -9,6 +10,8 @@ from models.workspace import (
 )
 
 __all__ = [
+    "User",
+    "WorkspaceMember",
     "Workspace",
     "NodeModel",
     "EdgeModel",

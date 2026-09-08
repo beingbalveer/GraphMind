@@ -1,8 +1,11 @@
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from database import Base
+
+if TYPE_CHECKING:
+    from models.user import User, WorkspaceMember
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     JSON,
@@ -38,6 +41,14 @@ class Workspace(Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False, default="Untitled Workspace")
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
+    # Multi-tenancy & Ownership
+    owner_id: Mapped[str] = mapped_column(
+        String(64),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
     # 2D Spatial Viewport State
     viewport_x: Mapped[float] = mapped_column(Float, default=0.0)
     viewport_y: Mapped[float] = mapped_column(Float, default=0.0)
@@ -54,6 +65,13 @@ class Workspace(Base):
     )
 
     # Relationships
+    owner: Mapped["User"] = relationship("User", back_populates="owned_workspaces")
+    members: Mapped[List["WorkspaceMember"]] = relationship(
+        "WorkspaceMember",
+        back_populates="workspace",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
     nodes: Mapped[List["NodeModel"]] = relationship(
         "NodeModel",
         back_populates="workspace",

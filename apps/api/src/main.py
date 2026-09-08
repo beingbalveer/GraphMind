@@ -87,6 +87,34 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
                         "ON workspace_concepts (workspace_id, created_at);"
                     )
                 )
+                # Auth & Multi-Tenancy Invariant Migration
+                await conn.execute(
+                    text("ALTER TABLE workspaces ADD COLUMN IF NOT EXISTS owner_id VARCHAR(64);")
+                )
+                await conn.execute(
+                    text(
+                        "INSERT INTO users (id, email, full_name, provider, token_version, is_active, created_at, updated_at) "
+                        "VALUES ('usr_default_admin', 'dev@graphmind.local', 'Default Admin', 'local', 1, true, NOW(), NOW()) "
+                        "ON CONFLICT (id) DO NOTHING;"
+                    )
+                )
+                await conn.execute(
+                    text("UPDATE workspaces SET owner_id = 'usr_default_admin' WHERE owner_id IS NULL;")
+                )
+                await conn.execute(
+                    text("CREATE INDEX IF NOT EXISTS idx_workspaces_owner_id ON workspaces (owner_id);")
+                )
+                await conn.execute(
+                    text(
+                        "INSERT INTO workspace_members (id, workspace_id, user_id, role, created_at) "
+                        "SELECT 'wsm_' || substr(md5(random()::text), 1, 12), id, 'usr_default_admin', 'owner', NOW() "
+                        "FROM workspaces w "
+                        "WHERE NOT EXISTS ("
+                        "    SELECT 1 FROM workspace_members wm WHERE wm.workspace_id = w.id AND wm.user_id = 'usr_default_admin'"
+                        ") "
+                        "ON CONFLICT DO NOTHING;"
+                    )
+                )
         logger.info("Database schema, pgvector extension, and performance indexes initialized successfully")
     except Exception as e:
         logger.warning("Database synchronization deferred or failed", error=str(e))
