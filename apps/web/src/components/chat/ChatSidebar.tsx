@@ -250,116 +250,79 @@ export function ChatSidebar({
       <aside
         suppressHydrationWarning
         style={{ width: isOpen ? `${width}px` : `${COLLAPSED_WIDTH}px` }}
-        className={`fixed md:static inset-y-0 left-0 z-40 flex flex-col bg-background-secondary select-none relative shrink-0 border-r border-border-subtle ${
+        className={`fixed md:static inset-y-0 left-0 z-40 flex flex-col bg-background-secondary select-none relative shrink-0 overflow-hidden border-r border-border-subtle ${
           isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         } ${isResizing ? "transition-none" : "transition-[width,transform] duration-200 ease-in-out"}`}
       >
         {/* Sidebar Header */}
-        <div className="h-13 px-3 flex items-center shrink-0 overflow-hidden">
-          {isOpen ? (
-            <div className="flex items-center gap-2.5 min-w-0 w-full">
-              <button
-                type="button"
-                onClick={onToggle}
-                className="size-8 rounded-lg flex items-center justify-center text-foreground-muted hover:text-foreground hover:bg-surface-hover transition-colors cursor-pointer shrink-0"
-                title="Collapse sidebar (⌘B)"
-                aria-label="Collapse sidebar"
-              >
-                <PanelLeft className="w-4 h-4" />
-              </button>
-              <div className="flex items-center gap-2 min-w-0">
-                <div className="w-7 h-7 rounded-lg bg-primary text-primary-foreground flex items-center justify-center shrink-0 shadow-2xs">
-                  <LogoBadge size="sm" />
-                </div>
-                <div className="flex flex-col min-w-0 leading-tight">
-                  <span className="text-sm font-semibold text-foreground tracking-tight truncate">
-                    GraphMind
-                  </span>
-                  <span className="text-2xs text-foreground-muted truncate">
-                    {workspaceName}
-                  </span>
-                </div>
-              </div>
+        <div className="h-13 px-3 flex items-center shrink-0 w-full">
+          <button
+            type="button"
+            onClick={onToggle}
+            className="size-8 rounded-lg flex items-center justify-center text-foreground-muted hover:text-foreground hover:bg-surface-hover transition-colors cursor-pointer shrink-0"
+            title={isOpen ? "Collapse sidebar (⌘B)" : "Expand sidebar (⌘B)"}
+            aria-label={isOpen ? "Collapse sidebar" : "Expand sidebar"}
+          >
+            <PanelLeft className="w-4 h-4" />
+          </button>
+
+          <div className={`flex items-center gap-2 min-w-0 pl-2.5 transition-opacity duration-150 ${isOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
+            <div className="w-7 h-7 rounded-lg bg-primary text-primary-foreground flex items-center justify-center shrink-0 shadow-2xs">
+              <LogoBadge size="sm" />
             </div>
-          ) : (
-            <div className="w-full flex items-center justify-center">
-              <button
-                type="button"
-                onClick={onToggle}
-                className="size-8 rounded-lg flex items-center justify-center text-foreground-muted hover:text-foreground hover:bg-surface-hover transition-colors cursor-pointer"
-                title="Expand sidebar (⌘B)"
-                aria-label="Expand sidebar"
-              >
-                <PanelLeft className="w-4 h-4" />
-              </button>
+            <div className="flex flex-col min-w-0 leading-tight">
+              <span className="text-sm font-semibold text-foreground tracking-tight truncate">
+                GraphMind
+              </span>
+              <span className="text-2xs text-foreground-muted truncate">
+                {workspaceName}
+              </span>
             </div>
-          )}
+          </div>
         </div>
 
         {/* Actions: New chat & Library */}
-        <div className="px-3 pt-1 pb-1 shrink-0 space-y-1">
-          {isOpen ? (
-            <>
-              {onNewChat && (
-                <button
-                  type="button"
-                  onClick={onNewChat}
-                  className="h-9 w-full flex items-center gap-2 rounded-lg text-sm font-normal text-foreground hover:bg-surface-hover transition-colors cursor-pointer group"
-                  title="New chat (⌘N)"
-                >
-                  <div className="size-8 rounded-lg flex items-center justify-center shrink-0">
-                    <Plus className="w-4 h-4 text-foreground-muted group-hover:text-foreground transition-colors" />
-                  </div>
-                  <span className="flex-1 text-left truncate">New chat</span>
-                  <span className="text-2xs text-foreground-muted opacity-0 group-hover:opacity-100 transition-opacity font-mono pr-2">
-                    ⌘N
-                  </span>
-                </button>
-              )}
-              {onOpenFileLibrary && (
-                <button
-                  type="button"
-                  onClick={onOpenFileLibrary}
-                  className="h-9 w-full flex items-center gap-2 rounded-lg text-sm font-normal text-foreground-muted hover:text-foreground hover:bg-surface-hover transition-colors cursor-pointer group"
-                  title="Workspace File Library"
-                >
-                  <div className="size-8 rounded-lg flex items-center justify-center shrink-0">
-                    <FolderOpen className="w-4 h-4 text-foreground-muted group-hover:text-foreground transition-colors" />
-                  </div>
-                  <span className="truncate">File Library</span>
-                </button>
-              )}
-            </>
-          ) : (
-            <div className="flex flex-col items-center space-y-1">
-              {onNewChat && (
-                <button
-                  type="button"
-                  onClick={onNewChat}
-                  className="size-8 rounded-lg flex items-center justify-center text-foreground-muted hover:text-foreground hover:bg-surface-hover transition-colors cursor-pointer"
-                  title="New chat (⌘N)"
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
-              )}
-              {onOpenFileLibrary && (
-                <button
-                  type="button"
-                  onClick={onOpenFileLibrary}
-                  className="size-8 rounded-lg flex items-center justify-center text-foreground-muted hover:text-foreground hover:bg-surface-hover transition-colors cursor-pointer"
-                  title="Workspace File Library"
-                >
-                  <FolderOpen className="w-4 h-4" />
-                </button>
-              )}
-            </div>
+        <div className="px-3 pt-1 pb-1 shrink-0 space-y-1 w-full">
+          {onNewChat && (
+            <button
+              type="button"
+              onClick={onNewChat}
+              className="h-9 w-full flex items-center gap-2 rounded-lg text-sm font-normal text-foreground hover:bg-surface-hover transition-colors cursor-pointer group"
+              title="New chat (⌘N)"
+            >
+              <div className="size-8 rounded-lg flex items-center justify-center shrink-0">
+                <Plus className="w-4 h-4 text-foreground-muted group-hover:text-foreground transition-colors" />
+              </div>
+              <div className={`flex-1 flex items-center justify-between min-w-0 pr-2 transition-opacity duration-150 ${isOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
+                <span className="truncate text-left">New chat</span>
+                <span className="text-2xs text-foreground-muted opacity-0 group-hover:opacity-100 transition-opacity font-mono">
+                  ⌘N
+                </span>
+              </div>
+            </button>
+          )}
+
+          {onOpenFileLibrary && (
+            <button
+              type="button"
+              onClick={onOpenFileLibrary}
+              className="h-9 w-full flex items-center gap-2 rounded-lg text-sm font-normal text-foreground-muted hover:text-foreground hover:bg-surface-hover transition-colors cursor-pointer group"
+              title="Workspace File Library"
+            >
+              <div className="size-8 rounded-lg flex items-center justify-center shrink-0">
+                <FolderOpen className="w-4 h-4 text-foreground-muted group-hover:text-foreground transition-colors" />
+              </div>
+              <div className={`flex-1 min-w-0 text-left pr-2 transition-opacity duration-150 ${isOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
+                <span className="truncate">File Library</span>
+              </div>
+            </button>
           )}
         </div>
 
         {/* ThreadList Content */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-1 space-y-0.5">
-          {isOpen ? (
-            chatGroups.length === 0 ? (
+        <div className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-1 space-y-0.5 relative">
+          <div className={`transition-opacity duration-150 ${isOpen ? "opacity-100" : "opacity-0 pointer-events-none hidden"}`}>
+            {chatGroups.length === 0 ? (
               <div className="py-8 px-2.5 text-center text-xs text-foreground-muted">
                 No conversations yet
               </div>
@@ -372,9 +335,11 @@ export function ChatSidebar({
                   {group.chats.map(renderChatItem)}
                 </div>
               ))
-            )
-          ) : (
-            <div className="flex flex-col items-center pt-1">
+            )}
+          </div>
+
+          {!isOpen && (
+            <div className="flex flex-col items-center pt-1 animate-in fade-in duration-150">
               <button
                 type="button"
                 onClick={onToggle}
@@ -391,34 +356,23 @@ export function ChatSidebar({
         </div>
 
         {/* Sidebar Footer */}
-        <div className="p-3 shrink-0 space-y-1 relative">
+        <div className="p-3 shrink-0 space-y-1 relative w-full">
           <UserMenu collapsed={!isOpen} placement="top" />
 
           {onOpenSettings && (
-            isOpen ? (
-              <button
-                type="button"
-                onClick={onOpenSettings}
-                className="h-9 w-full flex items-center gap-2 rounded-lg text-sm font-normal text-foreground-muted hover:text-foreground hover:bg-surface-hover transition-colors cursor-pointer group"
-                title="Settings (⌘,)"
-              >
-                <div className="size-8 rounded-lg flex items-center justify-center shrink-0">
-                  <Settings className="w-4 h-4 text-foreground-muted group-hover:text-foreground transition-colors" />
-                </div>
-                <span className="truncate">Settings</span>
-              </button>
-            ) : (
-              <div className="flex justify-center">
-                <button
-                  type="button"
-                  onClick={onOpenSettings}
-                  className="size-8 rounded-lg flex items-center justify-center text-foreground-muted hover:text-foreground hover:bg-surface-hover transition-colors cursor-pointer"
-                  title="Settings (⌘,)"
-                >
-                  <Settings className="w-4 h-4" />
-                </button>
+            <button
+              type="button"
+              onClick={onOpenSettings}
+              className="h-9 w-full flex items-center gap-2 rounded-lg text-sm font-normal text-foreground-muted hover:text-foreground hover:bg-surface-hover transition-colors cursor-pointer group"
+              title="Settings (⌘,)"
+            >
+              <div className="size-8 rounded-lg flex items-center justify-center shrink-0">
+                <Settings className="w-4 h-4 text-foreground-muted group-hover:text-foreground transition-colors" />
               </div>
-            )
+              <div className={`flex-1 min-w-0 text-left pr-2 transition-opacity duration-150 ${isOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
+                <span className="truncate">Settings</span>
+              </div>
+            </button>
           )}
         </div>
 
