@@ -44,26 +44,26 @@
   :root {
     /* Backgrounds & Surfaces */
     --background: #ffffff;
-    --background-secondary: #f8f9fa;
-    --background-tertiary: #f4f4f6;
+    --background-secondary: #fafafc;
+    --background-tertiary: #f4f4f7;
     --surface: #ffffff;
-    --surface-hover: #f4f4f5;
+    --surface-hover: #f0f0f3;
     --card: #ffffff;
-    --card-foreground: #09090b;
+    --card-foreground: #0d0d0d;
 
     /* Text & Foreground */
-    --foreground: #09090b;
-    --foreground-muted: #71717a;
+    --foreground: #0d0d0d;
+    --foreground-muted: #3f3f46;
 
     /* Brand / Primary */
-    --primary: #18181b;
+    --primary: #0d0d0d;
     --primary-foreground: #ffffff;
 
     /* Muted & Borders */
-    --muted: #f4f4f5;
-    --muted-foreground: #71717a;
+    --muted: #f4f4f6;
+    --muted-foreground: #3f3f46;
     --border: #e4e4e7;
-    --border-subtle: #f4f4f5;
+    --border-subtle: #f0f0f3;
 
     /* Canvas Elements */
     --canvas-edge: #d4d4d8;

@@ -156,8 +156,8 @@ export function ChatSidebar({
         onClick={() => !isRenaming && onSelectChat(chat)}
         className={`group relative flex h-8 items-center px-2.5 rounded-lg transition-colors cursor-pointer select-none text-sm font-normal ${
           isActive
-            ? "bg-surface-hover text-foreground font-normal"
-            : "text-foreground-muted hover:bg-surface-hover/70 hover:text-foreground"
+            ? "bg-black/5 dark:bg-white/10 text-foreground font-normal"
+            : "text-foreground/85 hover:bg-black/5 dark:hover:bg-white/5 hover:text-foreground"
         }`}
       >
         {isRenaming ? (
@@ -339,7 +339,7 @@ export function ChatSidebar({
             ) : (
               chatGroups.map((group) => (
                 <div key={group.label} className="space-y-0.5 pt-3.5 first:pt-1">
-                  <div className="px-2.5 pb-1 text-2xs font-semibold text-foreground-muted/70 uppercase tracking-wider select-none">
+                  <div className="px-2.5 pb-1 text-2xs font-semibold text-foreground/60 uppercase tracking-wider select-none">
                     {group.label}
                   </div>
                   {group.chats.map(renderChatItem)}

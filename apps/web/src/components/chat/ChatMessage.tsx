@@ -193,35 +193,35 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
         },
         h1({ children }) {
           return (
-            <h1 className="text-xl font-bold text-zinc-950 mt-6 mb-3 tracking-tight">
+            <h1 className="text-xl font-bold text-foreground mt-6 mb-3 tracking-tight">
               {children}
             </h1>
           );
         },
         h2({ children }) {
           return (
-            <h2 className="text-lg font-semibold text-zinc-900 mt-5 mb-2.5 tracking-tight">
+            <h2 className="text-lg font-semibold text-foreground mt-5 mb-2.5 tracking-tight">
               {children}
             </h2>
           );
         },
         h3({ children }) {
           return (
-            <h3 className="text-base font-semibold text-zinc-800 mt-4 mb-2">
+            <h3 className="text-base font-semibold text-foreground mt-4 mb-2">
               {children}
             </h3>
           );
         },
         ul({ children }) {
           return (
-            <ul className="list-disc list-inside space-y-1.5 mb-4 pl-1 text-zinc-800">
+            <ul className="list-disc list-inside space-y-1.5 mb-4 pl-1 text-foreground">
               {children}
             </ul>
           );
         },
         ol({ children }) {
           return (
-            <ol className="list-decimal list-inside space-y-1.5 mb-4 pl-1 text-zinc-800">
+            <ol className="list-decimal list-inside space-y-1.5 mb-4 pl-1 text-foreground">
               {children}
             </ol>
           );
@@ -497,7 +497,7 @@ export function ChatMessage({
           )}
 
           {/* Bubble */}
-          <div className="max-w-2xl rounded-2xl bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 px-4 sm:px-5 py-3 border-0 shadow-2xs">
+          <div className="max-w-2xl rounded-2xl bg-muted text-foreground px-4 sm:px-5 py-3 border-0 shadow-2xs">
             {message.highlightedContext && (
               <div className="text-2xs font-medium text-emerald-800 bg-emerald-50 border border-emerald-200/80 rounded-md px-2 py-0.5 mb-2 inline-flex items-center gap-1.5 shadow-2xs">
                 <GitBranch className="w-3 h-3 text-emerald-600 shrink-0" />
@@ -775,7 +775,7 @@ export function ChatMessage({
   }
 
   return (
-    <div id={message.id} className="py-3 px-4 sm:px-6 bg-white group">
+    <div id={message.id} className="py-3 px-4 sm:px-6 bg-transparent group">
       {/* Floating Exploration Tooltip on Text Selection */}
       {selection && (
         <SelectionTooltip
@@ -788,8 +788,8 @@ export function ChatMessage({
 
       <div className="max-w-3xl mx-auto flex space-x-3.5">
         {/* Assistant Avatar */}
-        <div className="w-7 h-7 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center shrink-0 mt-0.5 text-zinc-800 dark:text-zinc-200 shadow-2xs">
-          <Sparkles className="w-3.5 h-3.5 text-zinc-700 dark:text-zinc-300" />
+        <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center shrink-0 mt-0.5 text-foreground shadow-2xs">
+          <Sparkles className="w-3.5 h-3.5 text-foreground" />
         </div>
 
         {/* Message Content Container */}
@@ -859,7 +859,7 @@ export function ChatMessage({
           <div
             ref={contentRef}
             className={`text-base select-text ${
-              message.isError ? "text-rose-700" : "text-zinc-800"
+              message.isError ? "text-rose-700" : "text-foreground"
             } leading-[1.8] break-words`}
           >
             {message.content ? (
