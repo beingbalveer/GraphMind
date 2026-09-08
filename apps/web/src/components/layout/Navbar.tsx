@@ -47,7 +47,7 @@ export function Navbar({
   onOpenFileLibrary: _onOpenFileLibrary,
   activeModelName: _activeModelName = "gemini-2.5-flash",
   syncStatus: _syncStatus = "saved",
-  isSidebarOpen: _isSidebarOpen = false,
+  isSidebarOpen = false,
   onToggleSidebar,
   isRightSidebarOpen = false,
   onToggleRightSidebar,
@@ -57,14 +57,14 @@ export function Navbar({
     <header className="h-13 bg-surface text-foreground px-3 sm:px-5 flex items-center justify-between z-30 shrink-0 select-none border-b border-border">
       {/* Top Left: Sidebar Toggle + Workspace Switcher */}
       <div className="flex items-center gap-2 shrink-0">
-        {onToggleSidebar && (
+        {!isSidebarOpen && onToggleSidebar && (
           <Button
             variant="ghost"
             size="iconSm"
             onClick={onToggleSidebar}
             className="-ml-1"
-            title="Toggle sidebar (⌘B)"
-            aria-label="Toggle sidebar"
+            title="Open sidebar (⌘B)"
+            aria-label="Open sidebar"
           >
             <PanelLeft className="w-4 h-4" />
           </Button>
