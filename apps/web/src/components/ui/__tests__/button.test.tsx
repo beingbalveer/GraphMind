@@ -8,6 +8,7 @@ describe("Button", () => {
     const button = screen.getByRole("button", { name: "Creating workspace" });
     expect(button).toBeDisabled();
     expect(button).toHaveAttribute("aria-busy", "true");
+    expect(button.querySelector("svg")).toHaveClass("motion-reduce:animate-none");
   });
 
   it("keeps standard dimensions and supports an explicit pill shape", () => {
@@ -15,5 +16,10 @@ describe("Button", () => {
     expect(screen.getByRole("button")).toHaveClass("h-8", "rounded-lg");
     rerender(<Button shape="pill">Save</Button>);
     expect(screen.getByRole("button")).toHaveClass("rounded-full");
+  });
+
+  it("preserves an explicit aria-busy value while not loading", () => {
+    render(<Button aria-busy="false">Save</Button>);
+    expect(screen.getByRole("button")).toHaveAttribute("aria-busy", "false");
   });
 });
