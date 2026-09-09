@@ -1,7 +1,9 @@
 "use client";
 
-import React, { useEffect, useCallback } from "react";
+import * as React from "react";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
+import { IconButton } from "./icon-button";
 import { cn } from "@/lib/utils";
 
 export interface ModalProps {
@@ -11,6 +13,8 @@ export interface ModalProps {
   size?: "sm" | "md" | "lg" | "xl" | "2xl" | "4xl" | "5xl" | "full";
   className?: string;
   closeOnClickOutside?: boolean;
+  ariaLabel?: string;
+  role?: "dialog" | "alertdialog";
 }
 
 const sizeClasses: Record<NonNullable<ModalProps["size"]>, string> = {
@@ -29,51 +33,71 @@ export function Modal({
   onClose,
   children,
   size = "lg",
-  className = "",
+  className,
   closeOnClickOutside = true,
+  ariaLabel = "Dialog",
+  role = "dialog",
 }: ModalProps) {
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        onClose();
-      }
-    },
-    [onClose]
+  const previouslyFocusedElement = React.useRef<HTMLElement | null>(null);
+  const hasSharedHeader = React.Children.toArray(children).some(
+    (child) => React.isValidElement(child) && child.type === ModalHeader
   );
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (isOpen) {
-      document.addEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = "hidden";
+      previouslyFocusedElement.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     }
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = "";
-    };
-  }, [isOpen, handleKeyDown]);
-
-  if (!isOpen) return null;
+  }, [isOpen]);
 
   return (
-    <div
-      onClick={closeOnClickOutside ? onClose : undefined}
-      className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in-0 duration-150 select-none font-sans"
+    <DialogPrimitive.Root
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
     >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className={cn(
-          "w-full bg-surface text-foreground rounded-2xl border border-border shadow-modal overflow-hidden flex flex-col animate-in zoom-in-95 duration-150",
-          sizeClasses[size],
-          className
-        )}
-      >
-        {children}
-      </div>
-    </div>
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-overlay backdrop-blur-xs motion-reduce:transition-none" />
+        <DialogPrimitive.Content
+          aria-label={hasSharedHeader ? undefined : ariaLabel}
+          className={cn(
+            "fixed left-1/2 top-1/2 z-50 flex w-full -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-2xl border border-border bg-surface text-foreground shadow-modal motion-reduce:transition-none",
+            sizeClasses[size],
+            className
+          )}
+          onEscapeKeyDown={(event) => {
+            if (!closeOnClickOutside) event.preventDefault();
+          }}
+          onOpenAutoFocus={(event) => {
+            const content = event.currentTarget as HTMLElement | null;
+            const field = content?.querySelector<HTMLElement>(
+              "input:not([disabled]), textarea:not([disabled]), select:not([disabled])"
+            );
+
+            if (field) {
+              event.preventDefault();
+              field.focus();
+            }
+          }}
+          onCloseAutoFocus={(event) => {
+            if (previouslyFocusedElement.current) {
+              event.preventDefault();
+              previouslyFocusedElement.current.focus();
+            }
+          }}
+          onPointerDownOutside={(event) => {
+            if (!closeOnClickOutside) event.preventDefault();
+          }}
+          role={role}
+        >
+          {children}
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
   );
 }
 
-interface ModalHeaderProps {
+export interface ModalHeaderProps {
   title: React.ReactNode;
   description?: React.ReactNode;
   icon?: React.ReactNode;
@@ -87,73 +111,65 @@ export function ModalHeader({
   description,
   icon,
   onClose,
-  className = "",
+  className,
   children,
 }: ModalHeaderProps) {
   return (
     <div
       className={cn(
-        "h-13 px-4 sm:px-5 border-b border-border flex items-center justify-between shrink-0 bg-surface/90 backdrop-blur-xs",
+        "flex h-13 shrink-0 items-center justify-between border-b border-border bg-surface px-4 sm:px-5",
         className
       )}
     >
-      <div className="flex items-center gap-2.5 min-w-0">
+      <div className="flex min-w-0 items-center gap-2.5">
         {icon && (
-          <div className="w-7 h-7 rounded-lg bg-muted border border-border text-foreground flex items-center justify-center shadow-xs shrink-0">
+          <div className="flex size-7 shrink-0 items-center justify-center rounded-lg border border-border bg-muted text-foreground shadow-xs">
             {icon}
           </div>
         )}
         <div className="min-w-0">
-          <h3 className="font-semibold text-sm text-foreground leading-tight truncate">
+          <DialogPrimitive.Title className="truncate text-sm font-semibold leading-tight text-foreground">
             {title}
-          </h3>
+          </DialogPrimitive.Title>
           {description && (
-            <p className="text-xs text-foreground-muted truncate">{description}</p>
+            <DialogPrimitive.Description className="truncate text-xs text-foreground-muted">
+              {description}
+            </DialogPrimitive.Description>
           )}
         </div>
       </div>
 
-      <div className="flex items-center gap-2 shrink-0">
+      <div className="flex shrink-0 items-center gap-2">
         {children}
         {onClose && (
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1.5 rounded-lg text-foreground-muted hover:text-foreground hover:bg-surface-hover transition-colors cursor-pointer"
-            title="Close"
-            aria-label="Close dialog"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          <IconButton label="Close dialog" onClick={onClose} variant="ghost">
+            <X className="size-4" />
+          </IconButton>
         )}
       </div>
     </div>
   );
 }
 
-interface ModalBodyProps {
+export interface ModalBodyProps {
   children: React.ReactNode;
   className?: string;
 }
 
-export function ModalBody({ children, className = "" }: ModalBodyProps) {
-  return (
-    <div className={cn("p-5 overflow-y-auto min-h-0 flex-1", className)}>
-      {children}
-    </div>
-  );
+export function ModalBody({ children, className }: ModalBodyProps) {
+  return <div className={cn("min-h-0 flex-1 overflow-y-auto p-5", className)}>{children}</div>;
 }
 
-interface ModalFooterProps {
+export interface ModalFooterProps {
   children: React.ReactNode;
   className?: string;
 }
 
-export function ModalFooter({ children, className = "" }: ModalFooterProps) {
+export function ModalFooter({ children, className }: ModalFooterProps) {
   return (
     <div
       className={cn(
-        "px-5 py-3 border-t border-border flex items-center justify-end gap-2 bg-background-secondary/50 shrink-0",
+        "flex shrink-0 items-center justify-end gap-2 border-t border-border bg-background-secondary px-5 py-3",
         className
       )}
     >
