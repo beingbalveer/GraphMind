@@ -7,7 +7,7 @@ export function MenuCard({ className, children, ...props }: MenuCardProps) {
   return (
     <div
       className={cn(
-        "rounded-2xl bg-white border border-zinc-200/60 shadow-lg p-1.5 text-zinc-950 flex flex-col gap-0.5",
+        "flex flex-col gap-0.5 rounded-2xl border border-border bg-surface p-1.5 text-foreground shadow-lg",
         className
       )}
       {...props}
@@ -24,42 +24,37 @@ export interface MenuItemProps extends React.ButtonHTMLAttributes<HTMLButtonElem
   variant?: "default" | "destructive";
 }
 
-export function MenuItem({
-  icon,
-  active,
-  trailing,
-  variant = "default",
-  className,
-  children,
-  ...props
-}: MenuItemProps) {
-  return (
-    <button
-      type="button"
-      className={cn(
-        "relative flex w-full cursor-pointer select-none items-center justify-between rounded-xl px-3.5 py-2 text-sm font-normal outline-none transition-colors group text-left",
-        variant === "destructive"
-          ? "text-rose-600 hover:bg-rose-50 hover:text-rose-700 active:bg-rose-100"
-          : active
-          ? "bg-zinc-100 text-zinc-950 font-medium"
-          : "text-zinc-900 hover:bg-zinc-100 active:bg-zinc-200/70",
-        props.disabled && "pointer-events-none opacity-50",
-        className
-      )}
-      {...props}
-    >
-      <div className="flex items-center gap-3.5 min-w-0">
-        {icon && (
-          <span className="h-[18px] w-[18px] flex items-center justify-center shrink-0 text-zinc-800 group-hover:text-zinc-950 [&>svg]:w-[18px] [&>svg]:h-[18px] [&>svg]:stroke-[1.75]">
-            {icon}
-          </span>
+export const MenuItem = React.forwardRef<HTMLButtonElement, MenuItemProps>(
+  ({ icon, active, trailing, variant = "default", className, children, ...props }, ref) => {
+    return (
+      <button
+        ref={ref}
+        type="button"
+        className={cn(
+          "group relative flex w-full cursor-pointer select-none items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-normal outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary/30 disabled:pointer-events-none disabled:opacity-50",
+          variant === "destructive"
+            ? "text-destructive hover:bg-destructive-bg focus:bg-destructive-bg data-[highlighted]:bg-destructive-bg"
+            : active
+              ? "bg-surface-hover font-medium text-foreground"
+              : "text-foreground hover:bg-surface-hover focus:bg-surface-hover data-[highlighted]:bg-surface-hover",
+          className
         )}
-        <span className="truncate">{children}</span>
-      </div>
-      {trailing && <div className="shrink-0 ml-3 flex items-center">{trailing}</div>}
-    </button>
-  );
-}
+        {...props}
+      >
+        <div className="flex min-w-0 items-center gap-3">
+          {icon && (
+            <span className="flex size-4 shrink-0 items-center justify-center text-foreground-muted group-hover:text-foreground [&>svg]:size-4">
+              {icon}
+            </span>
+          )}
+          <span className="truncate">{children}</span>
+        </div>
+        {trailing && <div className="ml-3 flex shrink-0 items-center">{trailing}</div>}
+      </button>
+    );
+  }
+);
+MenuItem.displayName = "MenuItem";
 
 export type MenuHeaderProps = React.HTMLAttributes<HTMLDivElement>;
 
@@ -67,7 +62,7 @@ export function MenuHeader({ className, children, ...props }: MenuHeaderProps) {
   return (
     <div
       className={cn(
-        "px-4 pt-2 pb-1 text-2xs font-semibold text-zinc-400 uppercase tracking-wider select-none",
+        "select-none px-4 pb-1 pt-2 text-2xs font-semibold uppercase tracking-wider text-foreground-muted",
         className
       )}
       {...props}
