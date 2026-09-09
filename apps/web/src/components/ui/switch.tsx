@@ -1,6 +1,7 @@
 "use client";
 
-import React from "react";
+import * as SwitchPrimitive from "@radix-ui/react-switch";
+import { cn } from "@/lib/utils";
 
 interface SwitchProps {
   checked: boolean;
@@ -10,30 +11,19 @@ interface SwitchProps {
   className?: string;
 }
 
-export function Switch({
-  checked,
-  onCheckedChange,
-  disabled = false,
-  id,
-  className = "",
-}: SwitchProps) {
+export function Switch({ checked, onCheckedChange, disabled = false, id, className }: SwitchProps) {
   return (
-    <button
+    <SwitchPrimitive.Root
       id={id}
-      type="button"
-      role="switch"
-      aria-checked={checked}
+      checked={checked}
+      onCheckedChange={onCheckedChange}
       disabled={disabled}
-      onClick={() => !disabled && onCheckedChange(!checked)}
-      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 ${
-        checked ? "bg-blue-600" : "bg-zinc-200"
-      } ${className}`}
+      className={cn(
+        "relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full bg-muted transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 motion-reduce:transition-none data-[state=checked]:bg-primary",
+        className
+      )}
     >
-      <span
-        className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
-          checked ? "translate-x-4" : "translate-x-0"
-        }`}
-      />
-    </button>
+      <SwitchPrimitive.Thumb className="pointer-events-none block h-4 w-4 rounded-full bg-surface-raised shadow-sm transition-transform duration-200 motion-reduce:transition-none data-[state=checked]:translate-x-4 data-[state=unchecked]:translate-x-0" />
+    </SwitchPrimitive.Root>
   );
 }

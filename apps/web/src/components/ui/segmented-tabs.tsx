@@ -1,6 +1,8 @@
 "use client";
 
-import React from "react";
+import * as TabsPrimitive from "@radix-ui/react-tabs";
+import { Badge } from "./badge";
+import { cn } from "@/lib/utils";
 
 export interface SegmentedTabItem<T extends string = string> {
   id: T;
@@ -21,51 +23,30 @@ export function SegmentedTabs<T extends string = string>({
   items,
   value,
   onChange,
-  className = "",
+  className,
   size = "md",
 }: SegmentedTabsProps<T>) {
   return (
-    <div
-      className={`inline-flex p-1 bg-muted/80 rounded-xl border border-border ${className}`}
-    >
+    <TabsPrimitive.Root value={value} onValueChange={(next) => onChange(next as T)}>
+      <TabsPrimitive.List className={cn("inline-flex rounded-xl border border-border bg-muted p-1", className)}>
       {items.map((item) => {
-        const isSelected = value === item.id;
         const Icon = item.icon;
         return (
-          <button
+          <TabsPrimitive.Trigger
             key={item.id}
-            type="button"
-            onClick={() => onChange(item.id)}
-            className={`flex items-center justify-center gap-1.5 rounded-lg font-medium transition-all cursor-pointer select-none ${
+            value={item.id}
+            className={cn(
+              "inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-lg font-medium text-foreground-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-1 hover:text-foreground motion-reduce:transition-none data-[state=active]:bg-surface data-[state=active]:font-semibold data-[state=active]:text-foreground data-[state=active]:shadow-xs",
               size === "sm" ? "px-2.5 py-1 text-xs" : "px-3 py-1.5 text-xs"
-            } ${
-              isSelected
-                ? "bg-surface text-foreground shadow-xs font-semibold"
-                : "text-foreground-muted hover:text-foreground"
-            }`}
+            )}
           >
-            {Icon && (
-              <Icon
-                className={`w-3.5 h-3.5 ${
-                  isSelected ? "text-foreground" : "text-foreground-muted"
-                }`}
-              />
-            )}
+            {Icon && <Icon className="h-3.5 w-3.5" />}
             <span>{item.label}</span>
-            {item.badge && (
-              <span
-                className={`ml-1 text-2xs px-1.5 py-0.5 rounded-md ${
-                  isSelected
-                    ? "bg-primary text-primary-foreground font-semibold"
-                    : "bg-surface text-foreground-muted border border-border"
-                }`}
-              >
-                {item.badge}
-              </span>
-            )}
-          </button>
+            {item.badge && <Badge variant="secondary">{item.badge}</Badge>}
+          </TabsPrimitive.Trigger>
         );
       })}
-    </div>
+      </TabsPrimitive.List>
+    </TabsPrimitive.Root>
   );
 }
