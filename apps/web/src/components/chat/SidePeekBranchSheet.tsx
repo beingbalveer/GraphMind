@@ -679,9 +679,15 @@ export function SidePeekBranchSheet({
                         align="right"
                         onOpenChange={(isOpen) => setOpenMenuTabId(isOpen ? tab.id : null)}
                         trigger={
-                          <div className="p-0.5 rounded-full hover:bg-zinc-200/80 text-zinc-400 hover:text-zinc-800 transition-colors cursor-pointer flex items-center justify-center">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="iconSm"
+                            aria-label="Side branch tab options"
+                            className="shrink-0 text-foreground-muted hover:text-foreground"
+                          >
                             <MoreVertical className="w-3 h-3" />
-                          </div>
+                          </Button>
                         }
                         items={[
                           {

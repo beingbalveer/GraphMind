@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef } from "react";
+import React from "react";
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
 import { cn } from "@/lib/utils";
 
@@ -30,8 +30,6 @@ export function DropdownMenu({
   className,
   onOpenChange,
 }: DropdownMenuProps) {
-  const contentRef = useRef<HTMLDivElement>(null);
-
   return (
     <DropdownMenuPrimitive.Root onOpenChange={onOpenChange}>
       <DropdownMenuPrimitive.Trigger asChild>
@@ -39,18 +37,9 @@ export function DropdownMenu({
       </DropdownMenuPrimitive.Trigger>
       <DropdownMenuPrimitive.Portal>
         <DropdownMenuPrimitive.Content
-          ref={contentRef}
           align={align === "right" ? "end" : "start"}
           sideOffset={4}
           className="z-dropdown outline-none"
-          {...({
-            onOpenAutoFocus: (event: Event) => {
-              event.preventDefault();
-              contentRef.current
-                ?.querySelector<HTMLButtonElement>('button:not([disabled])')
-                ?.focus();
-            },
-          } as React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Content>)}
         >
           <MenuCard className={cn("min-w-48", className)}>
             {items.map((item) => (
