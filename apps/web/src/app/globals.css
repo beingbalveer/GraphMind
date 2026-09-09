@@ -11,17 +11,22 @@
   --color-background-secondary: var(--background-secondary);
   --color-background-tertiary: var(--background-tertiary);
   --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
   --color-surface-hover: var(--surface-hover);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
   --color-foreground: var(--foreground);
   --color-foreground-muted: var(--foreground-muted);
+  --color-foreground-subtle: var(--foreground-subtle);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-border: var(--border);
   --color-border-subtle: var(--border-subtle);
+  --color-border-strong: var(--border-strong);
+  --color-focus-ring: var(--focus-ring);
+  --color-overlay: var(--overlay);
   --color-canvas-edge: var(--canvas-edge);
   --color-canvas-edge-active: var(--canvas-edge-active);
   --color-code-bg: var(--code-bg);
@@ -47,6 +52,7 @@
     --background-secondary: #fafafc;
     --background-tertiary: #f4f4f7;
     --surface: #ffffff;
+    --surface-raised: #ffffff;
     --surface-hover: #f0f0f3;
     --card: #ffffff;
     --card-foreground: #0d0d0d;
@@ -54,16 +60,21 @@
     /* Text & Foreground */
     --foreground: #0d0d0d;
     --foreground-muted: #3f3f46;
+    --foreground-subtle: #71717a;
 
     /* Brand / Primary */
-    --primary: #0d0d0d;
+    --primary: #4f46e5;
     --primary-foreground: #ffffff;
+    --focus-ring: #6366f1;
+    --overlay: rgba(9, 9, 11, 0.44);
+    --chat-content-max: 44rem;
 
     /* Muted & Borders */
     --muted: #f4f4f6;
     --muted-foreground: #3f3f46;
     --border: #e4e4e7;
     --border-subtle: #f0f0f3;
+    --border-strong: #d4d4d8;
 
     /* Canvas Elements */
     --canvas-edge: #d4d4d8;
@@ -125,6 +136,7 @@
     --background-secondary: #121215;
     --background-tertiary: #18181b;
     --surface: #18181b;
+    --surface-raised: #202024;
     --surface-hover: #27272a;
     --card: #121215;
     --card-foreground: #f4f4f5;
@@ -132,16 +144,20 @@
     /* Text & Foreground */
     --foreground: #f4f4f5;
     --foreground-muted: #a1a1aa;
+    --foreground-subtle: #71717a;
 
     /* Brand / Primary */
-    --primary: #fafafa;
-    --primary-foreground: #09090b;
+    --primary: #818cf8;
+    --primary-foreground: #0b0b0f;
+    --focus-ring: #818cf8;
+    --overlay: rgba(0, 0, 0, 0.64);
 
     /* Muted & Borders */
     --muted: #27272a;
     --muted-foreground: #a1a1aa;
     --border: #27272a;
     --border-subtle: #1f1f23;
+    --border-strong: #3f3f46;
 
     /* Canvas Elements */
     --canvas-edge: #3f3f46;
@@ -173,5 +189,14 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
