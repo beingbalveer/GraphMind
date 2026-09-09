@@ -51,6 +51,9 @@ export function Drawer({
             widthClassName,
             className
           )}
+          onPointerDownOutside={(event) => {
+            if (!hasBackdrop) event.preventDefault();
+          }}
         >
           {(hasTitle || Boolean(headerActions) || Boolean(onClose)) && (
             <div className="flex h-13 shrink-0 items-center justify-between border-b border-border bg-surface px-4">
