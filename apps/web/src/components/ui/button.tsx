@@ -1,5 +1,6 @@
 import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
+import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
@@ -18,29 +19,44 @@ const buttonVariants = cva(
         default: "h-8 px-3 py-1.5",
         sm: "h-7 rounded-md px-2.5 text-xs",
         lg: "h-9 rounded-xl px-4 text-sm",
-        icon: "h-8 w-8 p-0",
-        iconSm: "h-7 w-7 p-0",
+        icon: "size-8 p-0",
+        iconSm: "size-7 p-0",
+      },
+      shape: {
+        rectangle: "rounded-lg",
+        pill: "rounded-full",
+        round: "rounded-full",
       },
     },
     defaultVariants: {
       variant: "default",
       size: "default",
+      shape: "rectangle",
     },
   }
 );
 
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {}
+    VariantProps<typeof buttonVariants> {
+  loading?: boolean;
+  loadingLabel?: string;
+}
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, ...props }, ref) => {
+  ({ className, variant, size, shape, loading = false, loadingLabel, disabled, children, ...props }, ref) => {
     return (
       <button
-        className={cn(buttonVariants({ variant, size, className }))}
-        ref={ref}
         {...props}
-      />
+        aria-busy={loading || undefined}
+        aria-label={loading ? loadingLabel : props["aria-label"]}
+        className={cn(buttonVariants({ variant, size, shape, className }))}
+        disabled={loading || disabled}
+        ref={ref}
+      >
+        {loading && <Loader2 aria-hidden="true" className="size-3 animate-spin" />}
+        {children}
+      </button>
     );
   }
 );
