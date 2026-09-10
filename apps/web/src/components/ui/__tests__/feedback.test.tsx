@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Badge } from "../badge";
 import { Button } from "../button";
 import { CopyButton } from "../copy-button";
@@ -8,6 +8,12 @@ import { EmptyState } from "../feedback";
 import { Toast } from "../toast";
 
 describe("feedback primitives", () => {
+  let clipboardDescriptor: PropertyDescriptor | undefined;
+  beforeEach(() => { clipboardDescriptor = Object.getOwnPropertyDescriptor(navigator, "clipboard"); });
+  afterEach(() => {
+    if (clipboardDescriptor) Object.defineProperty(navigator, "clipboard", clipboardDescriptor);
+    else Reflect.deleteProperty(navigator, "clipboard");
+  });
   it("announces request errors and provides a labeled dismiss action", () => {
     render(<Toast message="Connection failed" onDismiss={vi.fn()} />);
 

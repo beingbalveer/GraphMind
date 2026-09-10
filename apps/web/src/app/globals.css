@@ -37,12 +37,21 @@
   --color-warning: var(--warning);
   --color-warning-bg: var(--warning-bg);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
   --color-destructive-bg: var(--destructive-bg);
   --color-info: var(--info);
   --color-info-bg: var(--info-bg);
   --shadow-modal: var(--shadow-modal);
   --shadow-2xs: var(--shadow-2xs);
   --text-2xs: 0.625rem;
+}
+
+@utility z-dropdown {
+  z-index: var(--z-dropdown);
+}
+
+@utility z-toast {
+  z-index: var(--z-toast);
 }
 
 @layer base {
@@ -86,13 +95,14 @@
     --code-foreground: #abb2bf;
 
     /* Status & Feedback */
-    --success: #10b981;
+    --success: #047857;
     --success-bg: #ecfdf5;
-    --warning: #f59e0b;
+    --warning: #92400e;
     --warning-bg: #fffbeb;
-    --destructive: #e11d48;
+    --destructive: #be123c;
+    --destructive-foreground: #ffffff;
     --destructive-bg: #fff1f2;
-    --info: #0284c7;
+    --info: #0369a1;
     --info-bg: #f0f9ff;
 
     /* Elevation & Shadows */
@@ -173,7 +183,8 @@
     --success-bg: rgba(16, 185, 129, 0.15);
     --warning: #fbbf24;
     --warning-bg: rgba(245, 158, 11, 0.15);
-    --destructive: #f43f5e;
+    --destructive: #fb7185;
+    --destructive-foreground: #0b0b0f;
     --destructive-bg: rgba(225, 29, 72, 0.15);
     --info: #38bdf8;
     --info-bg: rgba(2, 132, 199, 0.15);

@@ -1,6 +1,7 @@
 "use client";
 
 import { AlertTriangle } from "lucide-react";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Button } from "./button";
 import { Modal, ModalBody, ModalFooter, ModalHeader } from "./modal";
 
@@ -37,12 +38,13 @@ export function ConfirmDialog({
       size="sm"
     >
       <ModalHeader
-        description={description}
         icon={<AlertTriangle className="size-4" />}
         title={title}
       />
       <ModalBody className="py-3">
-        <p className="text-xs text-foreground-muted">Please confirm this action.</p>
+        <DialogPrimitive.Description className="whitespace-normal break-words text-xs text-foreground-muted">
+          {description}
+        </DialogPrimitive.Description>
       </ModalBody>
       <ModalFooter>
         <Button disabled={isLoading} onClick={onClose} type="button" variant="outline">

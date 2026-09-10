@@ -58,7 +58,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     ref
   ) => {
     const generatedErrorId = React.useId();
-    const errorId = errorMessage ? ariaDescribedBy ?? generatedErrorId : ariaDescribedBy;
+    const errorId = errorMessage ? generatedErrorId : undefined;
+    const descriptionIds = [ariaDescribedBy, errorId].filter(Boolean).join(" ") || undefined;
 
     return (
       <>
@@ -73,7 +74,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             type={type}
             disabled={disabled}
             aria-invalid={invalid ? true : ariaInvalid}
-            aria-describedby={errorId}
+            aria-describedby={descriptionIds}
             className={cn(
               inputVariants({ variant, inputSize, invalid }),
               startIcon && "pl-9",

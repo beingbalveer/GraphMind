@@ -4,6 +4,7 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
+  variant?: "default" | "ghost";
   invalid?: boolean;
   errorMessage?: string;
   maxRowsClassName?: string;
@@ -16,6 +17,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
   (
     {
       className,
+      variant = "default",
       disabled,
       invalid,
       errorMessage,
@@ -27,7 +29,8 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
     ref
   ) => {
     const generatedErrorId = React.useId();
-    const errorId = errorMessage ? ariaDescribedBy ?? generatedErrorId : ariaDescribedBy;
+    const errorId = errorMessage ? generatedErrorId : undefined;
+    const descriptionIds = [ariaDescribedBy, errorId].filter(Boolean).join(" ") || undefined;
 
     return (
       <>
@@ -35,9 +38,10 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           ref={ref}
           disabled={disabled}
           aria-invalid={invalid ? true : ariaInvalid}
-          aria-describedby={errorId}
+          aria-describedby={descriptionIds}
           className={cn(
             textareaClasses,
+            variant === "ghost" && "border-transparent bg-transparent shadow-none focus-visible:bg-surface-hover focus-visible:border-border",
             invalid && "border-destructive focus-visible:border-destructive",
             maxRowsClassName,
             className

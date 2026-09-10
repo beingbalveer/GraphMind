@@ -31,6 +31,7 @@ export function Drawer({
   widthClassName = "w-full sm:w-[480px] md:w-[540px] lg:w-[580px]",
   className,
 }: DrawerProps) {
+  const openerRef = React.useRef<HTMLElement | null>(null);
   const hasTitle = Boolean(title);
   const ariaLabel = typeof title === "string" ? title : "Panel";
 
@@ -53,6 +54,21 @@ export function Drawer({
           )}
           onPointerDownOutside={(event) => {
             if (!hasBackdrop) event.preventDefault();
+          }}
+          onFocusOutside={(event) => {
+            if (!hasBackdrop) event.preventDefault();
+          }}
+          onOpenAutoFocus={() => {
+            // Capture before Radix moves focus; this API has no Dialog.Trigger.
+            openerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+          }}
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            const activeElement = document.activeElement;
+            const content = event.target as HTMLElement;
+            const shouldRestore = hasBackdrop || activeElement === document.body || content.contains(activeElement);
+            if (shouldRestore && openerRef.current?.isConnected) openerRef.current.focus();
+            openerRef.current = null;
           }}
         >
           {(hasTitle || Boolean(headerActions) || Boolean(onClose)) && (

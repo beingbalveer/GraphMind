@@ -20,6 +20,7 @@ const feedbackToneClasses = {
 export function InlineFeedback({ tone, title, children, action, className }: InlineFeedbackProps) {
   return (
     <Surface
+      role={tone === "warning" || tone === "destructive" ? "alert" : "status"}
       variant="base"
       radius="widget"
       className={cn("flex items-start gap-3 p-3 text-sm", feedbackToneClasses[tone], className)}

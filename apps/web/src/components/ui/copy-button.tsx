@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import { Copy, Check } from "lucide-react";
 import { IconButton } from "./icon-button";
 
@@ -18,6 +18,10 @@ export function CopyButton({
   copiedTitle = "Copied!",
 }: CopyButtonProps) {
   const [copied, setCopied] = useState(false);
+  const resetTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (resetTimeout.current !== null) clearTimeout(resetTimeout.current);
+  }, []);
 
   const handleCopy = useCallback(
     async (e: React.MouseEvent) => {
@@ -27,7 +31,11 @@ export function CopyButton({
       try {
         await navigator.clipboard.writeText(text);
         setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
+        if (resetTimeout.current !== null) clearTimeout(resetTimeout.current);
+        resetTimeout.current = setTimeout(() => {
+          setCopied(false);
+          resetTimeout.current = null;
+        }, 2000);
       } catch (err) {
         console.error("Failed to copy text: ", err);
       }

@@ -66,6 +66,7 @@ describe("DropdownMenu", () => {
     await user.keyboard("{Escape}");
 
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
     expect(onDelete).not.toHaveBeenCalled();
   }, 15000);
 });

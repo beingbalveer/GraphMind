@@ -407,7 +407,7 @@ export function BranchChatPane({
                     className={`flex items-center justify-center transition-opacity shrink-0 ${
                       openMenuTabId === tab.id
                         ? "opacity-100"
-                        : "opacity-0 group-hover:opacity-100"
+                        : "opacity-0 group-hover:opacity-100 focus-within:opacity-100"
                     }`}
                     onClick={(e) => e.stopPropagation()}
                   >
