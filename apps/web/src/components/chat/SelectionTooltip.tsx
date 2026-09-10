@@ -57,7 +57,7 @@ export function SelectionTooltip({
         // Prevent clearing browser selection on container click/drag
         e.preventDefault();
       }}
-      className="z-50 select-none animate-in fade-in-50 zoom-in-95 duration-150"
+      className="z-50 select-none animate-in fade-in-50 zoom-in-95 duration-150 motion-reduce:animate-none"
     >
       <Surface variant="base" radius="card" className="flex min-w-[190px] flex-col gap-0.5 p-1.5 shadow-lg">
         <Button

@@ -49,6 +49,13 @@ const assistantNode = {
   },
 };
 
+const failedToolCall = {
+  ...toolCall,
+  id: "tool-failed",
+  status: "error" as const,
+  isError: true,
+};
+
 describe("chat learning signals", () => {
   it("starts activity collapsed", () => {
     render(<AgentToolCallsBanner toolCalls={[toolCall]} />);
@@ -66,6 +73,48 @@ describe("chat learning signals", () => {
       "aria-expanded",
       "false"
     );
+  });
+
+  it("visibly announces a failed tool and offers recovery without expanding activity", async () => {
+    const user = userEvent.setup();
+    const onRetry = vi.fn();
+    render(
+      <ChatMessage
+        message={{ ...assistantNode, metadata: { toolCalls: [failedToolCall] } }}
+        onRetry={onRetry}
+      />
+    );
+
+    expect(screen.getByRole("alert")).toHaveTextContent("Action failed");
+    expect(screen.getByRole("button", { name: /activity.*action failed/i })).toHaveAttribute("aria-expanded", "false");
+    await user.click(screen.getByRole("button", { name: "Retry response" }));
+    expect(onRetry).toHaveBeenCalledOnce();
+  });
+
+  it("uses a status badge for source page indicators", async () => {
+    const user = userEvent.setup();
+    render(
+      <ChatMessage
+        message={{
+          ...assistantNode,
+          metadata: {
+            ragSources: [{ ...assistantNode.metadata.ragSources[0], page_number: 4 }],
+          },
+        }}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: /sources/i }));
+    expect(screen.getByText("p. 4")).toHaveClass("border-info", "rounded-full");
+  });
+
+  it("respects reduced motion for migrated signal animations", () => {
+    const { container } = render(<SelectionTooltip {...selectionProps} />);
+    expect(container.ownerDocument.body.lastElementChild).toHaveClass("motion-reduce:animate-none");
+
+    const { unmount } = render(<AgentToolCallsBanner toolCalls={[{ ...toolCall, status: "running" }]} />);
+    expect(screen.getByRole("button", { name: /activity/i }).querySelector("svg")).toHaveClass("motion-reduce:animate-none");
+    unmount();
   });
 
   it("exposes branch lineage without making it a permanent message badge", () => {

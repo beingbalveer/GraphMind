@@ -1,14 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { Calculator, CheckCircle2, ChevronDown, ChevronUp, GitBranch, Globe, Loader2, PlusCircle, Search, Terminal } from "lucide-react";
+import { AlertCircle, Calculator, CheckCircle2, ChevronDown, ChevronUp, GitBranch, Globe, Loader2, PlusCircle, Search, Terminal } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { InlineFeedback } from "@/components/ui/feedback";
 import { ToolCallItem } from "@/hooks/useChatStream";
 
-interface AgentToolCallsBannerProps { toolCalls?: ToolCallItem[]; onRetry?: () => void; }
+interface AgentToolCallsBannerProps { toolCalls?: ToolCallItem[]; }
 
 function getToolIcon(name: string) {
   switch (name) {
@@ -32,7 +31,7 @@ function formatToolTitle(name: string): string {
   }
 }
 
-export function AgentToolCallsBanner({ toolCalls, onRetry }: AgentToolCallsBannerProps) {
+export function AgentToolCallsBanner({ toolCalls }: AgentToolCallsBannerProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   if (!toolCalls?.length) return null;
 
@@ -45,15 +44,14 @@ export function AgentToolCallsBanner({ toolCalls, onRetry }: AgentToolCallsBanne
         <CollapsibleTrigger asChild>
           <Button variant="ghost" size="sm" className="h-auto w-full justify-between rounded-none px-3 py-2 text-left">
             <span className="flex min-w-0 items-center gap-2">
-              {runningTool ? <Loader2 className="size-3.5 shrink-0 animate-spin text-info" /> : <CheckCircle2 className="size-3.5 shrink-0 text-success" />}
-              <span className="truncate font-medium text-foreground">{runningTool ? `Activity: ${formatToolTitle(runningTool.name)}` : `Activity: ${toolCalls.length} agent action${toolCalls.length === 1 ? "" : "s"}`}</span>
+              {runningTool ? <Loader2 className="size-3.5 shrink-0 animate-spin text-info motion-reduce:animate-none" /> : hasError ? <AlertCircle className="size-3.5 shrink-0 text-destructive" /> : <CheckCircle2 className="size-3.5 shrink-0 text-success" />}
+              <span className="truncate font-medium text-foreground">{runningTool ? `Activity: ${formatToolTitle(runningTool.name)}` : hasError ? "Activity: action failed" : `Activity: ${toolCalls.length} agent action${toolCalls.length === 1 ? "" : "s"}`}</span>
             </span>
-            <span className="flex items-center gap-1 text-foreground-muted"><span>{isExpanded ? "Hide" : "Details"}</span>{isExpanded ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}</span>
+            <span className="flex items-center gap-1 text-foreground-muted">{hasError && <Badge variant="destructive">Action failed</Badge>}<span>{isExpanded ? "Hide" : "Details"}</span>{isExpanded ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}</span>
           </Button>
         </CollapsibleTrigger>
         <CollapsibleContent className="border-t border-border-subtle p-3">
           <div className="space-y-2">
-            {hasError && <InlineFeedback tone="destructive" title="An agent action failed" action={onRetry ? <Button variant="outline" size="sm" onClick={onRetry}>Retry response</Button> : undefined}>Review the failed action below{onRetry ? " or retry the response." : "."}</InlineFeedback>}
             {toolCalls.map((toolCall, index) => {
               const isError = toolCall.status === "error" || toolCall.isError;
               const status = toolCall.status === "running" ? "running" : isError ? "failed" : "completed";

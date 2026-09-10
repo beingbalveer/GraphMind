@@ -347,6 +347,9 @@ export function ChatMessage({
   } | null>(null);
   const [viewingRagSnippet, setViewingRagSnippet] = useState<RagSourceItem | null>(null);
   const [areSourcesOpen, setAreSourcesOpen] = useState(false);
+  const hasFailedToolCall = (message.metadata?.toolCalls as ToolCallItem[] | undefined)?.some(
+    (toolCall) => toolCall.status === "error" || toolCall.isError
+  );
   const editTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Auto-focus and auto-resize textarea when entering edit mode
@@ -810,10 +813,18 @@ export function ChatMessage({
         <div className="flex-1 min-w-0 space-y-2">
           {/* Real-time Agent Tool Execution Actions */}
           {Boolean(message.metadata?.toolCalls) && (
-            <AgentToolCallsBanner
-              toolCalls={message.metadata?.toolCalls as ToolCallItem[]}
-              onRetry={message.isError ? onRetry : undefined}
-            />
+            <>
+              {hasFailedToolCall && onRetry && (
+                <InlineFeedback
+                  tone="destructive"
+                  title="Action failed"
+                  action={<Button variant="outline" size="sm" onClick={onRetry}>Retry response</Button>}
+                >
+                  Retry the response to run the failed action again.
+                </InlineFeedback>
+              )}
+              <AgentToolCallsBanner toolCalls={message.metadata?.toolCalls as ToolCallItem[]} />
+            </>
           )}
 
           {/* Grounded RAG Knowledge Base Sources Strip */}
@@ -822,7 +833,7 @@ export function ChatMessage({
               (message.metadata.ragSources as RagSourceItem[]).length > 0
           ) && (
             <Collapsible open={areSourcesOpen} onOpenChange={setAreSourcesOpen}>
-              <Surface variant="muted" radius="widget" className="mb-2 border-0 bg-info-bg p-1.5 select-none animate-in fade-in-50 duration-150">
+              <Surface variant="muted" radius="widget" className="mb-2 border-0 bg-info-bg p-1.5 select-none animate-in fade-in-50 duration-150 motion-reduce:animate-none">
                 <CollapsibleTrigger asChild>
                   <Button variant="ghost" size="sm" className="h-auto w-full justify-between px-1 py-1.5 text-left">
                     <span className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
@@ -865,9 +876,7 @@ export function ChatMessage({
                         {src.filename}
                       </span>
                       {src.page_number && (
-                        <span className="rounded bg-info-bg px-1 py-0.5 font-mono text-2xs font-semibold text-info">
-                          p. {src.page_number}
-                        </span>
+                        <Badge variant="info" className="font-mono">p. {src.page_number}</Badge>
                       )}
                     </Button>
                   );
