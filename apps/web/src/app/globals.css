@@ -71,10 +71,10 @@
     --foreground-muted: #3f3f46;
     --foreground-subtle: #71717a;
 
-    /* Brand / Primary */
-    --primary: #4f46e5;
+    /* Brand / Primary (Monochrome) */
+    --primary: #18181b;
     --primary-foreground: #ffffff;
-    --focus-ring: #6366f1;
+    --focus-ring: #18181b;
     --overlay: rgba(9, 9, 11, 0.44);
     --chat-content-max: 44rem;
 
@@ -156,10 +156,10 @@
     --foreground-muted: #a1a1aa;
     --foreground-subtle: #71717a;
 
-    /* Brand / Primary */
-    --primary: #818cf8;
-    --primary-foreground: #0b0b0f;
-    --focus-ring: #818cf8;
+    /* Brand / Primary (Monochrome) */
+    --primary: #f4f4f5;
+    --primary-foreground: #09090b;
+    --focus-ring: #f4f4f5;
     --overlay: rgba(0, 0, 0, 0.64);
 
     /* Muted & Borders */
