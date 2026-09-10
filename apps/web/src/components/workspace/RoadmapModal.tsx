@@ -173,18 +173,19 @@ export function RoadmapModal({ isOpen, onClose, onSuccess }: RoadmapModalProps) 
                 Try:
               </span>
               {SUGGESTED_GOALS.map((suggested) => (
-                <button
+                <Button
                   key={suggested.label}
-                  type="button"
+                  variant="outline"
+                  size="sm"
                   onClick={() => setGoal(suggested.label)}
                   disabled={isGenerating}
-                  className="text-2xs px-2.5 py-1 rounded-lg bg-surface border border-border-subtle hover:border-foreground/30 hover:bg-surface-hover text-foreground-muted hover:text-foreground transition-all cursor-pointer inline-flex items-center gap-1.5 select-none"
+                  className="h-6 px-2 text-2xs rounded-lg border-border-subtle hover:bg-surface-hover text-foreground-muted hover:text-foreground inline-flex items-center gap-1.5 shadow-none font-normal"
                 >
                   <span>{suggested.label}</span>
                   <span className="text-2xs opacity-60 font-mono">
                     {suggested.tag}
                   </span>
-                </button>
+                </Button>
               ))}
             </div>
           </div>

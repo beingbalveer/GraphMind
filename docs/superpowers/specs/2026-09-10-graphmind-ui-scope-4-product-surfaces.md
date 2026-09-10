@@ -1,6 +1,6 @@
 # Scope 4 — Remaining Product Surfaces
 
-Status: not started. This scope is an audit and targeted redesign, not a mandate to rebuild every screen.
+Status: Task 1 implemented; Tasks 2–7 remain.
 
 ## Objective
 
