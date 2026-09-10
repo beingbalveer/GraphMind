@@ -50,7 +50,7 @@ export function PdfViewerModal({
       {/* Header */}
       <div className="h-13 px-5 border-b border-border flex items-center justify-between shrink-0 select-none bg-surface">
         <div className="flex items-center gap-2.5 min-w-0 pr-4">
-          <div className="p-1.5 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200/80 dark:border-red-900 text-red-600">
+          <div className="p-1.5 rounded-lg bg-muted border border-border text-foreground">
             <FileText className="w-4 h-4" />
           </div>
           <div className="flex items-center gap-2 min-w-0">
@@ -62,7 +62,7 @@ export function PdfViewerModal({
               <Badge variant="secondary">Page {initialPage}</Badge>
             )}
             {sizeBytes && (
-              <span className="text-xs text-muted-foreground font-mono hidden sm:inline">
+              <span className="text-xs text-foreground-muted font-mono hidden sm:inline">
                 ({formatBytes(sizeBytes)})
               </span>
             )}
@@ -81,20 +81,21 @@ export function PdfViewerModal({
             <span>Download</span>
           </Button>
 
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="iconSm"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer ml-1"
             title="Close (Esc)"
             aria-label="Close dialog"
           >
             <X className="w-4 h-4" />
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* PDF Viewer Body */}
-      <div className="flex-1 bg-zinc-100 relative overflow-hidden flex items-center justify-center">
+      <div className="flex-1 bg-background-secondary relative overflow-hidden flex items-center justify-center">
         {pdfSource ? (
           <iframe
             src={pdfSource}
@@ -102,10 +103,10 @@ export function PdfViewerModal({
             title={filename}
           />
         ) : (
-          <div className="p-8 text-center text-zinc-500 space-y-2">
-            <FileText className="w-12 h-12 mx-auto text-zinc-400" />
+          <div className="p-8 text-center text-foreground-muted space-y-2">
+            <FileText className="w-12 h-12 mx-auto text-foreground-subtle" />
             <p className="text-sm font-medium">Unable to load PDF preview.</p>
-            <p className="text-xs text-zinc-400">
+            <p className="text-xs text-foreground-subtle">
               The file content is not available for inline viewing.
             </p>
           </div>

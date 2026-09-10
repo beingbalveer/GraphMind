@@ -92,13 +92,7 @@ export function CodeViewerModal({
       {/* Header */}
       <div className="h-13 px-5 border-b border-border flex items-center justify-between shrink-0 select-none bg-surface">
         <div className="flex items-center gap-2.5 min-w-0 pr-4">
-          <div
-            className={`p-1.5 rounded-lg border ${
-              isMarkdown
-                ? "bg-blue-50 border-blue-200/80 text-blue-600 dark:bg-blue-950/40 dark:border-blue-900"
-                : "bg-emerald-50 border-emerald-200/80 text-emerald-600 dark:bg-emerald-950/40 dark:border-emerald-900"
-            }`}
-          >
+          <div className="p-1.5 rounded-lg border border-border bg-muted text-foreground">
             {isMarkdown ? (
               <FileText className="w-4 h-4" />
             ) : (
@@ -109,11 +103,11 @@ export function CodeViewerModal({
             <span className="text-sm font-semibold text-foreground truncate">
               {filename}
             </span>
-            <Badge variant={isMarkdown ? "info" : "success"}>
+            <Badge variant="secondary">
               {isMarkdown ? "MARKDOWN" : inferredLang.toUpperCase()}
             </Badge>
             {sizeBytes && (
-              <span className="text-xs text-muted-foreground font-mono hidden sm:inline">
+              <span className="text-xs text-foreground-muted font-mono hidden sm:inline">
                 ({formatBytes(sizeBytes)})
               </span>
             )}
@@ -143,12 +137,12 @@ export function CodeViewerModal({
           >
             {copied ? (
               <>
-                <Check className="w-3.5 h-3.5 text-emerald-600 mr-1" />
-                <span className="text-emerald-700 font-semibold">Copied</span>
+                <Check className="w-3.5 h-3.5 text-success mr-1" />
+                <span className="text-success font-semibold">Copied</span>
               </>
             ) : (
               <>
-                <Copy className="w-3.5 h-3.5 text-zinc-500 mr-1" />
+                <Copy className="w-3.5 h-3.5 text-foreground-muted mr-1" />
                 <span>Copy</span>
               </>
             )}
@@ -165,15 +159,16 @@ export function CodeViewerModal({
             <span>Download</span>
           </Button>
 
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="iconSm"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer ml-1"
             title="Close (Esc)"
             aria-label="Close dialog"
           >
             <X className="w-4 h-4" />
-          </button>
+          </Button>
         </div>
       </div>
 
