@@ -1,6 +1,6 @@
 # Scope 2 — Canonical Chat Experience
 
-Status: Tasks 1–4 implemented; Task 5 remains. This document is the complete target contract for the reference chat surface.
+Status: complete across all 5 tasks and verified through full contract tests, typecheck, lint, and production build.
 
 ## Objective
 

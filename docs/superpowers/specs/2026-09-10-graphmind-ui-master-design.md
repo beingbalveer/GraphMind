@@ -85,11 +85,11 @@ Visual redesign must not silently change routing, API contracts, callback signat
 ### High-level status
 
 - Scope 1: complete and merged into local `main`.
-- Scope 2: Tasks 1–4 complete; Task 5 remains.
+- Scope 2: complete (all 5 tasks implemented and verified).
 - Scope 3: not started.
 - Scope 4: not started.
 
-The currently detailed implementation plans contain 12 tasks: 7 foundation tasks and 5 canonical-chat tasks. Ten are complete and two are outstanding. Scopes 3 and 4 are intentionally represented here as architectural stages; their detailed task documents are now being created by this documentation task.
+The foundational and canonical-chat implementation plans contain 12 tasks: 7 foundation tasks and 5 canonical-chat tasks. All 12 are complete. Scope 3 (Adaptive workspace shell) is the next phase.
 
 ### Git status at design time
 
