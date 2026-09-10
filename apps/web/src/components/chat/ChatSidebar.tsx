@@ -15,6 +15,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { ChatItem } from "@/lib/workspaceApi";
+import { Button } from "@/components/ui/button";
 import { LogoBadge } from "@/components/ui/Logo";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
@@ -155,11 +156,20 @@ export function ChatSidebar({
     return (
       <div
         key={chat.id}
+        role="button"
+        tabIndex={0}
+        aria-current={isActive ? "page" : undefined}
         onClick={() => !isRenaming && onSelectChat(chat)}
+        onKeyDown={(e) => {
+          if ((e.key === "Enter" || e.key === " ") && !isRenaming) {
+            e.preventDefault();
+            onSelectChat(chat);
+          }
+        }}
         className={`group relative flex h-8 items-center px-2.5 rounded-lg transition-colors cursor-pointer select-none text-sm font-normal ${
           isActive
-            ? "bg-black/[0.035] dark:bg-white/[0.08] text-foreground font-normal"
-            : "text-foreground/85 hover:bg-black/[0.025] dark:hover:bg-white/[0.04] hover:text-foreground"
+            ? "bg-surface-hover text-foreground font-medium"
+            : "text-foreground-muted hover:bg-surface-hover hover:text-foreground"
         }`}
       >
         {isRenaming ? (
@@ -196,13 +206,15 @@ export function ChatSidebar({
             >
               <DropdownMenu
                 trigger={
-                  <button
-                    type="button"
-                    className="size-6 rounded-md flex items-center justify-center text-foreground-muted hover:text-foreground hover:bg-surface-hover transition-colors"
+                  <Button
+                    variant="ghost"
+                    size="iconSm"
+                    className="size-6 p-0 text-foreground-muted hover:text-foreground hover:bg-surface-hover"
                     title="More options"
+                    aria-label="More options"
                   >
                     <MoreHorizontal className="size-3.5" />
-                  </button>
+                  </Button>
                 }
                 onOpenChange={(isOpenState) =>
                   setOpenMenuChatId(isOpenState ? chat.id : null)
@@ -258,15 +270,16 @@ export function ChatSidebar({
       >
         {/* Sidebar Header: Toggle button + GraphMind Icon & Workspace Name */}
         <div className="h-13 px-3 flex items-center shrink-0 w-full">
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="iconSm"
             onClick={onToggle}
-            className="size-8 rounded-lg flex items-center justify-center text-foreground-muted hover:text-foreground hover:bg-surface-hover transition-colors cursor-pointer shrink-0"
+            className="text-foreground-muted hover:text-foreground hover:bg-surface-hover transition-colors cursor-pointer shrink-0"
             title={isOpen ? "Collapse sidebar (⌘B)" : "Expand sidebar (⌘B)"}
             aria-label={isOpen ? "Collapse sidebar" : "Expand sidebar"}
           >
             <PanelLeft className="w-4 h-4" />
-          </button>
+          </Button>
 
           <div className={`flex items-center gap-1.5 min-w-0 pl-2 transition-opacity duration-150 ${isOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
             <Link
@@ -279,10 +292,10 @@ export function ChatSidebar({
             </Link>
 
             {onOpenWorkspaceModal ? (
-              <button
-                type="button"
+              <Button
+                variant="ghost"
                 onClick={onOpenWorkspaceModal}
-                className="flex items-center gap-1 px-1.5 py-1 rounded-lg hover:bg-surface-hover text-foreground transition-colors cursor-pointer group min-w-0"
+                className="h-auto flex items-center gap-1 px-1.5 py-1 rounded-lg hover:bg-surface-hover text-foreground transition-colors cursor-pointer group min-w-0 font-normal shadow-none"
                 title="Switch or manage workspaces"
                 aria-label="Switch or manage workspaces"
               >
@@ -290,7 +303,7 @@ export function ChatSidebar({
                   {workspaceName}
                 </span>
                 <ChevronDown className="w-3.5 h-3.5 text-foreground-muted group-hover:text-foreground transition-colors shrink-0" />
-              </button>
+              </Button>
             ) : (
               <span className="text-sm font-semibold text-foreground tracking-tight truncate max-w-[145px] px-1.5 py-1">
                 {workspaceName}
@@ -302,11 +315,12 @@ export function ChatSidebar({
         {/* Actions: New chat & Library */}
         <div className="px-3 pt-1 pb-1 shrink-0 space-y-1 w-full">
           {onNewChat && (
-            <button
-              type="button"
+            <Button
+              variant="ghost"
               onClick={onNewChat}
-              className="h-9 w-full flex items-center gap-2 rounded-lg text-sm font-normal text-foreground hover:bg-surface-hover transition-colors cursor-pointer group"
+              className="h-9 w-full justify-start items-center gap-2 rounded-lg text-sm font-normal text-foreground hover:bg-surface-hover transition-colors cursor-pointer group shadow-none px-0"
               title="New chat (⌘N)"
+              aria-label="New chat"
             >
               <div className="size-8 rounded-lg flex items-center justify-center shrink-0">
                 <Plus className="w-4 h-4 text-foreground-muted group-hover:text-foreground transition-colors" />
@@ -317,15 +331,16 @@ export function ChatSidebar({
                   ⌘N
                 </span>
               </div>
-            </button>
+            </Button>
           )}
 
           {onOpenFileLibrary && (
-            <button
-              type="button"
+            <Button
+              variant="ghost"
               onClick={onOpenFileLibrary}
-              className="h-9 w-full flex items-center gap-2 rounded-lg text-sm font-normal text-foreground-muted hover:text-foreground hover:bg-surface-hover transition-colors cursor-pointer group"
+              className="h-9 w-full justify-start items-center gap-2 rounded-lg text-sm font-normal text-foreground-muted hover:text-foreground hover:bg-surface-hover transition-colors cursor-pointer group shadow-none px-0"
               title="Workspace File Library"
+              aria-label="Workspace File Library"
             >
               <div className="size-8 rounded-lg flex items-center justify-center shrink-0">
                 <FolderOpen className="w-4 h-4 text-foreground-muted group-hover:text-foreground transition-colors" />
@@ -333,7 +348,7 @@ export function ChatSidebar({
               <div className={`flex-1 min-w-0 text-left pr-2 transition-opacity duration-150 ${isOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
                 <span className="truncate">File Library</span>
               </div>
-            </button>
+            </Button>
           )}
         </div>
 
@@ -358,17 +373,19 @@ export function ChatSidebar({
 
           {!isOpen && (
             <div className="flex flex-col items-center pt-1 animate-in fade-in duration-150">
-              <button
-                type="button"
+              <Button
+                variant="ghost"
+                size="iconSm"
                 onClick={onToggle}
-                className="size-8 rounded-lg flex items-center justify-center text-foreground-muted hover:text-foreground hover:bg-surface-hover transition-colors cursor-pointer relative"
+                className="text-foreground-muted hover:text-foreground hover:bg-surface-hover transition-colors cursor-pointer relative"
                 title={`Threads (${chats.length})`}
+                aria-label={`Threads (${chats.length})`}
               >
                 <MessageSquare className="w-4 h-4" />
                 {chats.length > 0 && (
                   <span className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-primary" />
                 )}
-              </button>
+              </Button>
             </div>
           )}
         </div>
@@ -378,11 +395,12 @@ export function ChatSidebar({
           <UserMenu collapsed={!isOpen} placement="top" />
 
           {onOpenSettings && (
-            <button
-              type="button"
+            <Button
+              variant="ghost"
               onClick={onOpenSettings}
-              className="h-9 w-full flex items-center gap-2 rounded-lg text-sm font-normal text-foreground-muted hover:text-foreground hover:bg-surface-hover transition-colors cursor-pointer group"
+              className="h-9 w-full justify-start items-center gap-2 rounded-lg text-sm font-normal text-foreground-muted hover:text-foreground hover:bg-surface-hover transition-colors cursor-pointer group shadow-none px-0"
               title="Settings (⌘,)"
+              aria-label="Settings"
             >
               <div className="size-8 rounded-lg flex items-center justify-center shrink-0">
                 <Settings className="w-4 h-4 text-foreground-muted group-hover:text-foreground transition-colors" />
@@ -390,7 +408,7 @@ export function ChatSidebar({
               <div className={`flex-1 min-w-0 text-left pr-2 transition-opacity duration-150 ${isOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
                 <span className="truncate">Settings</span>
               </div>
-            </button>
+            </Button>
           )}
         </div>
 

@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { LogOut, User as UserIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 
 interface UserMenuProps {
@@ -97,10 +98,10 @@ export function UserMenu({ collapsed = false, placement = "bottom" }: UserMenuPr
 
   return (
     <div className="relative shrink-0 w-full" ref={triggerRef}>
-      <button
-        type="button"
+      <Button
+        variant="ghost"
         onClick={() => setIsOpen(!isOpen)}
-        className="h-9 w-full flex items-center gap-2 rounded-lg text-sm font-normal text-foreground hover:bg-surface-hover transition-colors cursor-pointer group"
+        className="h-9 w-full justify-start items-center gap-2 rounded-lg text-sm font-normal text-foreground hover:bg-surface-hover transition-colors cursor-pointer group shadow-none px-0"
         title={user.fullName || user.email}
         aria-label="User profile menu"
       >
@@ -123,7 +124,7 @@ export function UserMenu({ collapsed = false, placement = "bottom" }: UserMenuPr
             {user.fullName || user.email}
           </span>
         </div>
-      </button>
+      </Button>
 
       {isOpen && mounted && createPortal(
         <div
@@ -140,17 +141,17 @@ export function UserMenu({ collapsed = false, placement = "bottom" }: UserMenuPr
               {user.provider} account
             </span>
           </div>
-          <button
-            type="button"
+          <Button
+            variant="ghost"
             onClick={async () => {
               setIsOpen(false);
               await logout();
             }}
-            className="w-full flex items-center gap-2 px-3.5 py-2 text-xs text-destructive hover:bg-destructive-bg transition cursor-pointer font-medium"
+            className="w-full justify-start items-center gap-2 px-3.5 py-2 text-xs text-destructive hover:bg-destructive-bg hover:text-destructive transition cursor-pointer font-medium shadow-none h-auto"
           >
             <LogOut className="w-3.5 h-3.5" />
             <span>Sign Out</span>
-          </button>
+          </Button>
         </div>,
         document.body
       )}
