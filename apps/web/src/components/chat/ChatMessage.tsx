@@ -30,7 +30,9 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { CopyButton } from "@/components/ui/copy-button";
+import { IconButton } from "@/components/ui/icon-button";
 import { Modal, ModalHeader, ModalBody } from "@/components/ui/modal";
+import { Surface } from "@/components/ui/surface";
 import { useTextSelection } from "@/hooks/useTextSelection";
 import { SelectionTooltip } from "./SelectionTooltip";
 import { CodeViewerModal } from "./CodeViewerModal";
@@ -133,7 +135,7 @@ function CodeBlock({ children, className, workspaceId, ...props }: any) {
   if (!language && !className?.includes("hljs")) {
     return (
       <code
-        className="px-1.5 py-0.5 rounded-md bg-zinc-100 border border-zinc-200/80 text-zinc-900 font-mono text-xs font-medium"
+        className="rounded-md border border-border bg-muted px-1.5 py-0.5 font-mono text-xs font-medium text-foreground"
         {...props}
       >
         {children}
@@ -142,12 +144,12 @@ function CodeBlock({ children, className, workspaceId, ...props }: any) {
   }
 
   return (
-    <div className="my-5 rounded-xl overflow-hidden border border-zinc-800 bg-code-bg text-zinc-100 font-mono text-xs leading-relaxed shadow-xs group/code">
-      <div className="px-4 py-2 bg-code-header-bg border-b border-zinc-800/80 text-xs text-zinc-400 font-medium flex items-center justify-between select-none">
-        <span className="lowercase font-mono text-zinc-400">{language || "code"}</span>
+    <div className="group/code my-5 overflow-hidden rounded-xl border border-border bg-code-bg font-mono text-xs leading-relaxed text-code-foreground shadow-xs">
+      <div className="flex items-center justify-between border-b border-border px-4 py-2 text-xs font-medium select-none bg-code-header-bg">
+        <span className="font-mono lowercase text-foreground-muted">{language || "code"}</span>
         <CopyButton
           text={rawCode}
-          className="text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 p-1"
+          className="p-1 text-foreground-muted hover:bg-surface-hover hover:text-foreground"
           title="Copy code"
         />
       </div>
@@ -231,7 +233,7 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
         },
         blockquote({ children }) {
           return (
-            <blockquote className="border-l-2 border-zinc-900 pl-4 italic text-zinc-700 my-4 bg-zinc-50/50 py-1.5 rounded-r-lg">
+            <blockquote className="my-4 rounded-r-lg border-l-2 border-border-strong bg-background-secondary py-1.5 pl-4 italic text-foreground-muted">
               {children}
             </blockquote>
           );
@@ -248,18 +250,19 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
                 : "";
 
             return (
-              <button
-                type="button"
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
                   onOpenSideBranch?.(leafId, excerptText);
                 }}
-                className="inline text-blue-600 hover:text-blue-800 underline underline-offset-2 decoration-blue-400/80 hover:decoration-blue-600 font-medium cursor-pointer transition-colors bg-transparent border-0 p-0 align-baseline"
+                className="inline h-auto rounded-none p-0 align-baseline font-medium text-primary underline decoration-primary/50 underline-offset-2 hover:bg-transparent hover:text-primary"
                 title={`Open branch for "${excerptText}" in parallel split pane`}
               >
                 {children}
-              </button>
+              </Button>
             );
           }
 
@@ -268,39 +271,39 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
               href={href}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-zinc-900 underline underline-offset-4 font-medium hover:text-black transition-colors"
+              className="font-medium text-primary underline underline-offset-4 transition-colors hover:text-primary/80"
             >
               {children}
             </a>
           );
         },
         hr() {
-          return <hr className="my-6 border-zinc-200/80" />;
+          return <hr className="my-6 border-border" />;
         },
         table({ children }) {
           return (
-            <div className="my-4 overflow-x-auto rounded-xl border border-zinc-200 shadow-xs">
-              <table className="w-full text-left text-xs border-collapse divide-y divide-zinc-200">
+            <div className="my-4 overflow-x-auto rounded-xl border border-border shadow-xs">
+              <table className="w-full border-collapse divide-y divide-border text-left text-xs">
                 {children}
               </table>
             </div>
           );
         },
         thead({ children }) {
-          return <thead className="bg-zinc-50 text-zinc-800 font-semibold">{children}</thead>;
+          return <thead className="bg-background-secondary font-semibold text-foreground">{children}</thead>;
         },
         tbody({ children }) {
-          return <tbody className="divide-y divide-zinc-100 bg-white">{children}</tbody>;
+          return <tbody className="divide-y divide-border-subtle bg-surface">{children}</tbody>;
         },
         tr({ children }) {
-          return <tr className="hover:bg-zinc-50/50 transition-colors">{children}</tr>;
+          return <tr className="transition-colors hover:bg-surface-hover">{children}</tr>;
         },
         th({ children }) {
           return <th className="px-3.5 py-2.5 font-medium">{children}</th>;
         },
         td({ children }) {
           return (
-            <td className="px-3.5 py-2 text-zinc-700 whitespace-pre-wrap leading-relaxed">
+            <td className="whitespace-pre-wrap px-3.5 py-2 leading-relaxed text-foreground-muted">
               {children}
             </td>
           );
@@ -413,9 +416,9 @@ export function ChatMessage({
   if (isUser) {
     if (isEditing) {
       return (
-        <div id={message.id} className="py-3 px-4 sm:px-6 bg-transparent">
-          <div className="max-w-3xl mx-auto flex flex-col items-end">
-            <div className="w-full max-w-2xl bg-white rounded-2xl border border-zinc-300 shadow-md p-3.5 space-y-2.5 transition-all">
+        <div id={message.id} className="bg-transparent px-4 py-3 sm:px-6">
+          <div className="mx-auto flex max-w-[var(--chat-content-max)] flex-col items-end">
+            <Surface variant="raised" radius="card" className="w-full max-w-2xl space-y-2.5 p-3.5 shadow-md transition-all">
               <textarea
                 ref={editTextareaRef}
                 value={editContent}
@@ -438,19 +441,19 @@ export function ChatMessage({
                   }
                 }}
                 rows={2}
-                className="w-full text-sm text-zinc-900 leading-relaxed outline-none resize-none bg-transparent"
+                className="w-full resize-none bg-transparent text-sm leading-relaxed text-foreground outline-none"
                 placeholder="Edit your message..."
               />
-              <div className="flex items-center justify-end space-x-2 pt-1.5 border-t border-zinc-100">
-                <button
-                  type="button"
+              <div className="flex items-center justify-end space-x-2 border-t border-border-subtle pt-1.5">
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => setIsEditing(false)}
-                  className="px-3 py-1.5 rounded-lg border border-zinc-200 text-xs font-medium text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 transition-colors cursor-pointer"
                 >
                   Cancel
-                </button>
-                <button
-                  type="button"
+                </Button>
+                <Button
+                  size="sm"
                   disabled={!editContent.trim()}
                   onClick={() => {
                     if (editContent.trim()) {
@@ -458,49 +461,48 @@ export function ChatMessage({
                       setIsEditing(false);
                     }
                   }}
-                  className="px-3.5 py-1.5 rounded-lg bg-zinc-900 text-white text-xs font-medium hover:bg-zinc-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer flex items-center space-x-1"
                 >
                   <span>Save & Submit</span>
-                </button>
+                </Button>
               </div>
-            </div>
+            </Surface>
           </div>
         </div>
       );
     }
 
     return (
-      <div id={message.id} className="py-3 px-4 sm:px-6 bg-transparent group/user">
-        <div className="max-w-3xl mx-auto flex items-center justify-end gap-1.5">
+      <div id={message.id} className="group/user bg-transparent px-4 py-3 sm:px-6">
+        <div className="mx-auto flex max-w-[var(--chat-content-max)] items-center justify-end gap-1.5">
           {/* Edit Prompt Button (Only on the last user message) */}
           {isLastUserMessage && onEditUserMessage && (
-            <button
-              type="button"
+            <IconButton
+              label="Edit message"
               onClick={() => {
                 setEditContent(message.content);
                 setIsEditing(true);
               }}
-              className="p-1 rounded-md text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 opacity-0 group-hover/user:opacity-100 transition-all cursor-pointer flex items-center justify-center"
+              className="opacity-0 transition-opacity group-hover/user:opacity-100 group-focus-within/user:opacity-100"
               title="Edit message"
             >
-              <Pencil className="w-3.5 h-3.5" />
-            </button>
+              <Pencil aria-hidden="true" className="size-3.5" />
+            </IconButton>
           )}
 
           {/* Copy Button */}
           {message.content && (
             <CopyButton
               text={message.content}
-              className="opacity-0 group-hover/user:opacity-100 transition-opacity"
+              className="opacity-0 transition-opacity group-hover/user:opacity-100 group-focus-within/user:opacity-100"
               title="Copy prompt"
             />
           )}
 
           {/* Bubble */}
-          <div className="max-w-2xl rounded-2xl bg-muted text-foreground px-4 sm:px-5 py-3 border-0 shadow-2xs">
+          <Surface variant="muted" radius="card" className="max-w-2xl border-0 bg-muted px-4 py-3 text-foreground shadow-2xs sm:px-5">
             {message.highlightedContext && (
-              <div className="text-2xs font-medium text-emerald-800 bg-emerald-50 border border-emerald-200/80 rounded-md px-2 py-0.5 mb-2 inline-flex items-center gap-1.5 shadow-2xs">
-                <GitBranch className="w-3 h-3 text-emerald-600 shrink-0" />
+              <div className="mb-2 inline-flex items-center gap-1.5 rounded-md border border-success/30 bg-success-bg px-2 py-0.5 text-2xs font-medium text-success shadow-2xs">
+                <GitBranch className="size-3 shrink-0" />
                 <span className="truncate">Sub-topic: &ldquo;{message.highlightedContext}&rdquo;</span>
               </div>
             )}
@@ -535,7 +537,7 @@ export function ChatMessage({
               );
 
               return (
-                <div className="flex flex-col space-y-2 mb-2.5">
+                <Surface variant="base" radius="widget" className="mb-2.5 flex flex-col space-y-2 border-0 bg-transparent">
                   {/* Image Thumbnails */}
                   {imageAttachments.length > 0 && (
                     <div className="flex flex-wrap gap-2">
@@ -543,9 +545,11 @@ export function ChatMessage({
                         const src = att.data || (att.url ? resolveFileUrl(att.url) : "");
                         if (!src) return null;
                         return (
-                          <div
+                          <Button
                             key={att.id || idx}
-                            className="relative rounded-xl overflow-hidden border border-zinc-200/90 bg-white max-w-xs shadow-2xs hover:border-zinc-300 transition-all cursor-pointer group/img"
+                            variant="outline"
+                            size="default"
+                            className="group/img relative h-auto max-w-xs overflow-hidden rounded-xl p-0 shadow-2xs"
                             onClick={() => setLightboxImage({ src, name: att.name || "Attachment" })}
                             title="Click to view full screen"
                           >
@@ -555,7 +559,7 @@ export function ChatMessage({
                               alt={att.name || "Attachment"}
                               className="max-h-60 rounded-xl object-contain group-hover/img:scale-[1.01] transition-transform duration-150"
                             />
-                          </div>
+                          </Button>
                         );
                       })}
                     </div>
@@ -565,24 +569,26 @@ export function ChatMessage({
                   {pdfAttachments.length > 0 && (
                     <div className="flex flex-wrap gap-2">
                       {pdfAttachments.map((att, idx) => (
-                        <div
+                        <Button
                           key={att.id || idx}
+                          variant="outline"
+                          size="default"
                           onClick={() => setViewingPdfFile(att)}
-                          className="flex items-center space-x-2.5 px-3 py-2 rounded-xl border border-red-200/90 bg-red-50/40 hover:bg-red-50/80 hover:border-red-300 hover:shadow-xs transition-all cursor-pointer group/pdf max-w-[260px]"
+                          className="group/pdf flex h-auto max-w-[260px] items-center space-x-2.5 rounded-xl border-success/30 bg-success-bg px-3 py-2 text-left hover:bg-success-bg hover:shadow-xs"
                           title="Click to view PDF in full screen"
                         >
-                          <div className="p-1.5 rounded-lg bg-white border border-red-200 text-red-600 shrink-0 group-hover/pdf:scale-105 transition-transform">
-                            <FileText className="w-4 h-4 text-red-600" />
+                          <div className="shrink-0 rounded-lg border border-success/30 bg-surface p-1.5 text-success transition-transform group-hover/pdf:scale-105">
+                            <FileText className="size-4" />
                           </div>
                           <div className="flex flex-col min-w-0 pr-1">
-                            <span className="text-xs font-semibold text-zinc-900 truncate">
+                            <span className="truncate text-xs font-semibold text-foreground">
                               {att.name}
                             </span>
-                            <span className="text-2xs text-red-600/80 font-medium">
+                            <span className="text-2xs font-medium text-success">
                               PDF Document · Click to view
                             </span>
                           </div>
-                        </div>
+                        </Button>
                       ))}
                     </div>
                   )}
@@ -594,24 +600,26 @@ export function ChatMessage({
                         const rowCount = (att.metadata as Record<string, unknown>)?.row_count as number | undefined;
                         const ext = att.name.split(".").pop()?.toUpperCase() || "TABLE";
                         return (
-                          <div
+                          <Button
                             key={att.id || idx}
+                            variant="outline"
+                            size="default"
                             onClick={() => setViewingTabularFile(att)}
-                            className="flex items-center space-x-2.5 px-3 py-2 rounded-xl border border-emerald-200/90 bg-emerald-50/40 hover:bg-emerald-50/80 hover:border-emerald-300 hover:shadow-xs transition-all cursor-pointer group/table max-w-[260px]"
+                            className="group/table flex h-auto max-w-[260px] items-center space-x-2.5 rounded-xl border-info/30 bg-info-bg px-3 py-2 text-left hover:bg-info-bg hover:shadow-xs"
                             title="Click to explore table data"
                           >
-                            <div className="p-1.5 rounded-lg bg-white border border-emerald-200 text-emerald-700 shrink-0 group-hover/table:scale-105 transition-transform">
-                              <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                            <div className="shrink-0 rounded-lg border border-info/30 bg-surface p-1.5 text-info transition-transform group-hover/table:scale-105">
+                              <FileSpreadsheet className="size-4" />
                             </div>
                             <div className="flex flex-col min-w-0 pr-1">
-                              <span className="text-xs font-semibold text-zinc-900 truncate font-mono">
+                              <span className="truncate font-mono text-xs font-semibold text-foreground">
                                 {att.name}
                               </span>
-                              <span className="text-2xs text-emerald-700/90 font-medium">
+                              <span className="text-2xs font-medium text-info">
                                 {ext} {rowCount !== undefined ? `· ${rowCount.toLocaleString()} rows` : "· Click to explore"}
                               </span>
                             </div>
-                          </div>
+                          </Button>
                         );
                       })}
                     </div>
@@ -630,13 +638,15 @@ export function ChatMessage({
                           : att.fileCategory?.toUpperCase() || "FILE";
 
                         return (
-                          <div
+                          <Button
                             key={att.id || idx}
+                            variant="outline"
+                            size="default"
                             onClick={() => setViewingCodeFile(att)}
-                            className={`flex items-center space-x-2.5 px-3 py-2 rounded-xl border transition-all cursor-pointer group/card max-w-[260px] ${
+                            className={`group/card flex h-auto max-w-[260px] items-center space-x-2.5 rounded-xl px-3 py-2 text-left ${
                               isMd
-                                ? "border-blue-200/90 bg-blue-50/30 hover:bg-blue-50/70 hover:border-blue-300 hover:shadow-xs"
-                                : "border-zinc-200/90 bg-white hover:border-zinc-300 hover:shadow-xs"
+                                ? "border-info/30 bg-info-bg hover:bg-info-bg hover:shadow-xs"
+                                : "border-border bg-surface hover:bg-surface-hover hover:shadow-xs"
                             }`}
                             title={
                               isMd
@@ -647,45 +657,45 @@ export function ChatMessage({
                             <div
                               className={`p-1.5 rounded-lg border shrink-0 transition-colors ${
                                 isMd
-                                  ? "bg-white border-blue-200 text-blue-600 group-hover/card:scale-105 transition-transform"
-                                  : "bg-zinc-100 border border-zinc-200/80 text-zinc-700 group-hover/card:bg-zinc-200"
+                                ? "border-info/30 bg-surface text-info transition-transform group-hover/card:scale-105"
+                                : "border-border bg-muted text-foreground-muted group-hover/card:bg-surface-hover"
                               }`}
                             >
                               {isMd ? (
-                                <FileText className="w-4 h-4 text-blue-600" />
+                                <FileText className="size-4" />
                               ) : isCode ? (
-                                <Code className="w-4 h-4 text-emerald-600" />
+                                <Code className="size-4 text-success" />
                               ) : (
-                                <FileText className="w-4 h-4 text-zinc-600" />
+                                <FileText className="size-4" />
                               )}
                             </div>
                             <div className="flex flex-col min-w-0 pr-1">
-                              <span className="text-xs font-medium text-zinc-900 truncate font-mono">
+                              <span className="truncate font-mono text-xs font-medium text-foreground">
                                 {att.name}
                               </span>
                               <span
                                 className={`text-2xs font-mono ${
                                   isMd
-                                    ? "text-blue-600/80 font-medium"
-                                    : "text-zinc-400"
+                                    ? "font-medium text-info"
+                                    : "text-foreground-subtle"
                                 }`}
                               >
                                 {label} · {isMd ? "Preview" : "View"}
                               </span>
                             </div>
-                          </div>
+                          </Button>
                         );
                       })}
                     </div>
                   )}
-                </div>
+                </Surface>
               );
             })()}
 
-            <div className="text-sm leading-relaxed select-text font-normal whitespace-pre-wrap">
+            <div className="rounded-2xl bg-muted text-sm font-normal leading-relaxed select-text whitespace-pre-wrap">
               {message.content}
             </div>
-          </div>
+          </Surface>
         </div>
 
         {/* In-Page Full Screen Image Lightbox */}
@@ -705,20 +715,20 @@ export function ChatMessage({
                   <a
                     href={lightboxImage.src}
                     download={lightboxImage.name}
-                    className="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors flex items-center space-x-1.5 cursor-pointer"
+                    className="flex items-center space-x-1.5 rounded-lg bg-surface/10 px-2.5 py-1 text-primary-foreground transition-colors hover:bg-surface/20"
                     title="Download image"
                   >
                     <Download className="w-3.5 h-3.5" />
                     <span>Download</span>
                   </a>
-                  <button
-                    type="button"
+                  <IconButton
+                    label="Close preview"
                     onClick={() => setLightboxImage(null)}
-                    className="p-1 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+                    className="bg-surface/10 text-primary-foreground hover:bg-surface/20 hover:text-primary-foreground"
                     title="Close preview (Esc)"
                   >
-                    <X className="w-4 h-4" />
-                  </button>
+                    <X aria-hidden="true" className="size-4" />
+                  </IconButton>
                 </div>
               </div>
 
@@ -775,7 +785,7 @@ export function ChatMessage({
   }
 
   return (
-    <div id={message.id} className="py-3 px-4 sm:px-6 bg-transparent group">
+    <div id={message.id} className="group bg-transparent px-4 py-3 sm:px-6">
       {/* Floating Exploration Tooltip on Text Selection */}
       {selection && (
         <SelectionTooltip
@@ -786,7 +796,7 @@ export function ChatMessage({
       )}
 
 
-      <div className="max-w-3xl mx-auto flex space-x-3.5">
+      <div className="mx-auto flex max-w-[var(--chat-content-max)] space-x-3.5">
         {/* Assistant Avatar */}
         <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center shrink-0 mt-0.5 text-foreground shadow-2xs">
           <Sparkles className="w-3.5 h-3.5 text-foreground" />
@@ -806,11 +816,11 @@ export function ChatMessage({
             message.metadata?.ragSources &&
               (message.metadata.ragSources as RagSourceItem[]).length > 0
           ) && (
-            <div className="rounded-xl bg-blue-50/50 p-2.5 space-y-1.5 mb-2 select-none animate-in fade-in-50 duration-150">
-              <div className="flex items-center space-x-1.5 text-xs font-semibold text-blue-900">
-                <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+            <Surface variant="muted" radius="widget" className="mb-2 space-y-1.5 border-0 bg-info-bg p-2.5 select-none animate-in fade-in-50 duration-150">
+              <div className="flex items-center space-x-1.5 text-xs font-semibold text-foreground">
+                <Sparkles className="size-3.5 text-info" />
                 <span>Verified Sources</span>
-                <span className="px-1.5 py-0.5 rounded-full bg-blue-100/90 text-2xs font-bold text-blue-800">
+                <span className="rounded-full bg-surface px-1.5 py-0.5 text-2xs font-bold text-info">
                   {(message.metadata?.ragSources as RagSourceItem[]).length}
                 </span>
               </div>
@@ -818,9 +828,10 @@ export function ChatMessage({
                 {(message.metadata?.ragSources as RagSourceItem[]).map((src) => {
                   const isPdf = src.filename.toLowerCase().endsWith(".pdf");
                   return (
-                    <button
+                    <Button
                       key={`${src.chunk_id}-${src.ref_index}`}
-                      type="button"
+                      variant="outline"
+                      size="sm"
                       onClick={() => {
                         if (isPdf) {
                           setViewingRagPdf({
@@ -832,27 +843,27 @@ export function ChatMessage({
                           setViewingRagSnippet(src);
                         }
                       }}
-                      className="group/src inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-white border border-blue-200/60 hover:border-blue-400 hover:shadow-xs text-xs text-zinc-700 transition-all cursor-pointer"
+                      className="group/src h-auto items-center space-x-1.5 border-info/30 bg-surface px-2.5 py-1 text-xs text-foreground-muted hover:bg-surface-hover hover:shadow-xs"
                       title={
                         src.snippet
                           ? `Snippet: ${src.snippet.slice(0, 160)}...`
                           : src.filename
                       }
                     >
-                      <FileText className="w-3.5 h-3.5 text-blue-500 group-hover/src:text-blue-700" />
-                      <span className="font-medium text-zinc-900 truncate max-w-[200px]">
+                      <FileText className="size-3.5 text-info" />
+                      <span className="max-w-[200px] truncate font-medium text-foreground">
                         {src.filename}
                       </span>
                       {src.page_number && (
-                        <span className="px-1 py-0.5 rounded text-2xs bg-blue-50 text-blue-700 font-mono font-semibold">
+                        <span className="rounded bg-info-bg px-1 py-0.5 font-mono text-2xs font-semibold text-info">
                           p. {src.page_number}
                         </span>
                       )}
-                    </button>
+                    </Button>
                   );
                 })}
               </div>
-            </div>
+            </Surface>
           )}
 
           {/* Markdown Rendered Body */}
@@ -877,17 +888,17 @@ export function ChatMessage({
               /* Smooth Staggered Wave Thinking State */
               <div className="flex items-center space-x-2 py-1 select-none">
                 <div className="flex space-x-1 items-center">
-                  <span className="w-1.5 h-1.5 rounded-full bg-zinc-500 animate-bounce [animation-delay:-0.3s]" />
-                  <span className="w-1.5 h-1.5 rounded-full bg-zinc-500 animate-bounce [animation-delay:-0.15s]" />
-                  <span className="w-1.5 h-1.5 rounded-full bg-zinc-500 animate-bounce" />
+                  <span className="size-1.5 animate-bounce rounded-full bg-foreground-subtle [animation-delay:-0.3s]" />
+                  <span className="size-1.5 animate-bounce rounded-full bg-foreground-subtle [animation-delay:-0.15s]" />
+                  <span className="size-1.5 animate-bounce rounded-full bg-foreground-subtle" />
                 </div>
-                <span className="text-xs font-medium text-zinc-400">Thinking...</span>
+                <span className="text-xs font-medium text-foreground-subtle">Thinking...</span>
               </div>
             ) : null}
 
             {/* Smooth Breathing Streaming Caret */}
             {message.isStreaming && message.content && (
-              <span className="inline-block w-[2px] h-[16px] ml-1 bg-zinc-900 animate-pulse align-middle rounded-full" />
+              <span className="ml-1 inline-block h-4 w-0.5 animate-pulse rounded-full bg-foreground align-middle" />
             )}
           </div>
 
@@ -898,24 +909,24 @@ export function ChatMessage({
                 {/* Copy Button */}
                 <CopyButton
                   text={message.content}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
                   title="Copy response"
                 />
 
                 {/* Response Rating: Thumbs Up */}
                 {onRateResponse && !message.isStreaming && (
-                  <button
-                    type="button"
+                  <IconButton
+                    label={(message.metadata?.rating as string) === "up" ? "Remove positive rating" : "Good response"}
                     onClick={() =>
                       onRateResponse(
                         message.id,
                         (message.metadata?.rating as string) === "up" ? null : "up"
                       )
                     }
-                    className={`w-7 h-7 rounded-xl transition-colors cursor-pointer flex items-center justify-center opacity-0 group-hover:opacity-100 ${
+                    className={`opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 ${
                       (message.metadata?.rating as string) === "up"
-                        ? "text-zinc-800 bg-zinc-100 opacity-100"
-                        : "text-zinc-400 hover:text-zinc-800 hover:bg-zinc-100"
+                        ? "bg-muted text-foreground opacity-100"
+                        : "text-foreground-subtle"
                     }`}
                     title={
                       (message.metadata?.rating as string) === "up"
@@ -923,30 +934,30 @@ export function ChatMessage({
                         : "Good response (thumbs up)"
                     }
                   >
-                    <ThumbsUp
+                    <ThumbsUp aria-hidden="true"
                       className={`w-3.5 h-3.5 ${
                         (message.metadata?.rating as string) === "up"
-                          ? "fill-zinc-400/50 stroke-[1.8]"
+                          ? "fill-foreground-muted/50 stroke-[1.8]"
                           : "stroke-[1.75]"
                       }`}
                     />
-                  </button>
+                  </IconButton>
                 )}
 
                 {/* Response Rating: Thumbs Down */}
                 {onRateResponse && !message.isStreaming && (
-                  <button
-                    type="button"
+                  <IconButton
+                    label={(message.metadata?.rating as string) === "down" ? "Remove negative rating" : "Poor response"}
                     onClick={() =>
                       onRateResponse(
                         message.id,
                         (message.metadata?.rating as string) === "down" ? null : "down"
                       )
                     }
-                    className={`w-7 h-7 rounded-xl transition-colors cursor-pointer flex items-center justify-center opacity-0 group-hover:opacity-100 ${
+                    className={`opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 ${
                       (message.metadata?.rating as string) === "down"
-                        ? "text-zinc-800 bg-zinc-100 opacity-100"
-                        : "text-zinc-400 hover:text-zinc-800 hover:bg-zinc-100"
+                        ? "bg-muted text-foreground opacity-100"
+                        : "text-foreground-subtle"
                     }`}
                     title={
                       (message.metadata?.rating as string) === "down"
@@ -954,26 +965,26 @@ export function ChatMessage({
                         : "Poor response (thumbs down)"
                     }
                   >
-                    <ThumbsDown
+                    <ThumbsDown aria-hidden="true"
                       className={`w-3.5 h-3.5 ${
                         (message.metadata?.rating as string) === "down"
-                          ? "fill-zinc-400/50 stroke-[1.8]"
+                          ? "fill-foreground-muted/50 stroke-[1.8]"
                           : "stroke-[1.75]"
                       }`}
                     />
-                  </button>
+                  </IconButton>
                 )}
 
                 {/* Regenerate Button (Only on the last assistant message) */}
                 {onRegenerate && isLastAssistantMessage && !message.isStreaming && (
-                  <button
-                    type="button"
+                  <IconButton
+                    label="Regenerate response"
                     onClick={() => onRegenerate(message.id)}
-                    className="w-7 h-7 rounded-xl text-zinc-400 hover:text-zinc-800 hover:bg-zinc-100 transition-colors opacity-0 group-hover:opacity-100 cursor-pointer flex items-center justify-center"
+                    className="opacity-0 text-foreground-subtle transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
                     title="Regenerate response"
                   >
-                    <RotateCcw className="w-3.5 h-3.5 stroke-[1.75]" />
-                  </button>
+                    <RotateCcw aria-hidden="true" className="size-3.5 stroke-[1.75]" />
+                  </IconButton>
                 )}
 
 
@@ -984,7 +995,7 @@ export function ChatMessage({
                     variant="outline"
                     size="sm"
                     onClick={onRetry}
-                    className="h-6 px-2 text-2xs text-zinc-700 hover:text-zinc-950 border-zinc-200 flex items-center space-x-1 shadow-2xs cursor-pointer"
+                    className="flex h-6 space-x-1 border-border px-2 text-2xs text-foreground-muted shadow-2xs hover:text-foreground"
                     title="Retry generation"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
@@ -1021,11 +1032,11 @@ export function ChatMessage({
                   ? `§ ${viewingRagSnippet.section_header}`
                   : undefined
               }
-              icon={<FileText className="w-4 h-4 text-blue-600" />}
+              icon={<FileText className="size-4 text-info" />}
               onClose={() => setViewingRagSnippet(null)}
             >
               {viewingRagSnippet.page_number && (
-                <span className="px-1.5 py-0.5 rounded text-2xs bg-blue-100 text-blue-800 font-mono font-semibold">
+                <span className="rounded bg-info-bg px-1.5 py-0.5 font-mono text-2xs font-semibold text-info">
                   Page {viewingRagSnippet.page_number}
                 </span>
               )}
@@ -1039,4 +1050,3 @@ export function ChatMessage({
     </div>
   );
 }
-
