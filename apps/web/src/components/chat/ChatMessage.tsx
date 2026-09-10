@@ -701,7 +701,7 @@ export function ChatMessage({
         {/* In-Page Full Screen Image Lightbox */}
         {lightboxImage && (
           <div
-            className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in-50 duration-150"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-overlay p-4 text-code-foreground backdrop-blur-sm animate-in fade-in-50 duration-150"
             onClick={() => setLightboxImage(null)}
           >
             <div
@@ -709,13 +709,13 @@ export function ChatMessage({
               onClick={(e) => e.stopPropagation()}
             >
               {/* Top action bar */}
-              <div className="w-full flex items-center justify-between pb-3 text-white/90 text-xs">
+              <div className="flex w-full items-center justify-between pb-3 text-xs">
                 <span className="font-medium truncate max-w-md">{lightboxImage.name}</span>
                 <div className="flex items-center space-x-2">
                   <a
                     href={lightboxImage.src}
                     download={lightboxImage.name}
-                    className="flex items-center space-x-1.5 rounded-lg bg-surface/10 px-2.5 py-1 text-primary-foreground transition-colors hover:bg-surface/20"
+                    className="flex items-center space-x-1.5 rounded-lg bg-surface/10 px-2.5 py-1 text-code-foreground transition-colors hover:bg-surface/20"
                     title="Download image"
                   >
                     <Download className="w-3.5 h-3.5" />
@@ -724,7 +724,7 @@ export function ChatMessage({
                   <IconButton
                     label="Close preview"
                     onClick={() => setLightboxImage(null)}
-                    className="bg-surface/10 text-primary-foreground hover:bg-surface/20 hover:text-primary-foreground"
+                    className="bg-surface/10 text-code-foreground hover:bg-surface/20 hover:text-code-foreground"
                     title="Close preview (Esc)"
                   >
                     <X aria-hidden="true" className="size-4" />
@@ -737,7 +737,7 @@ export function ChatMessage({
               <img
                 src={lightboxImage.src}
                 alt={lightboxImage.name}
-                className="max-h-[82vh] max-w-[92vw] rounded-xl object-contain shadow-2xl border border-white/15 animate-in zoom-in-95 duration-150"
+                className="max-h-[82vh] max-w-[92vw] rounded-xl border border-border object-contain shadow-2xl animate-in zoom-in-95 duration-150"
               />
             </div>
           </div>
@@ -870,7 +870,7 @@ export function ChatMessage({
           <div
             ref={contentRef}
             className={`text-base select-text ${
-              message.isError ? "text-rose-700" : "text-foreground"
+              message.isError ? "text-destructive" : "text-foreground"
             } leading-[1.8] break-words`}
           >
             {message.content ? (

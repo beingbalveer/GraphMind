@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-import { ChatMessage } from "../ChatMessage";
+import { ChatMessage, MarkdownRenderer } from "../ChatMessage";
 
 const userNode = {
   id: "user-1",
@@ -44,5 +44,67 @@ describe("ChatMessage", () => {
 
     await user.tab();
     expect(screen.getByRole("button", { name: "Edit message" })).toHaveFocus();
+  });
+
+  it("uses semantic Markdown surfaces for inline code, quotes, and tables", () => {
+    render(
+      <MarkdownRenderer
+        content={"Inline `code`.\n\n> Quoted text\n\n| Header |\n| --- |\n| Value |"}
+      />
+    );
+
+    expect(screen.getByText("code")).toHaveClass("bg-muted", "border-border");
+    expect(screen.getByText("Quoted text").closest("blockquote")).toHaveClass(
+      "bg-background-secondary",
+      "border-border-strong"
+    );
+    expect(screen.getByRole("table")).toHaveClass("divide-border");
+  });
+
+  it("opens injected branch links through the supplied branch callback", async () => {
+    const user = userEvent.setup();
+    const onOpenSideBranch = vi.fn();
+    render(
+      <MarkdownRenderer
+        content="Explore this exact excerpt next."
+        branchLinks={[{ excerpt: "exact excerpt", leafId: "branch-leaf-1" }]}
+        onOpenSideBranch={onOpenSideBranch}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: "exact excerpt" }));
+    expect(onOpenSideBranch).toHaveBeenCalledWith("branch-leaf-1", "exact excerpt");
+  });
+
+  it("uses semantic destructive text for failed assistant responses", () => {
+    render(<ChatMessage message={{ ...assistantNode, isError: true }} />);
+
+    expect(screen.getByText(assistantNode.content).parentElement).toHaveClass("text-destructive");
+  });
+
+  it("uses the semantic overlay token for an image preview", async () => {
+    const user = userEvent.setup();
+    render(
+      <ChatMessage
+        message={{
+          ...userNode,
+          attachments: [
+            {
+              id: "image-1",
+              name: "Diagram",
+              sizeBytes: 10,
+              mimeType: "image/png",
+              fileCategory: "image",
+              data: "data:image/png;base64,AA==",
+            },
+          ],
+        }}
+      />
+    );
+
+    await user.click(screen.getByTitle("Click to view full screen"));
+    expect(screen.getByRole("button", { name: "Close preview" }).closest("div.fixed")).toHaveClass(
+      "bg-overlay"
+    );
   });
 });
