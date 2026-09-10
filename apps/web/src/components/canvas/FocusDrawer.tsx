@@ -63,7 +63,7 @@ export function FocusDrawer({
   useEffect(() => {
     if (bottomRef.current) {
       const isNewNode = prevNodeIdRef.current !== node?.id;
-      bottomRef.current.scrollIntoView({ 
+      bottomRef.current.scrollIntoView?.({ 
         behavior: isNewNode ? "auto" : "smooth" 
       });
       prevNodeIdRef.current = node?.id || null;
@@ -181,18 +181,20 @@ export function FocusDrawer({
             disabled={isStreaming}
             className="w-full pl-3.5 pr-10 py-2.5 rounded-xl border border-border bg-surface text-xs sm:text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 shadow-2xs disabled:bg-muted"
           />
-          <button
+          <Button
             type="submit"
+            size="iconSm"
             disabled={!drawerPrompt.trim() || isStreaming}
-            className="absolute right-1.5 p-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+            className="absolute right-1.5"
             title="Send follow-up"
+            aria-label="Send follow-up"
           >
             {isStreaming ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
             ) : (
               <CornerDownLeft className="w-3.5 h-3.5" />
             )}
-          </button>
+          </Button>
         </form>
       </div>
     </aside>

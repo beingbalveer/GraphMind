@@ -12,6 +12,7 @@ import {
 import { ConversationThread } from "@/lib/threadUtils";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Button } from "@/components/ui/button";
 import { ConceptMasteryLevel } from "@graphmind/shared";
 
 export type ZoomMode = "orb" | "capsule" | "detailed";
@@ -48,7 +49,7 @@ export const ThreadGraphNode = memo(function ThreadGraphNode({
   const lastMessage = thread.messages[thread.messages.length - 1];
 
   const handleClasses =
-    "!w-2 !h-2 !bg-zinc-400 !border !border-white hover:!bg-zinc-900 transition-colors";
+    "!w-2 !h-2 !bg-foreground-subtle !border !border-surface hover:!bg-foreground transition-colors";
 
   /* =========================================================================
      1. GALAXY ORB VIEW (Zoom < 0.6x - Obsidian Style Note Orb)
@@ -71,22 +72,22 @@ export const ThreadGraphNode = memo(function ThreadGraphNode({
 
         {/* Circular Note Orb */}
         <div
-          className={`w-8 h-8 rounded-full flex items-center justify-center text-xs shadow-sm transition-all ${
+          className={`w-8 h-8 rounded-full flex items-center justify-center text-xs shadow-xs transition-all ${
             isStreaming
-              ? "bg-zinc-900 text-white ring-4 ring-zinc-900/30 animate-pulse"
+              ? "bg-primary text-primary-foreground ring-4 ring-primary/30 animate-pulse"
               : isActive
-              ? "bg-zinc-950 text-white ring-4 ring-zinc-950/20 shadow-md"
+              ? "bg-primary text-primary-foreground ring-4 ring-primary/20 shadow-md"
               : isHeatmapMode && masteryInfo
               ? masteryInfo.level === "mastered"
-                ? "bg-emerald-600 text-white ring-4 ring-emerald-500/30 shadow-[0_0_12px_rgba(16,185,129,0.4)]"
+                ? "bg-success text-success-foreground ring-4 ring-success/30"
                 : masteryInfo.level === "quizzed"
-                ? "bg-purple-600 text-white ring-4 ring-purple-500/30 shadow-[0_0_12px_rgba(168,85,247,0.4)]"
+                ? "bg-foreground text-background ring-4 ring-foreground/20"
                 : masteryInfo.level === "stale"
-                ? "bg-amber-500 text-white ring-4 ring-amber-500/30 shadow-[0_0_12px_rgba(245,158,11,0.4)]"
-                : "bg-sky-500 text-white ring-4 ring-sky-500/30 shadow-[0_0_12px_rgba(14,165,233,0.4)]"
+                ? "bg-warning text-warning-foreground ring-4 ring-warning/30"
+                : "bg-info text-info-foreground ring-4 ring-info/30"
               : isRoot
-              ? "bg-zinc-900 text-white border border-zinc-800"
-              : "bg-white text-zinc-800 hover:bg-zinc-50 border border-zinc-300 shadow-xs"
+              ? "bg-primary text-primary-foreground border border-border"
+              : "bg-surface text-foreground hover:bg-surface-hover border border-border shadow-xs"
           }`}
         >
           {isStreaming ? (
@@ -94,14 +95,14 @@ export const ThreadGraphNode = memo(function ThreadGraphNode({
           ) : isRoot ? (
             <FileText className="w-3.5 h-3.5" />
           ) : (
-            <GitBranch className="w-3.5 h-3.5 text-emerald-600" />
+            <GitBranch className="w-3.5 h-3.5 text-foreground-muted" />
           )}
         </div>
 
         {/* Floating Tooltip on Hover in Orb Mode */}
-        <div className="absolute left-1/2 -top-8 -translate-x-1/2 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-150 bg-zinc-900 text-white text-2xs font-medium px-2.5 py-1 rounded-lg whitespace-nowrap shadow-md z-40 max-w-[200px] truncate flex items-center space-x-1.5">
+        <div className="absolute left-1/2 -top-8 -translate-x-1/2 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-150 bg-foreground text-background text-2xs font-medium px-2.5 py-1 rounded-lg whitespace-nowrap shadow-md z-40 max-w-[200px] truncate flex items-center space-x-1.5">
           <span>{thread.title}</span>
-          <span className="text-2xs text-zinc-400 font-mono">({messageCount})</span>
+          <span className="text-2xs opacity-75 font-mono">({messageCount})</span>
         </div>
 
         <Handle
@@ -122,20 +123,20 @@ export const ThreadGraphNode = memo(function ThreadGraphNode({
     <div
       className={`group relative flex flex-col min-w-[180px] max-w-[260px] p-2.5 rounded-2xl border transition-all duration-150 select-none cursor-pointer shadow-xs ${
         isStreaming
-          ? "bg-white border-zinc-900 ring-2 ring-zinc-900/20 shadow-md animate-pulse z-20"
+          ? "bg-surface border-foreground ring-2 ring-foreground/20 shadow-md animate-pulse z-20"
           : isActive
-          ? "bg-white border-zinc-950 ring-2 ring-zinc-950/15 shadow-md z-10"
+          ? "bg-surface border-foreground ring-2 ring-foreground/15 shadow-md z-10"
           : isHeatmapMode && masteryInfo
           ? masteryInfo.level === "mastered"
-            ? "bg-white border-emerald-500 ring-1 ring-emerald-500/30 shadow-[0_0_16px_rgba(16,185,129,0.14)] text-zinc-950"
+            ? "bg-surface border-success ring-1 ring-success/30 shadow-[0_0_16px_rgba(16,185,129,0.14)] text-foreground"
             : masteryInfo.level === "quizzed"
-            ? "bg-white border-purple-500 ring-1 ring-purple-500/30 shadow-[0_0_16px_rgba(168,85,247,0.14)] text-zinc-950"
+            ? "bg-surface border-foreground ring-1 ring-foreground/30 shadow-xs text-foreground"
             : masteryInfo.level === "stale"
-            ? "bg-white border-amber-400 ring-1 ring-amber-400/30 shadow-[0_0_16px_rgba(245,158,11,0.14)] text-zinc-950"
-            : "bg-white border-sky-400 ring-1 ring-sky-400/20 shadow-[0_0_16px_rgba(14,165,233,0.14)] text-zinc-950"
+            ? "bg-surface border-warning ring-1 ring-warning/30 shadow-[0_0_16px_rgba(245,158,11,0.14)] text-foreground"
+            : "bg-surface border-info ring-1 ring-info/20 shadow-[0_0_16px_rgba(14,165,233,0.14)] text-foreground"
           : isRoot
-          ? "bg-zinc-50/90 border-zinc-300 text-zinc-900 hover:border-zinc-400"
-          : "bg-white border-zinc-200/90 text-zinc-900 hover:border-zinc-300 hover:shadow-xs"
+          ? "bg-surface-raised border-border-strong text-foreground hover:border-border"
+          : "bg-surface border-border text-foreground hover:border-border-strong hover:shadow-xs"
       }`}
     >
       {/* Heatmap Mastery Pill */}
@@ -143,12 +144,12 @@ export const ThreadGraphNode = memo(function ThreadGraphNode({
         <div
           className={`flex items-center justify-between px-2 py-0.5 mb-2 rounded-lg text-2xs font-semibold border select-none ${
             masteryInfo.level === "mastered"
-              ? "bg-emerald-50 text-emerald-800 border-emerald-200/80"
+              ? "bg-success-bg text-success border-success/30"
               : masteryInfo.level === "quizzed"
-              ? "bg-purple-50 text-purple-800 border-purple-200/80"
+              ? "bg-muted text-foreground border-border"
               : masteryInfo.level === "stale"
-              ? "bg-amber-50 text-amber-800 border-amber-200/80"
-              : "bg-sky-50 text-sky-800 border-sky-200/80"
+              ? "bg-warning-bg text-warning border-warning/30"
+              : "bg-info-bg text-info border-info/30"
           }`}
         >
           <span className="truncate max-w-[140px]">
@@ -174,10 +175,10 @@ export const ThreadGraphNode = memo(function ThreadGraphNode({
           <div
             className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 text-xs ${
               isStreaming
-                ? "bg-zinc-900 text-white"
+                ? "bg-primary text-primary-foreground"
                 : isRoot
-                ? "bg-zinc-900 text-white shadow-2xs"
-                : "bg-emerald-100 text-emerald-800 border border-emerald-300/70"
+                ? "bg-primary text-primary-foreground shadow-2xs"
+                : "bg-muted text-foreground border border-border-subtle"
             }`}
           >
             {isStreaming ? (
@@ -192,13 +193,13 @@ export const ThreadGraphNode = memo(function ThreadGraphNode({
           <div className="min-w-0">
             <span
               className={`text-xs font-semibold truncate block ${
-                isActive ? "text-zinc-950 font-bold" : "text-zinc-800"
+                isActive ? "text-foreground font-bold" : "text-foreground"
               }`}
             >
               {thread.title}
             </span>
             {thread.highlightedContext && thread.highlightedContext !== thread.title && (
-              <span className="text-2xs text-zinc-400 font-medium truncate block leading-tight">
+              <span className="text-2xs text-foreground-subtle font-medium truncate block leading-tight">
                 {thread.highlightedContext}
               </span>
             )}
@@ -208,7 +209,7 @@ export const ThreadGraphNode = memo(function ThreadGraphNode({
         {/* Message Count Badge & Branch Menu Action */}
         <div className="flex items-center space-x-1.5 shrink-0">
           <div
-            className="px-2 py-0.5 rounded-full bg-zinc-100 border border-zinc-200/80 text-2xs font-mono text-zinc-600 font-medium"
+            className="px-2 py-0.5 rounded-full bg-muted border border-border text-2xs font-mono text-foreground-muted font-medium"
             title={`${messageCount} messages in this thread`}
           >
             {messageCount} msg{messageCount > 1 ? "s" : ""}
@@ -226,17 +227,17 @@ export const ThreadGraphNode = memo(function ThreadGraphNode({
                 align="right"
                 onOpenChange={setIsMenuOpen}
                 trigger={
-                  <button
-                    type="button"
-                    className={`p-1 rounded-md transition-colors cursor-pointer flex items-center justify-center ${
-                      isMenuOpen
-                        ? "text-zinc-950 bg-zinc-200/80"
-                        : "text-zinc-400 hover:text-zinc-800 hover:bg-zinc-100"
+                  <Button
+                    variant="ghost"
+                    size="iconSm"
+                    className={`size-6 p-0 text-foreground-muted hover:text-foreground hover:bg-surface-hover ${
+                      isMenuOpen ? "text-foreground bg-surface-hover" : ""
                     }`}
                     title="Branch options"
+                    aria-label="Branch options"
                   >
                     <MoreVertical className="w-3.5 h-3.5" />
-                  </button>
+                  </Button>
                 }
                 items={[
                   {
@@ -254,15 +255,15 @@ export const ThreadGraphNode = memo(function ThreadGraphNode({
 
       {/* Detailed Mode: Last message preview or branch excerpt */}
       {isDetailed && (
-        <div className="mt-2 pt-2 border-t border-zinc-100 space-y-1">
+        <div className="mt-2 pt-2 border-t border-border-subtle space-y-1">
           {thread.highlightedContext && (
-            <div className="text-2xs text-zinc-500 italic truncate">
+            <div className="text-2xs text-foreground-muted italic truncate">
               &ldquo;{thread.highlightedContext}&rdquo;
             </div>
           )}
           {lastMessage && (
-            <div className="text-2xs text-zinc-600 line-clamp-2 leading-relaxed font-sans">
-              <span className="font-semibold text-zinc-800 mr-1">
+            <div className="text-2xs text-foreground-muted line-clamp-2 leading-relaxed font-sans">
+              <span className="font-semibold text-foreground mr-1">
                 {lastMessage.role === "user" ? "You:" : "AI:"}
               </span>
               {lastMessage.content.slice(0, 90)}

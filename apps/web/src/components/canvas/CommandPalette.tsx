@@ -14,6 +14,9 @@ import {
 } from "lucide-react";
 import { ConversationTree, TreeNode } from "@graphmind/shared";
 import { ViewMode } from "../layout/Navbar";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
 interface CommandPaletteProps {
   isOpen: boolean;
@@ -59,11 +62,13 @@ export function CommandPalette({
   const matchingNodes = useMemo(() => {
     if (!query.trim()) return [];
     const q = query.toLowerCase();
-    return allNodes.filter(
-      (n) =>
-        n.content.toLowerCase().includes(q) ||
-        (n.highlightedContext && n.highlightedContext.toLowerCase().includes(q))
-    ).slice(0, 5);
+    return allNodes
+      .filter(
+        (n) =>
+          n.content.toLowerCase().includes(q) ||
+          (n.highlightedContext && n.highlightedContext.toLowerCase().includes(q))
+      )
+      .slice(0, 5);
   }, [allNodes, query]);
 
   // Command actions
@@ -159,32 +164,35 @@ export function CommandPalette({
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-start justify-center pt-20 sm:pt-28 px-4 animate-in fade-in duration-150 select-none font-sans"
+      className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-start justify-center pt-20 sm:pt-28 px-4 animate-in fade-in duration-150 select-none font-sans"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-xl bg-white rounded-2xl border border-zinc-200/90 shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-150"
+        className="w-full max-w-xl bg-surface rounded-2xl border border-border shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-150"
       >
         {/* Search Input Bar */}
-        <div className="h-13 px-4 border-b border-zinc-200/80 flex items-center space-x-3 shrink-0">
-          <Search className="w-4 h-4 text-zinc-400 shrink-0" />
-          <input
-            type="text"
+        <div className="h-13 px-3 border-b border-border flex items-center space-x-2 shrink-0">
+          <Input
             value={query}
             onChange={(e) => {
               setQuery(e.target.value);
               setSelectedIndex(0);
             }}
             autoFocus
+            variant="ghost"
+            inputSize="lg"
+            startIcon={<Search className="w-4 h-4 text-foreground-muted shrink-0" />}
             placeholder="Search conversation nodes or type a command..."
-            className="flex-1 text-sm text-zinc-900 placeholder:text-zinc-400 bg-transparent focus:outline-none"
+            className="flex-1 text-sm bg-transparent border-none shadow-none focus-visible:ring-0 focus-visible:bg-transparent"
           />
-          <button
+          <Button
+            variant="ghost"
+            size="iconSm"
             onClick={onClose}
-            className="p-1 rounded-md text-zinc-400 hover:text-zinc-900 cursor-pointer"
+            aria-label="Close command palette"
           >
             <X className="w-4 h-4" />
-          </button>
+          </Button>
         </div>
 
         {/* Results Container */}
@@ -192,28 +200,35 @@ export function CommandPalette({
           {/* Matching Node Search Results */}
           {matchingNodes.length > 0 && (
             <div className="space-y-0.5 mb-2">
-              <div className="px-3 py-1 text-2xs font-semibold text-zinc-400 uppercase tracking-wider">
+              <div className="px-3 py-1 text-2xs font-semibold text-foreground-muted uppercase tracking-wider">
                 Conversation Nodes
               </div>
               {matchingNodes.map((node, index) => {
                 const isSelected = selectedIndex === index;
                 return (
-                  <button
+                  <Button
                     key={node.id}
-                    type="button"
+                    variant={isSelected ? "default" : "ghost"}
+                    size="sm"
                     onClick={() => {
                       onSelectNode(node.id);
                       onClose();
                     }}
                     onMouseEnter={() => setSelectedIndex(index)}
-                    className={`w-full text-left px-3 py-2 rounded-xl flex items-center justify-between text-xs transition-colors cursor-pointer ${
+                    className={cn(
+                      "w-full justify-between h-auto py-2 px-3 text-xs rounded-xl font-normal cursor-pointer transition-colors",
                       isSelected
-                        ? "bg-zinc-900 text-white font-medium"
-                        : "text-zinc-700 hover:bg-zinc-100"
-                    }`}
+                        ? "bg-primary text-primary-foreground font-medium"
+                        : "text-foreground hover:bg-surface-hover"
+                    )}
                   >
-                    <div className="flex items-center space-x-2 min-w-0">
-                      <span className={`text-2xs font-mono shrink-0 ${isSelected ? "text-zinc-300" : "text-zinc-400"}`}>
+                    <div className="flex items-center space-x-2 min-w-0 text-left">
+                      <span
+                        className={cn(
+                          "text-2xs font-mono shrink-0",
+                          isSelected ? "text-primary-foreground/70" : "text-foreground-muted"
+                        )}
+                      >
                         {node.role}
                       </span>
                       <span className="truncate">
@@ -221,8 +236,13 @@ export function CommandPalette({
                         {node.content}
                       </span>
                     </div>
-                    <CornerDownLeft className={`w-3 h-3 shrink-0 ml-2 ${isSelected ? "text-white" : "text-zinc-400"}`} />
-                  </button>
+                    <CornerDownLeft
+                      className={cn(
+                        "w-3 h-3 shrink-0 ml-2",
+                        isSelected ? "text-primary-foreground" : "text-foreground-muted"
+                      )}
+                    />
+                  </Button>
                 );
               })}
             </div>
@@ -230,7 +250,7 @@ export function CommandPalette({
 
           {/* Quick Actions List */}
           <div className="space-y-0.5">
-            <div className="px-3 py-1 text-2xs font-semibold text-zinc-400 uppercase tracking-wider">
+            <div className="px-3 py-1 text-2xs font-semibold text-foreground-muted uppercase tracking-wider">
               Actions
             </div>
             {commandActions.map((cmd, index) => {
@@ -239,44 +259,58 @@ export function CommandPalette({
               const Icon = cmd.icon;
 
               return (
-                <button
+                <Button
                   key={cmd.id}
-                  type="button"
+                  variant={isSelected ? "default" : "ghost"}
+                  size="sm"
                   onClick={cmd.action}
                   onMouseEnter={() => setSelectedIndex(actualIndex)}
-                  className={`w-full text-left px-3 py-2 rounded-xl flex items-center justify-between text-xs transition-colors cursor-pointer ${
+                  className={cn(
+                    "w-full justify-between h-auto py-2 px-3 text-xs rounded-xl font-normal cursor-pointer transition-colors",
                     isSelected
-                      ? "bg-zinc-900 text-white font-medium"
-                      : "text-zinc-700 hover:bg-zinc-100"
-                  }`}
+                      ? "bg-primary text-primary-foreground font-medium"
+                      : "text-foreground hover:bg-surface-hover"
+                  )}
                 >
                   <div className="flex items-center space-x-2.5">
-                    <Icon className={`w-4 h-4 ${isSelected ? "text-white" : "text-zinc-500"}`} />
+                    <Icon
+                      className={cn(
+                        "w-4 h-4",
+                        isSelected ? "text-primary-foreground" : "text-foreground-muted"
+                      )}
+                    />
                     <span>{cmd.label}</span>
                   </div>
                   <kbd
-                    className={`text-2xs font-mono px-1.5 py-0.5 rounded border ${
+                    className={cn(
+                      "text-2xs font-mono px-1.5 py-0.5 rounded border",
                       isSelected
-                        ? "bg-zinc-800 border-zinc-700 text-zinc-300"
-                        : "bg-zinc-100 border-zinc-200 text-zinc-500"
-                    }`}
+                        ? "bg-primary-foreground/20 border-primary-foreground/30 text-primary-foreground"
+                        : "bg-surface-hover border-border text-foreground-muted"
+                    )}
                   >
                     {cmd.shortcut}
                   </kbd>
-                </button>
+                </Button>
               );
             })}
           </div>
         </div>
 
         {/* Footer info */}
-        <div className="px-4 py-2 bg-zinc-50 border-t border-zinc-200/80 flex items-center justify-between text-xs text-zinc-500">
+        <div className="px-4 py-2 bg-background-secondary border-t border-border flex items-center justify-between text-xs text-foreground-muted">
           <div className="flex items-center space-x-2">
-            <span>Navigate with <kbd className="font-mono">↑</kbd> <kbd className="font-mono">↓</kbd></span>
+            <span>
+              Navigate with <kbd className="font-mono">↑</kbd> <kbd className="font-mono">↓</kbd>
+            </span>
             <span>•</span>
-            <span>Select with <kbd className="font-mono">↵</kbd></span>
+            <span>
+              Select with <kbd className="font-mono">↵</kbd>
+            </span>
           </div>
-          <span>Close with <kbd className="font-mono">esc</kbd></span>
+          <span>
+            Close with <kbd className="font-mono">esc</kbd>
+          </span>
         </div>
       </div>
     </div>

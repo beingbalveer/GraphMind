@@ -128,7 +128,7 @@ export function WorkspaceDashboard() {
           {error && (
             <div className="mb-6">
               <InlineFeedback
-                variant="error"
+                tone="destructive"
                 action={
                   <Button size="sm" variant="outline" onClick={loadWorkspaces}>
                     Retry
@@ -143,7 +143,7 @@ export function WorkspaceDashboard() {
           {/* Empty State vs Workspaces Grid */}
           {workspaces.length === 0 && !error ? (
             <Surface
-              variant="flat"
+              variant="base"
               radius="card"
               className="py-16 px-6 text-center border-2 border-dashed border-border max-w-2xl mx-auto space-y-4"
             >

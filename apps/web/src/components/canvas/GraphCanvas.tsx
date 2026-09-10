@@ -35,6 +35,8 @@ import { treeToGraph } from "@/lib/treeToGraph";
 import { getLayoutedElements, LayoutDirection } from "@/lib/layoutEngine";
 import { extractConversationThreads } from "@/lib/threadUtils";
 import { getWorkspaceMastery, getWorkspaceTimeline } from "@/lib/workspaceApi";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { ThreadGraphNode, ThreadNodeData, ThreadMasteryInfo, ZoomMode } from "./ThreadGraphNode";
 import { MindMapEdge } from "./MindMapEdge";
 import { TimelineReplayBar } from "./TimelineReplayBar";
@@ -368,7 +370,7 @@ function FlowCanvas({
         />
         <Controls
           showInteractive={false}
-          className="bg-white border border-zinc-200 shadow-sm rounded-xl overflow-hidden p-0.5 text-zinc-700"
+          className="bg-surface border border-border shadow-xs rounded-xl overflow-hidden p-0.5 text-foreground-muted"
         />
         {showMinimap && (
           <MiniMap
@@ -379,150 +381,156 @@ function FlowCanvas({
                 ? "var(--canvas-edge-active, #18181b)"
                 : "var(--border, #e4e4e7)";
             }}
-            className="bg-white/95 border border-zinc-200/90 shadow-sm rounded-xl overflow-hidden hidden sm:block"
+            className="bg-surface/95 border border-border shadow-xs rounded-xl overflow-hidden hidden sm:block"
           />
         )}
       </ReactFlow>
 
       {/* Floating Canvas Camera & Layout Toolbar */}
       <div
-        className={`absolute top-4 z-20 flex items-center gap-1 p-1 bg-white border border-zinc-200/70 rounded-2xl select-none transition-all duration-200 ${
+        className={`absolute top-4 z-20 flex items-center gap-1 p-1 bg-surface border border-border rounded-2xl select-none shadow-xs transition-all duration-200 ${
           isSidePeekOpen
             ? "right-4 sm:right-[496px] md:right-[556px] lg:right-[596px]"
             : "right-4"
         }`}
       >
         {/* LOD Mode Indicator Badge */}
-        <div className="px-2.5 py-1 rounded-xl bg-zinc-100 text-xs font-medium text-zinc-800 capitalize">
+        <Badge variant="secondary" className="text-xs font-medium capitalize">
           {zoomMode === "orb" ? "🌌 Galaxy View" : zoomMode === "detailed" ? "🔍 Focus View" : "📄 Thread Tree"}
-        </div>
-        <div className="w-px h-4 bg-zinc-200/80 mx-0.5" />
+        </Badge>
+        <div className="w-px h-4 bg-border-subtle mx-0.5" />
 
-        <button
-          type="button"
+        <Button
+          variant="ghost"
+          size="iconSm"
           onClick={handleToggleDirection}
-          className="w-7 h-7 rounded-xl text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100 flex items-center justify-center transition-colors cursor-pointer"
+          className="text-foreground-muted hover:text-foreground hover:bg-surface-hover"
           title={`Switch Layout: ${direction === "LR" ? "Horizontal (Left-to-Right)" : "Vertical (Top-to-Bottom)"}`}
+          aria-label="Switch Layout Direction"
         >
           {direction === "LR" ? (
             <Rows3 className="w-3.5 h-3.5 stroke-[1.75]" />
           ) : (
             <Columns3 className="w-3.5 h-3.5 stroke-[1.75]" />
           )}
-        </button>
-        <button
-          type="button"
+        </Button>
+        <Button
+          variant="ghost"
+          size="iconSm"
           onClick={handleAutoLayout}
-          className="w-7 h-7 rounded-xl text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100 flex items-center justify-center transition-colors cursor-pointer"
+          className="text-foreground-muted hover:text-foreground hover:bg-surface-hover"
           title="Recompute Clean Auto-Layout (⌘L)"
+          aria-label="Recompute Auto Layout"
         >
           <Sparkles className="w-3.5 h-3.5 stroke-[1.75]" />
-        </button>
-        <div className="w-px h-4 bg-zinc-200/80 mx-0.5" />
-        <button
-          type="button"
+        </Button>
+        <div className="w-px h-4 bg-border-subtle mx-0.5" />
+        <Button
+          variant="ghost"
+          size="iconSm"
           onClick={() => centerOnNode()}
-          className="w-7 h-7 rounded-xl text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100 flex items-center justify-center transition-colors cursor-pointer"
+          className="text-foreground-muted hover:text-foreground hover:bg-surface-hover"
           title="Center on Active Node (⌘.)"
+          aria-label="Center on Active Node"
         >
           <Crosshair className="w-3.5 h-3.5 stroke-[1.75]" />
-        </button>
-        <button
-          type="button"
+        </Button>
+        <Button
+          variant="ghost"
+          size="iconSm"
           onClick={handleFitView}
-          className="w-7 h-7 rounded-xl text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100 flex items-center justify-center transition-colors cursor-pointer"
+          className="text-foreground-muted hover:text-foreground hover:bg-surface-hover"
           title="Fit All Nodes in View (⌘0)"
+          aria-label="Fit All Nodes in View"
         >
           <Maximize2 className="w-3.5 h-3.5 stroke-[1.75]" />
-        </button>
-        <button
-          type="button"
+        </Button>
+        <Button
+          variant="ghost"
+          size="iconSm"
           onClick={handleResetZoom}
-          className="w-7 h-7 rounded-xl text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100 flex items-center justify-center transition-colors cursor-pointer"
+          className="text-foreground-muted hover:text-foreground hover:bg-surface-hover"
           title="Reset Zoom to 100%"
+          aria-label="Reset Zoom"
         >
           <RotateCcw className="w-3.5 h-3.5 stroke-[1.75]" />
-        </button>
-        <div className="w-px h-4 bg-zinc-200/80 mx-0.5" />
-        <button
-          type="button"
+        </Button>
+        <div className="w-px h-4 bg-border-subtle mx-0.5" />
+        <Button
+          variant="ghost"
+          size="iconSm"
           onClick={() => setShowMinimap((prev) => !prev)}
-          className={`w-7 h-7 rounded-xl text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100 flex items-center justify-center transition-colors cursor-pointer ${
-            showMinimap ? "bg-zinc-100 text-zinc-950 font-medium" : ""
+          className={`text-foreground-muted hover:text-foreground hover:bg-surface-hover ${
+            showMinimap ? "bg-surface-hover text-foreground font-medium" : ""
           }`}
           title="Toggle Radar Minimap"
+          aria-label="Toggle Radar Minimap"
         >
           <MapIcon className="w-3.5 h-3.5 stroke-[1.75]" />
-        </button>
-        <div className="w-px h-4 bg-zinc-200/80 mx-0.5" />
-        <button
-          type="button"
+        </Button>
+        <div className="w-px h-4 bg-border-subtle mx-0.5" />
+        <Button
+          variant={isHeatmapMode ? "default" : "ghost"}
+          size="sm"
           onClick={() => setIsHeatmapMode((prev) => !prev)}
-          className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-xl text-xs font-medium transition-all cursor-pointer ${
-            isHeatmapMode
-              ? "bg-purple-600 text-white shadow-xs"
-              : "text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100"
-          }`}
+          className="h-7 px-2.5 text-xs font-medium gap-1.5"
           title="Toggle Concept Mastery Heatmap"
+          aria-label="Toggle Concept Mastery Heatmap"
         >
           <Flame className="w-3.5 h-3.5 stroke-[2]" />
           <span>Heatmap</span>
-        </button>
-        <div className="w-px h-4 bg-zinc-200/80 mx-0.5" />
-        <button
-          type="button"
-          onClick={() => {
-            setIsReplayMode((prev) => !prev);
-          }}
-          className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-xl text-xs font-medium transition-all cursor-pointer ${
-            isReplayMode
-              ? "bg-purple-600 text-white shadow-xs"
-              : "text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100"
-          }`}
+        </Button>
+        <div className="w-px h-4 bg-border-subtle mx-0.5" />
+        <Button
+          variant={isReplayMode ? "default" : "ghost"}
+          size="sm"
+          onClick={() => setIsReplayMode((prev) => !prev)}
+          className="h-7 px-2.5 text-xs font-medium gap-1.5"
           title="Replay Knowledge Graph Evolution"
+          aria-label="Replay Knowledge Graph Evolution"
         >
           <History className="w-3.5 h-3.5 stroke-[2]" />
           <span>Replay</span>
-        </button>
+        </Button>
       </div>
 
       {/* Floating Heatmap Legend */}
       {isHeatmapMode && (
-        <div className="absolute bottom-4 left-4 z-20 bg-white/95 backdrop-blur-xs border border-zinc-200/80 rounded-2xl p-3 shadow-md select-none text-xs animate-in fade-in slide-in-from-bottom-2 duration-150 space-y-2 max-w-[220px]">
-          <div className="flex items-center justify-between text-xs font-semibold text-zinc-900 pb-1 border-b border-zinc-100">
+        <div className="absolute bottom-4 left-4 z-20 bg-surface/95 backdrop-blur-xs border border-border rounded-2xl p-3 shadow-md select-none text-xs animate-in fade-in slide-in-from-bottom-2 duration-150 space-y-2 max-w-[220px]">
+          <div className="flex items-center justify-between text-xs font-semibold text-foreground pb-1 border-b border-border-subtle">
             <span className="flex items-center gap-1.5">
-              <Flame className="w-3.5 h-3.5 text-purple-600" />
+              <Flame className="w-3.5 h-3.5 text-foreground" />
               <span>Mastery Heatmap</span>
             </span>
           </div>
-          <div className="space-y-1.5 text-zinc-700">
+          <div className="space-y-1.5 text-foreground-muted">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                <span className="w-2 h-2 rounded-full bg-success shrink-0" />
                 <span>Mastered</span>
               </div>
-              <span className="font-mono text-2xs text-zinc-400">≥80%</span>
+              <span className="font-mono text-2xs text-foreground-subtle">≥80%</span>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-purple-500 shrink-0" />
+                <span className="w-2 h-2 rounded-full bg-foreground shrink-0" />
                 <span>Quizzed</span>
               </div>
-              <span className="font-mono text-2xs text-zinc-400">50-79%</span>
+              <span className="font-mono text-2xs text-foreground-subtle">50-79%</span>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-sky-500 shrink-0" />
+                <span className="w-2 h-2 rounded-full bg-info shrink-0" />
                 <span>Explored</span>
               </div>
-              <span className="font-mono text-2xs text-zinc-400">&gt;0%</span>
+              <span className="font-mono text-2xs text-foreground-subtle">&gt;0%</span>
             </div>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+                <span className="w-2 h-2 rounded-full bg-warning shrink-0" />
                 <span>Stale</span>
               </div>
-              <span className="font-mono text-2xs text-zinc-400">Needs Review</span>
+              <span className="font-mono text-2xs text-foreground-subtle">Needs Review</span>
             </div>
           </div>
         </div>

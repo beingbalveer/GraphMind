@@ -14,6 +14,8 @@ import {
   GitBranch,
 } from "lucide-react";
 import { TimelineEvent, WorkspaceTimelineResponse } from "@graphmind/shared";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 interface TimelineReplayBarProps {
   timeline: WorkspaceTimelineResponse | null;
@@ -93,26 +95,29 @@ export function TimelineReplayBar({
 
   if (totalEvents === 0) {
     return (
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 bg-white/95 backdrop-blur-md border border-zinc-200/80 rounded-2xl px-5 py-3 shadow-lg select-none flex items-center space-x-3 text-xs text-zinc-600 animate-in fade-in slide-in-from-bottom-3 duration-200">
-        <History className="w-4 h-4 text-purple-600" />
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 bg-surface/95 backdrop-blur-md border border-border rounded-2xl px-5 py-3 shadow-modal select-none flex items-center space-x-3 text-xs text-foreground-muted animate-in fade-in slide-in-from-bottom-3 duration-200">
+        <History className="w-4 h-4 text-foreground" />
         <span>No historical events recorded for this workspace yet.</span>
-        <button
-          type="button"
+        <Button
+          variant="ghost"
+          size="iconSm"
           onClick={onClose}
-          className="p-1 text-zinc-400 hover:text-zinc-950 rounded-lg hover:bg-zinc-100 transition-colors"
+          className="text-foreground-muted hover:text-foreground hover:bg-surface-hover"
+          title="Close replay bar"
+          aria-label="Close replay bar"
         >
           <X className="w-3.5 h-3.5" />
-        </button>
+        </Button>
       </div>
     );
   }
 
   return (
-    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 w-[94%] max-w-2xl bg-white/95 backdrop-blur-md border border-zinc-200/90 rounded-2xl p-3 sm:p-4 shadow-xl select-none animate-in fade-in slide-in-from-bottom-3 duration-200 space-y-3">
+    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 w-[94%] max-w-2xl bg-surface/95 backdrop-blur-md border border-border rounded-2xl p-3 sm:p-4 shadow-modal select-none animate-in fade-in slide-in-from-bottom-3 duration-200 space-y-3">
       {/* Top Header: Current Event info & Live Stats */}
       <div className="flex items-center justify-between text-xs gap-2">
         <div className="flex items-center space-x-2 min-w-0">
-          <div className="p-1.5 rounded-lg bg-purple-50 text-purple-700 border border-purple-200 shrink-0">
+          <div className="p-1.5 rounded-lg bg-surface-hover text-foreground border border-border shrink-0">
             {currentEvent?.eventType === "branch_created" ? (
               <GitBranch className="w-3.5 h-3.5" />
             ) : currentEvent?.eventType === "concept_mastered" ? (
@@ -122,12 +127,12 @@ export function TimelineReplayBar({
             )}
           </div>
           <div className="min-w-0">
-            <p className="font-semibold text-zinc-900 truncate">
+            <p className="font-semibold text-foreground truncate">
               {currentEvent?.title || "Replaying Evolution"}
             </p>
-            <div className="flex items-center space-x-2 text-2xs text-zinc-500">
+            <div className="flex items-center space-x-2 text-2xs text-foreground-muted">
               <span className="flex items-center space-x-1">
-                <Calendar className="w-3 h-3 text-zinc-400" />
+                <Calendar className="w-3 h-3 text-foreground-subtle" />
                 <span>{formattedDate}</span>
               </span>
               <span>•</span>
@@ -138,30 +143,26 @@ export function TimelineReplayBar({
           </div>
         </div>
 
-        {/* Live Counters */}
+        {/* Live Graph Evolution Metrics */}
         <div className="flex items-center space-x-2 shrink-0">
-          <div className="hidden sm:flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-zinc-100 text-zinc-700 font-mono text-2xs">
-            <span>Nodes:</span>
-            <span className="font-bold text-zinc-950">
-              {visibleNodeCount}/{totalNodeCount}
-            </span>
-          </div>
+          <Badge variant="secondary" className="font-mono text-2xs">
+            <span>Nodes: {visibleNodeCount}/{totalNodeCount}</span>
+          </Badge>
 
-          <div className="hidden sm:flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200/80 text-emerald-800 font-mono text-2xs">
-            <span>Mastered:</span>
-            <span className="font-bold">
-              {masteredConceptCount}/{totalConceptCount}
-            </span>
-          </div>
+          <Badge variant="success" className="font-mono text-2xs hidden sm:inline-flex">
+            <span>Mastered: {masteredConceptCount}/{totalConceptCount}</span>
+          </Badge>
 
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="iconSm"
             onClick={onClose}
-            className="p-1.5 text-zinc-400 hover:text-zinc-900 rounded-lg hover:bg-zinc-100 transition-colors cursor-pointer"
+            className="text-foreground-muted hover:text-foreground hover:bg-surface-hover"
             title="Exit Timeline Replay"
+            aria-label="Exit Timeline Replay"
           >
             <X className="w-4 h-4" />
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -173,7 +174,7 @@ export function TimelineReplayBar({
           max={totalEvents - 1}
           value={currentEventIndex}
           onChange={(e) => onSelectEventIndex(parseInt(e.target.value, 10))}
-          className="w-full h-1.5 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-purple-600 focus:outline-none"
+          className="w-full h-1.5 bg-muted rounded-lg appearance-none cursor-pointer accent-primary focus:outline-none"
         />
 
         {/* Milestone Indicator Dots along track */}
@@ -187,8 +188,8 @@ export function TimelineReplayBar({
                 style={{ left: `${leftPct}%` }}
                 className={`absolute -top-1 w-2 h-2 -translate-x-1/2 rounded-full border transition-colors ${
                   isPassed
-                    ? "bg-purple-600 border-white shadow-2xs"
-                    : "bg-zinc-300 border-zinc-100"
+                    ? "bg-primary border-surface shadow-2xs"
+                    : "bg-muted-foreground/40 border-border"
                 }`}
                 title={events[mIdx]?.title}
               />
@@ -201,68 +202,77 @@ export function TimelineReplayBar({
       <div className="flex items-center justify-between pt-0.5 text-xs">
         {/* Left: Play/Pause & Milestone navigation */}
         <div className="flex items-center space-x-1.5">
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="iconSm"
             onClick={() => onSelectEventIndex(0)}
-            className="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-950 hover:bg-zinc-100 transition-colors cursor-pointer"
+            className="text-foreground-muted hover:text-foreground hover:bg-surface-hover"
             title="Jump to Start"
+            aria-label="Jump to Start"
           >
             <RotateCcw className="w-3.5 h-3.5" />
-          </button>
+          </Button>
 
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="iconSm"
             onClick={handlePrevMilestone}
-            className="p-1.5 rounded-lg text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100 transition-colors cursor-pointer"
+            className="text-foreground-muted hover:text-foreground hover:bg-surface-hover"
             title="Previous Milestone"
+            aria-label="Previous Milestone"
           >
             <SkipBack className="w-4 h-4" />
-          </button>
+          </Button>
 
-          <button
-            type="button"
+          <Button
+            variant="default"
+            size="sm"
             onClick={onTogglePlay}
-            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-medium transition-all shadow-xs cursor-pointer"
+            className="h-8 px-3 text-xs font-medium gap-1.5 shadow-xs"
             title={isPlaying ? "Pause" : "Play Replay"}
+            aria-label={isPlaying ? "Pause" : "Play Replay"}
           >
             {isPlaying ? (
               <>
-                <Pause className="w-3.5 h-3.5 fill-white" />
+                <Pause className="w-3.5 h-3.5 fill-current" />
                 <span className="text-2xs">Pause</span>
               </>
             ) : (
               <>
-                <Play className="w-3.5 h-3.5 fill-white" />
+                <Play className="w-3.5 h-3.5 fill-current" />
                 <span className="text-2xs">Play</span>
               </>
             )}
-          </button>
+          </Button>
 
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="iconSm"
             onClick={handleNextMilestone}
-            className="p-1.5 rounded-lg text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100 transition-colors cursor-pointer"
+            className="text-foreground-muted hover:text-foreground hover:bg-surface-hover"
             title="Next Milestone"
+            aria-label="Next Milestone"
           >
             <SkipForward className="w-4 h-4" />
-          </button>
+          </Button>
         </div>
 
         {/* Right: Speed controls */}
-        <div className="flex items-center space-x-1 bg-zinc-100/90 p-1 rounded-xl">
+        <div className="flex items-center space-x-1 bg-muted p-1 rounded-xl">
           {[1, 2, 5].map((spd) => (
-            <button
+            <Button
               key={spd}
-              type="button"
+              variant={playbackSpeed === spd ? "outline" : "ghost"}
+              size="sm"
               onClick={() => onSpeedChange(spd)}
-              className={`px-2 py-0.5 rounded-lg text-2xs font-semibold transition-all cursor-pointer ${
+              className={`h-6 px-2 text-2xs font-semibold shadow-none ${
                 playbackSpeed === spd
-                  ? "bg-white text-zinc-950 shadow-2xs"
-                  : "text-zinc-500 hover:text-zinc-800"
+                  ? "bg-surface text-foreground"
+                  : "text-foreground-muted hover:text-foreground hover:bg-surface-hover"
               }`}
             >
               {spd}x
-            </button>
+            </Button>
           ))}
         </div>
       </div>

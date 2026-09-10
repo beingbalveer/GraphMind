@@ -42,8 +42,8 @@ export function CustomBranchEdge({
   });
 
   const strokeColor = isActive
-    ? "var(--canvas-edge-active, #18181b)"
-    : "var(--canvas-edge, #d4d4d8)";
+    ? "var(--border-strong, currentColor)"
+    : "var(--border, currentColor)";
   const strokeWidth = isActive ? 2 : 1.5;
 
   return (
@@ -71,10 +71,10 @@ export function CustomBranchEdge({
               transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
               pointerEvents: "all",
             }}
-            className="nodrag nopan flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/95 border border-zinc-200 shadow-xs text-2xs text-zinc-600 font-medium max-w-[130px] truncate select-none hover:border-zinc-400 transition-colors"
+            className="nodrag nopan flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface/95 border border-border shadow-2xs text-2xs text-foreground font-medium max-w-[130px] truncate select-none hover:border-border-subtle transition-colors"
             title={`Branched from excerpt: "${highlightedContext}"`}
           >
-            <GitBranch className="w-2.5 h-2.5 text-zinc-400 shrink-0" />
+            <GitBranch className="w-2.5 h-2.5 text-foreground-muted shrink-0" />
             <span className="italic truncate">&ldquo;{highlightedContext}&rdquo;</span>
           </div>
         </EdgeLabelRenderer>
