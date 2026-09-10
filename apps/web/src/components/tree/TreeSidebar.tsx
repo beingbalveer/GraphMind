@@ -45,16 +45,17 @@ function TreeNodeItem({
 
   return (
     <div className="flex flex-col">
-      <button
+      <Button
         type="button"
+        variant="ghost"
         onClick={() => onSelectNode(node.id)}
         style={{ paddingLeft: `${Math.min(depth * 14 + 10, 120)}px` }}
-        className={`w-full text-left py-2 pr-3 rounded-lg flex items-start space-x-2 transition-all group cursor-pointer text-xs font-normal ${
+        className={`w-full h-auto text-left py-2 pr-3 rounded-lg flex items-start justify-start space-x-2 transition-all group cursor-pointer text-xs font-normal whitespace-normal ${
           isActive
-            ? "bg-primary text-primary-foreground"
+            ? "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground"
             : isOnActivePath
-            ? "bg-muted/90 text-foreground"
-            : "text-muted-foreground hover:bg-surface-hover hover:text-foreground"
+            ? "bg-muted/90 text-foreground hover:bg-muted hover:text-foreground"
+            : "text-foreground-muted hover:bg-surface-hover hover:text-foreground"
         }`}
       >
         {/* Node Icon */}
@@ -62,19 +63,19 @@ function TreeNodeItem({
           {node.highlightedContext ? (
             <GitBranch
               className={`w-3.5 h-3.5 ${
-                isActive ? "text-white" : "text-zinc-500"
+                isActive ? "text-primary-foreground" : "text-foreground-muted"
               }`}
             />
           ) : isUser ? (
             <User
               className={`w-3.5 h-3.5 ${
-                isActive ? "text-white" : "text-zinc-400"
+                isActive ? "text-primary-foreground" : "text-foreground-muted"
               }`}
             />
           ) : (
             <Sparkles
               className={`w-3.5 h-3.5 ${
-                isActive ? "text-white" : "text-zinc-400"
+                isActive ? "text-primary-foreground" : "text-foreground-muted"
               }`}
             />
           )}
@@ -85,7 +86,7 @@ function TreeNodeItem({
           {node.highlightedContext && (
             <div
               className={`text-2xs truncate font-normal ${
-                isActive ? "text-primary-foreground/80" : "text-muted-foreground"
+                isActive ? "text-primary-foreground/80" : "text-foreground-muted"
               }`}
             >
               &ldquo;{node.highlightedContext}&rdquo;
@@ -109,7 +110,7 @@ function TreeNodeItem({
             {children.length}
           </span>
         )}
-      </button>
+      </Button>
 
       {/* Render Subtree Children */}
       {children.length > 0 && (
@@ -117,7 +118,7 @@ function TreeNodeItem({
           {/* Vertical lineage guide line */}
           <div
             style={{ left: `${depth * 14 + 16}px` }}
-            className="absolute top-0 bottom-2 w-px bg-zinc-200/80 pointer-events-none"
+            className="absolute top-0 bottom-2 w-px bg-border-subtle pointer-events-none"
           />
           {children.map((child) => (
             <TreeNodeItem

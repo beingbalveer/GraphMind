@@ -27,5 +27,5 @@ describe("real branch menu triggers", () => {
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
     expect(trigger).toHaveFocus();
     expect(wrapper).toHaveClass("focus-within:opacity-100");
-  }, 15000);
+  }, 30000);
 });

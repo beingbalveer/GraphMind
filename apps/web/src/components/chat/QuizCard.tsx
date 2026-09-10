@@ -2,6 +2,8 @@
 
 import React, { useState } from "react";
 import { CheckCircle2, XCircle, Sparkles, Check } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   createWorkspaceConcept,
   updateWorkspaceConcept,
@@ -89,26 +91,26 @@ function SingleQuizCard({
       {/* Quiz Card Header */}
       <div className="flex items-center justify-between gap-2 mb-3">
         <div className="flex items-center space-x-2 min-w-0">
-          <span className="flex items-center space-x-1.5 text-xs font-semibold px-2.5 py-0.5 rounded-md bg-purple-50 text-purple-800 border border-purple-200/70">
-            <Sparkles className="w-3 h-3 text-purple-600" />
+          <Badge variant="secondary" className="gap-1.5 py-0.5">
+            <Sparkles className="w-3 h-3 text-foreground" />
             <span>Interactive Quiz</span>
-          </span>
+          </Badge>
           {item.concept && (
-            <span className="text-2xs font-medium text-zinc-600 bg-zinc-100 px-2 py-0.5 rounded-md truncate max-w-[200px]">
+            <Badge variant="outline" className="text-2xs font-medium text-foreground-muted truncate max-w-[200px]">
               {item.concept}
-            </span>
+            </Badge>
           )}
         </div>
 
         {totalQuestions && totalQuestions > 1 && questionIndex !== undefined && (
-          <span className="text-2xs font-medium text-zinc-400">
+          <span className="text-2xs font-medium text-foreground-muted">
             {questionIndex + 1} of {totalQuestions}
           </span>
         )}
       </div>
 
       {/* Question Prompt */}
-      <h4 className="text-sm font-semibold text-zinc-950 mb-3.5 leading-relaxed">
+      <h4 className="text-sm font-semibold text-foreground mb-3.5 leading-relaxed">
         {item.question}
       </h4>
 
@@ -120,37 +122,38 @@ function SingleQuizCard({
           const isThisOptionCorrect = opt.isCorrect ?? false;
 
           let btnStyles =
-            "border-zinc-200 bg-white hover:border-zinc-300 hover:bg-zinc-50/70 text-zinc-800";
+            "border-border bg-surface hover:border-border-strong hover:bg-surface-hover text-foreground";
 
           if (isAnswered) {
             if (isSelected) {
               btnStyles = isCorrect
-                ? "border-emerald-500 bg-emerald-50/80 text-emerald-950 ring-1 ring-emerald-500/20"
-                : "border-rose-400 bg-rose-50/80 text-rose-950 ring-1 ring-rose-400/20";
+                ? "border-foreground bg-surface-hover text-foreground ring-1 ring-foreground/30 font-medium"
+                : "border-destructive bg-destructive/10 text-foreground ring-1 ring-destructive/30";
             } else if (isThisOptionCorrect) {
-              btnStyles = "border-emerald-300 bg-emerald-50/40 text-emerald-900";
+              btnStyles = "border-foreground/50 bg-surface-hover/70 text-foreground font-medium";
             } else {
-              btnStyles = "border-zinc-200/60 bg-zinc-50/40 text-zinc-400 opacity-60";
+              btnStyles = "border-border-subtle bg-surface/30 text-foreground-muted opacity-50";
             }
           }
 
           return (
-            <button
+            <Button
               key={opt.id || idx}
               type="button"
+              variant="outline"
               disabled={isAnswered}
               onClick={() => handleSelect(opt.id)}
-              className={`w-full flex items-start text-left p-3 rounded-xl border text-xs transition-all duration-150 cursor-pointer disabled:cursor-default ${btnStyles}`}
+              className={`w-full flex items-start justify-start text-left p-3 h-auto rounded-xl border text-xs transition-all duration-150 cursor-pointer disabled:cursor-default whitespace-normal font-normal shadow-none ${btnStyles}`}
             >
               <div
                 className={`w-5 h-5 rounded-md flex items-center justify-center font-bold text-2xs shrink-0 mr-3 mt-0.5 transition-colors ${
                   isAnswered && isSelected
                     ? isCorrect
-                      ? "bg-emerald-600 text-white"
-                      : "bg-rose-600 text-white"
+                      ? "bg-foreground text-background"
+                      : "bg-destructive text-destructive-foreground"
                     : isAnswered && isThisOptionCorrect
-                    ? "bg-emerald-200 text-emerald-900"
-                    : "bg-zinc-100 text-zinc-700"
+                    ? "bg-foreground/20 text-foreground"
+                    : "bg-surface-hover text-foreground-muted"
                 }`}
               >
                 {isAnswered && isSelected ? (
@@ -164,7 +167,7 @@ function SingleQuizCard({
                 )}
               </div>
               <span className="flex-1 leading-relaxed">{opt.text}</span>
-            </button>
+            </Button>
           );
         })}
       </div>
@@ -175,32 +178,32 @@ function SingleQuizCard({
           <div
             className={`p-3 rounded-xl border text-xs leading-relaxed space-y-1.5 ${
               isCorrect
-                ? "bg-emerald-50/50 border-emerald-200/80 text-emerald-900"
-                : "bg-zinc-50 border-zinc-200/80 text-zinc-800"
+                ? "bg-surface-hover border-border text-foreground"
+                : "bg-surface border-border text-foreground"
             }`}
           >
             <div className="flex items-center space-x-1.5 font-semibold">
               {isCorrect ? (
                 <>
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span className="text-emerald-950">Correct! Great retention.</span>
+                  <CheckCircle2 className="w-4 h-4 text-foreground shrink-0" />
+                  <span className="text-foreground">Correct! Great retention.</span>
                 </>
               ) : (
                 <>
-                  <XCircle className="w-4 h-4 text-rose-600 shrink-0" />
-                  <span className="text-zinc-950">Review explanation:</span>
+                  <XCircle className="w-4 h-4 text-destructive shrink-0" />
+                  <span className="text-foreground">Review explanation:</span>
                 </>
               )}
             </div>
 
             {item.explanation && (
-              <p className="text-xs opacity-90">{item.explanation}</p>
+              <p className="text-xs opacity-90 text-foreground-muted">{item.explanation}</p>
             )}
 
             {/* Profile update confirmation */}
             {workspaceId && item.concept && (
-              <div className="flex items-center space-x-1 text-2xs pt-1 font-medium text-purple-700">
-                <Sparkles className="w-3 h-3 text-purple-500" />
+              <div className="flex items-center space-x-1 text-2xs pt-1 font-medium text-foreground-muted">
+                <Sparkles className="w-3 h-3 text-foreground" />
                 <span>
                   {isUpdatingProfile
                     ? "Updating Knowledge Profile..."
@@ -234,7 +237,7 @@ export function QuizCard({
   } catch {
     // If not JSON, render fallback block
     return (
-      <div className="my-3 p-3 rounded-xl bg-purple-50/50 border border-purple-200 text-xs text-purple-900 font-mono">
+      <div className="my-3 p-3 rounded-xl bg-surface border border-border text-xs text-foreground font-mono">
         {rawCode}
       </div>
     );
