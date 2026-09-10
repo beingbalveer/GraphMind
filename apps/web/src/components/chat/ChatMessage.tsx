@@ -701,7 +701,7 @@ export function ChatMessage({
         {/* In-Page Full Screen Image Lightbox */}
         {lightboxImage && (
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-overlay p-4 text-code-foreground backdrop-blur-sm animate-in fade-in-50 duration-150"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-overlay p-4 text-foreground backdrop-blur-sm animate-in fade-in-50 duration-150"
             onClick={() => setLightboxImage(null)}
           >
             <div
@@ -715,7 +715,7 @@ export function ChatMessage({
                   <a
                     href={lightboxImage.src}
                     download={lightboxImage.name}
-                    className="flex items-center space-x-1.5 rounded-lg bg-surface/10 px-2.5 py-1 text-code-foreground transition-colors hover:bg-surface/20"
+                    className="flex items-center space-x-1.5 rounded-lg bg-surface/10 px-2.5 py-1 text-foreground transition-colors hover:bg-surface/20"
                     title="Download image"
                   >
                     <Download className="w-3.5 h-3.5" />
@@ -724,7 +724,7 @@ export function ChatMessage({
                   <IconButton
                     label="Close preview"
                     onClick={() => setLightboxImage(null)}
-                    className="bg-surface/10 text-code-foreground hover:bg-surface/20 hover:text-code-foreground"
+                    className="bg-surface/10 text-foreground hover:bg-surface/20 hover:text-foreground"
                     title="Close preview (Esc)"
                   >
                     <X aria-hidden="true" className="size-4" />

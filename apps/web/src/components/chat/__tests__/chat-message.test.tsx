@@ -103,8 +103,9 @@ describe("ChatMessage", () => {
     );
 
     await user.click(screen.getByTitle("Click to view full screen"));
-    expect(screen.getByRole("button", { name: "Close preview" }).closest("div.fixed")).toHaveClass(
-      "bg-overlay"
-    );
+    const closePreview = screen.getByRole("button", { name: "Close preview" });
+    expect(closePreview.closest("div.fixed")).toHaveClass("bg-overlay", "text-foreground");
+    expect(screen.getByTitle("Download image")).toHaveClass("text-foreground");
+    expect(closePreview).toHaveClass("text-foreground");
   });
 });
