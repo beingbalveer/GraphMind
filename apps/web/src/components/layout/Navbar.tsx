@@ -93,7 +93,7 @@ export function Navbar({
             variant="ghost"
             size="iconSm"
             onClick={onToggleRightSidebar}
-            className="h-8 w-8 cursor-pointer transition-colors text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100"
+            className="cursor-pointer text-foreground-muted hover:text-foreground hover:bg-surface-hover"
             title="Open right panel"
             aria-label="Open right panel"
           >

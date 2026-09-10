@@ -362,7 +362,7 @@ export function ChatInput({
   const canSubmit = (prompt.trim().length > 0 || attachments.length > 0) && !isStreaming && !isUploading;
 
   return (
-    <div className="w-full max-w-3xl mx-auto px-4 pb-4 sm:pb-6">
+    <div className="w-full max-w-[var(--chat-content-max)] mx-auto px-4 pb-4 sm:pb-6">
       <form
         onSubmit={handleSubmit}
         onDragOver={handleDragOver}

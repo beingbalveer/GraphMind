@@ -85,7 +85,7 @@ Visual redesign must not silently change routing, API contracts, callback signat
 ### High-level status
 
 - Scope 1: complete and merged into local `main`.
-- Scope 2: Tasks 1–3 complete; Tasks 4–5 remain.
+- Scope 2: Tasks 1–4 complete; Task 5 remains.
 - Scope 3: not started.
 - Scope 4: not started.
 

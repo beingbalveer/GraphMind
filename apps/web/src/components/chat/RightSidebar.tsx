@@ -2,6 +2,7 @@
 
 import React from "react";
 import { PanelRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { useResizableSidebar } from "@/hooks/useResizableSidebar";
 
 interface RightSidebarProps {
@@ -60,14 +61,16 @@ export function RightSidebar({
 
         {/* Top Actions: Seamlessly integrated with no dividing border or separate header box */}
         <div className="h-13 px-3 flex items-center justify-end shrink-0 w-full">
-          <button
+          <Button
+            variant="ghost"
+            size="iconSm"
             onClick={onToggle}
-            className="size-8 rounded-lg flex items-center justify-center text-foreground-muted hover:text-foreground hover:bg-surface-hover transition-colors cursor-pointer shrink-0"
+            className="text-foreground-muted hover:text-foreground hover:bg-surface-hover cursor-pointer shrink-0"
             title="Collapse panel"
             aria-label="Collapse panel"
           >
             <PanelRight className="w-4 h-4" />
-          </button>
+          </Button>
         </div>
 
         {/* Blank Content Area */}
