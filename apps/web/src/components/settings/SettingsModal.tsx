@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   X,
   Sparkles,
@@ -16,15 +16,19 @@ import {
   Cpu,
   Bot,
   Zap,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { SegmentedTabs } from "@/components/ui/segmented-tabs";
+import { Badge } from "@/components/ui/badge";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { SettingRow, SettingSection } from "@/components/ui/setting-row";
 import { LLMConfig, LLMProvider, DEFAULT_LLM_CONFIG } from "@/hooks/useModelConfig";
 import { WorkspaceItem } from "@/lib/workspaceApi";
+import { cn } from "@/lib/utils";
 
 export type SettingsTabId =
   | "models"
@@ -124,7 +128,9 @@ export function SettingsModal({
   // Appearance Settings
   const [compactDensity, setCompactDensity] = useState(false);
 
-  const [savedFeedback, setSavedFeedback] = useState(false);
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   // Sync state when modal opens
   useEffect(() => {
@@ -138,9 +144,35 @@ export function SettingsModal({
       setAnthropicApiKey(config.anthropicApiKey || "");
       setDeepseekApiKey(config.deepseekApiKey || "");
       setOllamaBaseUrl(config.ollamaBaseUrl || "http://localhost:11434/v1");
-      setSavedFeedback(false);
+      setSaveState("idle");
+      setErrorMessage(null);
     }
   }, [isOpen, config]);
+
+  const hasUnsavedChanges = useMemo(() => {
+    return (
+      selectedProvider !== config.provider ||
+      selectedModel !== config.model ||
+      temperature !== config.temperature ||
+      systemPrompt !== config.systemPrompt ||
+      geminiApiKey !== (config.geminiApiKey || "") ||
+      openaiApiKey !== (config.openaiApiKey || "") ||
+      anthropicApiKey !== (config.anthropicApiKey || "") ||
+      deepseekApiKey !== (config.deepseekApiKey || "") ||
+      ollamaBaseUrl !== (config.ollamaBaseUrl || "http://localhost:11434/v1")
+    );
+  }, [
+    selectedProvider,
+    selectedModel,
+    temperature,
+    systemPrompt,
+    geminiApiKey,
+    openaiApiKey,
+    anthropicApiKey,
+    deepseekApiKey,
+    ollamaBaseUrl,
+    config,
+  ]);
 
   if (!isOpen) return null;
 
@@ -152,23 +184,42 @@ export function SettingsModal({
     }
   };
 
-  const handleSave = () => {
-    onSaveConfig({
-      provider: selectedProvider,
-      model: selectedModel,
-      temperature,
-      systemPrompt,
-      geminiApiKey: geminiApiKey.trim(),
-      openaiApiKey: openaiApiKey.trim(),
-      anthropicApiKey: anthropicApiKey.trim(),
-      deepseekApiKey: deepseekApiKey.trim(),
-      ollamaBaseUrl: ollamaBaseUrl.trim() || "http://localhost:11434/v1",
-    });
-    setSavedFeedback(true);
-    setTimeout(() => {
-      setSavedFeedback(false);
-      onClose();
-    }, 350);
+  const handleSave = async () => {
+    setErrorMessage(null);
+
+    // Explicit validation check
+    if (selectedProvider === "ollama" && ollamaBaseUrl.trim()) {
+      try {
+        new URL(ollamaBaseUrl.trim());
+      } catch {
+        setErrorMessage("Invalid Ollama Server URL. Please enter a valid http:// or https:// URL.");
+        setSaveState("error");
+        return;
+      }
+    }
+
+    setSaveState("saving");
+    try {
+      onSaveConfig({
+        provider: selectedProvider,
+        model: selectedModel,
+        temperature,
+        systemPrompt,
+        geminiApiKey: geminiApiKey.trim(),
+        openaiApiKey: openaiApiKey.trim(),
+        anthropicApiKey: anthropicApiKey.trim(),
+        deepseekApiKey: deepseekApiKey.trim(),
+        ollamaBaseUrl: ollamaBaseUrl.trim() || "http://localhost:11434/v1",
+      });
+      setSaveState("saved");
+      setTimeout(() => {
+        setSaveState("idle");
+        onClose();
+      }, 400);
+    } catch (err: unknown) {
+      setErrorMessage(err instanceof Error ? err.message : "Failed to save configuration.");
+      setSaveState("error");
+    }
   };
 
   const handleReset = () => {
@@ -182,6 +233,8 @@ export function SettingsModal({
     setAnthropicApiKey(DEFAULT_LLM_CONFIG.anthropicApiKey);
     setDeepseekApiKey(DEFAULT_LLM_CONFIG.deepseekApiKey);
     setOllamaBaseUrl(DEFAULT_LLM_CONFIG.ollamaBaseUrl);
+    setSaveState("idle");
+    setErrorMessage(null);
   };
 
   interface NavItem {
@@ -216,7 +269,8 @@ export function SettingsModal({
   ];
 
   return (
-    <Modal
+    <>
+      <Modal
       isOpen={isOpen}
       onClose={onClose}
       size="4xl"
@@ -241,15 +295,18 @@ export function SettingsModal({
                   const isSelected = activeTab === item.id;
                   const Icon = item.icon;
                   return (
-                    <button
+                    <Button
                       key={item.id}
                       type="button"
+                      variant={isSelected ? "secondary" : "ghost"}
+                      size="sm"
                       onClick={() => setActiveTab(item.id)}
-                      className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all text-left cursor-pointer ${
+                      className={cn(
+                        "w-full justify-between h-auto py-2 px-3 text-xs font-medium transition-all text-left cursor-pointer rounded-lg shadow-none",
                         isSelected
                           ? "bg-surface text-foreground font-semibold shadow-xs border border-border"
                           : "text-foreground-muted hover:bg-surface-hover hover:text-foreground border border-transparent"
-                      }`}
+                      )}
                     >
                       <div className="flex items-center space-x-2.5 min-w-0">
                         <Icon
@@ -264,7 +321,7 @@ export function SettingsModal({
                           {item.badge}
                         </span>
                       )}
-                    </button>
+                    </Button>
                   );
                 })}
               </div>
@@ -293,15 +350,16 @@ export function SettingsModal({
               {activeTab === "about" && "About GraphMind"}
             </h1>
           </div>
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="iconSm"
             onClick={onClose}
-            className="size-8 rounded-lg flex items-center justify-center text-foreground-muted hover:text-foreground hover:bg-surface-hover transition-colors cursor-pointer"
             title="Close (Esc)"
             aria-label="Close"
           >
             <X className="w-4 h-4" />
-          </button>
+          </Button>
         </div>
 
         {/* Content Scrollable Body */}
@@ -383,13 +441,15 @@ export function SettingsModal({
                         placeholder="AIzaSy... (uses server key if blank)"
                         className="font-mono text-2xs"
                         endIcon={
-                          <button
+                          <Button
                             type="button"
+                            variant="ghost"
+                            size="iconSm"
                             onClick={() => setShowGeminiKey((prev) => !prev)}
-                            className="p-1 text-foreground-muted hover:text-foreground cursor-pointer"
+                            className="size-6 p-0 text-foreground-muted hover:text-foreground"
                           >
                             {showGeminiKey ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                          </button>
+                          </Button>
                         }
                       />
                     </div>
@@ -409,13 +469,15 @@ export function SettingsModal({
                         placeholder="sk-proj-..."
                         className="font-mono text-2xs"
                         endIcon={
-                          <button
+                          <Button
                             type="button"
+                            variant="ghost"
+                            size="iconSm"
                             onClick={() => setShowOpenAiKey((prev) => !prev)}
-                            className="p-1 text-foreground-muted hover:text-foreground cursor-pointer"
+                            className="size-6 p-0 text-foreground-muted hover:text-foreground"
                           >
                             {showOpenAiKey ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                          </button>
+                          </Button>
                         }
                       />
                     </div>
@@ -435,13 +497,15 @@ export function SettingsModal({
                         placeholder="sk-ant-api03-..."
                         className="font-mono text-2xs"
                         endIcon={
-                          <button
+                          <Button
                             type="button"
+                            variant="ghost"
+                            size="iconSm"
                             onClick={() => setShowAnthropicKey((prev) => !prev)}
-                            className="p-1 text-foreground-muted hover:text-foreground cursor-pointer"
+                            className="size-6 p-0 text-foreground-muted hover:text-foreground"
                           >
                             {showAnthropicKey ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                          </button>
+                          </Button>
                         }
                       />
                     </div>
@@ -461,13 +525,15 @@ export function SettingsModal({
                         placeholder="sk-..."
                         className="font-mono text-2xs"
                         endIcon={
-                          <button
+                          <Button
                             type="button"
+                            variant="ghost"
+                            size="iconSm"
                             onClick={() => setShowDeepseekKey((prev) => !prev)}
-                            className="p-1 text-foreground-muted hover:text-foreground cursor-pointer"
+                            className="size-6 p-0 text-foreground-muted hover:text-foreground"
                           >
                             {showDeepseekKey ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                          </button>
+                          </Button>
                         }
                       />
                     </div>
@@ -515,18 +581,21 @@ export function SettingsModal({
                       {MODELS_BY_PROVIDER[selectedProvider].map((m) => {
                         const isSelected = selectedModel === m.id;
                         return (
-                          <button
+                          <Button
                             key={m.id}
                             type="button"
+                            variant={isSelected ? "default" : "outline"}
+                            size="sm"
                             onClick={() => setSelectedModel(m.id)}
-                            className={`px-3 py-1.5 rounded-lg border text-xs font-medium transition-all cursor-pointer ${
+                            className={cn(
+                              "h-7 px-2.5 text-xs font-medium rounded-lg",
                               isSelected
-                                ? "bg-primary text-primary-foreground border-primary font-semibold shadow-xs"
-                                : "bg-surface border-border-subtle hover:border-border text-foreground hover:bg-surface-hover"
-                            }`}
+                                ? "font-semibold shadow-2xs"
+                                : "text-foreground hover:bg-surface-hover"
+                            )}
                           >
                             {m.name}
-                          </button>
+                          </Button>
                         );
                       })}
                     </div>
@@ -727,17 +796,29 @@ export function SettingsModal({
 
         {/* Modal Footer Actions: Standardized */}
         <div className="h-13 px-6 bg-background-secondary/60 border-t border-border-subtle flex items-center justify-between shrink-0">
-          <button
+          <Button
             type="button"
-            onClick={handleReset}
-            className="flex items-center space-x-1.5 text-xs text-foreground-muted hover:text-foreground transition-colors cursor-pointer"
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowResetConfirm(true)}
+            className="flex items-center space-x-1.5 text-xs text-foreground-muted hover:text-foreground"
             title="Reset to default settings"
           >
-            <RotateCcw className="w-3.5 h-3.5" />
+            <RotateCcw className="w-3.5 h-3.5 mr-1" />
             <span>Reset to defaults</span>
-          </button>
+          </Button>
 
           <div className="flex items-center space-x-2">
+            {errorMessage && (
+              <span className="text-xs text-destructive font-medium mr-2" role="alert">
+                {errorMessage}
+              </span>
+            )}
+            {hasUnsavedChanges && saveState === "idle" && !errorMessage && (
+              <Badge variant="outline" className="text-2xs font-mono text-foreground-muted">
+                Unsaved changes
+              </Badge>
+            )}
             <Button
               variant="outline"
               size="sm"
@@ -748,10 +829,16 @@ export function SettingsModal({
             <Button
               size="sm"
               onClick={handleSave}
+              disabled={saveState === "saving"}
             >
-              {savedFeedback ? (
+              {saveState === "saving" ? (
                 <>
-                  <Check className="w-3.5 h-3.5 text-emerald-400 mr-1" />
+                  <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+                  <span>Saving...</span>
+                </>
+              ) : saveState === "saved" ? (
+                <>
+                  <Check className="w-3.5 h-3.5 text-success mr-1.5" />
                   <span>Saved!</span>
                 </>
               ) : (
@@ -762,5 +849,20 @@ export function SettingsModal({
         </div>
       </main>
     </Modal>
+
+    {/* Destructive Confirm Dialog for Settings Reset */}
+    <ConfirmDialog
+      isOpen={showResetConfirm}
+      onClose={() => setShowResetConfirm(false)}
+      onConfirm={() => {
+        handleReset();
+        setShowResetConfirm(false);
+      }}
+      title="Reset settings to defaults"
+      description="Are you sure you want to reset all model settings and preferences? Custom API keys and endpoints will be removed."
+      confirmText="Reset Defaults"
+      variant="destructive"
+    />
+    </>
   );
 }

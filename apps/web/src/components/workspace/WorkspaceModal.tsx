@@ -182,17 +182,17 @@ export function WorkspaceModal({
 
           {/* Workspaces List */}
           <div className="space-y-1.5">
-            <div className="text-2xs font-semibold text-zinc-400 uppercase tracking-wider px-1">
+            <div className="text-2xs font-semibold text-foreground-muted uppercase tracking-wider px-1">
               Your Workspaces ({workspaces.length})
             </div>
 
             {isLoading ? (
-              <div className="py-8 flex items-center justify-center text-xs text-zinc-400 space-x-2">
+              <div className="py-8 flex items-center justify-center text-xs text-foreground-muted space-x-2">
                 <Loader2 className="w-4 h-4 animate-spin" />
                 <span>Loading workspaces...</span>
               </div>
             ) : workspaces.length === 0 ? (
-              <div className="p-4 text-center text-xs text-zinc-500">
+              <div className="p-4 text-center text-xs text-foreground-muted">
                 No saved workspaces yet. Create one above to persist your knowledge trees.
               </div>
             ) : (
@@ -207,13 +207,13 @@ export function WorkspaceModal({
                     }}
                     className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
                       isActive
-                        ? "border-zinc-900 bg-zinc-50 shadow-2xs"
-                        : "border-zinc-200/80 hover:border-zinc-300 hover:bg-zinc-50/50"
+                        ? "border-primary bg-surface-hover shadow-2xs"
+                        : "border-border hover:border-border-subtle hover:bg-surface-hover"
                     }`}
                   >
                     <div className="min-w-0 pr-3">
                       <div className="flex items-center space-x-2">
-                        <span className="text-xs font-semibold text-zinc-900 truncate">
+                        <span className="text-xs font-semibold text-foreground truncate">
                           {ws.name}
                         </span>
                         {isActive && (
@@ -224,24 +224,27 @@ export function WorkspaceModal({
                         )}
                       </div>
                       {ws.description && (
-                        <p className="text-xs text-zinc-500 truncate mt-0.5">
+                        <p className="text-xs text-foreground-muted truncate mt-0.5">
                           {ws.description}
                         </p>
                       )}
-                      <div className="text-2xs text-zinc-400 mt-1">
+                      <div className="text-2xs text-foreground-muted mt-1">
                         {ws.nodeCount} {ws.nodeCount === 1 ? "node" : "nodes"} • Updated{" "}
                         {new Date(ws.updatedAt).toLocaleDateString()}
                       </div>
                     </div>
 
-                    <button
+                    <Button
                       type="button"
+                      variant="ghost"
+                      size="iconSm"
                       onClick={(e) => handleDelete(e, ws.id)}
-                      className="p-1.5 rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                      className="text-destructive hover:text-destructive hover:bg-destructive-bg"
                       title="Delete Workspace"
+                      aria-label="Delete Workspace"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    </Button>
                   </div>
                 );
               })

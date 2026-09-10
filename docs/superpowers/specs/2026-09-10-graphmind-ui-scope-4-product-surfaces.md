@@ -1,6 +1,6 @@
 # Scope 4 — Remaining Product Surfaces
 
-Status: Tasks 1–3 implemented; Tasks 4–7 remain.
+Status: Tasks 1–4 implemented; Tasks 5–7 remain.
 
 ## Objective
 
