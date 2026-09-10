@@ -5,7 +5,8 @@ import { createPortal } from "react-dom";
 
 import { Search } from "lucide-react";
 import { SelectionState } from "@/hooks/useTextSelection";
-import { MenuCard, MenuItem } from "@/components/ui/menu";
+import { Button } from "@/components/ui/button";
+import { Surface } from "@/components/ui/surface";
 
 function BranchInChatIcon({ className }: { className?: string }) {
   return (
@@ -58,25 +59,28 @@ export function SelectionTooltip({
       }}
       className="z-50 select-none animate-in fade-in-50 zoom-in-95 duration-150"
     >
-      <MenuCard className="min-w-[190px]">
-        <MenuItem
-          icon={<BranchInChatIcon />}
+      <Surface variant="base" radius="card" className="flex min-w-[190px] flex-col gap-0.5 p-1.5 shadow-lg">
+        <Button
+          variant="ghost"
+          className="w-full justify-start gap-3 px-3 py-2 text-sm font-normal"
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => onExplore(selection.text)}
         >
-          Branch in new chat
-        </MenuItem>
+          <BranchInChatIcon className="size-4" />
+          Explore branch
+        </Button>
 
-        <MenuItem
-          icon={<Search />}
+        <Button
+          variant="ghost"
+          className="w-full justify-start gap-3 px-3 py-2 text-sm font-normal"
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => onSearch(selection.text)}
         >
+          <Search className="size-4" />
           Search
-        </MenuItem>
-      </MenuCard>
+        </Button>
+      </Surface>
     </div>,
     document.body
   );
 }
-

@@ -29,7 +29,10 @@ import {
 } from "@graphmind/shared";
 
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { CopyButton } from "@/components/ui/copy-button";
+import { InlineFeedback } from "@/components/ui/feedback";
 import { IconButton } from "@/components/ui/icon-button";
 import { Modal, ModalHeader, ModalBody } from "@/components/ui/modal";
 import { Surface } from "@/components/ui/surface";
@@ -343,6 +346,7 @@ export function ChatMessage({
     page?: number;
   } | null>(null);
   const [viewingRagSnippet, setViewingRagSnippet] = useState<RagSourceItem | null>(null);
+  const [areSourcesOpen, setAreSourcesOpen] = useState(false);
   const editTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Auto-focus and auto-resize textarea when entering edit mode
@@ -808,6 +812,7 @@ export function ChatMessage({
           {Boolean(message.metadata?.toolCalls) && (
             <AgentToolCallsBanner
               toolCalls={message.metadata?.toolCalls as ToolCallItem[]}
+              onRetry={message.isError ? onRetry : undefined}
             />
           )}
 
@@ -816,15 +821,20 @@ export function ChatMessage({
             message.metadata?.ragSources &&
               (message.metadata.ragSources as RagSourceItem[]).length > 0
           ) && (
-            <Surface variant="muted" radius="widget" className="mb-2 space-y-1.5 border-0 bg-info-bg p-2.5 select-none animate-in fade-in-50 duration-150">
-              <div className="flex items-center space-x-1.5 text-xs font-semibold text-foreground">
-                <Sparkles className="size-3.5 text-info" />
-                <span>Verified Sources</span>
-                <span className="rounded-full bg-surface px-1.5 py-0.5 text-2xs font-bold text-info">
-                  {(message.metadata?.ragSources as RagSourceItem[]).length}
-                </span>
-              </div>
-              <div className="flex flex-wrap gap-1.5">
+            <Collapsible open={areSourcesOpen} onOpenChange={setAreSourcesOpen}>
+              <Surface variant="muted" radius="widget" className="mb-2 border-0 bg-info-bg p-1.5 select-none animate-in fade-in-50 duration-150">
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-auto w-full justify-between px-1 py-1.5 text-left">
+                    <span className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+                      <Sparkles className="size-3.5 text-info" />
+                      <span>Verified sources</span>
+                      <Badge variant="info">{(message.metadata?.ragSources as RagSourceItem[]).length}</Badge>
+                    </span>
+                    <span className="text-foreground-muted">{areSourcesOpen ? "Hide" : "Show"}</span>
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="px-1 pb-1">
+                  <div className="flex flex-wrap gap-1.5 pt-1.5">
                 {(message.metadata?.ragSources as RagSourceItem[]).map((src) => {
                   const isPdf = src.filename.toLowerCase().endsWith(".pdf");
                   return (
@@ -862,8 +872,10 @@ export function ChatMessage({
                     </Button>
                   );
                 })}
-              </div>
-            </Surface>
+                  </div>
+                </CollapsibleContent>
+              </Surface>
+            </Collapsible>
           )}
 
           {/* Markdown Rendered Body */}
@@ -991,16 +1003,14 @@ export function ChatMessage({
 
                 {/* Retry Error Button */}
                 {message.isError && onRetry && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={onRetry}
-                    className="flex h-6 space-x-1 border-border px-2 text-2xs text-foreground-muted shadow-2xs hover:text-foreground"
-                    title="Retry generation"
+                  <InlineFeedback
+                    tone="destructive"
+                    title="Response interrupted"
+                    action={<Button variant="outline" size="sm" onClick={onRetry}><RotateCcw aria-hidden="true" className="size-3.5" />Retry</Button>}
+                    className="w-full"
                   >
-                    <RotateCcw className="w-3.5 h-3.5" />
-                    <span>Retry</span>
-                  </Button>
+                    Retry to continue this response.
+                  </InlineFeedback>
                 )}
               </div>
             ) : null}

@@ -1,147 +1,72 @@
 "use client";
 
-import React, { useState } from "react";
-import {
-  Search,
-  GitBranch,
-  PlusCircle,
-  Globe,
-  Calculator,
-  Terminal,
-  Loader2,
-  CheckCircle2,
-  ChevronDown,
-  ChevronUp,
-} from "lucide-react";
+import { useState } from "react";
+import { Calculator, CheckCircle2, ChevronDown, ChevronUp, GitBranch, Globe, Loader2, PlusCircle, Search, Terminal } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { InlineFeedback } from "@/components/ui/feedback";
 import { ToolCallItem } from "@/hooks/useChatStream";
 
-interface AgentToolCallsBannerProps {
-  toolCalls?: ToolCallItem[];
-}
+interface AgentToolCallsBannerProps { toolCalls?: ToolCallItem[]; onRetry?: () => void; }
 
 function getToolIcon(name: string) {
   switch (name) {
-    case "search_graph":
-      return <Search className="w-3.5 h-3.5 text-blue-600" />;
-    case "traverse_lineage":
-      return <GitBranch className="w-3.5 h-3.5 text-purple-600" />;
-    case "create_subnode":
-      return <PlusCircle className="w-3.5 h-3.5 text-emerald-600" />;
-    case "fetch_url":
-      return <Globe className="w-3.5 h-3.5 text-cyan-600" />;
-    case "calculator":
-      return <Calculator className="w-3.5 h-3.5 text-amber-600" />;
-    default:
-      return <Terminal className="w-3.5 h-3.5 text-zinc-600" />;
+    case "search_graph": return <Search className="size-3.5" />;
+    case "traverse_lineage": return <GitBranch className="size-3.5" />;
+    case "create_subnode": return <PlusCircle className="size-3.5" />;
+    case "fetch_url": return <Globe className="size-3.5" />;
+    case "calculator": return <Calculator className="size-3.5" />;
+    default: return <Terminal className="size-3.5" />;
   }
 }
 
 function formatToolTitle(name: string): string {
   switch (name) {
-    case "search_graph":
-      return "Search Workspace Graph";
-    case "traverse_lineage":
-      return "Traverse Conversation Lineage";
-    case "create_subnode":
-      return "Create Knowledge Sub-node";
-    case "fetch_url":
-      return "Fetch Web Documentation";
-    case "calculator":
-      return "Evaluate Expression";
-    default:
-      return name;
+    case "search_graph": return "Search workspace graph";
+    case "traverse_lineage": return "Traverse conversation lineage";
+    case "create_subnode": return "Create knowledge sub-node";
+    case "fetch_url": return "Fetch web documentation";
+    case "calculator": return "Evaluate expression";
+    default: return name;
   }
 }
 
-export function AgentToolCallsBanner({ toolCalls }: AgentToolCallsBannerProps) {
+export function AgentToolCallsBanner({ toolCalls, onRetry }: AgentToolCallsBannerProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  if (!toolCalls?.length) return null;
 
-  if (!toolCalls || toolCalls.length === 0) {
-    return null;
-  }
-
-  const hasRunning = toolCalls.some((tc) => tc.status === "running");
-  const runningTool = toolCalls.find((tc) => tc.status === "running");
+  const runningTool = toolCalls.find((toolCall) => toolCall.status === "running");
+  const hasError = toolCalls.some((toolCall) => toolCall.status === "error" || toolCall.isError);
 
   return (
-    <div className="mb-3 rounded-xl border border-zinc-200/90 bg-zinc-50/70 overflow-hidden text-xs shadow-2xs transition-all">
-      {/* Header bar */}
-      <button
-        type="button"
-        onClick={() => setIsExpanded((prev) => !prev)}
-        className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-zinc-100/70 transition-colors cursor-pointer"
-      >
-        <div className="flex items-center space-x-2 min-w-0">
-          {hasRunning ? (
-            <Loader2 className="w-3.5 h-3.5 text-indigo-600 animate-spin shrink-0" />
-          ) : (
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-          )}
-
-          <span className="font-medium text-zinc-800 truncate">
-            {hasRunning && runningTool
-              ? `Agent running: ${formatToolTitle(runningTool.name)}...`
-              : `Executed ${toolCalls.length} agent action${toolCalls.length > 1 ? "s" : ""}`}
-          </span>
-        </div>
-
-        <div className="flex items-center space-x-1.5 text-zinc-400 text-2xs">
-          <span>{isExpanded ? "Hide" : "Details"}</span>
-          {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-        </div>
-      </button>
-
-      {/* Expanded tool details */}
-      {isExpanded && (
-        <div className="border-t border-zinc-200/80 px-3 py-2 space-y-2 bg-white/60">
-          {toolCalls.map((tc, idx) => {
-            const isErr = tc.status === "error" || tc.isError;
-            const isRun = tc.status === "running";
-
-            return (
-              <div
-                key={tc.id || idx}
-                className="p-2 rounded-lg bg-zinc-50 border border-zinc-200/60 flex flex-col space-y-1.5"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    {getToolIcon(tc.name)}
-                    <span className="font-semibold text-zinc-900 font-mono text-2xs">
-                      {tc.name}
-                    </span>
-                  </div>
-
-                  <span
-                    className={`text-2xs px-1.5 py-0.5 rounded font-medium ${
-                      isRun
-                        ? "bg-amber-100 text-amber-800"
-                        : isErr
-                        ? "bg-rose-100 text-rose-800"
-                        : "bg-emerald-100 text-emerald-800"
-                    }`}
-                  >
-                    {isRun ? "running..." : isErr ? "failed" : "completed"}
-                  </span>
-                </div>
-
-                {/* Arguments */}
-                {tc.arguments && Object.keys(tc.arguments).length > 0 && (
-                  <div className="text-2xs text-zinc-600 font-mono bg-zinc-100/80 px-2 py-1 rounded">
-                    {JSON.stringify(tc.arguments)}
-                  </div>
-                )}
-
-                {/* Result snippet */}
-                {tc.result && (
-                  <div className="text-2xs text-zinc-500 font-mono bg-white px-2 py-1 rounded border border-zinc-200/50 max-h-24 overflow-y-auto whitespace-pre-wrap">
-                    {tc.result}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
+    <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
+      <div className="mb-3 overflow-hidden rounded-xl border border-border-subtle bg-background-secondary text-xs shadow-2xs">
+        <CollapsibleTrigger asChild>
+          <Button variant="ghost" size="sm" className="h-auto w-full justify-between rounded-none px-3 py-2 text-left">
+            <span className="flex min-w-0 items-center gap-2">
+              {runningTool ? <Loader2 className="size-3.5 shrink-0 animate-spin text-info" /> : <CheckCircle2 className="size-3.5 shrink-0 text-success" />}
+              <span className="truncate font-medium text-foreground">{runningTool ? `Activity: ${formatToolTitle(runningTool.name)}` : `Activity: ${toolCalls.length} agent action${toolCalls.length === 1 ? "" : "s"}`}</span>
+            </span>
+            <span className="flex items-center gap-1 text-foreground-muted"><span>{isExpanded ? "Hide" : "Details"}</span>{isExpanded ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}</span>
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="border-t border-border-subtle p-3">
+          <div className="space-y-2">
+            {hasError && <InlineFeedback tone="destructive" title="An agent action failed" action={onRetry ? <Button variant="outline" size="sm" onClick={onRetry}>Retry response</Button> : undefined}>Review the failed action below{onRetry ? " or retry the response." : "."}</InlineFeedback>}
+            {toolCalls.map((toolCall, index) => {
+              const isError = toolCall.status === "error" || toolCall.isError;
+              const status = toolCall.status === "running" ? "running" : isError ? "failed" : "completed";
+              const variant = toolCall.status === "running" ? "warning" : isError ? "destructive" : "success";
+              return <div key={toolCall.id || index} className="space-y-1.5 rounded-lg border border-border-subtle bg-surface p-2">
+                <div className="flex items-center justify-between gap-2"><div className="flex min-w-0 items-center gap-2 text-foreground-muted">{getToolIcon(toolCall.name)}<span className="truncate font-mono text-2xs font-semibold text-foreground">{formatToolTitle(toolCall.name)}</span></div><Badge variant={variant}>{status}</Badge></div>
+                {toolCall.arguments && Object.keys(toolCall.arguments).length > 0 && <pre className="overflow-x-auto rounded-lg bg-muted px-2 py-1 text-2xs text-foreground-muted">{JSON.stringify(toolCall.arguments)}</pre>}
+                {toolCall.result && <pre className="max-h-24 overflow-auto rounded-lg bg-background-secondary px-2 py-1 text-2xs text-foreground-muted whitespace-pre-wrap">{toolCall.result}</pre>}
+              </div>;
+            })}
+          </div>
+        </CollapsibleContent>
+      </div>
+    </Collapsible>
   );
 }
