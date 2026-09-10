@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
@@ -17,9 +19,12 @@ describe("ChatInput", () => {
 
     const input = screen.getByRole("textbox");
     await user.type(input, "Explain branching");
+    await user.keyboard("{Shift>}{Enter}{/Shift}");
+    expect(input).toHaveValue("Explain branching\n");
+    await user.type(input, "with context");
     await user.keyboard("{Enter}");
 
-    expect(onSendMessage).toHaveBeenCalledWith("Explain branching", [], null);
+    expect(onSendMessage).toHaveBeenCalledWith("Explain branching\nwith context", [], null);
   });
 
   it("keeps a stable send/stop control and exposes attachment mode", () => {
@@ -27,5 +32,14 @@ describe("ChatInput", () => {
 
     expect(screen.getByRole("button", { name: "Add attachment or select mode" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Send message" })).toBeDisabled();
+  });
+
+  it("keeps migrated composer styles on semantic color tokens", () => {
+    const source = readFileSync(
+      path.resolve(process.cwd(), "src/components/chat/ChatInput.tsx"),
+      "utf8"
+    );
+
+    expect(source).not.toMatch(/\b(?:bg|text|border|ring)-(?:white|zinc|red|emerald|blue)-/);
   });
 });

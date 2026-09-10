@@ -398,10 +398,10 @@ export function ChatInput({
                     }}
                   >
                     <div className="flex items-center space-x-2">
-                      <span className="font-mono text-xs text-zinc-400 font-normal">
+                      <span className="font-mono text-xs font-normal text-foreground-muted">
                         {cmd.command}
                       </span>
-                      <span className="font-medium text-zinc-900">{cmd.label}</span>
+                      <span className="font-medium text-foreground">{cmd.label}</span>
                     </div>
                   </MenuItem>
                 );
@@ -444,9 +444,9 @@ export function ChatInput({
                 return (
                   <div
                     key={att.id}
-                    className="relative group rounded-xl border border-zinc-200/90 bg-zinc-50 overflow-hidden shadow-2xs transition-all hover:border-zinc-300"
+                    className="group relative overflow-hidden rounded-xl border border-border bg-surface shadow-2xs transition-all hover:border-border-strong"
                   >
-                    <div className="relative w-16 h-16 bg-zinc-100 flex items-center justify-center overflow-hidden">
+                    <div className="relative flex h-16 w-16 items-center justify-center overflow-hidden bg-background-secondary">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={att.data || att.url}
@@ -471,28 +471,28 @@ export function ChatInput({
               return (
                 <div
                   key={att.id}
-                  className="relative group flex items-center space-x-2.5 px-3 py-2 rounded-xl border border-zinc-200/90 bg-zinc-50 hover:bg-zinc-100/80 shadow-2xs transition-all max-w-[240px]"
+                  className="group relative flex max-w-60 items-center space-x-2.5 rounded-xl border border-border bg-surface px-3 py-2 shadow-2xs transition-all hover:bg-surface-hover"
                 >
                   <div
-                    className={`p-1.5 rounded-lg bg-white border border-zinc-200/80 shrink-0 ${
-                      isPdf ? "text-red-600 bg-red-50/50" : isCode ? "text-emerald-600" : "text-blue-600"
+                    className={`shrink-0 rounded-lg border border-border-subtle bg-background-secondary p-1.5 ${
+                      isPdf ? "bg-destructive-bg text-destructive" : isCode ? "text-success" : "text-info"
                     }`}
                   >
                     {isPdf ? (
-                      <FileText className="w-4 h-4 text-red-600" />
+                      <FileText className="h-4 w-4" />
                     ) : isCode ? (
-                      <Code className="w-4 h-4 text-emerald-600" />
+                      <Code className="h-4 w-4" />
                     ) : (
-                      <FileText className="w-4 h-4 text-blue-600" />
+                      <FileText className="h-4 w-4" />
                     )}
                   </div>
                   <div className="flex flex-col min-w-0 pr-4">
-                    <span className="text-xs font-medium text-zinc-900 truncate" title={att.name}>
+                    <span className="truncate text-xs font-medium text-foreground" title={att.name}>
                       {att.name}
                     </span>
-                    <div className="flex items-center space-x-1.5 text-2xs text-zinc-500 font-mono">
+                    <div className="flex items-center space-x-1.5 font-mono text-2xs text-foreground-muted">
                       {isPdf && (
-                        <span className="font-bold text-red-600 bg-red-50 px-1 rounded text-2xs">
+                        <span className="rounded bg-destructive-bg px-1 text-2xs font-bold text-destructive">
                           PDF
                         </span>
                       )}
@@ -512,7 +512,7 @@ export function ChatInput({
             })}
 
             {isUploading && (
-              <div className="h-14 px-3 rounded-xl border border-dashed border-zinc-300 bg-zinc-50 flex items-center justify-center space-x-2 text-xs text-zinc-500">
+              <div className="flex h-14 items-center justify-center space-x-2 rounded-xl border border-dashed border-border bg-surface px-3 text-xs text-foreground-muted">
                 <Loader2 className="w-4 h-4 text-foreground-muted animate-spin motion-reduce:animate-none" />
                 <span>Reading file...</span>
               </div>
@@ -598,12 +598,12 @@ export function ChatInput({
                       </MenuItem>
                     )}
 
-                    <div className="my-1 border-t border-zinc-100" />
+                    <div className="my-1 border-t border-border-subtle" />
 
                     <MenuItem
                       icon={<MessageSquare className="w-4 h-4 stroke-[1.75]" />}
                       active={selectedSkill === null}
-                      trailing={selectedSkill === null ? <span className="text-zinc-900 font-medium">✓</span> : null}
+                      trailing={selectedSkill === null ? <span className="font-medium text-foreground">✓</span> : null}
                       onClick={() => {
                         setSelectedSkill(null);
                         setIsAttachMenuOpen(false);
@@ -615,7 +615,7 @@ export function ChatInput({
                     <MenuItem
                       icon={<Compass className="w-4 h-4 stroke-[1.75]" />}
                       active={selectedSkill === "deep_research"}
-                      trailing={selectedSkill === "deep_research" ? <span className="text-zinc-900 font-medium">✓</span> : null}
+                      trailing={selectedSkill === "deep_research" ? <span className="font-medium text-foreground">✓</span> : null}
                       onClick={() => {
                         setSelectedSkill("deep_research");
                         setIsAttachMenuOpen(false);
@@ -627,7 +627,7 @@ export function ChatInput({
                     <MenuItem
                       icon={<Layers className="w-4 h-4 stroke-[1.75]" />}
                       active={selectedSkill === "code_architect"}
-                      trailing={selectedSkill === "code_architect" ? <span className="text-zinc-900 font-medium">✓</span> : null}
+                      trailing={selectedSkill === "code_architect" ? <span className="font-medium text-foreground">✓</span> : null}
                       onClick={() => {
                         setSelectedSkill("code_architect");
                         setIsAttachMenuOpen(false);
@@ -639,7 +639,7 @@ export function ChatInput({
                     <MenuItem
                       icon={<GraduationCap className="w-4 h-4 stroke-[1.75]" />}
                       active={selectedSkill === "quiz_master"}
-                      trailing={selectedSkill === "quiz_master" ? <span className="text-zinc-900 font-medium">✓</span> : null}
+                      trailing={selectedSkill === "quiz_master" ? <span className="font-medium text-foreground">✓</span> : null}
                       onClick={() => {
                         setSelectedSkill("quiz_master");
                         setIsAttachMenuOpen(false);
@@ -656,13 +656,13 @@ export function ChatInput({
             {selectedSkill && (
               <div className="flex select-none items-center space-x-1.5 rounded-xl bg-background-secondary px-2.5 py-1 text-xs text-foreground shadow-2xs animate-in fade-in-50 zoom-in-95 duration-150 motion-reduce:animate-none">
                 {selectedSkill === "deep_research" ? (
-                  <Compass className="w-3.5 h-3.5 text-zinc-700 shrink-0 stroke-[1.75]" />
+                  <Compass className="h-3.5 w-3.5 shrink-0 stroke-[1.75]" />
                 ) : selectedSkill === "code_architect" ? (
-                  <Layers className="w-3.5 h-3.5 text-zinc-700 shrink-0 stroke-[1.75]" />
+                  <Layers className="h-3.5 w-3.5 shrink-0 stroke-[1.75]" />
                 ) : selectedSkill === "quiz_master" ? (
-                  <GraduationCap className="w-3.5 h-3.5 text-zinc-700 shrink-0 stroke-[1.75]" />
+                  <GraduationCap className="h-3.5 w-3.5 shrink-0 stroke-[1.75]" />
                 ) : (
-                  <Sparkles className="w-3.5 h-3.5 text-zinc-700 shrink-0 stroke-[1.75]" />
+                  <Sparkles className="h-3.5 w-3.5 shrink-0 stroke-[1.75]" />
                 )}
                 <span className="font-medium text-foreground">
                   {selectedSkill === "deep_research" && "Deep Research"}
