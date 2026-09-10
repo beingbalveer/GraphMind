@@ -19,7 +19,10 @@ import {
   GraduationCap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import { MenuCard, MenuItem } from "@/components/ui/menu";
+import { Surface } from "@/components/ui/surface";
+import { Textarea } from "@/components/ui/textarea";
 import { BranchContext } from "@/hooks/useChatStream";
 import { FileAttachment } from "@graphmind/shared";
 import { uploadWorkspaceFile } from "@/lib/workspaceApi";
@@ -309,7 +312,7 @@ export function ChatInput({
 
     onSendMessage(
       cleanPrompt,
-      attachments.length > 0 ? attachments : undefined,
+      attachments,
       effectiveSkill
     );
     setPrompt("");
@@ -365,15 +368,20 @@ export function ChatInput({
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className={`relative bg-surface rounded-2xl transition-all p-2.5 flex flex-col space-y-2 border border-border/80 ${
-          isDragOver
-            ? "bg-blue-50/30 dark:bg-blue-950/20 shadow-lg ring-2 ring-blue-400/50"
-            : "shadow-md hover:shadow-lg focus-within:shadow-xl focus-within:border-border"
-        }`}
+        className="relative"
       >
+        <Surface
+          variant="raised"
+          radius="card"
+          className={`flex flex-col space-y-2 p-2.5 transition-all motion-reduce:transition-none ${
+          isDragOver
+            ? "bg-info/10 ring-2 ring-info/50"
+            : "hover:shadow-md focus-within:border-border-strong"
+        }`}
+        >
         {/* Floating Slash Command Autocomplete Menu */}
         {isSlashMode && matchingSlashCommands.length > 0 && (
-          <div className="absolute bottom-full left-0 mb-2 z-50 animate-in fade-in-50 zoom-in-95 duration-150">
+          <div className="absolute bottom-full left-0 mb-2 z-50 animate-in fade-in-50 zoom-in-95 duration-150 motion-reduce:animate-none">
             <MenuCard className="min-w-[240px]">
               {matchingSlashCommands.map((cmd, idx) => {
                 const Icon = cmd.icon;
@@ -404,30 +412,30 @@ export function ChatInput({
 
         {/* Active Branch Context Pill */}
         {activeBranch && (
-          <div className="flex items-center justify-between px-3 py-1.5 rounded-xl bg-background-tertiary text-xs text-zinc-700 animate-in fade-in-50 slide-in-from-bottom-1 duration-150">
+          <div className="flex items-center justify-between rounded-xl bg-background-secondary px-3 py-1.5 text-xs text-foreground-muted animate-in fade-in-50 slide-in-from-bottom-1 duration-150 motion-reduce:animate-none">
             <div className="flex items-center space-x-1.5 min-w-0 pr-2">
-              <GitBranch className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
-              <span className="font-semibold text-zinc-900 shrink-0">Sub-topic:</span>
-              <span className="italic text-zinc-600 truncate">
+              <GitBranch className="h-3.5 w-3.5 shrink-0" />
+              <span className="shrink-0 font-semibold text-foreground">Sub-topic:</span>
+              <span className="truncate italic">
                 &ldquo;{activeBranch.highlightedText}&rdquo;
               </span>
             </div>
             {onClearBranch && (
-              <button
-                type="button"
+              <IconButton
+                label="Cancel branch context"
                 onClick={onClearBranch}
-                className="text-zinc-400 hover:text-zinc-700 p-0.5 rounded transition-colors shrink-0 cursor-pointer"
-                title="Cancel branch context"
+                variant="ghost"
+                className="shrink-0"
               >
                 <X className="w-3.5 h-3.5" />
-              </button>
+              </IconButton>
             )}
           </div>
         )}
 
         {/* Attachment Previews Tray */}
         {attachments.length > 0 && (
-          <div className="flex flex-wrap gap-2 px-1 pt-1 pb-1 animate-in fade-in-50 duration-150">
+          <div className="flex flex-wrap gap-2 px-1 pb-1 pt-1 animate-in fade-in-50 duration-150 motion-reduce:animate-none">
             {attachments.map((att) => {
               const isImg = att.fileCategory === "image" || att.data?.startsWith("data:image/");
               const isCode = att.fileCategory === "code";
@@ -446,14 +454,14 @@ export function ChatInput({
                         className="w-full h-full object-cover"
                       />
                     </div>
-                    <button
-                      type="button"
+                    <IconButton
+                      label={`Remove ${att.name}`}
                       onClick={() => handleRemoveAttachment(att.id)}
-                      className="absolute top-1 right-1 p-0.5 rounded-full bg-black/60 text-white hover:bg-black transition-colors cursor-pointer"
-                      title="Remove attachment"
+                      variant="destructive"
+                      className="absolute right-1 top-1 size-5 bg-foreground/60 text-background hover:bg-foreground"
                     >
                       <X className="w-3 h-3" />
-                    </button>
+                    </IconButton>
                   </div>
                 );
               }
@@ -491,21 +499,21 @@ export function ChatInput({
                       <span>{formatBytes(att.sizeBytes)}</span>
                     </div>
                   </div>
-                  <button
-                    type="button"
+                  <IconButton
+                    label={`Remove ${att.name}`}
                     onClick={() => handleRemoveAttachment(att.id)}
-                    className="absolute top-1.5 right-1.5 p-0.5 rounded-full text-zinc-400 hover:text-zinc-700 hover:bg-zinc-200 transition-colors cursor-pointer"
-                    title="Remove attachment"
+                    variant="ghost"
+                    className="absolute right-1.5 top-1.5 size-5"
                   >
                     <X className="w-3 h-3" />
-                  </button>
+                  </IconButton>
                 </div>
               );
             })}
 
             {isUploading && (
               <div className="h-14 px-3 rounded-xl border border-dashed border-zinc-300 bg-zinc-50 flex items-center justify-center space-x-2 text-xs text-zinc-500">
-                <Loader2 className="w-4 h-4 text-zinc-400 animate-spin" />
+                <Loader2 className="w-4 h-4 text-foreground-muted animate-spin motion-reduce:animate-none" />
                 <span>Reading file...</span>
               </div>
             )}
@@ -513,7 +521,7 @@ export function ChatInput({
         )}
 
         {/* Textarea Input */}
-        <textarea
+        <Textarea
           ref={textareaRef}
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
@@ -526,7 +534,9 @@ export function ChatInput({
           }
           rows={1}
           disabled={isStreaming}
-          className="w-full px-2 py-1.5 text-base text-foreground placeholder-muted-foreground bg-transparent resize-none outline-none font-normal max-h-48 leading-relaxed"
+          variant="ghost"
+          maxRowsClassName="max-h-48"
+          className="min-h-0 px-2 py-1.5 text-base font-normal leading-relaxed"
         />
 
         {/* Action Bar */}
@@ -548,23 +558,23 @@ export function ChatInput({
                 }}
               />
 
-              <button
-                type="button"
+              <IconButton
+                label="Add attachment or select mode"
                 onClick={() => setIsAttachMenuOpen((prev) => !prev)}
                 disabled={isStreaming || isUploading}
-                className={`w-7 h-7 rounded-xl transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center ${
+                variant={isAttachMenuOpen ? "secondary" : "ghost"}
+                className={`rounded-xl ${
                   isAttachMenuOpen
-                    ? "bg-zinc-200 text-zinc-950"
-                    : "text-zinc-500 hover:text-zinc-950 hover:bg-zinc-100"
+                    ? "text-foreground"
+                    : "text-foreground-muted"
                 }`}
-                title="Add attachment or select mode"
               >
-                <Plus className={`w-4 h-4 stroke-[1.75] transition-transform duration-200 ${isAttachMenuOpen ? "rotate-45 text-zinc-950" : ""}`} />
-              </button>
+                <Plus className={`h-4 w-4 stroke-[1.75] transition-transform duration-200 motion-reduce:transition-none ${isAttachMenuOpen ? "rotate-45 text-foreground" : ""}`} />
+              </IconButton>
 
               {/* Unified Action Dropdown Menu */}
               {isAttachMenuOpen && (
-                <div className="absolute bottom-full left-0 mb-2 z-50 animate-in fade-in-50 zoom-in-95 duration-150">
+                <div className="absolute bottom-full left-0 mb-2 z-50 animate-in fade-in-50 zoom-in-95 duration-150 motion-reduce:animate-none">
                   <MenuCard className="min-w-[210px]">
                     <MenuItem
                       icon={<Upload className="w-4 h-4 stroke-[1.75]" />}
@@ -644,7 +654,7 @@ export function ChatInput({
 
             {/* Active Mode Compact Chip */}
             {selectedSkill && (
-              <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded-xl bg-background-tertiary text-xs text-zinc-800 shadow-2xs animate-in fade-in-50 zoom-in-95 duration-150 select-none">
+              <div className="flex select-none items-center space-x-1.5 rounded-xl bg-background-secondary px-2.5 py-1 text-xs text-foreground shadow-2xs animate-in fade-in-50 zoom-in-95 duration-150 motion-reduce:animate-none">
                 {selectedSkill === "deep_research" ? (
                   <Compass className="w-3.5 h-3.5 text-zinc-700 shrink-0 stroke-[1.75]" />
                 ) : selectedSkill === "code_architect" ? (
@@ -654,20 +664,20 @@ export function ChatInput({
                 ) : (
                   <Sparkles className="w-3.5 h-3.5 text-zinc-700 shrink-0 stroke-[1.75]" />
                 )}
-                <span className="font-medium text-zinc-900">
+                <span className="font-medium text-foreground">
                   {selectedSkill === "deep_research" && "Deep Research"}
                   {selectedSkill === "code_architect" && "Code Architect"}
                   {selectedSkill === "quiz_master" && "Quiz Master"}
                   {!["deep_research", "code_architect", "quiz_master"].includes(selectedSkill) && selectedSkill}
                 </span>
-                <button
-                  type="button"
+                <IconButton
+                  label="Clear mode"
                   onClick={() => setSelectedSkill(null)}
-                  className="text-zinc-400 hover:text-zinc-700 p-0.5 rounded transition-colors shrink-0 cursor-pointer ml-0.5"
-                  title="Clear mode"
+                  variant="ghost"
+                  className="ml-0.5 shrink-0"
                 >
                   <X className="w-3 h-3" />
-                </button>
+                </IconButton>
               </div>
             )}
           </div>
@@ -679,28 +689,31 @@ export function ChatInput({
                 type="button"
                 variant="destructive"
                 size="iconSm"
+                shape="round"
                 onClick={onStopStreaming}
-                className="rounded-full h-7 w-7 cursor-pointer"
-                title="Stop generating"
+                aria-label="Stop generating"
               >
                 <Square className="w-2.5 h-2.5 fill-current" />
               </Button>
             ) : (
-              <button
+              <Button
                 type="submit"
+                variant="default"
+                size="iconSm"
+                shape="round"
                 disabled={!canSubmit}
-                className="h-7 w-7 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground flex items-center justify-center transition-colors shadow-xs cursor-pointer disabled:cursor-not-allowed"
-                title="Send message"
+                aria-label="Send message"
               >
                 {isUploading ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <Loader2 className="w-3.5 h-3.5 animate-spin motion-reduce:animate-none" />
                 ) : (
                   <ArrowUp className="w-4 h-4 stroke-[2.5]" />
                 )}
-              </button>
+              </Button>
             )}
           </div>
         </div>
+        </Surface>
       </form>
 
       {/* Attach from Workspace File Library Modal */}
