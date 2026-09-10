@@ -11,7 +11,6 @@ import {
   Compass,
   Sparkles,
   ArrowRight,
-  BookOpen,
 } from "lucide-react";
 import { fetchWorkspaces, createWorkspace, WorkspaceItem } from "@/lib/workspaceApi";
 import { buildWorkspaceUrl } from "@/lib/urls";

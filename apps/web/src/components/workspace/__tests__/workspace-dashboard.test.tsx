@@ -115,6 +115,7 @@ describe("WorkspaceDashboard & Learning Dashboard Contract (Scope 4, Task 1)", (
 
     await waitFor(() => {
       expect(screen.getByText(/start your learning journey/i)).toBeInTheDocument();
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
     });
   });
 });
