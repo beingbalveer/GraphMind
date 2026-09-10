@@ -106,9 +106,9 @@ export function MasteryPanel({
 
   if (loading) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center p-8 space-y-2 text-zinc-400 select-none">
-        <RefreshCw className="w-5 h-5 animate-spin text-zinc-500" />
-        <span className="text-xs text-zinc-500 font-medium">Loading knowledge profile...</span>
+      <div className="flex-1 flex flex-col items-center justify-center p-8 space-y-2 text-foreground-muted select-none">
+        <RefreshCw className="w-5 h-5 animate-spin text-foreground-muted" />
+        <span className="text-xs text-foreground-muted font-medium">Loading knowledge profile...</span>
       </div>
     );
   }
@@ -136,55 +136,55 @@ export function MasteryPanel({
       {activeTab === "curated" ? (
         <>
           {/* Overall Mastery Score Card */}
-          <div className="p-4 sm:p-5 rounded-2xl bg-white border border-zinc-200/70 shadow-xs space-y-4">
+          <div className="p-4 sm:p-5 rounded-2xl bg-surface border border-border shadow-xs space-y-4">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2 text-sm font-semibold text-zinc-900">
-                <Sparkles className="w-4 h-4 text-zinc-700" />
+              <div className="flex items-center space-x-2 text-sm font-semibold text-foreground">
+                <Sparkles className="w-4 h-4 text-foreground" />
                 <span>Mastery Score</span>
               </div>
-              <span className="text-xl font-bold text-zinc-950 font-mono">{overallPct}%</span>
+              <span className="text-xl font-bold text-foreground font-mono">{overallPct}%</span>
             </div>
 
             {/* Progress Bar */}
-            <div className="w-full h-2 rounded-full bg-zinc-100 overflow-hidden">
+            <div className="w-full h-2 rounded-full bg-muted overflow-hidden">
               <div
-                className="h-full bg-zinc-900 transition-all duration-500 rounded-full"
+                className="h-full bg-foreground transition-all duration-500 rounded-full"
                 style={{ width: `${Math.max(overallPct, 4)}%` }}
               />
             </div>
 
             {/* Distribution Badges */}
             <div className="grid grid-cols-2 gap-2 pt-1">
-              <div className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-zinc-50/90 border border-zinc-200/60 text-xs">
-                <span className="flex items-center space-x-2 text-zinc-600 font-medium">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+              <div className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-surface-hover/50 border border-border-subtle text-xs">
+                <span className="flex items-center space-x-2 text-foreground-muted font-medium">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-foreground shrink-0" />
                   <span>Mastered</span>
                 </span>
-                <span className="font-semibold text-zinc-900 font-mono">{distribution.mastered}</span>
+                <span className="font-semibold text-foreground font-mono">{distribution.mastered}</span>
               </div>
 
-              <div className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-zinc-50/90 border border-zinc-200/60 text-xs">
-                <span className="flex items-center space-x-2 text-zinc-600 font-medium">
-                  <Sparkles className="w-3.5 h-3.5 text-zinc-700 shrink-0" />
+              <div className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-surface-hover/50 border border-border-subtle text-xs">
+                <span className="flex items-center space-x-2 text-foreground-muted font-medium">
+                  <Sparkles className="w-3.5 h-3.5 text-foreground-muted shrink-0" />
                   <span>Quizzed</span>
                 </span>
-                <span className="font-semibold text-zinc-900 font-mono">{distribution.quizzed}</span>
+                <span className="font-semibold text-foreground font-mono">{distribution.quizzed}</span>
               </div>
 
-              <div className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-zinc-50/90 border border-zinc-200/60 text-xs">
-                <span className="flex items-center space-x-2 text-zinc-600 font-medium">
-                  <BookOpen className="w-3.5 h-3.5 text-zinc-600 shrink-0" />
+              <div className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-surface-hover/50 border border-border-subtle text-xs">
+                <span className="flex items-center space-x-2 text-foreground-muted font-medium">
+                  <BookOpen className="w-3.5 h-3.5 text-foreground-muted shrink-0" />
                   <span>Explored</span>
                 </span>
-                <span className="font-semibold text-zinc-900 font-mono">{distribution.explored}</span>
+                <span className="font-semibold text-foreground font-mono">{distribution.explored}</span>
               </div>
 
-              <div className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-zinc-50/90 border border-zinc-200/60 text-xs">
-                <span className="flex items-center space-x-2 text-zinc-600 font-medium">
-                  <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+              <div className="flex items-center justify-between px-3 py-2.5 rounded-xl bg-surface-hover/50 border border-border-subtle text-xs">
+                <span className="flex items-center space-x-2 text-foreground-muted font-medium">
+                  <Clock className="w-3.5 h-3.5 text-foreground-muted shrink-0" />
                   <span>Stale</span>
                 </span>
-                <span className="font-semibold text-zinc-900 font-mono">{distribution.stale}</span>
+                <span className="font-semibold text-foreground font-mono">{distribution.stale}</span>
               </div>
             </div>
           </div>
@@ -194,8 +194,8 @@ export function MasteryPanel({
             <div className="space-y-2.5">
               <div className="flex items-center justify-between px-1">
                 <div className="flex items-center space-x-2">
-                  <Rocket className="w-4 h-4 text-zinc-700" />
-                  <h3 className="text-sm font-semibold text-zinc-900">Next Best Topics</h3>
+                  <Rocket className="w-4 h-4 text-foreground-muted" />
+                  <h3 className="text-sm font-semibold text-foreground">Next Best Topics</h3>
                 </div>
                 <Badge variant="outline" className="rounded-full px-2.5 py-0.5 text-xs font-medium">
                   AI Curated
@@ -210,39 +210,39 @@ export function MasteryPanel({
                   return (
                     <div
                       key={rec.id}
-                      className="p-4 rounded-2xl bg-white border border-zinc-200/70 hover:border-zinc-300 transition-all space-y-3 shadow-xs"
+                      className="p-4 rounded-2xl bg-surface border border-border hover:border-border-strong transition-all space-y-3 shadow-xs"
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 pr-1">
-                          <p className="font-semibold text-zinc-900 truncate text-sm leading-snug">
+                          <p className="font-semibold text-foreground truncate text-sm leading-snug">
                             {rec.topicName}
                           </p>
-                          <p className="text-xs text-zinc-500 font-normal mt-0.5">
+                          <p className="text-xs text-foreground-muted font-normal mt-0.5">
                             {rec.domain}
                           </p>
                         </div>
                         <Badge
-                          variant={isReady ? "success" : isProgress ? "secondary" : "outline"}
+                          variant={isReady ? "default" : isProgress ? "secondary" : "outline"}
                           className="rounded-full px-2.5 py-0.5 text-xs shrink-0 font-medium tracking-wide"
                         >
                           {rec.readiness.replace(/_/g, " ")}
                         </Badge>
                       </div>
 
-                      <p className="text-xs text-zinc-600 leading-relaxed">
+                      <p className="text-xs text-foreground-muted leading-relaxed">
                         {rec.rationale}
                       </p>
 
                       {rec.unlockedBy.length > 0 && (
                         <div className="pt-1">
-                          <span className="text-xs font-medium text-zinc-500 block mb-1.5">
+                          <span className="text-xs font-medium text-foreground-muted block mb-1.5">
                             Unlocked by:
                           </span>
                           <div className="flex flex-wrap gap-1.5">
                             {rec.unlockedBy.map((u, idx) => (
                               <span
                                 key={idx}
-                                className="inline-flex items-center px-2.5 py-1 rounded-lg bg-zinc-100/90 text-zinc-700 text-xs font-normal border border-zinc-200/60"
+                                className="inline-flex items-center px-2.5 py-1 rounded-lg bg-surface-hover text-foreground-muted text-xs font-normal border border-border-subtle"
                               >
                                 {u}
                               </span>
@@ -253,14 +253,14 @@ export function MasteryPanel({
 
                       {rec.futureUnlocks.length > 0 && (
                         <div className="pt-1">
-                          <span className="text-xs font-medium text-zinc-500 block mb-1.5">
+                          <span className="text-xs font-medium text-foreground-muted block mb-1.5">
                             Unlocks next:
                           </span>
                           <div className="flex flex-wrap gap-1.5">
                             {rec.futureUnlocks.map((fu, idx) => (
                               <span
                                 key={idx}
-                                className="inline-flex items-center px-2.5 py-1 rounded-lg bg-zinc-100/90 text-zinc-700 text-xs font-normal border border-zinc-200/60"
+                                className="inline-flex items-center px-2.5 py-1 rounded-lg bg-surface-hover text-foreground-muted text-xs font-normal border border-border-subtle"
                               >
                                 {fu}
                               </span>
@@ -294,8 +294,8 @@ export function MasteryPanel({
             <div className="space-y-2.5">
               <div className="flex items-center justify-between px-1">
                 <div className="flex items-center space-x-2">
-                  <GitBranch className="w-4 h-4 text-zinc-700" />
-                  <h3 className="text-sm font-semibold text-zinc-900">Knowledge Gaps</h3>
+                  <GitBranch className="w-4 h-4 text-foreground-muted" />
+                  <h3 className="text-sm font-semibold text-foreground">Knowledge Gaps</h3>
                 </div>
                 <Badge
                   variant={gapAnalysis.highSeverityCount > 0 ? "destructive" : "secondary"}
@@ -309,14 +309,14 @@ export function MasteryPanel({
                 {gapAnalysis.gaps.slice(0, 3).map((gap) => (
                   <div
                     key={gap.id}
-                    className="p-4 rounded-2xl bg-white border border-zinc-200/70 hover:border-zinc-300 transition-all space-y-3 shadow-xs"
+                    className="p-4 rounded-2xl bg-surface border border-border hover:border-border-strong transition-all space-y-3 shadow-xs"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 pr-1">
-                        <p className="font-semibold text-zinc-900 truncate text-sm leading-snug">
+                        <p className="font-semibold text-foreground truncate text-sm leading-snug">
                           {gap.conceptName}
                         </p>
-                        <p className="text-xs text-zinc-500 font-normal mt-0.5">
+                        <p className="text-xs text-foreground-muted font-normal mt-0.5">
                           {gap.domain}
                         </p>
                       </div>
@@ -328,20 +328,20 @@ export function MasteryPanel({
                       </Badge>
                     </div>
 
-                    <p className="text-xs text-zinc-600 leading-relaxed">
+                    <p className="text-xs text-foreground-muted leading-relaxed">
                       {gap.rationale}
                     </p>
 
                     {gap.dependentConcepts.length > 0 && (
                       <div className="pt-1">
-                        <span className="text-xs font-medium text-zinc-500 block mb-1.5">
+                        <span className="text-xs font-medium text-foreground-muted block mb-1.5">
                           Prerequisite for:
                         </span>
                         <div className="flex flex-wrap gap-1.5">
                           {gap.dependentConcepts.map((dep, idx) => (
                             <span
                               key={idx}
-                              className="inline-flex items-center px-2.5 py-1 rounded-lg bg-zinc-100/90 text-zinc-700 text-xs font-normal border border-zinc-200/60"
+                              className="inline-flex items-center px-2.5 py-1 rounded-lg bg-surface-hover text-foreground-muted text-xs font-normal border border-border-subtle"
                             >
                               {dep}
                             </span>
@@ -400,8 +400,8 @@ export function MasteryPanel({
             <div className="space-y-2.5">
               <div className="flex items-center justify-between px-1">
                 <div className="flex items-center space-x-2">
-                  <Clock className="w-4 h-4 text-zinc-700" />
-                  <h3 className="text-sm font-semibold text-zinc-900">Needs Review</h3>
+                  <Clock className="w-4 h-4 text-foreground-muted" />
+                  <h3 className="text-sm font-semibold text-foreground">Needs Review</h3>
                 </div>
                 <Badge variant="secondary" className="rounded-full px-2.5 py-0.5 text-xs font-medium">
                   {summary.needingReview.length} concepts
@@ -412,13 +412,13 @@ export function MasteryPanel({
                 {summary.needingReview.slice(0, 3).map((concept) => (
                   <div
                     key={concept.id}
-                    className="p-3.5 sm:p-4 rounded-2xl bg-white border border-zinc-200/70 hover:border-zinc-300 transition-all flex items-center justify-between shadow-xs"
+                    className="p-3.5 sm:p-4 rounded-2xl bg-surface border border-border hover:border-border-strong transition-all flex items-center justify-between shadow-xs"
                   >
                     <div className="min-w-0 pr-3">
-                      <p className="text-sm font-medium text-zinc-900 truncate">
+                      <p className="text-sm font-medium text-foreground truncate">
                         {concept.name}
                       </p>
-                      <p className="text-xs text-zinc-500 font-mono mt-0.5">
+                      <p className="text-xs text-foreground-muted font-mono mt-0.5">
                         Confidence: {Math.round(concept.confidenceScore * 100)}%
                       </p>
                     </div>
@@ -431,7 +431,7 @@ export function MasteryPanel({
                         className="h-8 px-3 rounded-lg text-xs font-medium cursor-pointer shrink-0"
                         title={`Practice ${concept.name}`}
                       >
-                        <Zap className="w-3.5 h-3.5 mr-1 text-amber-500 fill-amber-500/30" />
+                        <Zap className="w-3.5 h-3.5 mr-1 text-foreground" />
                         <span>Quiz</span>
                       </Button>
                     )}
@@ -445,26 +445,26 @@ export function MasteryPanel({
         /* Concepts Tab View */
         <div className="space-y-3 flex-1 flex flex-col min-h-0">
           <div className="flex items-center justify-between px-1">
-            <h3 className="text-sm font-semibold text-zinc-900">
+            <h3 className="text-sm font-semibold text-foreground">
               Tracked Concepts ({concepts.length})
             </h3>
           </div>
 
           {/* Filter Input */}
           <Input
-            startIcon={<Search className="w-4 h-4 text-zinc-400" />}
+            startIcon={<Search className="w-4 h-4 text-foreground-muted" />}
             placeholder="Filter concepts..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-9 text-xs bg-white rounded-xl shadow-xs"
+            className="h-9 text-xs bg-surface rounded-xl shadow-xs border-border"
           />
 
           {/* Concepts List */}
           <div className="space-y-2 overflow-y-auto flex-1 pr-0.5">
             {filteredConcepts.length === 0 ? (
-              <div className="text-center py-10 px-4 text-zinc-400 space-y-1.5 select-none">
-                <p className="text-sm font-medium text-zinc-700">No concepts found</p>
-                <p className="text-xs text-zinc-500 leading-relaxed max-w-[240px] mx-auto">
+              <div className="text-center py-10 px-4 text-foreground-muted space-y-1.5 select-none">
+                <p className="text-sm font-medium text-foreground">No concepts found</p>
+                <p className="text-xs text-foreground-muted leading-relaxed max-w-[240px] mx-auto">
                   Take quizzes or explore technical branches to populate your profile.
                 </p>
               </div>
@@ -474,17 +474,17 @@ export function MasteryPanel({
                 return (
                   <div
                     key={c.id}
-                    className="p-3.5 rounded-2xl bg-white border border-zinc-200/70 hover:border-zinc-300 transition-all group flex items-center justify-between shadow-xs"
+                    className="p-3.5 rounded-2xl bg-surface border border-border hover:border-border-strong transition-all group flex items-center justify-between shadow-xs"
                   >
                     <div className="min-w-0 pr-3 flex-1">
                       <div className="flex items-center space-x-2 mb-2">
-                        <span className="text-sm font-medium text-zinc-900 truncate">
+                        <span className="text-sm font-medium text-foreground truncate">
                           {c.name}
                         </span>
                         <Badge
                           variant={
                             c.masteryLevel === "mastered"
-                              ? "success"
+                              ? "default"
                               : c.masteryLevel === "quizzed"
                               ? "secondary"
                               : "outline"
@@ -496,19 +496,13 @@ export function MasteryPanel({
                       </div>
 
                       <div className="flex items-center space-x-2.5">
-                        <div className="flex-1 h-2 rounded-full bg-zinc-100 overflow-hidden">
+                        <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
                           <div
-                            className={`h-full rounded-full transition-all duration-300 ${
-                              c.confidenceScore >= 0.8
-                                ? "bg-emerald-500"
-                                : c.confidenceScore >= 0.5
-                                ? "bg-zinc-800"
-                                : "bg-zinc-400"
-                            }`}
+                            className="h-full rounded-full transition-all duration-300 bg-foreground"
                             style={{ width: `${Math.max(confPct, 5)}%` }}
                           />
                         </div>
-                        <span className="text-xs font-mono text-zinc-400 shrink-0">
+                        <span className="text-xs font-mono text-foreground-muted shrink-0">
                           {confPct}%
                         </span>
                       </div>
@@ -519,7 +513,7 @@ export function MasteryPanel({
                         size="iconSm"
                         variant="ghost"
                         onClick={() => onQuizConcept(c.name)}
-                        className="opacity-0 group-hover:opacity-100 h-8 w-8 rounded-lg text-zinc-500 hover:text-zinc-950 cursor-pointer shrink-0"
+                        className="opacity-0 group-hover:opacity-100 h-8 w-8 rounded-lg text-foreground-muted hover:text-foreground cursor-pointer shrink-0"
                         title={`Practice ${c.name}`}
                       >
                         <Zap className="w-4 h-4" />

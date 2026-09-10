@@ -92,7 +92,7 @@ export function FocusDrawer({
         <div className="flex items-center space-x-2.5 min-w-0">
           <div className="w-6 h-6 rounded-lg bg-primary text-primary-foreground flex items-center justify-center shrink-0 text-xs shadow-2xs">
             {node.highlightedContext ? (
-              <GitBranch className="w-3.5 h-3.5 text-emerald-400" />
+              <GitBranch className="w-3.5 h-3.5 text-primary-foreground" />
             ) : (
               <Sparkles className="w-3.5 h-3.5" />
             )}
