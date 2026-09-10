@@ -1,6 +1,6 @@
 # Scope 3 — Adaptive Workspace Shell
 
-Status: not started.
+Status: Task 1 implemented; Tasks 2–7 remain.
 
 ## Objective
 

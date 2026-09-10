@@ -86,7 +86,7 @@ Visual redesign must not silently change routing, API contracts, callback signat
 
 - Scope 1: complete and merged into local `main`.
 - Scope 2: complete (all 5 tasks implemented and verified).
-- Scope 3: not started.
+- Scope 3: Task 1 complete; Tasks 2–7 remain.
 - Scope 4: not started.
 
 The foundational and canonical-chat implementation plans contain 12 tasks: 7 foundation tasks and 5 canonical-chat tasks. All 12 are complete. Scope 3 (Adaptive workspace shell) is the next phase.

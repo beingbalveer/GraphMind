@@ -35,6 +35,7 @@ import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { safeGetItem, safeSetItem } from "@/lib/storage";
 
 import { Navbar, ViewMode } from "../layout/Navbar";
+import { WorkspaceShell } from "../layout/WorkspaceShell";
 import {
   buildWorkspaceUrl,
   buildChatUrl,
@@ -1003,76 +1004,94 @@ export function ChatContainer({
   ];
 
   return (
-    <div className="h-screen w-screen flex bg-background overflow-hidden select-text">
-      {/* Left Workspace Chats History Sidebar (Extends full height till top) */}
-      <ChatSidebar
-        isOpen={isSidebarOpen}
-        onToggle={() => setIsSidebarOpen((prev) => !prev)}
-        workspaceName={currentWorkspace?.name || "Main Workspace"}
-        chats={chats}
-        activeChatId={activeChatId}
-        onSelectChat={handleSelectChat}
-        onDeleteChat={handleDeleteChat}
-        onRenameChat={handleRenameChat}
-        onTogglePinChat={handleTogglePinChat}
-        onOpenWorkspaceModal={() => setIsWorkspaceModalOpen(true)}
-        onOpenSettings={() => setIsModelConfigOpen(true)}
-        onNewChat={handleNewChat}
-        onOpenFileLibrary={() => setIsFileLibraryOpen(true)}
-      />
-
-      {/* Center Column: Top Navbar + Workspace Content Area */}
-      <div className="flex-1 min-w-0 flex flex-col h-full overflow-hidden bg-background">
-        {/* Top Main Navigation Bar */}
-        <Navbar
-          viewMode={viewMode}
-          onViewModeChange={(mode) => {
-            setViewMode(mode);
-            if (currentWorkspace && activeChatId) {
-              const url = mode === "canvas"
-                ? buildCanvasUrl(currentWorkspace.id, activeChatId)
-                : buildChatUrl(currentWorkspace.id, activeChatId);
-              router.push(url);
+    <>
+      <WorkspaceShell
+        navigation={
+          <ChatSidebar
+            isOpen={isSidebarOpen}
+            onToggle={() => setIsSidebarOpen((prev) => !prev)}
+            workspaceName={currentWorkspace?.name || "Main Workspace"}
+            chats={chats}
+            activeChatId={activeChatId}
+            onSelectChat={handleSelectChat}
+            onDeleteChat={handleDeleteChat}
+            onRenameChat={handleRenameChat}
+            onTogglePinChat={handleTogglePinChat}
+            onOpenWorkspaceModal={() => setIsWorkspaceModalOpen(true)}
+            onOpenSettings={() => setIsModelConfigOpen(true)}
+            onNewChat={handleNewChat}
+            onOpenFileLibrary={() => setIsFileLibraryOpen(true)}
+          />
+        }
+        header={
+          <Navbar
+            viewMode={viewMode}
+            onViewModeChange={(mode) => {
+              setViewMode(mode);
+              if (currentWorkspace && activeChatId) {
+                const url = mode === "canvas"
+                  ? buildCanvasUrl(currentWorkspace.id, activeChatId)
+                  : buildChatUrl(currentWorkspace.id, activeChatId);
+                router.push(url);
+              }
+            }}
+            syncStatus={syncStatus}
+            workspaceName={currentWorkspace?.name || "Main Workspace"}
+            onOpenWorkspaceModal={() => setIsWorkspaceModalOpen(true)}
+            onOpenModelConfig={() => setIsModelConfigOpen(true)}
+            onOpenFileLibrary={() => setIsFileLibraryOpen(true)}
+            activeModelName={llmConfig.model}
+            messageCount={activeMessages.length}
+            isSidebarOpen={isSidebarOpen}
+            onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
+            isRightSidebarOpen={isRightSidebarOpen}
+            onToggleRightSidebar={handleToggleRightSidebar}
+            onNewChat={handleNewChat}
+            onClearChat={() => {
+              clearMessages();
+              handleCloseSidePeek();
+            }}
+            breadcrumbs={
+              <BranchBreadcrumbs
+                steps={breadcrumbSteps}
+                onSelectStep={(step) => {
+                  lastProcessedBranchRef.current = null;
+                  lastProcessedNodeRef.current = null;
+                  switchBranch(step.leafId);
+                  setSidePeekState({ stack: [], index: 0 });
+                  if (currentWorkspace && activeChatId) {
+                    router.replace(buildChatUrl(currentWorkspace.id, activeChatId), { scroll: false });
+                  }
+                }}
+              />
             }
-          }}
-          syncStatus={syncStatus}
-          workspaceName={currentWorkspace?.name || "Main Workspace"}
-          onOpenWorkspaceModal={() => setIsWorkspaceModalOpen(true)}
-          onOpenModelConfig={() => setIsModelConfigOpen(true)}
-          onOpenFileLibrary={() => setIsFileLibraryOpen(true)}
-          activeModelName={llmConfig.model}
-          messageCount={activeMessages.length}
-
-          isSidebarOpen={isSidebarOpen}
-          onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
-          isRightSidebarOpen={isRightSidebarOpen}
-          onToggleRightSidebar={handleToggleRightSidebar}
-          onNewChat={handleNewChat}
-          onClearChat={() => {
-            clearMessages();
-            handleCloseSidePeek();
-          }}
-          breadcrumbs={
-            <BranchBreadcrumbs
-              steps={breadcrumbSteps}
-              onSelectStep={(step) => {
-                lastProcessedBranchRef.current = null;
-                lastProcessedNodeRef.current = null;
-                switchBranch(step.leafId);
-                setSidePeekState({ stack: [], index: 0 });
-                if (currentWorkspace && activeChatId) {
-                  router.replace(buildChatUrl(currentWorkspace.id, activeChatId), { scroll: false });
-                }
-              }}
-            />
-          }
-        />
-
-        {/* Content Area: Canvas / Primary Chat + Side-Peek */}
-        <div className="flex-1 min-h-0 flex relative bg-background overflow-hidden">
-          {viewMode === "canvas" ? (
-            /* 2D Spatial Mind Map & Knowledge Graph Canvas View */
-            <div className="w-full h-full relative">
+          />
+        }
+        rail={
+          <RightSidebar
+            isOpen={isRightSidebarOpen}
+            onToggle={handleToggleRightSidebar}
+          >
+            {currentWorkspace?.id && (
+              <MasteryPanel
+                workspaceId={currentWorkspace.id}
+                onQuizConcept={(conceptName) => {
+                  handleSendMessage(`Quiz me on ${conceptName} with a short conceptual check.`);
+                }}
+                onExploreGap={(gap) => {
+                  handleSendMessage(`Explain the knowledge gap regarding ${gap.conceptName}: ${gap.rationale}`);
+                }}
+                onStartTopic={(topic) => {
+                  handleSendMessage(topic.suggestedPrompt || `Let's explore ${topic.topicName}: ${topic.rationale}`);
+                }}
+              />
+            )}
+          </RightSidebar>
+        }
+      >
+        {viewMode === "canvas" ? (
+          /* 2D Spatial Mind Map & Knowledge Graph Canvas View */
+          <div className="w-full h-full relative">
               <GraphCanvas
                 tree={tree}
                 workspaceId={currentWorkspace?.id}
@@ -1279,32 +1298,10 @@ export function ChatContainer({
             onSwitchBranch={switchBranch}
             onRateResponse={handleRateResponse}
           />
-        </div>
-      </div>
+        </WorkspaceShell>
 
-      {/* Right Sidebar: Contextual Rail */}
-      <RightSidebar
-        isOpen={isRightSidebarOpen}
-        onToggle={handleToggleRightSidebar}
-      >
-        {currentWorkspace?.id && (
-          <MasteryPanel
-            workspaceId={currentWorkspace.id}
-            onQuizConcept={(conceptName) => {
-              handleSendMessage(`Quiz me on ${conceptName} with a short conceptual check.`);
-            }}
-            onExploreGap={(gap) => {
-              handleSendMessage(`Explain the knowledge gap regarding ${gap.conceptName}: ${gap.rationale}`);
-            }}
-            onStartTopic={(topic) => {
-              handleSendMessage(topic.suggestedPrompt || `Let's explore ${topic.topicName}: ${topic.rationale}`);
-            }}
-          />
-        )}
-      </RightSidebar>
-
-      {/* Global Command Palette (⌘K) */}
-      <CommandPalette
+        {/* Global Command Palette (⌘K) */}
+        <CommandPalette
         isOpen={isPaletteOpen}
         onClose={() => setIsPaletteOpen(false)}
         tree={tree}
@@ -1359,7 +1356,6 @@ export function ChatContainer({
 
       {/* Non-intrusive Floating Toast Notification */}
       <Toast message={error} onDismiss={clearError} />
-    </div>
+    </>
   );
-
 }
