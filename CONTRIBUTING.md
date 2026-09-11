@@ -32,7 +32,7 @@ GraphMind/
 ├── packages/
 │   ├── ai-core/                # Provider-agnostic LLM, tool, embedding, and skill abstractions
 │   └── shared/                 # Shared TypeScript domain models, schemas, and tree algorithms
-├── docs/                       # Architectural Decision Records (ADRs), roadmaps, specs
+├── docs/                       # Architecture specs, PRD, Roadmap, URL design
 ├── docker-compose.yml          # PostgreSQL 16 (pgvector) & Redis
 ├── pnpm-workspace.yaml         # PNPM monorepo workspace configuration
 └── pyproject.toml              # Root Python workspace configuration (uv)

@@ -210,20 +210,13 @@ GraphMind enforces a strict, hierarchical URL design (see [`docs/URL_DESIGN.md`]
 
 ## 🏛️ Documentation Index
 
-- 📜 [**Manifesto**](docs/MANIFESTO.md): Core product philosophy, graph-first interaction model, and guiding principles.
-- 📋 [**Product Requirements Document (PRD)**](docs/PRD.md): MVP scope, target user personas, and functional requirements.
-- 📐 [**System Architecture**](docs/ARCHITECTURE.md): Technical layout, database ERD, data flows, and tool execution.
-- 🗺️ [**Evolutionary Roadmap**](docs/ROADMAP.md): Detailed progression across Phases 1 through 6.
-- 🔗 [**URL Routing Contract**](docs/URL_DESIGN.md): Architectural spec for URL hierarchy and path management.
+- 📋 [**Product Requirements & Manifesto (PRD)**](docs/PRD.md): Core product philosophy, MVP scope, personas, and functional requirements.
+- 📐 [**System Architecture & Decisions**](docs/ARCHITECTURE.md): Technical layout, database ERD, data flows, AI Core, and architectural decision records (ADRs 1–5).
+- 🗺️ [**Evolutionary Roadmap**](docs/ROADMAP.md): Master timeline, completed milestone deliverables, and future enterprise horizon.
+- 🔗 [**URL Routing Contract**](docs/URL_DESIGN.md): Canonical URL hierarchy and routing contract (ADR-0006).
+- 🔬 [**Feature Research**](docs/FEATURE_RESEARCH.md): Deep-dive feature research and competitive benchmarks.
 - 📌 [**Master Project Context**](PROJECT_CONTEXT.md): Authoritative context document for contributors and AI coding assistants.
 
-### Architectural Decision Records (ADRs)
-1. [ADR-0001: Product Identity & Interaction Model](docs/adr/0001-product-identity.md)
-2. [ADR-0002: Modular Monolith Monorepo Architecture](docs/adr/0002-modular-monolith-architecture.md)
-3. [ADR-0003: AI Provider Abstraction (`packages/ai-core`)](docs/adr/0003-ai-provider-abstraction.md)
-4. [ADR-0004: Selection of Apache License 2.0](docs/adr/0004-apache-2.0-license.md)
-5. [ADR-0005: Milestone-Driven Execution Strategy](docs/adr/0005-milestone-execution-strategy.md)
-6. [ADR-0006: Canonical URL Routing Contract](docs/adr/0006-url-routing-design.md)
 
 ---
 

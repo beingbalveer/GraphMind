@@ -325,14 +325,13 @@ Whitespace and typography are more important than decorations.
 
 # 22. Documentation
 
-Initially create:
+Canonical documentation in docs/:
 
-README.md
-MANIFESTO.md
-ARCHITECTURE.md
-ROADMAP.md
-
-ADRs can be added incrementally.
+- ARCHITECTURE.md
+- FEATURE_RESEARCH.md
+- PRD.md
+- ROADMAP.md
+- URL_DESIGN.md
 
 # 23. Dev Philosophy
 

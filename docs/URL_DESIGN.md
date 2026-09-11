@@ -1,7 +1,6 @@
 # GraphMind — URL Design & Routing Reference
 
-> **Status:** Canonical. All new features MUST follow this design.
-> **See also:** [`docs/adr/0006-url-routing-design.md`](./adr/0006-url-routing-design.md) for the decision rationale.
+> **Status:** Canonical Architectural Contract (ADR-0006). All features and routing logic MUST follow this design.
 
 ---
 

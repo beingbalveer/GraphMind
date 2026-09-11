@@ -269,3 +269,30 @@ sequenceDiagram
 - **Log Format**: Structured JSON logs via Python `structlog` in the backend with correlation IDs (`RequestTracingMiddleware`).
 - **Configuration**: Strictly validated through Pydantic `BaseSettings` reading `.env` files.
 - **Performance Profiling**: Sub-10ms HNSW vector searches, sub-5ms tree lineage queries, and single-pass memoized React Flow layouts scaling to 500+ nodes.
+
+---
+
+## 7. Architectural Decisions Log
+
+Key architectural decisions are preserved below for historical context and design governance:
+
+### ADR-0001: Product Identity & Interaction Model
+- **Decision:** Shift the fundamental unit of interaction from ephemeral linear chat messages to a multi-dimensional, branching knowledge graph (nodes and edges).
+- **Rationale:** Human cognition operates in associative networks rather than flat linear stacks. Traditional chat causes context degradation and buried provenance when exploring tangents. GraphMind keeps original context visible and navigable.
+
+### ADR-0002: Modular Monolith Monorepo Architecture
+- **Decision:** Structure GraphMind as a modular monolith monorepo (`apps/web`, `apps/api`, `packages/ai-core`, `packages/shared`) managed with `pnpm` and `uv`.
+- **Rationale:** Avoids premature microservice operational overhead (service discovery, distributed tracing, network latency) while maintaining strict package boundaries, fast local development via Docker Compose, and shared TypeScript/Python contracts.
+
+### ADR-0003: AI Provider Abstraction (`packages/ai-core`)
+- **Decision:** Strictly isolate foundation model providers behind an internal abstraction package (`packages/ai-core`).
+- **Rationale:** Foundation model APIs and vendor SDKs (Gemini, Anthropic, OpenAI, DeepSeek, Ollama) change frequently. Enforcing that `apps/api` never directly imports external vendor libraries prevents lock-in, enables seamless model switching, and simplifies deterministic mock testing.
+
+### ADR-0004: Selection of Apache License 2.0
+- **Decision:** Publish GraphMind under the Apache License 2.0.
+- **Rationale:** Apache 2.0 provides permissive open-source usage while including explicit patent grants and contributor protections, making it ideal for both developer adoption and enterprise deployment.
+
+### ADR-0005: Milestone-Driven Execution Strategy
+- **Decision:** Adopt a progressive, milestone-driven development strategy with a zero dead UI policy and strict phase completion gates.
+- **Rationale:** Prevents scope creep, premature mock buttons, and unfinished architectural churn. Every milestone produces an observable, fully tested, production-grade slice of the system.
+

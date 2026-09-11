@@ -19,7 +19,7 @@ Every single task must follow this strict **3-step workflow**:
 ```
 
 ### Rule 1: One Task at a Time
-- **Never implement multiple tasks at once.** Always focus strictly on the single active task from the current sub-phase in [`docs/ROADMAP.md`](./docs/ROADMAP.md) / [`docs/phases/`](./docs/phases/).
+- **Never implement multiple tasks at once.** Always focus strictly on the single active task from the current milestone in [`docs/ROADMAP.md`](./docs/ROADMAP.md).
 
 ### Rule 2: Explain & Propose Before Coding
 - Before writing any code, explain the task clearly to the user.
@@ -56,7 +56,7 @@ Every single task must follow this strict **3-step workflow**:
 
 ## 4. URL Contract (Non-Negotiable)
 
-**Read [`docs/URL_DESIGN.md`](./docs/URL_DESIGN.md) and [`docs/adr/0006-url-routing-design.md`](./docs/adr/0006-url-routing-design.md) before touching any routing code.**
+**Read [`docs/URL_DESIGN.md`](./docs/URL_DESIGN.md) before touching any routing code.**
 
 The canonical URL hierarchy is:
 
