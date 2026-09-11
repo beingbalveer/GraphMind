@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional
 from database import Base
 
 if TYPE_CHECKING:
+    from models.flashcard import FlashcardModel
     from models.user import User, WorkspaceMember
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
@@ -99,6 +100,13 @@ class Workspace(Base):
         passive_deletes=True,
         order_by="ConceptModel.created_at.desc()",
     )
+    flashcards: Mapped[List["FlashcardModel"]] = relationship(
+        "FlashcardModel",
+        back_populates="workspace",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        order_by="FlashcardModel.created_at",
+    )
 
 
 node_concepts = Table(
@@ -186,6 +194,13 @@ class NodeModel(Base):
         "ConceptModel",
         secondary=node_concepts,
         back_populates="nodes",
+    )
+    flashcards: Mapped[List["FlashcardModel"]] = relationship(
+        "FlashcardModel",
+        back_populates="source_node",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        order_by="FlashcardModel.position",
     )
 
 

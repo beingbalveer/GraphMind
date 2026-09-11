@@ -1,3 +1,4 @@
+from models.flashcard import FlashcardModel
 from models.user import User, WorkspaceMember
 from models.workspace import (
     ConceptModel,
@@ -19,4 +20,5 @@ __all__ = [
     "WorkspaceFileChunk",
     "ConceptModel",
     "node_concepts",
+    "FlashcardModel",
 ]
