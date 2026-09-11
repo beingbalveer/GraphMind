@@ -127,11 +127,12 @@ export function ChatSidebar({
             onSelectChat(chat);
           }
         }}
-        className={`group relative flex h-8 items-center px-2.5 rounded-lg transition-colors cursor-pointer select-none text-sm font-normal ${
+        className={cn(
+          "group relative flex h-9 w-full items-center px-2.5 rounded-lg text-sm transition-colors cursor-pointer select-none shadow-none",
           isActive
             ? "bg-surface-hover text-foreground font-medium"
-            : "text-foreground-muted hover:bg-surface-hover hover:text-foreground"
-        }`}
+            : "text-foreground-muted font-normal hover:text-foreground hover:bg-surface-hover"
+        )}
       >
         {isRenaming ? (
           /* Inline rename input */
