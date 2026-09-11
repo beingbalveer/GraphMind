@@ -35,6 +35,50 @@ def test_parser_strips_fences_and_deduplicates_questions() -> None:
     assert cards[0].answer == "A function plus lexical scope."
 
 
+def test_parser_repairs_common_llm_json_glitches() -> None:
+    # 1. Missing comma between card objects
+    missing_comma = """{
+      "cards": [
+        {"question": "What is A?", "answer": "Answer A"}
+        {"question": "What is B?", "answer": "Answer B"}
+      ]
+    }"""
+    cards = FlashcardService._parse_drafts(missing_comma, count=5)
+    assert len(cards) == 2
+    assert cards[0].question == "What is A?"
+    assert cards[1].question == "What is B?"
+
+    # 2. Trailing commas
+    trailing_comma = """{
+      "cards": [
+        {"question": "What is C?", "answer": "Answer C"},
+      ],
+    }"""
+    cards = FlashcardService._parse_drafts(trailing_comma, count=5)
+    assert len(cards) == 1
+    assert cards[0].question == "What is C?"
+
+    # 3. Literal unescaped newlines in strings
+    literal_newlines = """{
+      "cards": [
+        {"question": "What is D?", "answer": "Line 1\nLine 2"}
+      ]
+    }"""
+    cards = FlashcardService._parse_drafts(literal_newlines, count=5)
+    assert len(cards) == 1
+    assert "Line 1\nLine 2" in cards[0].answer
+
+    # 4. Unescaped quotes inside string
+    unescaped_quotes = """{
+      "cards": [
+        {"question": "What does the "async" keyword do?", "answer": "Defines a coroutine"}
+      ]
+    }"""
+    cards = FlashcardService._parse_drafts(unescaped_quotes, count=5)
+    assert len(cards) == 1
+    assert "async" in cards[0].question
+
+
 @pytest.mark.parametrize(
     "raw",
     ["not json", "{}", '{"cards":[]}', '{"cards":[{"question":"","answer":"bad"}]}'],

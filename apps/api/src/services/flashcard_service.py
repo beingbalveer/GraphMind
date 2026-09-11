@@ -1,4 +1,5 @@
 import json
+import re
 from typing import Optional
 
 import structlog
@@ -72,8 +73,11 @@ class FlashcardService:
             "- Provide concise, factual, and accurate answers.\n"
             "- Do not introduce facts unsupported by the source content.\n"
             "- Do not generate duplicate questions.\n"
-            "- Return ONLY a valid JSON object matching this schema:\n"
-            '{"cards": [{"question": "string", "answer": "string"}]}\n\n'
+            "- Crucial formatting rule: Output ONLY valid, strict JSON matching this schema:\n"
+            '{"cards": [{"question": "string", "answer": "string"}]}\n'
+            "- All quotes inside questions and answers must be escaped with backslashes (\\\"...\\\") or single-quoted.\n"
+            "- Do not include raw newlines inside string values (use \\n if needed).\n"
+            "- Do not include trailing commas.\n\n"
             "--- BEGIN SOURCE ---\n"
             f"{truncated_source}\n"
             "--- END SOURCE ---\n\n"
@@ -84,12 +88,8 @@ class FlashcardService:
     def _parse_drafts(cls, raw_text: str, count: int) -> list[FlashcardDraft]:
         cleaned = raw_text.strip()
         if cleaned.startswith("```"):
-            lines = cleaned.split("\n")
-            if lines[0].startswith("```"):
-                lines = lines[1:]
-            if lines and lines[-1].strip().startswith("```"):
-                lines = lines[:-1]
-            cleaned = "\n".join(lines).strip()
+            cleaned = re.sub(r"^```(?:json)?", "", cleaned, flags=re.IGNORECASE)
+            cleaned = re.sub(r"```$", "", cleaned).strip()
 
         start_idx = cleaned.find("{")
         end_idx = cleaned.rfind("}")
@@ -97,10 +97,49 @@ class FlashcardService:
             raise FlashcardGenerationError("No JSON object found in model output")
 
         json_str = cleaned[start_idx : end_idx + 1]
+        data: Optional[dict[str, object]] = None
+        json_exc: Optional[Exception] = None
+
+        # Attempt 1: Direct load with strict=False (allows unescaped control chars / literal newlines)
         try:
-            data = json.loads(json_str)
-        except json.JSONDecodeError as exc:
-            raise FlashcardGenerationError(f"Invalid JSON in model output: {exc}") from exc
+            parsed = json.loads(json_str, strict=False)
+            if isinstance(parsed, dict) and "cards" in parsed and isinstance(parsed["cards"], list):
+                data = parsed
+        except Exception as exc:
+            json_exc = exc
+
+        # Attempt 2: Auto-repair common syntax glitches (missing commas between objects, trailing commas)
+        if data is None:
+            fixed = json_str
+            fixed = re.sub(r"\}\s*\{", "}, {", fixed)
+            fixed = re.sub(r",\s*([\]}])", r"\1", fixed)
+            try:
+                parsed = json.loads(fixed, strict=False)
+                if isinstance(parsed, dict) and "cards" in parsed and isinstance(parsed["cards"], list):
+                    data = parsed
+            except Exception as exc:
+                if json_exc is None:
+                    json_exc = exc
+
+        # Attempt 3: Robust regex extraction of question & answer pairs
+        if data is None:
+            pattern = re.compile(
+                r"\"question\"\s*:\s*\"(.*?)\"\s*,\s*\"answer\"\s*:\s*\"(.*?)\"",
+                re.DOTALL,
+            )
+            extracted_cards = []
+            for q, a in pattern.findall(cleaned):
+                q_clean = q.replace('\\"', '"').replace("\\n", "\n").strip()
+                a_clean = a.replace('\\"', '"').replace("\\n", "\n").strip()
+                if q_clean and a_clean:
+                    extracted_cards.append({"question": q_clean, "answer": a_clean})
+            if extracted_cards:
+                data = {"cards": extracted_cards}
+
+        if data is None:
+            if json_exc is not None:
+                raise FlashcardGenerationError(f"Invalid JSON in model output: {json_exc}") from json_exc
+            raise FlashcardGenerationError("JSON must contain a 'cards' array")
 
         if not isinstance(data, dict) or "cards" not in data or not isinstance(data["cards"], list):
             raise FlashcardGenerationError("JSON must contain a 'cards' array")
