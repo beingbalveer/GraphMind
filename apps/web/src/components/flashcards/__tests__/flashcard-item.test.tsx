@@ -141,4 +141,51 @@ describe("FlashcardItem", () => {
     await user.click(showButton);
     expect(screen.getByTestId("flashcard-answer-card_123")).toBeInTheDocument();
   });
+
+  it("preserves draft content and keeps editor open when saving fails", async () => {
+    const user = userEvent.setup();
+    const handleSave = vi.fn().mockRejectedValue(new Error("Network error during save"));
+
+    render(
+      <FlashcardItem
+        card={mockCard}
+        onSave={handleSave}
+        onRequestDelete={vi.fn()}
+      />
+    );
+
+    await user.click(screen.getByRole("button", { name: /edit flashcard/i }));
+    const qInput = screen.getByLabelText("Edit question");
+    const aInput = screen.getByLabelText("Edit answer");
+
+    await user.clear(qInput);
+    await user.type(qInput, "Failed edit question draft?");
+    await user.clear(aInput);
+    await user.type(aInput, "Failed edit answer draft.");
+
+    const saveButton = screen.getByRole("button", { name: /save/i });
+    await user.click(saveButton);
+
+    await waitFor(() => {
+      expect(handleSave).toHaveBeenCalledTimes(1);
+    });
+
+    // Editor should still be open, with user's entered text intact
+    expect(screen.getByLabelText("Edit question")).toBeInTheDocument();
+    expect(screen.getByLabelText("Edit question")).toHaveValue("Failed edit question draft?");
+    expect(screen.getByLabelText("Edit answer")).toHaveValue("Failed edit answer draft.");
+  });
+
+  it("renders displayIndex accurately when provided", () => {
+    render(
+      <FlashcardItem
+        card={mockCard}
+        displayIndex={4}
+        onSave={vi.fn()}
+        onRequestDelete={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText("Card 4")).toBeInTheDocument();
+  });
 });

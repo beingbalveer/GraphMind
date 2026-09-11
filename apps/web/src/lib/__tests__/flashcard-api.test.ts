@@ -142,4 +142,32 @@ describe("flashcardApi", () => {
       generateNodeFlashcards("ws_1", "node_1", { count: 5 })
     ).rejects.toThrow(ApiError);
   });
+
+  it("forwards custom baseUrl and provider in generation request payload", async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 201,
+      json: async () => [],
+    });
+
+    await generateNodeFlashcards("ws_1", "node_1", {
+      count: 5,
+      provider: "ollama",
+      model: "llama3",
+      baseUrl: "http://localhost:11434/v1",
+    });
+
+    expect(global.fetch).toHaveBeenCalledWith(
+      "/api/v1/workspaces/ws_1/nodes/node_1/flashcards/generate",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          count: 5,
+          provider: "ollama",
+          model: "llama3",
+          baseUrl: "http://localhost:11434/v1",
+        }),
+      })
+    );
+  });
 });

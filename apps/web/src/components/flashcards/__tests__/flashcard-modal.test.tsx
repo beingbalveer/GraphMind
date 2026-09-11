@@ -139,8 +139,83 @@ describe("FlashcardModal", () => {
     const goToSourceBtn = screen.getByRole("button", { name: /go to source/i });
     await user.click(goToSourceBtn);
 
-    expect(handleGoToSource).toHaveBeenCalledTimes(1);
     expect(handleClose).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(handleGoToSource).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it("renders read-only empty state and hides regenerate when canEdit is false", async () => {
+    vi.mocked(flashcardApi.listNodeFlashcards).mockResolvedValueOnce([]);
+
+    render(
+      <FlashcardModal
+        isOpen={true}
+        onClose={vi.fn()}
+        workspaceId="ws_test"
+        nodeId="node_1"
+        canEdit={false}
+      />
+    );
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/No flashcards have been generated for this response yet\. An editor or workspace owner can generate flashcards\./i)
+      ).toBeInTheDocument();
+    });
+
+    expect(flashcardApi.generateNodeFlashcards).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: /regenerate flashcards/i })).not.toBeInTheDocument();
+  });
+
+  it("handles 403 Forbidden on auto-generation gracefully for viewers", async () => {
+    vi.mocked(flashcardApi.listNodeFlashcards).mockResolvedValueOnce([]);
+    vi.mocked(flashcardApi.generateNodeFlashcards).mockRejectedValueOnce(
+      new Error("403 Forbidden: Only editors and owners can generate flashcards")
+    );
+
+    render(
+      <FlashcardModal
+        isOpen={true}
+        onClose={vi.fn()}
+        workspaceId="ws_test"
+        nodeId="node_1"
+      />
+    );
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/No flashcards have been generated for this response yet/i)
+      ).toBeInTheDocument();
+    });
+
+    // Error banner should not be displayed
+    expect(screen.queryByText(/Flashcard Error/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /retry/i })).not.toBeInTheDocument();
+  });
+
+  it("includes accessible live status and allows dismiss during loading", async () => {
+    vi.mocked(flashcardApi.listNodeFlashcards).mockImplementationOnce(
+      () => new Promise(() => {}) // never resolves to keep in loading state
+    );
+    const handleClose = vi.fn();
+
+    render(
+      <FlashcardModal
+        isOpen={true}
+        onClose={handleClose}
+        workspaceId="ws_test"
+        nodeId="node_1"
+      />
+    );
+
+    const loadingStatus = screen.getByRole("status");
+    expect(loadingStatus).toBeInTheDocument();
+    expect(loadingStatus).toHaveAttribute("aria-live", "polite");
+
+    // Close button should be enabled and clickable while generating/loading
+    const closeBtn = screen.getByRole("button", { name: /^close$/i });
+    expect(closeBtn).toBeEnabled();
   });
 
   it("deletes a card via confirmation dialog", async () => {

@@ -233,7 +233,9 @@ class FlashcardService:
                 workspace_id=workspace_id,
                 node_id=node_id,
                 provider=resolved_provider,
-                error=str(exc),
+                model=resolved_model,
+                requested_count=request.count,
+                error_type=type(exc).__name__,
             )
             raise FlashcardGenerationError("Flashcard generation failed") from exc
 
@@ -353,4 +355,18 @@ class FlashcardService:
             raise FlashcardNotFoundError(f"Card '{card_id}' not found")
 
         await db.delete(card)
+        await db.flush()
+
+        # Re-index remaining cards for this node so positions are contiguous without gaps
+        reindex_stmt = (
+            select(FlashcardModel)
+            .where(
+                FlashcardModel.workspace_id == workspace_id,
+                FlashcardModel.source_node_id == node_id,
+            )
+            .order_by(FlashcardModel.position.asc(), FlashcardModel.created_at.asc())
+        )
+        remaining = (await db.scalars(reindex_stmt)).all()
+        for new_pos, remaining_card in enumerate(remaining):
+            remaining_card.position = new_pos
         await db.flush()

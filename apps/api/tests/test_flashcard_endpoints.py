@@ -3,8 +3,11 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 from ai_core import ChatRole, GenerationResult
+from database import get_session_factory
 from httpx import ASGITransport, AsyncClient
 from main import app
+from models.user import User, WorkspaceMember
+from sqlalchemy import select
 
 
 def unique_email(prefix: str = "fc") -> str:
@@ -225,31 +228,118 @@ async def test_flashcard_cross_tenant_and_viewer_rbac() -> None:
             assert gen.status_code == 201
             card_id = gen.json()[0]["id"]
 
-    # User B (Unrelated intruder)
+    # User B (Member with role: "viewer")
     async with AsyncClient(transport=transport, base_url="http://test") as client_b:
-        email_b = unique_email("intruder_b")
+        email_b = unique_email("viewer_b")
         await client_b.post(
             "/api/v1/auth/register",
             json={"email": email_b, "password": "Password123456!"},
         )
 
+        session_factory = get_session_factory()
+        async with session_factory() as session:
+            user_b_stmt = select(User).where(User.email == email_b)
+            user_b = (await session.execute(user_b_stmt)).scalar_one()
+            member = WorkspaceMember(workspace_id=ws_id, user_id=user_b.id, role="viewer")
+            session.add(member)
+            await session.commit()
+
+        # Viewer can read flashcards (200 OK)
+        r_get = await client_b.get(f"/api/v1/workspaces/{ws_id}/nodes/{node_id}/flashcards")
+        assert r_get.status_code == 200
+        assert len(r_get.json()) == 1
+
+        # Viewer receives 403 Forbidden for generate, update, and delete
+        r_gen = await client_b.post(
+            f"/api/v1/workspaces/{ws_id}/nodes/{node_id}/flashcards/generate",
+            json={"count": 5},
+        )
+        assert r_gen.status_code == 403
+
+        r_patch = await client_b.patch(
+            f"/api/v1/workspaces/{ws_id}/nodes/{node_id}/flashcards/{card_id}",
+            json={"question": "Viewer edit?"},
+        )
+        assert r_patch.status_code == 403
+
+        r_del = await client_b.delete(
+            f"/api/v1/workspaces/{ws_id}/nodes/{node_id}/flashcards/{card_id}"
+        )
+        assert r_del.status_code == 403
+
+    # User C (Unrelated intruder)
+    async with AsyncClient(transport=transport, base_url="http://test") as client_c:
+        email_c = unique_email("intruder_c")
+        await client_c.post(
+            "/api/v1/auth/register",
+            json={"email": email_c, "password": "Password123456!"},
+        )
+
         # Unrelated user must receive 404 on all endpoints
-        r1 = await client_b.get(f"/api/v1/workspaces/{ws_id}/nodes/{node_id}/flashcards")
+        r1 = await client_c.get(f"/api/v1/workspaces/{ws_id}/nodes/{node_id}/flashcards")
         assert r1.status_code == 404
 
-        r2 = await client_b.post(
+        r2 = await client_c.post(
             f"/api/v1/workspaces/{ws_id}/nodes/{node_id}/flashcards/generate",
             json={"count": 5},
         )
         assert r2.status_code == 404
 
-        r3 = await client_b.patch(
+        r3 = await client_c.patch(
             f"/api/v1/workspaces/{ws_id}/nodes/{node_id}/flashcards/{card_id}",
             json={"question": "Hacked?"},
         )
         assert r3.status_code == 404
 
-        r4 = await client_b.delete(
+        r4 = await client_c.delete(
             f"/api/v1/workspaces/{ws_id}/nodes/{node_id}/flashcards/{card_id}"
         )
         assert r4.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_flashcard_endpoint_custom_base_url_in_generate_request() -> None:
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        email = unique_email("ollama_owner")
+        await client.post(
+            "/api/v1/auth/register",
+            json={"email": email, "password": "Password123456!"},
+        )
+
+        ws_resp = await client.post(
+            "/api/v1/workspaces",
+            json={"name": "Ollama Workspace"},
+        )
+        ws_id = ws_resp.json()["id"]
+
+        node_resp = await client.post(
+            f"/api/v1/workspaces/{ws_id}/nodes",
+            json={"role": "assistant", "content": "Local models run offline with Ollama."},
+        )
+        node_id = node_resp.json()["id"]
+
+        fake_provider = AsyncMock()
+        fake_provider.generate.return_value = GenerationResult(
+            content='{"cards":[{"question":"What is Ollama?","answer":"Local LLM runtime."}]}',
+            role=ChatRole.ASSISTANT,
+            model_name="llama3",
+        )
+
+        with patch("services.flashcard_service.get_provider", return_value=fake_provider) as mock_get_provider:
+            resp = await client.post(
+                f"/api/v1/workspaces/{ws_id}/nodes/{node_id}/flashcards/generate",
+                json={
+                    "count": 5,
+                    "provider": "ollama",
+                    "model": "llama3",
+                    "baseUrl": "http://localhost:11434/v1",
+                },
+            )
+            assert resp.status_code == 201
+            # Verify the custom base URL was properly forwarded to get_provider
+            mock_get_provider.assert_called_once_with(
+                "ollama",
+                api_key=None,
+                base_url="http://localhost:11434/v1",
+            )

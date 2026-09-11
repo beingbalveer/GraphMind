@@ -60,6 +60,7 @@ import {
   snapshotToTree,
   seedDemoWorkspace,
 } from "@/lib/workspaceApi";
+import type { FlashcardGenerationConfig } from "@/lib/flashcardApi";
 
 interface ChatContainerProps {
   initialWorkspaceId?: string;
@@ -132,12 +133,12 @@ export function ChatContainer({
     getEffectiveBaseUrl,
   } = useModelConfig();
 
-  const flashcardGenerationConfig = useMemo(() => {
+  const flashcardGenerationConfig: FlashcardGenerationConfig = useMemo(() => {
     const apiKey = getEffectiveApiKey(llmConfig.provider);
     return {
       provider: llmConfig.provider,
       model: llmConfig.model,
-      customBaseUrl: getEffectiveBaseUrl(llmConfig.provider),
+      baseUrl: getEffectiveBaseUrl(llmConfig.provider),
       apiKey: apiKey || undefined,
     };
   }, [llmConfig.provider, llmConfig.model, getEffectiveApiKey, getEffectiveBaseUrl]);

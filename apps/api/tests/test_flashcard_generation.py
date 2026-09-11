@@ -218,3 +218,168 @@ async def test_generate_for_node_lifecycle_and_conflict() -> None:
         remaining = await FlashcardService.list_for_node(session, ws_id, node_id)
         assert len(remaining) == 1
         assert remaining[0].id != target_card_id
+
+
+@pytest.mark.asyncio
+async def test_failed_regeneration_preserves_existing_cards_and_edits() -> None:
+    session_factory = get_session_factory()
+    async with session_factory() as session:
+        ws = Workspace(name="Preserve Cards WS", owner_id="usr_default_admin")
+        session.add(ws)
+        await session.flush()
+
+        node = NodeModel(
+            workspace_id=ws.id,
+            role="assistant",
+            content="Important architecture concepts: CQRS and Event Sourcing.",
+        )
+        session.add(node)
+        await session.commit()
+        ws_id, node_id = ws.id, node.id
+
+    # 1. Initial generation
+    initial_provider = AsyncMock()
+    initial_provider.generate.return_value = GenerationResult(
+        content='{"cards":[{"question":"What is CQRS?","answer":"Command Query Responsibility Segregation."}]}',
+        role=ChatRole.ASSISTANT,
+        model_name="fake-model",
+    )
+    with patch("services.flashcard_service.get_provider", return_value=initial_provider):
+        async with session_factory() as session:
+            cards = await FlashcardService.generate_for_node(
+                session, ws_id, node_id, FlashcardGenerateRequest(count=5)
+            )
+            await session.commit()
+            card_id = cards[0].id
+
+    # 2. User edits the card
+    async with session_factory() as session:
+        await FlashcardService.update_card(
+            session,
+            ws_id,
+            node_id,
+            card_id,
+            FlashcardUpdate(question="Customized CQRS question?"),
+        )
+        await session.commit()
+
+    # 3. Attempt replacement generation with a failing provider
+    failing_provider = AsyncMock()
+    failing_provider.generate.side_effect = RuntimeError("Provider timeout or service unavailable")
+
+    with patch("services.flashcard_service.get_provider", return_value=failing_provider):
+        async with session_factory() as session:
+            with pytest.raises(FlashcardGenerationError):
+                await FlashcardService.generate_for_node(
+                    session, ws_id, node_id, FlashcardGenerateRequest(count=5, replace_existing=True)
+                )
+            await session.rollback()
+
+    # 4. Verify original card and user edit are still intact
+    async with session_factory() as session:
+        cards_after = await FlashcardService.list_for_node(session, ws_id, node_id)
+        assert len(cards_after) == 1
+        assert cards_after[0].id == card_id
+        assert cards_after[0].question == "Customized CQRS question?"
+
+
+@pytest.mark.asyncio
+async def test_concurrent_generation_does_not_create_duplicate_sets() -> None:
+    session_factory = get_session_factory()
+    async with session_factory() as session:
+        ws = Workspace(name="Concurrent Gen WS", owner_id="usr_default_admin")
+        session.add(ws)
+        await session.flush()
+
+        node = NodeModel(
+            workspace_id=ws.id,
+            role="assistant",
+            content="Concurrent access must be protected against race conditions.",
+        )
+        session.add(node)
+        await session.commit()
+        ws_id, node_id = ws.id, node.id
+
+    provider = AsyncMock()
+    provider.generate.return_value = GenerationResult(
+        content='{"cards":[{"question":"What is concurrency?","answer":"Execution of multiple tasks."}]}',
+        role=ChatRole.ASSISTANT,
+        model_name="fake-model",
+    )
+
+    async def run_gen() -> list:
+        async with session_factory() as session:
+            result = await FlashcardService.generate_for_node(
+                session, ws_id, node_id, FlashcardGenerateRequest(count=5, replace_existing=False)
+            )
+            await session.commit()
+            return result
+
+    with patch("services.flashcard_service.get_provider", return_value=provider):
+        # Run sequentially or concurrently; with replace_existing=False, after the first commits,
+        # the next attempt must raise FlashcardConflictError
+        first_cards = await run_gen()
+        assert len(first_cards) == 1
+
+        async with session_factory() as session:
+            with pytest.raises(FlashcardConflictError):
+                await FlashcardService.generate_for_node(
+                    session, ws_id, node_id, FlashcardGenerateRequest(count=5, replace_existing=False)
+                )
+
+    async with session_factory() as session:
+        final_cards = await FlashcardService.list_for_node(session, ws_id, node_id)
+        assert len(final_cards) == 1
+
+
+@pytest.mark.asyncio
+async def test_delete_reindexes_positions_contiguously() -> None:
+    session_factory = get_session_factory()
+    async with session_factory() as session:
+        ws = Workspace(name="Reindex WS", owner_id="usr_default_admin")
+        session.add(ws)
+        await session.flush()
+
+        node = NodeModel(
+            workspace_id=ws.id,
+            role="assistant",
+            content="Card ordering and numbering test source text.",
+        )
+        session.add(node)
+        await session.commit()
+        ws_id, node_id = ws.id, node.id
+
+    provider = AsyncMock()
+    provider.generate.return_value = GenerationResult(
+        content="""{"cards":[
+            {"question":"Card 0?","answer":"A0"},
+            {"question":"Card 1?","answer":"A1"},
+            {"question":"Card 2?","answer":"A2"}
+        ]}""",
+        role=ChatRole.ASSISTANT,
+        model_name="fake-model",
+    )
+
+    with patch("services.flashcard_service.get_provider", return_value=provider):
+        async with session_factory() as session:
+            cards = await FlashcardService.generate_for_node(
+                session, ws_id, node_id, FlashcardGenerateRequest(count=3)
+            )
+            await session.commit()
+            assert len(cards) == 3
+            assert [c.position for c in cards] == [0, 1, 2]
+            middle_id = cards[1].id
+
+    # Delete the middle card (position 1)
+    async with session_factory() as session:
+        await FlashcardService.delete_card(session, ws_id, node_id, middle_id)
+        await session.commit()
+
+    # Verify positions are re-indexed to contiguous [0, 1]
+    async with session_factory() as session:
+        remaining = await FlashcardService.list_for_node(session, ws_id, node_id)
+        assert len(remaining) == 2
+        assert [c.position for c in remaining] == [0, 1]
+        assert remaining[0].question == "Card 0?"
+        assert remaining[1].question == "Card 2?"
+

@@ -25,6 +25,7 @@ export interface FlashcardModalProps {
   sourcePreview?: string;
   generationConfig?: FlashcardGenerationConfig;
   onGoToSource?: () => void;
+  canEdit?: boolean;
 }
 
 export function FlashcardModal({
@@ -35,6 +36,7 @@ export function FlashcardModal({
   sourcePreview = "",
   generationConfig,
   onGoToSource,
+  canEdit = true,
 }: FlashcardModalProps) {
   const [cards, setCards] = React.useState<Flashcard[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
@@ -48,6 +50,7 @@ export function FlashcardModal({
 
   const [showRegenerateConfirm, setShowRegenerateConfirm] = React.useState(false);
   const [isRegenerating, setIsRegenerating] = React.useState(false);
+  const [isForbiddenViewer, setIsForbiddenViewer] = React.useState(false);
 
   const truncatedPreview = React.useMemo(() => {
     if (!sourcePreview) return "";
@@ -64,6 +67,7 @@ export function FlashcardModal({
       setFailedPhase(null);
       setIsLoading(false);
       setStatusMessage(null);
+      setIsForbiddenViewer(false);
       return;
     }
 
@@ -75,6 +79,7 @@ export function FlashcardModal({
       setError(null);
       setFailedPhase(null);
       setStatusMessage("Checking existing flashcards…");
+      setIsForbiddenViewer(false);
 
       try {
         const existing = await listNodeFlashcards(workspaceId, nodeId);
@@ -82,6 +87,14 @@ export function FlashcardModal({
 
         if (existing.length > 0) {
           setCards(existing);
+          setIsLoading(false);
+          setStatusMessage(null);
+          return;
+        }
+
+        // If user cannot edit, do not attempt to auto-generate
+        if (!canEdit) {
+          setCards([]);
           setIsLoading(false);
           setStatusMessage(null);
           return;
@@ -102,6 +115,23 @@ export function FlashcardModal({
         setStatusMessage(null);
       } catch (err: unknown) {
         if (isCancelled) return;
+
+        // Gracefully handle 403 Forbidden for viewers during generation
+        const isForbidden =
+          (err instanceof Error &&
+            (err.message.includes("403") || err.message.toLowerCase().includes("forbidden"))) ||
+          (typeof err === "object" && err !== null && (err as { status?: number }).status === 403);
+
+        if (isForbidden) {
+          setCards([]);
+          setError(null);
+          setFailedPhase(null);
+          setIsLoading(false);
+          setStatusMessage(null);
+          setIsForbiddenViewer(true);
+          return;
+        }
+
         const msg =
           err instanceof Error
             ? err.message
@@ -118,7 +148,7 @@ export function FlashcardModal({
     return () => {
       isCancelled = true;
     };
-  }, [isOpen, workspaceId, nodeId, generationConfig]);
+  }, [isOpen, workspaceId, nodeId, generationConfig, canEdit]);
 
   const handleRetry = async () => {
     setError(null);
@@ -180,6 +210,7 @@ export function FlashcardModal({
       const msg =
         err instanceof Error ? err.message : "Failed to update flashcard";
       setError(msg);
+      throw err;
     } finally {
       setBusyCardId(null);
     }
@@ -193,7 +224,10 @@ export function FlashcardModal({
 
     try {
       await deleteNodeFlashcard(workspaceId, nodeId, pendingDelete.id);
-      setCards((prev) => prev.filter((c) => c.id !== pendingDelete.id));
+      setCards((prev) => {
+        const next = prev.filter((c) => c.id !== pendingDelete.id);
+        return next.map((c, idx) => ({ ...c, position: idx }));
+      });
       setPendingDelete(null);
     } catch (err: unknown) {
       const msg =
@@ -225,16 +259,17 @@ export function FlashcardModal({
     }
   };
 
-  const isAnyBusy = isLoading || isRegenerating || Boolean(busyCardId);
+  const isMutating = isDeleting || isRegenerating;
+  const isAnyBusy = isLoading || isMutating || Boolean(busyCardId);
 
   return (
     <>
       <Modal
         isOpen={isOpen}
-        onClose={isAnyBusy ? () => {} : onClose}
+        onClose={isMutating ? () => {} : onClose}
         size="xl"
         ariaLabel="Response Flashcards"
-        closeOnClickOutside={!isAnyBusy}
+        closeOnClickOutside={!isMutating}
       >
         <ModalHeader
           icon={<BookOpen className="size-4 text-primary" />}
@@ -249,9 +284,9 @@ export function FlashcardModal({
             </div>
           }
           description={truncatedPreview || "Study key concepts from this message"}
-          onClose={isAnyBusy ? undefined : onClose}
+          onClose={isMutating ? undefined : onClose}
         >
-          {cards.length > 0 && !isLoading && (
+          {cards.length > 0 && !isLoading && canEdit && !isForbiddenViewer && (
             <Button
               variant="outline"
               size="sm"
@@ -290,6 +325,8 @@ export function FlashcardModal({
 
           {isLoading ? (
             <div
+              role="status"
+              aria-live="polite"
               className="py-10 flex flex-col items-center justify-center gap-2.5 text-foreground-muted"
               data-testid="flashcard-loading-state"
             >
@@ -298,10 +335,11 @@ export function FlashcardModal({
             </div>
           ) : cards.length > 0 ? (
             <div className="flex flex-col gap-2">
-              {cards.map((card) => (
+              {cards.map((card, index) => (
                 <FlashcardItem
                   key={card.id}
                   card={card}
+                  displayIndex={index + 1}
                   onSave={handleSaveCard}
                   onRequestDelete={(c) => setPendingDelete(c)}
                   isBusy={busyCardId === card.id || isAnyBusy}
@@ -310,7 +348,9 @@ export function FlashcardModal({
             </div>
           ) : !error ? (
             <div className="py-8 text-center text-xs text-foreground-muted">
-              No flashcards found for this response.
+              {!canEdit || isForbiddenViewer
+                ? "No flashcards have been generated for this response yet. An editor or workspace owner can generate flashcards."
+                : "No flashcards found for this response."}
             </div>
           ) : null}
         </ModalBody>
@@ -322,10 +362,14 @@ export function FlashcardModal({
                 variant="ghost"
                 size="sm"
                 onClick={() => {
-                  onGoToSource();
                   onClose();
+                  requestAnimationFrame(() => {
+                    setTimeout(() => {
+                      onGoToSource();
+                    }, 60);
+                  });
                 }}
-                disabled={isAnyBusy}
+                disabled={isMutating}
               >
                 <ExternalLink className="size-3.5 mr-1.5" />
                 Go to source
@@ -337,7 +381,7 @@ export function FlashcardModal({
             variant="outline"
             size="sm"
             onClick={onClose}
-            disabled={isAnyBusy}
+            disabled={isMutating}
           >
             Close
           </Button>

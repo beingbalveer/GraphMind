@@ -59,7 +59,7 @@ In **GraphMind**, **knowledge is the product, and chat is only an interface**. E
 ### 🃏 Node-Linked Flashcards & Active Recall
 - **Response-Grounded Flashcard Generation**: Generate 1–10 high-retention Q&A cards directly from any completed assistant response node across chat and canvas side-peek views.
 - **Relational Persistence & Full Lifecycle**: Cards are persisted with foreign-key cascades to source node and workspace, supporting list, inline edit, delete, and full regeneration.
-- **Accessible Study Modal**: Flip cards to reveal answers, edit text on the fly, or jump directly back to the grounded source node in the conversation tree.
+- **Accessible Study Modal**: Reveal answers on cards, edit text on the fly, or jump directly back to the grounded source node in the conversation tree.
 
 ### ⚡ Provider-Agnostic Foundation Core (`packages/ai-core`)
 - Completely decoupled foundation model layer supporting:

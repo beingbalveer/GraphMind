@@ -11,6 +11,7 @@ import { Edit2, Trash2, Eye, EyeOff, Check, X } from "lucide-react";
 
 export interface FlashcardItemProps {
   card: Flashcard;
+  displayIndex?: number;
   onSave: (cardId: string, update: FlashcardUpdateInput) => Promise<void> | void;
   onRequestDelete: (card: Flashcard) => void;
   isBusy?: boolean;
@@ -18,6 +19,7 @@ export interface FlashcardItemProps {
 
 export function FlashcardItem({
   card,
+  displayIndex,
   onSave,
   onRequestDelete,
   isBusy = false,
@@ -56,6 +58,8 @@ export function FlashcardItem({
     try {
       await onSave(card.id, { question: trimmedQ, answer: trimmedA });
       setIsEditing(false);
+    } catch {
+      // Keep isEditing true, preserve entered content in editedQuestion and editedAnswer
     } finally {
       setIsSaving(false);
     }
@@ -77,7 +81,7 @@ export function FlashcardItem({
     >
       <div className="flex items-center justify-between gap-2">
         <Badge variant="secondary">
-          Card {card.position + 1}
+          Card {displayIndex ?? card.position + 1}
         </Badge>
         <div className="flex items-center gap-0.5">
           {!isEditing ? (

@@ -80,6 +80,7 @@ interface ChatMessageProps {
   onRateResponse?: (nodeId: string, rating: "up" | "down" | null) => void;
   workspaceId?: string;
   flashcardGenerationConfig?: FlashcardGenerationConfig;
+  canEdit?: boolean;
 }
 
 
@@ -335,6 +336,7 @@ export function ChatMessage({
   onRateResponse,
   workspaceId,
   flashcardGenerationConfig,
+  canEdit = true,
 }: ChatMessageProps) {
 
   const isUser = message.role === "user";
@@ -958,7 +960,7 @@ export function ChatMessage({
                     variant="ghost"
                     label="Generate or review flashcards"
                     onClick={() => setIsFlashcardModalOpen(true)}
-                    className="opacity-0 text-foreground-subtle hover:text-foreground transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 shadow-none"
+                    className="opacity-100 sm:opacity-0 text-foreground-subtle hover:text-foreground transition-opacity sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 shadow-none"
                     title="Generate or review flashcards"
                     data-testid={`flashcard-trigger-${message.id}`}
                   >
@@ -1110,11 +1112,16 @@ export function ChatMessage({
             nodeId={message.id}
             sourcePreview={message.content}
             generationConfig={flashcardGenerationConfig}
+            canEdit={canEdit}
             onGoToSource={() => {
               setIsFlashcardModalOpen(false);
-              const el = document.getElementById(message.id);
-              el?.focus();
-              el?.scrollIntoView({ behavior: "smooth", block: "center" });
+              requestAnimationFrame(() => {
+                setTimeout(() => {
+                  const el = document.getElementById(message.id);
+                  el?.focus();
+                  el?.scrollIntoView({ behavior: "smooth", block: "center" });
+                }, 60);
+              });
             }}
           />
         )}
