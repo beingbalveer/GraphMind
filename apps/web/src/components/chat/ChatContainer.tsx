@@ -844,10 +844,22 @@ export function ChatContainer({
   }, [tree]);
 
   const breadcrumbSteps = useMemo(() => {
-    if (!tree || !tree.rootNodeId || !tree.nodes[tree.rootNodeId]) return [];
+    const activeChat = chats.find((c) => c.id === activeChatId);
+    const fallbackTitle = activeChat?.title || "New Chat";
+
+    if (!tree || !tree.rootNodeId || !tree.nodes[tree.rootNodeId]) {
+      return [
+        {
+          id: activeChatId || "new",
+          leafId: activeChatId || "new",
+          title: fallbackTitle,
+          isRoot: true,
+        },
+      ];
+    }
     const rootMessage = tree.nodes[tree.rootNodeId];
-    const rawPrompt = rootMessage?.content || "New Chat";
-    const rootTitle = rawPrompt.length > 20 ? rawPrompt.slice(0, 18) + "…" : rawPrompt;
+    const rawPrompt = rootMessage?.content || fallbackTitle;
+    const rootTitle = activeChat?.title || (rawPrompt.length > 24 ? rawPrompt.slice(0, 22) + "…" : rawPrompt);
 
     const rootLeaf = getBranchLinearLeafNode(tree, tree.rootNodeId);
     const rootLeafId = rootLeaf ? rootLeaf.id : tree.rootNodeId;
@@ -873,7 +885,7 @@ export function ChatContainer({
     });
 
     return steps;
-  }, [tree, activeLineage]);
+  }, [tree, activeLineage, chats, activeChatId]);
 
   const handleEditUserMessage = useCallback(
     async (userNodeId: string, newContent: string) => {
@@ -1069,14 +1081,15 @@ export function ChatContainer({
             }}
             breadcrumbs={
               viewMode === "library" ? (
-                <div className="flex items-center gap-1.5 text-xs text-foreground font-medium">
-                  <span className="text-foreground-muted">Workspace</span>
-                  <span className="text-foreground-subtle">/</span>
-                  <span>File Library</span>
+                <div className="flex items-center gap-1.5 text-xs text-foreground font-medium select-none">
+                  <span className="text-foreground-muted shrink-0">Workspace</span>
+                  <span className="text-foreground-subtle shrink-0">/</span>
+                  <span className="shrink-0">File Library</span>
                 </div>
               ) : (
                 <BranchBreadcrumbs
                   steps={breadcrumbSteps}
+                  suffix={viewMode === "canvas" ? "Canvas" : undefined}
                   onSelectStep={(step) => {
                     lastProcessedBranchRef.current = null;
                     lastProcessedNodeRef.current = null;

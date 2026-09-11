@@ -122,4 +122,11 @@ describe("ChatContainer canonical composition", () => {
     expect(source).not.toMatch(/\b(?:bg|text|border|ring)-(?:white|zinc)-/);
     expect(source).not.toMatch(/<button\b/);
   });
+
+  it("renders unified breadcrumbs matching library style for chat and new chat", () => {
+    render(<ChatContainer initialWorkspaceId="ws_test" initialViewMode="chat" />);
+
+    expect(screen.getByText("Workspace")).toBeInTheDocument();
+    expect(screen.getByText("New Chat")).toBeInTheDocument();
+  });
 });
