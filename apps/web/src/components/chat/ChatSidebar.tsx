@@ -22,6 +22,7 @@ import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { useResizableSidebar } from "@/hooks/useResizableSidebar";
 import { UserMenu } from "@/components/layout/UserMenu";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 interface ChatSidebarProps {
   isOpen: boolean;
@@ -29,6 +30,7 @@ interface ChatSidebarProps {
   workspaceName?: string;
   chats: ChatItem[];
   activeChatId: string | null;
+  isLibraryActive?: boolean;
   onSelectChat: (chat: ChatItem) => void;
   onDeleteChat: (id: string) => void;
   onRenameChat: (id: string, newTitle: string) => Promise<void>;
@@ -99,6 +101,7 @@ export function ChatSidebar({
   onOpenSettings,
   onNewChat,
   onOpenFileLibrary,
+  isLibraryActive = false,
 }: ChatSidebarProps) {
   const [deletingChatId, setDeletingChatId] = useState<string | null>(null);
   const [renamingChatId, setRenamingChatId] = useState<string | null>(null);
@@ -150,7 +153,7 @@ export function ChatSidebar({
 
   // Assistant-ui styled thread list item
   const renderChatItem = (chat: ChatItem) => {
-    const isActive = chat.id === activeChatId;
+    const isActive = !isLibraryActive && chat.id === activeChatId;
     const isRenaming = renamingChatId === chat.id;
 
     return (
@@ -338,12 +341,25 @@ export function ChatSidebar({
             <Button
               variant="ghost"
               onClick={onOpenFileLibrary}
-              className="h-9 w-full justify-start items-center gap-2 rounded-lg text-sm font-normal text-foreground-muted hover:text-foreground hover:bg-surface-hover transition-colors cursor-pointer group shadow-none px-0"
+              aria-current={isLibraryActive ? "page" : undefined}
+              className={cn(
+                "h-9 w-full justify-start items-center gap-2 rounded-lg text-sm transition-colors cursor-pointer group shadow-none px-0",
+                isLibraryActive
+                  ? "bg-surface-hover text-foreground font-medium"
+                  : "text-foreground-muted font-normal hover:text-foreground hover:bg-surface-hover"
+              )}
               title="Workspace File Library"
               aria-label="Workspace File Library"
             >
               <div className="size-8 rounded-lg flex items-center justify-center shrink-0">
-                <FolderOpen className="w-4 h-4 text-foreground-muted group-hover:text-foreground transition-colors" />
+                <FolderOpen
+                  className={cn(
+                    "w-4 h-4 transition-colors",
+                    isLibraryActive
+                      ? "text-foreground"
+                      : "text-foreground-muted group-hover:text-foreground"
+                  )}
+                />
               </div>
               <div className={`flex-1 min-w-0 text-left pr-2 transition-opacity duration-150 ${isOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
                 <span className="truncate">File Library</span>

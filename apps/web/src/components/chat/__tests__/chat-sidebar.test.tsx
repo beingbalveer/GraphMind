@@ -146,4 +146,28 @@ describe("ChatSidebar & UserMenu Contract (Scope 3, Task 2)", () => {
     await user.click(settingsBtn);
     expect(handleOpenSettings).toHaveBeenCalledTimes(1);
   });
+
+  it("marks File Library as active and unhighlights chats when isLibraryActive is true", () => {
+    render(
+      <ChatSidebar
+        isOpen={true}
+        onToggle={vi.fn()}
+        chats={mockChats}
+        activeChatId="chat-1"
+        isLibraryActive={true}
+        onSelectChat={vi.fn()}
+        onDeleteChat={vi.fn()}
+        onRenameChat={vi.fn().mockResolvedValue(undefined)}
+        onOpenFileLibrary={vi.fn()}
+      />
+    );
+
+    const fileLibraryBtn = screen.getByRole("button", { name: /workspace file library/i });
+    expect(fileLibraryBtn).toHaveAttribute("aria-current", "page");
+    expect(fileLibraryBtn).toHaveClass("bg-surface-hover", "text-foreground", "font-medium");
+
+    // Chat 1 is NOT active when library is active
+    const chatEl = screen.getByText("Quantum Computing Exploration").closest("[role='button']");
+    expect(chatEl).not.toHaveAttribute("aria-current");
+  });
 });

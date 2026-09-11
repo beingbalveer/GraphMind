@@ -1017,6 +1017,7 @@ export function ChatContainer({
             workspaceName={currentWorkspace?.name || "Main Workspace"}
             chats={chats}
             activeChatId={activeChatId}
+            isLibraryActive={viewMode === "library"}
             onSelectChat={handleSelectChat}
             onDeleteChat={handleDeleteChat}
             onRenameChat={handleRenameChat}
