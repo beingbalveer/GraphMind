@@ -153,10 +153,10 @@ export function ChatSidebar({
           <>
             {/* Title trigger with pe-7 on hover so title never overlaps 3 dots */}
             <div className="flex h-full min-w-0 flex-1 items-center text-start outline-none group-hover:pe-7 transition-[padding]">
-              {chat.pinned && (
-                <Pin className="size-3 text-foreground-muted shrink-0 mr-1.5" aria-label="Pinned" />
-              )}
               <span className="min-w-0 flex-1 truncate">{chat.title || "New Chat"}</span>
+              {chat.pinned && (
+                <Pin className="size-3 text-foreground-muted shrink-0 ml-1.5" aria-label="Pinned" />
+              )}
             </div>
 
             {/* Subtle 3-dots trigger button (only visible on hover or when open) */}
