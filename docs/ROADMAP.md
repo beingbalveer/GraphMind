@@ -65,6 +65,12 @@
 - **Knowledge Curator Engine**: Domain ontology DAG modeling prerequisite relationships, identifying missing foundational knowledge gaps, and recommending forward learning frontiers.
 - **Mastery Heatmap & Timeline Replay**: Color-coded node illumination (`mastered`, `quizzed`, `explored`, `stale`) and timeline scrubber to visualize learning growth across time.
 
+### Active Superpowers: Node-Linked Flashcards (Feature 2.1)
+- **Node-Linked Generation (`/api/v1/workspaces/{workspace_id}/nodes/{node_id}/flashcards`)**: Provider-agnostic LLM extraction generating 1–10 high-retention Q&A flashcards strictly grounded in assistant response content.
+- **Relational Persistence**: `flashcards` PostgreSQL table with cascade deletion on workspace and source node, deterministic positions, and Alembic migrations.
+- **Review & Edit Modal**: In-app modal interface allowing users to inspect, flip (reveal answers), edit inline (question and answer), delete with confirmation, and regenerate with fresh drafts.
+- **Surface Integration**: Integrated into assistant message actions across both linear chat and the canvas side-peek branch sheet.
+
 ---
 
 ## 3. Future Enterprise Horizon

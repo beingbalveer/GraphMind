@@ -56,6 +56,11 @@ In **GraphMind**, **knowledge is the product, and chat is only an interface**. E
   - 🔬 **Deep Research**: Rigorous academic researcher synthesizing evidence, comparing trade-offs, and citing sources.
   - 🎯 **Quiz Master**: Traverses conversation nodes to test understanding through interactive multiple-choice questions and code challenges.
 
+### 🃏 Node-Linked Flashcards & Active Recall
+- **Response-Grounded Flashcard Generation**: Generate 1–10 high-retention Q&A cards directly from any completed assistant response node across chat and canvas side-peek views.
+- **Relational Persistence & Full Lifecycle**: Cards are persisted with foreign-key cascades to source node and workspace, supporting list, inline edit, delete, and full regeneration.
+- **Accessible Study Modal**: Flip cards to reveal answers, edit text on the fly, or jump directly back to the grounded source node in the conversation tree.
+
 ### ⚡ Provider-Agnostic Foundation Core (`packages/ai-core`)
 - Completely decoupled foundation model layer supporting:
   - **Google Gemini** (`gemini-2.5-pro`, `gemini-2.5-flash` with multimodal attachments & native search grounding)
