@@ -22,7 +22,7 @@ import { GraphCanvas } from "../canvas/GraphCanvas";
 import { CommandPalette } from "../canvas/CommandPalette";
 import { WorkspaceModal } from "../workspace/WorkspaceModal";
 import { SettingsModal } from "../settings/SettingsModal";
-import { FileLibraryModal } from "../library/FileLibraryModal";
+import { FileLibraryView } from "../library/FileLibraryView";
 import { SidePeekBranchSheet, SidePeekEntry } from "./SidePeekBranchSheet";
 import { Button } from "@/components/ui/button";
 import { InlineFeedback } from "@/components/ui/feedback";
@@ -38,6 +38,7 @@ import { Navbar, ViewMode } from "../layout/Navbar";
 import { WorkspaceShell } from "../layout/WorkspaceShell";
 import {
   buildWorkspaceUrl,
+  buildLibraryUrl,
   buildChatUrl,
   buildCanvasUrl,
   buildNodeUrl,
@@ -108,7 +109,6 @@ export function ChatContainer({
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
   const [isWorkspaceModalOpen, setIsWorkspaceModalOpen] = useState(false);
   const [isModelConfigOpen, setIsModelConfigOpen] = useState(false);
-  const [isFileLibraryOpen, setIsFileLibraryOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState<boolean>(() => {
     const saved = safeGetItem("graphmind_right_sidebar_open_v1");
@@ -303,8 +303,12 @@ export function ChatContainer({
   useEffect(() => {
     if (!currentWorkspace) return;
 
-    // 1. Sync viewMode from path: /canvas vs standard chat
-    const targetViewMode: ViewMode = pathname.endsWith("/canvas") ? "canvas" : "chat";
+    // 1. Sync viewMode from path: /canvas vs /library vs standard chat
+    const targetViewMode: ViewMode = pathname.endsWith("/canvas")
+      ? "canvas"
+      : pathname.endsWith("/library")
+      ? "library"
+      : "chat";
     setViewMode((prev) => (prev !== targetViewMode ? targetViewMode : prev));
 
     // 2. Sync chatId from path: /w/{workspaceId}/chat/{chatId}
@@ -1020,7 +1024,11 @@ export function ChatContainer({
             onOpenWorkspaceModal={() => setIsWorkspaceModalOpen(true)}
             onOpenSettings={() => setIsModelConfigOpen(true)}
             onNewChat={handleNewChat}
-            onOpenFileLibrary={() => setIsFileLibraryOpen(true)}
+            onOpenFileLibrary={() => {
+              if (currentWorkspace) {
+                router.push(buildLibraryUrl(currentWorkspace.id));
+              }
+            }}
           />
         }
         header={
@@ -1028,18 +1036,25 @@ export function ChatContainer({
             viewMode={viewMode}
             onViewModeChange={(mode) => {
               setViewMode(mode);
-              if (currentWorkspace && activeChatId) {
-                const url = mode === "canvas"
-                  ? buildCanvasUrl(currentWorkspace.id, activeChatId)
-                  : buildChatUrl(currentWorkspace.id, activeChatId);
-                router.push(url);
+              if (currentWorkspace) {
+                if (mode === "canvas") {
+                  router.push(activeChatId ? buildCanvasUrl(currentWorkspace.id, activeChatId) : buildWorkspaceUrl(currentWorkspace.id));
+                } else if (mode === "chat") {
+                  router.push(activeChatId ? buildChatUrl(currentWorkspace.id, activeChatId) : buildWorkspaceUrl(currentWorkspace.id));
+                } else if (mode === "library") {
+                  router.push(buildLibraryUrl(currentWorkspace.id));
+                }
               }
             }}
             syncStatus={syncStatus}
             workspaceName={currentWorkspace?.name || "Main Workspace"}
             onOpenWorkspaceModal={() => setIsWorkspaceModalOpen(true)}
             onOpenModelConfig={() => setIsModelConfigOpen(true)}
-            onOpenFileLibrary={() => setIsFileLibraryOpen(true)}
+            onOpenFileLibrary={() => {
+              if (currentWorkspace) {
+                router.push(buildLibraryUrl(currentWorkspace.id));
+              }
+            }}
             activeModelName={llmConfig.model}
             messageCount={activeMessages.length}
             isSidebarOpen={isSidebarOpen}
@@ -1052,18 +1067,26 @@ export function ChatContainer({
               handleCloseSidePeek();
             }}
             breadcrumbs={
-              <BranchBreadcrumbs
-                steps={breadcrumbSteps}
-                onSelectStep={(step) => {
-                  lastProcessedBranchRef.current = null;
-                  lastProcessedNodeRef.current = null;
-                  switchBranch(step.leafId);
-                  setSidePeekState({ stack: [], index: 0 });
-                  if (currentWorkspace && activeChatId) {
-                    router.replace(buildChatUrl(currentWorkspace.id, activeChatId), { scroll: false });
-                  }
-                }}
-              />
+              viewMode === "library" ? (
+                <div className="flex items-center gap-1.5 text-xs text-foreground font-medium">
+                  <span className="text-foreground-muted">Workspace</span>
+                  <span className="text-foreground-subtle">/</span>
+                  <span>File Library</span>
+                </div>
+              ) : (
+                <BranchBreadcrumbs
+                  steps={breadcrumbSteps}
+                  onSelectStep={(step) => {
+                    lastProcessedBranchRef.current = null;
+                    lastProcessedNodeRef.current = null;
+                    switchBranch(step.leafId);
+                    setSidePeekState({ stack: [], index: 0 });
+                    if (currentWorkspace && activeChatId) {
+                      router.replace(buildChatUrl(currentWorkspace.id, activeChatId), { scroll: false });
+                    }
+                  }}
+                />
+              )
             }
           />
         }
@@ -1089,7 +1112,19 @@ export function ChatContainer({
           </RightSidebar>
         }
       >
-        {viewMode === "canvas" ? (
+        {viewMode === "library" ? (
+          /* Full-Page File Library & Knowledge Assets View */
+          <FileLibraryView
+            workspaceId={currentWorkspace?.id || ""}
+            onBack={() => {
+              if (currentWorkspace && activeChatId) {
+                router.push(buildChatUrl(currentWorkspace.id, activeChatId));
+              } else if (currentWorkspace) {
+                router.push(buildWorkspaceUrl(currentWorkspace.id));
+              }
+            }}
+          />
+        ) : viewMode === "canvas" ? (
           /* 2D Spatial Mind Map & Knowledge Graph Canvas View */
           <div className="w-full h-full relative">
               <GraphCanvas
@@ -1344,15 +1379,6 @@ export function ChatContainer({
         onResetDefaults={resetLLMDefaults}
         currentWorkspace={currentWorkspace}
       />
-
-      {/* Workspace File Library Modal */}
-      {currentWorkspace && (
-        <FileLibraryModal
-          isOpen={isFileLibraryOpen}
-          onClose={() => setIsFileLibraryOpen(false)}
-          workspaceId={currentWorkspace.id}
-        />
-      )}
 
       {/* Non-intrusive Floating Toast Notification */}
       <Toast message={error} onDismiss={clearError} />

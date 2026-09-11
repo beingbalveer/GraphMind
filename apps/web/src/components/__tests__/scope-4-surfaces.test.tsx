@@ -19,6 +19,7 @@ describe("Scope 4 Product Surfaces - Master Verification Gate", () => {
     "canvas/MindMapEdge.tsx",
     // Task 3: File Library & Viewers
     "library/FileLibraryModal.tsx",
+    "library/FileLibraryView.tsx",
     // Task 4: Settings & Workspace Modals
     "settings/SettingsModal.tsx",
     "workspace/WorkspaceModal.tsx",

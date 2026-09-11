@@ -9,6 +9,10 @@
 export const buildWorkspaceUrl = (workspaceId: string): string =>
   `/w/${workspaceId}`;
 
+/** /w/{workspaceId}/library — Full-page Workspace File Library */
+export const buildLibraryUrl = (workspaceId: string): string =>
+  `/w/${workspaceId}/library`;
+
 /** /w/{workspaceId}/chat/{chatId} — Chat / thread view */
 export const buildChatUrl = (
   workspaceId: string,

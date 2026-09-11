@@ -27,7 +27,11 @@ export default function WorkspaceLayout({
   // Parse chatId from the pathname: /w/{workspaceId}/chat/{chatId}[/canvas]
   const chatIdMatch = pathname.match(/\/chat\/([^/]+)/);
   const chatId = chatIdMatch ? chatIdMatch[1] : undefined;
-  const viewMode = pathname.endsWith("/canvas") ? "canvas" : "chat";
+  const viewMode = pathname.endsWith("/canvas")
+    ? "canvas"
+    : pathname.endsWith("/library")
+    ? "library"
+    : "chat";
   const nodeId = searchParams.get("node") ?? undefined;
   const branchId = searchParams.get("branch") ?? undefined;
 
