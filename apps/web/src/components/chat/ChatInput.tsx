@@ -373,10 +373,10 @@ export function ChatInput({
         <Surface
           variant="raised"
           radius="card"
-          className={`flex flex-col space-y-2 p-2.5 transition-all motion-reduce:transition-none ${
+          className={`flex flex-col space-y-2 p-3 transition-all motion-reduce:transition-none focus-within:border-border-strong focus-within:shadow-md ${
           isDragOver
             ? "bg-info/10 ring-2 ring-info/50"
-            : "hover:shadow-md focus-within:border-border-strong"
+            : "hover:shadow-md"
         }`}
         >
         {/* Floating Slash Command Autocomplete Menu */}
@@ -536,7 +536,7 @@ export function ChatInput({
           disabled={isStreaming}
           variant="ghost"
           maxRowsClassName="max-h-48"
-          className="min-h-0 px-2 py-1.5 text-base font-normal leading-relaxed"
+          className="min-h-0 border-0 bg-transparent px-3 py-1.5 text-base font-normal leading-relaxed shadow-none focus-visible:ring-0 focus:outline-none placeholder:text-foreground-muted/60"
         />
 
         {/* Action Bar */}

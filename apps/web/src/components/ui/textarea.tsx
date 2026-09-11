@@ -41,7 +41,8 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           aria-describedby={descriptionIds}
           className={cn(
             textareaClasses,
-            variant === "ghost" && "border-transparent bg-transparent shadow-none focus-visible:bg-surface-hover focus-visible:border-border",
+            variant === "ghost" &&
+              "border-0 border-transparent bg-transparent shadow-none rounded-none focus-visible:border-transparent focus-visible:bg-transparent focus-visible:ring-0 focus-visible:outline-none focus:outline-none focus:ring-0",
             invalid && "border-destructive focus-visible:border-destructive",
             maxRowsClassName,
             className
