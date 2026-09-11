@@ -66,7 +66,6 @@ describe("FileLibraryView Full-Page Component", () => {
     render(<FileLibraryView workspaceId="ws-1" />);
 
     await waitFor(() => {
-      expect(screen.getByText("File Library & Knowledge Assets")).toBeInTheDocument();
       expect(screen.getByText("architecture-diagram.png")).toBeInTheDocument();
     });
 

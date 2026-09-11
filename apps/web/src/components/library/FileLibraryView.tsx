@@ -143,8 +143,6 @@ export function FileLibraryView({
     return f.name.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
-  const totalBytes = files.reduce((acc, f) => acc + (f.sizeBytes || 0), 0);
-
   return (
     <div
       data-testid="file-library-view"
@@ -162,10 +160,10 @@ export function FileLibraryView({
         </div>
       )}
 
-      {/* Top Banner / Hero Bar */}
-      <div className="border-b border-border bg-surface px-4 sm:px-6 py-4 shrink-0">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
+      {/* Streamlined Top Toolbar */}
+      <div className="border-b border-border bg-surface px-4 sm:px-6 py-3 shrink-0">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 min-w-0">
             {onBack && (
               <IconButton
                 label="Back to chat"
@@ -176,30 +174,47 @@ export function FileLibraryView({
                 <ArrowLeft className="size-4" />
               </IconButton>
             )}
-            <div className="size-9 rounded-xl bg-background-secondary border border-border flex items-center justify-center shrink-0">
-              <FolderOpen className="size-4.5 text-foreground" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-base font-semibold text-foreground tracking-tight">
-                  File Library & Knowledge Assets
-                </h1>
-                <Badge variant="secondary" className="font-mono text-2xs">
-                  {files.length} {files.length === 1 ? "file" : "files"}
-                </Badge>
-                {files.length > 0 && (
-                  <span className="text-2xs text-foreground-muted font-mono hidden md:inline">
-                    ({formatBytes(totalBytes)})
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-foreground-muted mt-0.5">
-                Persistent multimodal documents, source code, and tabular datasets for grounding and RAG.
-              </p>
-            </div>
+
+            <SegmentedTabs
+              value={selectedCategory}
+              onChange={(val) => setSelectedCategory(val)}
+              size="sm"
+              items={[
+                { id: "all", label: "All" },
+                { id: "image", label: "Images", icon: ImageIcon },
+                { id: "tabular", label: "Tabular", icon: FileSpreadsheet },
+                { id: "code", label: "Code", icon: Code },
+                { id: "document", label: "Docs", icon: FileText },
+              ]}
+            />
+
+            <Badge variant="secondary" className="font-mono text-2xs shrink-0 hidden md:inline-flex">
+              {files.length} {files.length === 1 ? "file" : "files"}
+            </Badge>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
+            <div className="w-full sm:w-64 relative">
+              <Input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Filter by name..."
+                startIcon={<Search className="size-3.5 text-foreground-muted" />}
+                inputSize="sm"
+              />
+              {searchQuery && (
+                <IconButton
+                  label="Clear search"
+                  variant="ghost"
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-1 top-1/2 -translate-y-1/2 size-6"
+                >
+                  <X className="size-3" />
+                </IconButton>
+              )}
+            </div>
+
             <input
               type="file"
               ref={fileInputRef}
@@ -214,52 +229,15 @@ export function FileLibraryView({
               size="sm"
               onClick={() => fileInputRef.current?.click()}
               disabled={isUploading}
-              className="cursor-pointer"
+              className="cursor-pointer shrink-0"
             >
               {isUploading ? (
                 <Loader2 className="size-3.5 animate-spin mr-1.5" />
               ) : (
                 <Upload className="size-3.5 mr-1.5" />
               )}
-              <span>Upload Files</span>
+              <span>Upload</span>
             </Button>
-          </div>
-        </div>
-
-        {/* Toolbar: Category filters & search */}
-        <div className="mt-4 pt-3 border-t border-border-subtle flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-          <SegmentedTabs
-            value={selectedCategory}
-            onChange={(val) => setSelectedCategory(val)}
-            size="sm"
-            items={[
-              { id: "all", label: "All" },
-              { id: "image", label: "Images", icon: ImageIcon },
-              { id: "tabular", label: "Tabular", icon: FileSpreadsheet },
-              { id: "code", label: "Code", icon: Code },
-              { id: "document", label: "Docs", icon: FileText },
-            ]}
-          />
-
-          <div className="w-full sm:w-72 relative">
-            <Input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Filter by name..."
-              startIcon={<Search className="size-3.5 text-foreground-muted" />}
-              inputSize="sm"
-            />
-            {searchQuery && (
-              <IconButton
-                label="Clear search"
-                variant="ghost"
-                onClick={() => setSearchQuery("")}
-                className="absolute right-1 top-1/2 -translate-y-1/2 size-6"
-              >
-                <X className="size-3" />
-              </IconButton>
-            )}
           </div>
         </div>
       </div>
