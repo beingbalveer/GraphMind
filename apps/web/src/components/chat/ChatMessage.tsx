@@ -501,7 +501,7 @@ export function ChatMessage({
           {message.content && (
             <CopyButton
               text={message.content}
-              className="opacity-0 transition-opacity group-hover/user:opacity-100 group-focus-within/user:opacity-100"
+              className="opacity-0 text-foreground-subtle hover:text-foreground transition-opacity group-hover/user:opacity-100 group-focus-within/user:opacity-100 shadow-none"
               title="Copy prompt"
             />
           )}
@@ -931,7 +931,7 @@ export function ChatMessage({
                 {/* Copy Button */}
                 <CopyButton
                   text={message.content}
-                  className="opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+                  className="opacity-0 text-foreground-subtle hover:text-foreground transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 shadow-none"
                   title="Copy response"
                 />
 

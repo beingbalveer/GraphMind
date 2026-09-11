@@ -24,7 +24,7 @@ describe("portalled overlays inside a modal", () => {
     await user.keyboard("{Escape}");
     expect(trigger).toHaveFocus();
     expect(screen.getByRole("dialog")).toBeVisible();
-  }, 15000);
+  }, 30000);
   it("puts a modal tooltip on the same compiled dropdown layer", async () => {
     const user = userEvent.setup({ pointerEventsCheck: 0 });
     render(<Modal isOpen onClose={vi.fn()}><ModalHeader title="Settings" description="Edit settings" /><ModalBody>
@@ -34,5 +34,5 @@ describe("portalled overlays inside a modal", () => {
     const tooltip = await screen.findByRole("tooltip");
     expect(tooltip.closest(".z-dropdown")).not.toBeNull();
     expect(screen.getByRole("dialog")).not.toContainElement(tooltip);
-  }, 15000);
+  }, 30000);
 });

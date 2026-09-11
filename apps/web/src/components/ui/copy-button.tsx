@@ -3,6 +3,7 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import { Copy, Check } from "lucide-react";
 import { IconButton } from "./icon-button";
+import { cn } from "@/lib/utils";
 
 interface CopyButtonProps {
   text: string;
@@ -48,13 +49,13 @@ export function CopyButton({
       label={copied ? copiedTitle : title}
       title={copied ? copiedTitle : title}
       variant="ghost"
-      className={className}
+      className={cn("text-foreground-subtle hover:text-foreground shadow-none", className)}
       onClick={handleCopy}
     >
       {copied ? (
-        <Check aria-hidden="true" className="size-4 text-success" />
+        <Check aria-hidden="true" className="size-3.5 stroke-[1.75] text-success" />
       ) : (
-        <Copy aria-hidden="true" className="size-4" />
+        <Copy aria-hidden="true" className="size-3.5 stroke-[1.75]" />
       )}
     </IconButton>
   );
