@@ -113,6 +113,8 @@ export function ChatSidebar({
   const renderChatItem = (chat: ChatItem) => {
     const isActive = !isLibraryActive && chat.id === activeChatId;
     const isRenaming = renamingChatId === chat.id;
+    const rawTitle = chat.title?.trim() || "New Chat";
+    const formattedTitle = rawTitle.charAt(0).toUpperCase() + rawTitle.slice(1);
 
     return (
       <div
@@ -154,7 +156,7 @@ export function ChatSidebar({
           <>
             {/* Title trigger with pe-7 on hover so title never overlaps 3 dots */}
             <div className="flex h-full min-w-0 flex-1 items-center text-start outline-none group-hover:pe-7 transition-[padding]">
-              <span className="min-w-0 flex-1 truncate">{chat.title || "New Chat"}</span>
+              <span className="min-w-0 flex-1 truncate first-letter:uppercase">{formattedTitle}</span>
               {chat.pinned && (
                 <Pin className="size-3 text-foreground-muted shrink-0 ml-1.5" aria-label="Pinned" />
               )}
@@ -284,14 +286,14 @@ export function ChatSidebar({
               variant="ghost"
               onClick={onNewChat}
               className="h-9 w-full justify-start items-center gap-2 rounded-lg text-sm font-normal text-foreground hover:bg-surface-hover transition-colors cursor-pointer group shadow-none px-0"
-              title="New chat (⌘N)"
-              aria-label="New chat"
+              title="New Chat (⌘N)"
+              aria-label="New Chat"
             >
               <div className="size-8 rounded-lg flex items-center justify-center shrink-0">
                 <Plus className="w-4 h-4 text-foreground-muted group-hover:text-foreground transition-colors" />
               </div>
               <div className={`flex-1 flex items-center justify-between min-w-0 pr-2 transition-opacity duration-150 ${isOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
-                <span className="truncate text-left">New chat</span>
+                <span className="truncate text-left">New Chat</span>
                 <span className="text-2xs text-foreground-muted opacity-0 group-hover:opacity-100 transition-opacity font-mono">
                   ⌘N
                 </span>
