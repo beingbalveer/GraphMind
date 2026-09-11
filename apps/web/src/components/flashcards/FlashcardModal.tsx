@@ -70,6 +70,7 @@ export function FlashcardModal({
     let isCancelled = false;
 
     const loadOrGenerate = async () => {
+      let currentPhase: "load" | "generate" = "load";
       setIsLoading(true);
       setError(null);
       setFailedPhase(null);
@@ -87,6 +88,7 @@ export function FlashcardModal({
         }
 
         // Existing is empty -> trigger auto-generation
+        currentPhase = "generate";
         setStatusMessage("Generating 5 flashcards from response…");
         const generated = await generateNodeFlashcards(workspaceId, nodeId, {
           count: 5,
@@ -105,7 +107,7 @@ export function FlashcardModal({
             ? err.message
             : "Failed to load or generate flashcards";
         setError(msg);
-        setFailedPhase(cards.length > 0 ? "generate" : "load");
+        setFailedPhase(currentPhase);
         setIsLoading(false);
         setStatusMessage(null);
       }
