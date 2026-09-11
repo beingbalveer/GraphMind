@@ -75,7 +75,7 @@ export function FlashcardItem({
       data-testid={`flashcard-item-${card.id}`}
     >
       <div className="flex items-center justify-between gap-2">
-        <Badge variant="subtle" size="sm">
+        <Badge variant="secondary">
           Card {card.position + 1}
         </Badge>
         <div className="flex items-center gap-1">
@@ -148,7 +148,7 @@ export function FlashcardItem({
               Cancel
             </Button>
             <Button
-              variant="primary"
+              variant="default"
               size="sm"
               onClick={handleSave}
               disabled={!canSave}
@@ -176,7 +176,7 @@ export function FlashcardItem({
 
           <div className="pt-2 flex justify-start">
             <Button
-              variant="subtle"
+              variant="secondary"
               size="sm"
               onClick={() => setIsRevealed(!isRevealed)}
               aria-label={isRevealed ? "Hide answer" : "Show answer"}
