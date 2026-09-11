@@ -40,21 +40,27 @@ describe("MainHeader Component & Contract (Scope 3, Task 3)", () => {
     expect(header).toHaveClass("border-b");
   });
 
-  it("displays workspace name and triggers modal callback when clicked", async () => {
+  it("omits redundant workspace name from header and renders sidebar toggle when collapsed", async () => {
     const user = userEvent.setup();
-    const handleOpenWorkspaceModal = vi.fn();
+    const handleToggle = vi.fn();
 
     render(
       <MainHeader
         workspaceName="Quantum Computing"
-        onOpenWorkspaceModal={handleOpenWorkspaceModal}
+        isSidebarOpen={false}
+        onToggleSidebar={handleToggle}
       />
     );
 
-    const wsBtn = screen.getByRole("button", { name: /current workspace: quantum computing/i });
-    expect(wsBtn).toBeInTheDocument();
-    await user.click(wsBtn);
-    expect(handleOpenWorkspaceModal).toHaveBeenCalledTimes(1);
+    // Workspace name is not rendered in header (handled by sidebar)
+    expect(screen.queryByRole("button", { name: /current workspace: quantum computing/i })).not.toBeInTheDocument();
+    expect(screen.queryByText("Quantum Computing")).not.toBeInTheDocument();
+
+    // Sidebar toggle is rendered and functional
+    const toggleBtn = screen.getByRole("button", { name: "Expand sidebar" });
+    expect(toggleBtn).toBeInTheDocument();
+    await user.click(toggleBtn);
+    expect(handleToggle).toHaveBeenCalledTimes(1);
   });
 
   it("supports mode switching between Chat and Canvas via SegmentedTabs", async () => {

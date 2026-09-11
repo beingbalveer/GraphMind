@@ -43,8 +43,8 @@ export interface MainHeaderProps {
 export function MainHeader({
   viewMode = "chat",
   onViewModeChange,
-  workspaceName = "Main Workspace",
-  onOpenWorkspaceModal,
+  workspaceName: _workspaceName,
+  onOpenWorkspaceModal: _onOpenWorkspaceModal,
   breadcrumbs,
   isSidebarOpen = true,
   onToggleSidebar,
@@ -60,7 +60,7 @@ export function MainHeader({
         className
       )}
     >
-      {/* Left Zone: Sidebar toggle (when collapsed or on mobile) & Workspace identity */}
+      {/* Left Zone: Sidebar toggle (when collapsed or on mobile) */}
       <div className="flex items-center gap-2 shrink-0 min-w-0">
         {onToggleSidebar && (
           <Button
@@ -76,30 +76,6 @@ export function MainHeader({
           >
             <PanelLeft className="w-4 h-4" />
           </Button>
-        )}
-
-        {workspaceName && (
-          <div className="flex items-center min-w-0">
-            {onOpenWorkspaceModal ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onOpenWorkspaceModal}
-                className="h-8 px-2 text-sm font-semibold text-foreground hover:bg-surface-hover tracking-tight truncate max-w-[180px] shadow-none"
-                title={`Workspace: ${workspaceName}`}
-                aria-label={`Current workspace: ${workspaceName}`}
-              >
-                <span className="truncate">{workspaceName}</span>
-              </Button>
-            ) : (
-              <span
-                className="text-sm font-semibold text-foreground tracking-tight truncate max-w-[180px] px-2 py-1"
-                title={`Workspace: ${workspaceName}`}
-              >
-                {workspaceName}
-              </span>
-            )}
-          </div>
         )}
       </div>
 
