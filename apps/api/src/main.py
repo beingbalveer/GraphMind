@@ -15,7 +15,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from middleware import RequestTracingMiddleware
 from pydantic import BaseModel
-from routers import auth, chat, curator, files, mastery, roadmap, workspaces
+from routers import auth, chat, curator, files, flashcards, mastery, roadmap, workspaces
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 settings = get_settings()
@@ -163,6 +163,7 @@ app.include_router(workspaces.router, prefix="/api/v1")
 app.include_router(roadmap.router, prefix="/api/v1")
 app.include_router(mastery.router, prefix="/api/v1")
 app.include_router(curator.router, prefix="/api/v1")
+app.include_router(flashcards.router, prefix="/api/v1")
 app.include_router(files.router)
 
 
