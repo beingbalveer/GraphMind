@@ -484,12 +484,13 @@ export function ChatMessage({
           {/* Edit Prompt Button (Only on the last user message) */}
           {isLastUserMessage && onEditUserMessage && (
             <IconButton
+              variant="ghost"
               label="Edit message"
               onClick={() => {
                 setEditContent(message.content);
                 setIsEditing(true);
               }}
-              className="opacity-0 transition-opacity group-hover/user:opacity-100 group-focus-within/user:opacity-100"
+              className="opacity-0 text-foreground-subtle hover:text-foreground transition-opacity group-hover/user:opacity-100 group-focus-within/user:opacity-100 shadow-none"
               title="Edit message"
             >
               <Pencil aria-hidden="true" className="size-3.5" />
@@ -937,6 +938,7 @@ export function ChatMessage({
                 {/* Response Rating: Thumbs Up */}
                 {onRateResponse && !message.isStreaming && (
                   <IconButton
+                    variant="ghost"
                     label={(message.metadata?.rating as string) === "up" ? "Remove positive rating" : "Good response"}
                     onClick={() =>
                       onRateResponse(
@@ -946,8 +948,8 @@ export function ChatMessage({
                     }
                     className={`opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 ${
                       (message.metadata?.rating as string) === "up"
-                        ? "bg-muted text-foreground opacity-100"
-                        : "text-foreground-subtle"
+                        ? "bg-surface-hover text-foreground opacity-100 shadow-none"
+                        : "text-foreground-subtle hover:text-foreground"
                     }`}
                     title={
                       (message.metadata?.rating as string) === "up"
@@ -968,6 +970,7 @@ export function ChatMessage({
                 {/* Response Rating: Thumbs Down */}
                 {onRateResponse && !message.isStreaming && (
                   <IconButton
+                    variant="ghost"
                     label={(message.metadata?.rating as string) === "down" ? "Remove negative rating" : "Poor response"}
                     onClick={() =>
                       onRateResponse(
@@ -977,8 +980,8 @@ export function ChatMessage({
                     }
                     className={`opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 ${
                       (message.metadata?.rating as string) === "down"
-                        ? "bg-muted text-foreground opacity-100"
-                        : "text-foreground-subtle"
+                        ? "bg-surface-hover text-foreground opacity-100 shadow-none"
+                        : "text-foreground-subtle hover:text-foreground"
                     }`}
                     title={
                       (message.metadata?.rating as string) === "down"
@@ -999,9 +1002,10 @@ export function ChatMessage({
                 {/* Regenerate Button (Only on the last assistant message) */}
                 {onRegenerate && isLastAssistantMessage && !message.isStreaming && (
                   <IconButton
+                    variant="ghost"
                     label="Regenerate response"
                     onClick={() => onRegenerate(message.id)}
-                    className="opacity-0 text-foreground-subtle transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+                    className="opacity-0 text-foreground-subtle hover:text-foreground transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 shadow-none"
                     title="Regenerate response"
                   >
                     <RotateCcw aria-hidden="true" className="size-3.5 stroke-[1.75]" />

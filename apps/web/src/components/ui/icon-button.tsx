@@ -11,7 +11,7 @@ export interface IconButtonProps extends Omit<ButtonProps, "children" | "aria-la
 }
 
 export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
-  ({ label, tooltip, children, onBlur, onFocus, ...props }, ref) => {
+  ({ label, tooltip, variant = "ghost", children, onBlur, onFocus, ...props }, ref) => {
     const [isTooltipOpen, setIsTooltipOpen] = React.useState(false);
 
     const control = (
@@ -20,6 +20,7 @@ export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
         type="button"
         size="iconSm"
         shape="round"
+        variant={variant}
         aria-label={label}
         onBlur={(event) => {
           onBlur?.(event);
