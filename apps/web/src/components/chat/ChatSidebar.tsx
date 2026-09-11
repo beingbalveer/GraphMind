@@ -377,8 +377,8 @@ export function ChatSidebar({
               </div>
             ) : (
               chatGroups.map((group) => (
-                <div key={group.label} className="space-y-0.5 pt-3.5 first:pt-1">
-                  <div className="px-2.5 pb-1 text-2xs font-semibold text-foreground/60 uppercase tracking-wider select-none">
+                <div key={group.label} className="space-y-0.5 pt-4 first:pt-2.5">
+                  <div className="px-2.5 pb-1 pt-1 text-2xs font-medium text-foreground-muted select-none">
                     {group.label}
                   </div>
                   {group.chats.map(renderChatItem)}

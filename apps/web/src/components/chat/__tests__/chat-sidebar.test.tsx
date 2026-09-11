@@ -170,4 +170,23 @@ describe("ChatSidebar & UserMenu Contract (Scope 3, Task 2)", () => {
     const chatEl = screen.getByText("Quantum Computing Exploration").closest("[role='button']");
     expect(chatEl).not.toHaveAttribute("aria-current");
   });
+
+  it("renders thread group headers without uppercase styling and with proper spacing", () => {
+    render(
+      <ChatSidebar
+        isOpen={true}
+        onToggle={vi.fn()}
+        chats={mockChats}
+        activeChatId="chat-1"
+        onSelectChat={vi.fn()}
+        onDeleteChat={vi.fn()}
+        onRenameChat={vi.fn().mockResolvedValue(undefined)}
+      />
+    );
+
+    const pinnedHeader = screen.getByText("Pinned");
+    expect(pinnedHeader).toBeInTheDocument();
+    expect(pinnedHeader).not.toHaveClass("uppercase");
+    expect(pinnedHeader).toHaveClass("text-2xs", "font-medium", "text-foreground-muted");
+  });
 });
