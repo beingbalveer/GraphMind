@@ -232,7 +232,7 @@ export function FlashcardModal({
       <Modal
         isOpen={isOpen}
         onClose={isAnyBusy ? () => {} : onClose}
-        size="2xl"
+        size="xl"
         ariaLabel="Response Flashcards"
         closeOnClickOutside={!isAnyBusy}
       >
@@ -265,7 +265,7 @@ export function FlashcardModal({
           )}
         </ModalHeader>
 
-        <ModalBody className="p-4 sm:p-5 flex flex-col gap-4 max-h-[65vh] overflow-y-auto">
+        <ModalBody className="p-3.5 sm:p-4 flex flex-col gap-3 max-h-[65vh] overflow-y-auto">
           {error && (
             <InlineFeedback
               tone="destructive"
@@ -290,14 +290,14 @@ export function FlashcardModal({
 
           {isLoading ? (
             <div
-              className="py-12 flex flex-col items-center justify-center gap-3 text-foreground-muted"
+              className="py-10 flex flex-col items-center justify-center gap-2.5 text-foreground-muted"
               data-testid="flashcard-loading-state"
             >
-              <Loader2 className="size-6 animate-spin text-primary" />
+              <Loader2 className="size-5 animate-spin text-primary" />
               <p className="text-xs">{statusMessage || "Loading flashcards…"}</p>
             </div>
           ) : cards.length > 0 ? (
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-2">
               {cards.map((card) => (
                 <FlashcardItem
                   key={card.id}
@@ -309,13 +309,13 @@ export function FlashcardModal({
               ))}
             </div>
           ) : !error ? (
-            <div className="py-10 text-center text-xs text-foreground-muted">
+            <div className="py-8 text-center text-xs text-foreground-muted">
               No flashcards found for this response.
             </div>
           ) : null}
         </ModalBody>
 
-        <ModalFooter className="flex items-center justify-between sm:justify-between">
+        <ModalFooter className="flex items-center justify-between sm:justify-between py-2.5 px-3.5 sm:px-4">
           <div>
             {onGoToSource ? (
               <Button

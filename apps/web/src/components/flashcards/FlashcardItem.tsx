@@ -5,6 +5,7 @@ import type { Flashcard, FlashcardUpdateInput } from "@graphmind/shared";
 import { Surface } from "@/components/ui/surface";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import { Textarea } from "@/components/ui/textarea";
 import { Edit2, Trash2, Eye, EyeOff, Check, X } from "lucide-react";
 
@@ -70,47 +71,46 @@ export function FlashcardItem({
   return (
     <Surface
       variant="base"
-      radius="card"
-      className="p-4 transition-all duration-200 hover:border-border flex flex-col gap-3"
+      radius="control"
+      className="p-3 transition-all duration-200 hover:border-border flex flex-col gap-2"
       data-testid={`flashcard-item-${card.id}`}
     >
       <div className="flex items-center justify-between gap-2">
         <Badge variant="secondary">
           Card {card.position + 1}
         </Badge>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5">
           {!isEditing ? (
             <>
-              <Button
+              <IconButton
                 variant="ghost"
-                size="sm"
+                size="iconSm"
+                label="Edit flashcard"
+                title="Edit flashcard"
                 onClick={handleStartEdit}
                 disabled={isBusy}
-                aria-label="Edit flashcard"
               >
-                <Edit2 className="h-3.5 w-3.5 mr-1" />
-                Edit
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
+                <Edit2 aria-hidden="true" className="size-3.5" />
+              </IconButton>
+              <IconButton
+                variant="dangerGhost"
+                size="iconSm"
+                label="Delete flashcard"
+                title="Delete flashcard"
                 onClick={() => onRequestDelete(card)}
                 disabled={isBusy}
-                className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                aria-label="Delete flashcard"
               >
-                <Trash2 className="h-3.5 w-3.5 mr-1" />
-                Delete
-              </Button>
+                <Trash2 aria-hidden="true" className="size-3.5" />
+              </IconButton>
             </>
           ) : null}
         </div>
       </div>
 
       {isEditing ? (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-2">
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-foreground-muted" htmlFor={`q-${card.id}`}>
+            <label className="text-2xs font-medium text-foreground-muted" htmlFor={`q-${card.id}`}>
               Question
             </label>
             <Textarea
@@ -118,13 +118,14 @@ export function FlashcardItem({
               value={editedQuestion}
               onChange={(e) => setEditedQuestion(e.target.value)}
               disabled={isBusy || isSaving}
-              rows={2}
+              rows={1}
+              className="min-h-[38px] text-xs py-1.5"
               aria-label="Edit question"
             />
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-medium text-foreground-muted" htmlFor={`a-${card.id}`}>
+            <label className="text-2xs font-medium text-foreground-muted" htmlFor={`a-${card.id}`}>
               Answer
             </label>
             <Textarea
@@ -132,19 +133,20 @@ export function FlashcardItem({
               value={editedAnswer}
               onChange={(e) => setEditedAnswer(e.target.value)}
               disabled={isBusy || isSaving}
-              rows={3}
+              rows={2}
+              className="min-h-[52px] text-xs py-1.5"
               aria-label="Edit answer"
             />
           </div>
 
-          <div className="flex items-center justify-end gap-2 mt-1">
+          <div className="flex items-center justify-end gap-1.5 pt-0.5">
             <Button
               variant="outline"
               size="sm"
               onClick={handleCancelEdit}
               disabled={isBusy || isSaving}
             >
-              <X className="h-3.5 w-3.5 mr-1" />
+              <X className="size-3.5 mr-1" />
               Cancel
             </Button>
             <Button
@@ -154,27 +156,27 @@ export function FlashcardItem({
               disabled={!canSave}
               loading={isSaving}
             >
-              <Check className="h-3.5 w-3.5 mr-1" />
+              <Check className="size-3.5 mr-1" />
               Save
             </Button>
           </div>
         </div>
       ) : (
-        <div className="flex flex-col gap-3">
-          <div className="text-sm font-medium text-foreground leading-relaxed">
+        <div className="flex flex-col gap-2">
+          <div className="text-sm font-medium text-foreground leading-snug">
             {card.question}
           </div>
 
           {isRevealed ? (
             <div
-              className="mt-1 pt-3 border-t border-border-subtle text-xs text-foreground-muted leading-relaxed"
+              className="mt-0.5 pt-2 border-t border-border-subtle/70 text-xs text-foreground-muted leading-relaxed"
               data-testid={`flashcard-answer-${card.id}`}
             >
               {card.answer}
             </div>
           ) : null}
 
-          <div className="pt-2 flex justify-start">
+          <div className="pt-0.5 flex justify-start">
             <Button
               variant="secondary"
               size="sm"
@@ -183,12 +185,12 @@ export function FlashcardItem({
             >
               {isRevealed ? (
                 <>
-                  <EyeOff className="h-3.5 w-3.5 mr-1.5" />
+                  <EyeOff className="size-3.5 mr-1.5" />
                   Hide answer
                 </>
               ) : (
                 <>
-                  <Eye className="h-3.5 w-3.5 mr-1.5" />
+                  <Eye className="size-3.5 mr-1.5" />
                   Show answer
                 </>
               )}
