@@ -160,4 +160,50 @@ describe("Auxiliary Panels & Repeated Patterns", () => {
 
     expect(screen.getAllByText("Attention mechanism").length).toBeGreaterThan(0);
   });
+
+  it("forwards workspaceId in SidePeekBranchSheet so assistant messages expose the flashcard action", () => {
+    const branchTree: ConversationTree = {
+      ...mockTree,
+      nodes: {
+        ...mockTree.nodes,
+        "node-2": {
+          ...mockTree.nodes["node-2"],
+          childrenIds: ["node-3"],
+        },
+        "node-3": {
+          id: "node-3",
+          parentId: "node-2",
+          childrenIds: [],
+          role: "assistant",
+          content: "Self-attention computes weights between all tokens.",
+          createdAt: "2026-09-10T00:03:00.000Z",
+        },
+      },
+    };
+
+    const historyStack = [
+      {
+        nodeId: "node-3",
+        excerpt: "Attention allows models to focus",
+      },
+    ];
+
+    render(
+      <SidePeekBranchSheet
+        isOpen={true}
+        workspaceId="ws-123"
+        onClose={vi.fn()}
+        historyStack={historyStack}
+        historyIndex={0}
+        onNavigateBack={vi.fn()}
+        onNavigateForward={vi.fn()}
+        onPushBranch={vi.fn()}
+        onPromoteToPrimary={vi.fn()}
+        onSendMessage={vi.fn()}
+        tree={branchTree}
+      />
+    );
+
+    expect(screen.getByRole("button", { name: "Generate or review flashcards" })).toBeInTheDocument();
+  });
 });

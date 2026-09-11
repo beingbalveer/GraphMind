@@ -33,6 +33,7 @@ import { CopyButton } from "@/components/ui/copy-button";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ChatMessage } from "./ChatMessage";
+import type { FlashcardGenerationConfig } from "@/lib/flashcardApi";
 
 export interface SidePeekEntry {
   nodeId: string;
@@ -74,6 +75,8 @@ interface SidePeekBranchSheetProps {
   onEditUserMessage?: (userNodeId: string, newContent: string) => void;
   onSwitchBranch?: (nodeId: string) => void;
   onRateResponse?: (nodeId: string, rating: "up" | "down" | null) => void;
+  workspaceId?: string;
+  flashcardGenerationConfig?: FlashcardGenerationConfig;
 }
 
 /**
@@ -181,6 +184,8 @@ export function SidePeekBranchSheet({
   onEditUserMessage,
   onSwitchBranch,
   onRateResponse,
+  workspaceId,
+  flashcardGenerationConfig,
 }: SidePeekBranchSheetProps) {
   const [inputPrompt, setInputPrompt] = useState("");
   const [isDraftingNewTab, setIsDraftingNewTab] = useState(false);
@@ -808,6 +813,8 @@ export function SidePeekBranchSheet({
                   return (
                     <ChatMessage
                       key={msg.id}
+                      workspaceId={workspaceId}
+                      flashcardGenerationConfig={flashcardGenerationConfig}
                       message={{
                         ...msg,
                         isStreaming: isLastAssistant,

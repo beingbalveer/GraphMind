@@ -1327,6 +1327,8 @@ export function ChatContainer({
             isOpen={isSidePeekOpen}
             hasBackdrop={viewMode !== "canvas"}
             tree={tree}
+            workspaceId={currentWorkspace?.id}
+            flashcardGenerationConfig={flashcardGenerationConfig}
             historyStack={sidePeekStack}
             historyIndex={sidePeekIndex}
             isStreaming={isStreaming}
