@@ -46,46 +46,7 @@ const COLLAPSED_WIDTH = 56;
 const MIN_WIDTH = 200;
 const MAX_WIDTH = 480;
 
-const DAY_IN_MS = 86_400_000;
 
-interface ChatGroup {
-  label: string;
-  chats: ChatItem[];
-}
-
-function groupChatsByDate(chats: ChatItem[]): ChatGroup[] {
-  const now = new Date();
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-  const startOfYesterday = startOfToday - DAY_IN_MS;
-
-  const pinned: ChatItem[] = [];
-  const todayChats: ChatItem[] = [];
-  const yesterdayChats: ChatItem[] = [];
-  const earlierChats: ChatItem[] = [];
-
-  for (const chat of chats) {
-    if (chat.pinned) {
-      pinned.push(chat);
-      continue;
-    }
-    const time = new Date(chat.updatedAt).getTime();
-    if (time >= startOfToday) {
-      todayChats.push(chat);
-    } else if (time >= startOfYesterday) {
-      yesterdayChats.push(chat);
-    } else {
-      earlierChats.push(chat);
-    }
-  }
-
-  const groups: ChatGroup[] = [];
-  if (pinned.length > 0) groups.push({ label: "Pinned", chats: pinned });
-  if (todayChats.length > 0) groups.push({ label: "Today", chats: todayChats });
-  if (yesterdayChats.length > 0) groups.push({ label: "Yesterday", chats: yesterdayChats });
-  if (earlierChats.length > 0) groups.push({ label: "Earlier", chats: earlierChats });
-
-  return groups;
-}
 
 export function ChatSidebar({
   isOpen,
@@ -126,9 +87,6 @@ export function ChatSidebar({
     });
   }, [chats]);
 
-  const chatGroups = useMemo(() => {
-    return groupChatsByDate(sortedChats);
-  }, [sortedChats]);
 
   // Auto-focus rename input when triggered
   useEffect(() => {
@@ -195,6 +153,9 @@ export function ChatSidebar({
           <>
             {/* Title trigger with pe-7 on hover so title never overlaps 3 dots */}
             <div className="flex h-full min-w-0 flex-1 items-center text-start outline-none group-hover:pe-7 transition-[padding]">
+              {chat.pinned && (
+                <Pin className="size-3 text-foreground-muted shrink-0 mr-1.5" aria-label="Pinned" />
+              )}
               <span className="min-w-0 flex-1 truncate">{chat.title || "New Chat"}</span>
             </div>
 
@@ -371,19 +332,17 @@ export function ChatSidebar({
         {/* ThreadList Content */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-1 space-y-0.5 relative">
           <div className={`transition-opacity duration-150 ${isOpen ? "opacity-100" : "opacity-0 pointer-events-none hidden"}`}>
-            {chatGroups.length === 0 ? (
+            {sortedChats.length === 0 ? (
               <div className="py-8 px-2.5 text-center text-xs text-foreground-muted">
                 No conversations yet
               </div>
             ) : (
-              chatGroups.map((group) => (
-                <div key={group.label} className="space-y-0.5 pt-4 first:pt-2.5">
-                  <div className="px-2.5 pb-1 pt-1 text-2xs font-medium text-foreground-muted select-none">
-                    {group.label}
-                  </div>
-                  {group.chats.map(renderChatItem)}
+              <div className="space-y-0.5 pt-4 first:pt-2.5">
+                <div className="px-2.5 pb-1 pt-1 text-2xs font-medium text-foreground-muted select-none">
+                  Conversations
                 </div>
-              ))
+                {sortedChats.map(renderChatItem)}
+              </div>
             )}
           </div>
 

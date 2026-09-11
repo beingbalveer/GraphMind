@@ -171,7 +171,7 @@ describe("ChatSidebar & UserMenu Contract (Scope 3, Task 2)", () => {
     expect(chatEl).not.toHaveAttribute("aria-current");
   });
 
-  it("renders thread group headers without uppercase styling and with proper spacing", () => {
+  it("renders a single Conversations section with pinned chat on top and pin icon", () => {
     render(
       <ChatSidebar
         isOpen={true}
@@ -184,9 +184,25 @@ describe("ChatSidebar & UserMenu Contract (Scope 3, Task 2)", () => {
       />
     );
 
-    const pinnedHeader = screen.getByText("Pinned");
-    expect(pinnedHeader).toBeInTheDocument();
-    expect(pinnedHeader).not.toHaveClass("uppercase");
-    expect(pinnedHeader).toHaveClass("text-2xs", "font-medium", "text-foreground-muted");
+    // Single unified section header
+    const conversationsHeader = screen.getByText("Conversations");
+    expect(conversationsHeader).toBeInTheDocument();
+    expect(conversationsHeader).toHaveClass("text-2xs", "font-medium", "text-foreground-muted");
+
+    // Date-based split section headers are gone
+    expect(screen.queryByText("Pinned")).not.toBeInTheDocument();
+    expect(screen.queryByText("Today")).not.toBeInTheDocument();
+    expect(screen.queryByText("Earlier")).not.toBeInTheDocument();
+
+    // Pin icon on pinned chat
+    const pinIcon = screen.getByLabelText("Pinned");
+    expect(pinIcon).toBeInTheDocument();
+
+    // Pinned chat appears before unpinned chat
+    const chatElements = screen.getAllByRole("button").filter((el) =>
+      el.textContent?.includes("Computing") || el.textContent?.includes("Architecture")
+    );
+    expect(chatElements[0]).toHaveTextContent("Pinned Architecture Notes");
+    expect(chatElements[1]).toHaveTextContent("Quantum Computing Exploration");
   });
 });
