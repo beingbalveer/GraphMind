@@ -132,6 +132,16 @@ export function ChatContainer({
     getEffectiveBaseUrl,
   } = useModelConfig();
 
+  const flashcardGenerationConfig = useMemo(() => {
+    const apiKey = getEffectiveApiKey(llmConfig.provider);
+    return {
+      provider: llmConfig.provider,
+      model: llmConfig.model,
+      customBaseUrl: getEffectiveBaseUrl(llmConfig.provider),
+      apiKey: apiKey || undefined,
+    };
+  }, [llmConfig.provider, llmConfig.model, getEffectiveApiKey, getEffectiveBaseUrl]);
+
   // Two-Tier State: Workspaces (Outer Vault) and Chats (Inner Trees)
   const [currentWorkspace, setCurrentWorkspace] = useState<WorkspaceItem | null>(null);
   const [chats, setChats] = useState<ChatItem[]>([]);
@@ -1228,6 +1238,7 @@ export function ChatContainer({
                             <ChatMessage
                               key={node.id}
                               workspaceId={currentWorkspace?.id}
+                              flashcardGenerationConfig={flashcardGenerationConfig}
                               message={{
                                 ...node,
                                 isStreaming: isLastAssistant,

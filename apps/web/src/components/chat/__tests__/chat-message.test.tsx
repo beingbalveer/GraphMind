@@ -108,4 +108,41 @@ describe("ChatMessage", () => {
     expect(screen.getByTitle("Download image")).toHaveClass("text-foreground");
     expect(closePreview).toHaveClass("text-foreground");
   });
+
+  it("renders flashcard action on eligible completed assistant messages and opens the modal on click", async () => {
+    const user = userEvent.setup();
+    render(
+      <ChatMessage
+        message={assistantNode}
+        workspaceId="ws-123"
+      />
+    );
+
+    const flashcardButton = screen.getByRole("button", { name: "Generate or review flashcards" });
+    expect(flashcardButton).toBeInTheDocument();
+
+    await user.click(flashcardButton);
+    expect(screen.getByRole("dialog", { name: "Response Flashcards" })).toBeInTheDocument();
+  });
+
+  it("does not render flashcard action on user messages or streaming assistant messages", () => {
+    const { unmount } = render(
+      <ChatMessage
+        message={userNode}
+        workspaceId="ws-123"
+      />
+    );
+
+    expect(screen.queryByRole("button", { name: "Generate or review flashcards" })).not.toBeInTheDocument();
+
+    unmount();
+    render(
+      <ChatMessage
+        message={{ ...assistantNode, isStreaming: true }}
+        workspaceId="ws-123"
+      />
+    );
+
+    expect(screen.queryByRole("button", { name: "Generate or review flashcards" })).not.toBeInTheDocument();
+  });
 });

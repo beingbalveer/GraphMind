@@ -18,7 +18,10 @@ import {
   Code,
   FileText,
   FileSpreadsheet,
+  BookOpen,
 } from "lucide-react";
+import { FlashcardModal } from "@/components/flashcards/FlashcardModal";
+import type { FlashcardGenerationConfig } from "@/lib/flashcardApi";
 
 import {
   TreeNode,
@@ -76,6 +79,7 @@ interface ChatMessageProps {
   onOpenSideBranch?: (childNodeId: string, excerpt: string) => void;
   onRateResponse?: (nodeId: string, rating: "up" | "down" | null) => void;
   workspaceId?: string;
+  flashcardGenerationConfig?: FlashcardGenerationConfig;
 }
 
 
@@ -330,13 +334,26 @@ export function ChatMessage({
   onOpenSideBranch,
   onRateResponse,
   workspaceId,
+  flashcardGenerationConfig,
 }: ChatMessageProps) {
 
   const isUser = message.role === "user";
   const contentRef = useRef<HTMLDivElement>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
+  const [isFlashcardModalOpen, setIsFlashcardModalOpen] = useState(false);
   const [lightboxImage, setLightboxImage] = useState<{ src: string; name: string } | null>(null);
+
+  const effectiveWorkspaceId =
+    workspaceId ||
+    (tree as unknown as { workspaceId?: string })?.workspaceId ||
+    (message as unknown as { workspaceId?: string })?.workspaceId;
+
+  const canHaveFlashcards =
+    !isUser &&
+    Boolean(effectiveWorkspaceId) &&
+    Boolean(message.content?.trim()) &&
+    !message.isStreaming;
   const [viewingCodeFile, setViewingCodeFile] = useState<FileAttachment | null>(null);
   const [viewingPdfFile, setViewingPdfFile] = useState<FileAttachment | null>(null);
   const [viewingTabularFile, setViewingTabularFile] = useState<FileAttachment | null>(null);
@@ -793,7 +810,7 @@ export function ChatMessage({
   }
 
   return (
-    <div id={message.id} className="group bg-transparent px-4 py-3 sm:px-6">
+    <div id={message.id} tabIndex={-1} className="group bg-transparent px-4 py-3 sm:px-6 outline-none">
       {/* Floating Exploration Tooltip on Text Selection */}
       {selection && (
         <SelectionTooltip
@@ -935,6 +952,20 @@ export function ChatMessage({
                   title="Copy response"
                 />
 
+                {/* Generate or Review Flashcards */}
+                {canHaveFlashcards && (
+                  <IconButton
+                    variant="ghost"
+                    label="Generate or review flashcards"
+                    onClick={() => setIsFlashcardModalOpen(true)}
+                    className="opacity-0 text-foreground-subtle hover:text-foreground transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 shadow-none"
+                    title="Generate or review flashcards"
+                    data-testid={`flashcard-trigger-${message.id}`}
+                  >
+                    <BookOpen aria-hidden="true" className="size-3.5 stroke-[1.75]" />
+                  </IconButton>
+                )}
+
                 {/* Response Rating: Thumbs Up */}
                 {onRateResponse && !message.isStreaming && (
                   <IconButton
@@ -1068,6 +1099,24 @@ export function ChatMessage({
               {viewingRagSnippet.snippet || "No snippet content available."}
             </ModalBody>
           </Modal>
+        )}
+
+        {/* Flashcard Modal */}
+        {canHaveFlashcards && effectiveWorkspaceId && (
+          <FlashcardModal
+            isOpen={isFlashcardModalOpen}
+            onClose={() => setIsFlashcardModalOpen(false)}
+            workspaceId={effectiveWorkspaceId}
+            nodeId={message.id}
+            sourcePreview={message.content}
+            generationConfig={flashcardGenerationConfig}
+            onGoToSource={() => {
+              setIsFlashcardModalOpen(false);
+              const el = document.getElementById(message.id);
+              el?.focus();
+              el?.scrollIntoView({ behavior: "smooth", block: "center" });
+            }}
+          />
         )}
       </div>
     </div>
