@@ -239,4 +239,34 @@ export interface WorkspaceTimelineResponse {
   milestones: TimelineEvent[];
 }
 
+/**
+ * Node-Linked Flashcard Domain Types
+ */
+
+export interface Flashcard {
+  id: string;
+  workspaceId: string;
+  sourceNodeId: string;
+  question: string;
+  answer: string;
+  position: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FlashcardGenerateInput {
+  count?: number;
+  replaceExisting?: boolean;
+  provider?: string;
+  model?: string;
+  apiKey?: string;
+  baseUrl?: string;
+}
+
+export interface FlashcardUpdateInput {
+  question?: string;
+  answer?: string;
+}
+
 export * from './tree-utils';
+
