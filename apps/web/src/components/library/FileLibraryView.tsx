@@ -440,7 +440,7 @@ export function FileLibraryView({
                         <IconButton
                           label={`Delete ${file.name}`}
                           onClick={() => setFileToDelete(file)}
-                          variant="dangerGhost"
+                          variant="destructive"
                           className="size-7"
                           title="Delete file"
                         >

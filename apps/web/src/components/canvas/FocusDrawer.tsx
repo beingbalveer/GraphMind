@@ -117,7 +117,7 @@ export function FocusDrawer({
 
           <Button
             variant="ghost"
-            size="iconSm"
+            size="icon-sm"
             onClick={onClose}
             className="h-7 w-7 text-muted-foreground hover:text-foreground cursor-pointer"
             title="Close Focus Drawer (Esc)"
@@ -183,7 +183,7 @@ export function FocusDrawer({
           />
           <Button
             type="submit"
-            size="iconSm"
+            size="icon-sm"
             disabled={!drawerPrompt.trim() || isStreaming}
             className="absolute right-1.5"
             title="Send follow-up"

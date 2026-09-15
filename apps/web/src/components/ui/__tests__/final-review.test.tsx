@@ -67,8 +67,12 @@ describe("final review regressions", () => {
     expect(screen.getByRole("textbox")).not.toHaveAttribute("variant");
   });
 
-  it.each(["sm", "lg", "default"] as const)("exports a single unambiguous pill radius for size %s", (size) => {
-    expect(buttonVariants({ size, shape: "pill" }).split(" ").filter((value) => value.startsWith("rounded-"))).toEqual(["rounded-full"]);
+  it.each([
+    ["xs", "h-6"],
+    ["sm", "h-7"],
+    ["icon-sm", "size-7"],
+  ] as const)("keeps Assistant UI's compact %s control dimensions", (size, dimension) => {
+    expect(buttonVariants({ size })).toContain(dimension);
   });
 
   it.each([ ["info", "status"], ["success", "status"], ["warning", "alert"], ["destructive", "alert"] ] as const)("announces %s feedback as %s", (tone, role) => {

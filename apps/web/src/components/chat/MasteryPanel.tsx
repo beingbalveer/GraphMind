@@ -510,7 +510,7 @@ export function MasteryPanel({
 
                     {onQuizConcept && (
                       <Button
-                        size="iconSm"
+                        size="icon-sm"
                         variant="ghost"
                         onClick={() => onQuizConcept(c.name)}
                         className="opacity-0 group-hover:opacity-100 h-8 w-8 rounded-lg text-foreground-muted hover:text-foreground cursor-pointer shrink-0"

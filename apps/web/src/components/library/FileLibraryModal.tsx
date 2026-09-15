@@ -374,7 +374,7 @@ export function FileLibraryModal({
                           <Button
                             type="button"
                             variant="ghost"
-                            size="iconSm"
+                            size="icon-sm"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleLaunchViewer();
@@ -388,7 +388,7 @@ export function FileLibraryModal({
                         <Button
                           type="button"
                           variant="ghost"
-                          size="iconSm"
+                          size="icon-sm"
                           onClick={(e) => {
                             e.stopPropagation();
                             window.open(downloadUrl, "_blank");
@@ -401,7 +401,7 @@ export function FileLibraryModal({
                         <Button
                           type="button"
                           variant="ghost"
-                          size="iconSm"
+                          size="icon-sm"
                           onClick={(e) => {
                             e.stopPropagation();
                             setFileToDelete(file);

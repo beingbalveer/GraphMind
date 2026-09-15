@@ -237,7 +237,7 @@ export function WorkspaceModal({
                     <Button
                       type="button"
                       variant="ghost"
-                      size="iconSm"
+                      size="icon-sm"
                       onClick={(e) => handleDelete(e, ws.id)}
                       className="text-destructive hover:text-destructive hover:bg-destructive-bg"
                       title="Delete Workspace"

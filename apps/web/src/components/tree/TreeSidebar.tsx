@@ -170,7 +170,7 @@ export function TreeSidebar({
 
         <Button
           variant="ghost"
-          size="iconSm"
+          size="icon-sm"
           onClick={onClose}
           className="text-foreground-muted hover:text-foreground h-7 w-7"
           title="Close Tree Sidebar"

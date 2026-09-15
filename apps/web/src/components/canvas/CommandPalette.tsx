@@ -187,7 +187,7 @@ export function CommandPalette({
           />
           <Button
             variant="ghost"
-            size="iconSm"
+            size="icon-sm"
             onClick={onClose}
             aria-label="Close command palette"
           >

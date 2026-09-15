@@ -11,11 +11,28 @@ describe("Button", () => {
     expect(button.querySelector("svg")).toHaveClass("motion-reduce:animate-none");
   });
 
-  it("keeps standard dimensions and supports an explicit pill shape", () => {
-    const { rerender } = render(<Button>Save</Button>);
-    expect(screen.getByRole("button")).toHaveClass("h-8", "rounded-lg");
-    rerender(<Button shape="pill">Save</Button>);
-    expect(screen.getByRole("button")).toHaveClass("rounded-full");
+  it("uses the Assistant UI default button treatment", () => {
+    render(<Button>Save</Button>);
+    const button = screen.getByRole("button", { name: "Save" });
+
+    expect(button).toHaveAttribute("data-slot", "button");
+    expect(button).toHaveClass("h-8", "rounded-lg", "font-medium", "bg-primary", "hover:bg-primary/80");
+  });
+
+  it("supports Assistant UI's compact icon size", () => {
+    render(<Button size="icon-sm" aria-label="Open menu">Menu</Button>);
+
+    expect(screen.getByRole("button", { name: "Open menu" })).toHaveClass("size-7");
+  });
+
+  it("uses Assistant UI's low-emphasis destructive treatment", () => {
+    render(<Button variant="destructive">Delete</Button>);
+
+    expect(screen.getByRole("button", { name: "Delete" })).toHaveClass(
+      "bg-destructive/10",
+      "text-destructive",
+      "hover:bg-destructive/20"
+    );
   });
 
   it("preserves an explicit aria-busy value while not loading", () => {

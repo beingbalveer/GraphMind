@@ -688,8 +688,7 @@ export function ChatInput({
               <Button
                 type="button"
                 variant="destructive"
-                size="iconSm"
-                shape="round"
+                size="icon-sm"
                 onClick={onStopStreaming}
                 aria-label="Stop generating"
               >
@@ -699,8 +698,7 @@ export function ChatInput({
               <Button
                 type="submit"
                 variant="default"
-                size="iconSm"
-                shape="round"
+                size="icon-sm"
                 disabled={!canSubmit}
                 aria-label="Send message"
               >

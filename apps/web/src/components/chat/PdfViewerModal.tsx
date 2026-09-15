@@ -84,7 +84,7 @@ export function PdfViewerModal({
           <Button
             type="button"
             variant="ghost"
-            size="iconSm"
+            size="icon-sm"
             onClick={onClose}
             title="Close (Esc)"
             aria-label="Close dialog"

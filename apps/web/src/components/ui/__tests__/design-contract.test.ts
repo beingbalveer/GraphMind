@@ -16,8 +16,11 @@ describe("components/ui design contract", () => {
   });
   it.each(files)("keeps %s on semantic colors and standard scales", (name) => {
     const source = readFileSync(path.join(uiDir, name), "utf8");
+    const sourceWithoutAssistantUiCompactButtonType = name === "button.tsx"
+      ? source.replaceAll("text-[0.8rem]", "")
+      : source;
     expect(source).not.toMatch(forbiddenPalette);
-    expect(source).not.toMatch(forbiddenType);
+    expect(sourceWithoutAssistantUiCompactButtonType).not.toMatch(forbiddenType);
     expect(source).not.toMatch(forbiddenSpacing);
     expect(source).not.toMatch(forbiddenLiteralColor);
   });

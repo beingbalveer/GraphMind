@@ -229,7 +229,7 @@ export const ThreadGraphNode = memo(function ThreadGraphNode({
                 trigger={
                   <Button
                     variant="ghost"
-                    size="iconSm"
+                    size="icon-sm"
                     className={`size-6 p-0 text-foreground-muted hover:text-foreground hover:bg-surface-hover ${
                       isMenuOpen ? "text-foreground bg-surface-hover" : ""
                     }`}

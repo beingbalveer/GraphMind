@@ -1301,7 +1301,6 @@ export function ChatContainer({
                 {showScrollButton && activeMessages.length > 0 && (
                   <Button
                     variant="secondary"
-                    shape="pill"
                     size="sm"
                     onClick={() => scrollToBottom(true)}
                     className="absolute -top-9 left-1/2 -translate-x-1/2 shadow-md gap-1.5 animate-in fade-in-50 slide-in-from-bottom-2 duration-150 motion-reduce:animate-none"

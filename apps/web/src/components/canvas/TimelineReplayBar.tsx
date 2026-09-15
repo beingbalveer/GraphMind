@@ -100,7 +100,7 @@ export function TimelineReplayBar({
         <span>No historical events recorded for this workspace yet.</span>
         <Button
           variant="ghost"
-          size="iconSm"
+          size="icon-sm"
           onClick={onClose}
           className="text-foreground-muted hover:text-foreground hover:bg-surface-hover"
           title="Close replay bar"
@@ -155,7 +155,7 @@ export function TimelineReplayBar({
 
           <Button
             variant="ghost"
-            size="iconSm"
+            size="icon-sm"
             onClick={onClose}
             className="text-foreground-muted hover:text-foreground hover:bg-surface-hover"
             title="Exit Timeline Replay"
@@ -204,7 +204,7 @@ export function TimelineReplayBar({
         <div className="flex items-center space-x-1.5">
           <Button
             variant="ghost"
-            size="iconSm"
+            size="icon-sm"
             onClick={() => onSelectEventIndex(0)}
             className="text-foreground-muted hover:text-foreground hover:bg-surface-hover"
             title="Jump to Start"
@@ -215,7 +215,7 @@ export function TimelineReplayBar({
 
           <Button
             variant="ghost"
-            size="iconSm"
+            size="icon-sm"
             onClick={handlePrevMilestone}
             className="text-foreground-muted hover:text-foreground hover:bg-surface-hover"
             title="Previous Milestone"
@@ -247,7 +247,7 @@ export function TimelineReplayBar({
 
           <Button
             variant="ghost"
-            size="iconSm"
+            size="icon-sm"
             onClick={handleNextMilestone}
             className="text-foreground-muted hover:text-foreground hover:bg-surface-hover"
             title="Next Milestone"

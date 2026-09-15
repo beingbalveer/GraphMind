@@ -416,7 +416,7 @@ export function BranchChatPane({
                         <Button
                           type="button"
                           variant="ghost"
-                          size="iconSm"
+                          size="icon-sm"
                           aria-label="Branch tab options"
                           className="shrink-0 text-foreground-muted hover:text-foreground"
                         >
@@ -475,7 +475,7 @@ export function BranchChatPane({
           <Button
             type="button"
             variant="ghost"
-            size="iconSm"
+            size="icon-sm"
             onClick={onClose}
             className="h-8 w-8 text-foreground-muted hover:text-foreground shrink-0 cursor-pointer"
             title="Close branch view"
@@ -591,7 +591,7 @@ export function BranchChatPane({
           <Button
             type="submit"
             variant="secondary"
-            size="iconSm"
+            size="icon-sm"
             disabled={!inputPrompt.trim() || isStreaming}
             className="absolute right-1.5 h-7 w-7 rounded-lg border border-border disabled:opacity-30 disabled:cursor-not-allowed transition-all"
             title={isDraftingNewTab ? "Start new sub-branch tab" : "Send follow-up"}

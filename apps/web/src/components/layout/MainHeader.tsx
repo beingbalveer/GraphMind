@@ -65,7 +65,7 @@ export function MainHeader({
         {onToggleSidebar && (
           <Button
             variant="ghost"
-            size="iconSm"
+            size="icon-sm"
             onClick={onToggleSidebar}
             className={cn(
               "text-foreground-muted hover:text-foreground hover:bg-surface-hover transition-colors shrink-0",
@@ -101,7 +101,7 @@ export function MainHeader({
         {onToggleRightSidebar && (
           <Button
             variant="ghost"
-            size="iconSm"
+            size="icon-sm"
             onClick={onToggleRightSidebar}
             className={cn(
               "text-foreground-muted hover:text-foreground hover:bg-surface-hover transition-colors cursor-pointer shrink-0",

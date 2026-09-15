@@ -553,7 +553,7 @@ export function SidePeekBranchSheet({
           <div className="flex items-center space-x-1 shrink-0">
             <Button
               variant="ghost"
-              size="iconSm"
+              size="icon-sm"
               disabled={!canGoBack}
               onClick={onNavigateBack}
               className="h-7 w-7 text-muted-foreground hover:text-foreground disabled:opacity-30 cursor-pointer"
@@ -564,7 +564,7 @@ export function SidePeekBranchSheet({
 
             <Button
               variant="ghost"
-              size="iconSm"
+              size="icon-sm"
               disabled={!canGoForward}
               onClick={onNavigateForward}
               className="h-7 w-7 text-muted-foreground hover:text-foreground disabled:opacity-30 cursor-pointer"
@@ -599,7 +599,7 @@ export function SidePeekBranchSheet({
             {/* Promote to Primary Chat Button */}
             <Button
               variant="ghost"
-              size="iconSm"
+              size="icon-sm"
               disabled={!activeLeafNodeId || isDraftingNewTab}
               onClick={() => {
                 if (activeLeafNodeId) onPromoteToPrimary(activeLeafNodeId);
@@ -614,7 +614,7 @@ export function SidePeekBranchSheet({
 
             <Button
               variant="ghost"
-              size="iconSm"
+              size="icon-sm"
               onClick={onClose}
               className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer"
               title="Close side peek (Esc)"
@@ -687,7 +687,7 @@ export function SidePeekBranchSheet({
                           <Button
                             type="button"
                             variant="ghost"
-                            size="iconSm"
+                            size="icon-sm"
                             aria-label="Side branch tab options"
                             className="shrink-0 text-foreground-muted hover:text-foreground"
                           >
@@ -741,7 +741,7 @@ export function SidePeekBranchSheet({
             <Button
               type="button"
               variant={isDraftingNewTab ? "default" : "ghost"}
-              size="iconSm"
+              size="icon-sm"
               onClick={handleStartNewTab}
               className="rounded-full shrink-0 ml-1"
               title="Create new sub-branch exploration on this topic"
@@ -857,7 +857,7 @@ export function SidePeekBranchSheet({
             />
             <Button
               type="submit"
-              size="iconSm"
+              size="icon-sm"
               disabled={!inputPrompt.trim() || isStreaming}
               className="absolute right-1.5 shadow-2xs"
               title={isDraftingNewTab ? "Start new branch exploration" : "Send follow-up in this branch"}

@@ -329,7 +329,7 @@ export function TableViewerModal({
           <Button
             type="button"
             variant="ghost"
-            size="iconSm"
+            size="icon-sm"
             onClick={onClose}
             title="Close modal (Esc)"
             aria-label="Close dialog"
@@ -372,7 +372,7 @@ export function TableViewerModal({
             <Button
               type="button"
               variant="ghost"
-              size="iconSm"
+              size="icon-sm"
               disabled={currentPage <= 1}
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               className="size-7 p-0 text-foreground-muted hover:text-foreground disabled:opacity-30"
@@ -387,7 +387,7 @@ export function TableViewerModal({
             <Button
               type="button"
               variant="ghost"
-              size="iconSm"
+              size="icon-sm"
               disabled={currentPage >= totalPages}
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               className="size-7 p-0 text-foreground-muted hover:text-foreground disabled:opacity-30"

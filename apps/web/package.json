@@ -12,6 +12,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@base-ui/react": "^1.8.0",
     "@dagrejs/dagre": "^3.1.1",
     "@graphmind/shared": "workspace:*",
     "@radix-ui/react-collapsible": "^1.1.20",

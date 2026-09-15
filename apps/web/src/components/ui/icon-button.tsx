@@ -18,8 +18,7 @@ export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
       <Button
         ref={ref}
         type="button"
-        size="iconSm"
-        shape="round"
+        size="icon-sm"
         variant={variant}
         aria-label={label}
         onBlur={(event) => {

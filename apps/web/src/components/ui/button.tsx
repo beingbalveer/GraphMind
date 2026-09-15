@@ -1,80 +1,75 @@
-import * as React from "react";
+import { Button as ButtonPrimitive } from "@base-ui/react/button";
 import { cva, type VariantProps } from "class-variance-authority";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center whitespace-nowrap text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-1 disabled:pointer-events-none disabled:opacity-50 select-none cursor-pointer shadow-xs",
+  "group/button focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:ring-1 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:ring-1 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90 active:bg-primary/95 shadow-xs",
-        secondary: "bg-muted text-foreground hover:bg-surface-hover active:bg-muted/80",
-        outline: "border border-border bg-surface text-foreground hover:bg-surface-hover hover:border-border-subtle",
-        ghost: "hover:bg-surface-hover hover:text-foreground text-foreground-muted shadow-none",
-        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-xs",
-        dangerGhost: "text-destructive hover:bg-destructive-bg hover:text-destructive shadow-none",
+        default: "bg-primary text-primary-foreground hover:bg-primary/80",
+        outline:
+          "bg-muted/70 text-foreground hover:bg-muted aria-expanded:bg-muted aria-expanded:text-foreground dark:bg-muted/50 dark:hover:bg-muted border-transparent",
+        secondary:
+          "bg-secondary text-secondary-foreground aria-expanded:bg-secondary aria-expanded:text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)]",
+        ghost:
+          "hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50",
+        destructive:
+          "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
+        link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
-        default: "h-8 px-3 py-1.5",
-        sm: "h-7 px-2.5 text-xs",
-        lg: "h-9 px-4 text-sm",
-        icon: "size-8 p-0",
-        iconSm: "size-7 p-0",
-      },
-      shape: {
-        rectangle: "rounded-lg",
-        pill: "rounded-full",
-        round: "rounded-full",
+        default: "h-8 gap-1.5 px-3 has-data-[icon=inline-end]:pr-2.5 has-data-[icon=inline-start]:pl-2.5",
+        xs: "h-6 gap-1 rounded-[min(var(--radius-md),10px)] px-2 text-xs in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
+        sm: "h-7 gap-1 rounded-[min(var(--radius-md),12px)] px-2.5 text-[0.8rem] in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
+        lg: "h-9 gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
+        icon: "size-8",
+        "icon-xs": "size-6 rounded-[min(var(--radius-md),10px)] in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-3",
+        "icon-sm": "size-7 rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg",
+        "icon-lg": "size-9",
       },
     },
     defaultVariants: {
       variant: "default",
       size: "default",
-      shape: "rectangle",
     },
   }
 );
 
-export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
+interface ButtonProps
+  extends ButtonPrimitive.Props,
     VariantProps<typeof buttonVariants> {
   loading?: boolean;
   loadingLabel?: string;
 }
 
-const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  (
-    {
-      className,
-      variant,
-      size,
-      shape,
-      loading = false,
-      loadingLabel,
-      disabled,
-      children,
-      "aria-busy": ariaBusy,
-      "aria-label": ariaLabel,
-      ...props
-    },
-    ref
-  ) => {
-    return (
-      <button
-        {...props}
-        aria-busy={loading ? true : ariaBusy}
-        aria-label={loading ? loadingLabel ?? ariaLabel : ariaLabel}
-        className={cn(buttonVariants({ variant, size, shape, className }))}
-        disabled={loading || disabled}
-        ref={ref}
-      >
-        {loading && <Loader2 aria-hidden="true" className="size-3 animate-spin motion-reduce:animate-none" />}
-        {children}
-      </button>
-    );
-  }
-);
-Button.displayName = "Button";
+function Button({
+  className,
+  variant = "default",
+  size = "default",
+  loading = false,
+  loadingLabel,
+  disabled,
+  children,
+  "aria-busy": ariaBusy,
+  "aria-label": ariaLabel,
+  ...props
+}: ButtonProps) {
+  return (
+    <ButtonPrimitive
+      {...props}
+      aria-busy={loading ? true : ariaBusy}
+      aria-label={loading ? loadingLabel ?? ariaLabel : ariaLabel}
+      className={cn(buttonVariants({ variant, size, className }))}
+      data-slot="button"
+      disabled={loading || disabled}
+    >
+      {loading && <Loader2 aria-hidden="true" className="size-3 animate-spin motion-reduce:animate-none" />}
+      {children}
+    </ButtonPrimitive>
+  );
+}
 
 export { Button, buttonVariants };
+export type { ButtonProps };

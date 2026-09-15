@@ -402,7 +402,7 @@ function FlowCanvas({
 
         <Button
           variant="ghost"
-          size="iconSm"
+          size="icon-sm"
           onClick={handleToggleDirection}
           className="text-foreground-muted hover:text-foreground hover:bg-surface-hover"
           title={`Switch Layout: ${direction === "LR" ? "Horizontal (Left-to-Right)" : "Vertical (Top-to-Bottom)"}`}
@@ -416,7 +416,7 @@ function FlowCanvas({
         </Button>
         <Button
           variant="ghost"
-          size="iconSm"
+          size="icon-sm"
           onClick={handleAutoLayout}
           className="text-foreground-muted hover:text-foreground hover:bg-surface-hover"
           title="Recompute Clean Auto-Layout (⌘L)"
@@ -427,7 +427,7 @@ function FlowCanvas({
         <div className="w-px h-4 bg-border-subtle mx-0.5" />
         <Button
           variant="ghost"
-          size="iconSm"
+          size="icon-sm"
           onClick={() => centerOnNode()}
           className="text-foreground-muted hover:text-foreground hover:bg-surface-hover"
           title="Center on Active Node (⌘.)"
@@ -437,7 +437,7 @@ function FlowCanvas({
         </Button>
         <Button
           variant="ghost"
-          size="iconSm"
+          size="icon-sm"
           onClick={handleFitView}
           className="text-foreground-muted hover:text-foreground hover:bg-surface-hover"
           title="Fit All Nodes in View (⌘0)"
@@ -447,7 +447,7 @@ function FlowCanvas({
         </Button>
         <Button
           variant="ghost"
-          size="iconSm"
+          size="icon-sm"
           onClick={handleResetZoom}
           className="text-foreground-muted hover:text-foreground hover:bg-surface-hover"
           title="Reset Zoom to 100%"
@@ -458,7 +458,7 @@ function FlowCanvas({
         <div className="w-px h-4 bg-border-subtle mx-0.5" />
         <Button
           variant="ghost"
-          size="iconSm"
+          size="icon-sm"
           onClick={() => setShowMinimap((prev) => !prev)}
           className={`text-foreground-muted hover:text-foreground hover:bg-surface-hover ${
             showMinimap ? "bg-surface-hover text-foreground font-medium" : ""

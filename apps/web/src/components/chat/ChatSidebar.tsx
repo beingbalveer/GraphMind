@@ -175,7 +175,7 @@ export function ChatSidebar({
                 trigger={
                   <Button
                     variant="ghost"
-                    size="iconSm"
+                    size="icon-sm"
                     className="size-6 p-0 text-foreground-muted hover:text-foreground hover:bg-surface-hover"
                     title="More options"
                     aria-label="More options"
@@ -239,7 +239,7 @@ export function ChatSidebar({
         <div className="h-13 px-3 flex items-center shrink-0 w-full">
           <Button
             variant="ghost"
-            size="iconSm"
+            size="icon-sm"
             onClick={onToggle}
             className="text-foreground-muted hover:text-foreground hover:bg-surface-hover transition-colors cursor-pointer shrink-0"
             title={isOpen ? "Collapse sidebar (⌘B)" : "Expand sidebar (⌘B)"}
@@ -353,7 +353,7 @@ export function ChatSidebar({
             <div className="flex flex-col items-center pt-1 animate-in fade-in duration-150">
               <Button
                 variant="ghost"
-                size="iconSm"
+                size="icon-sm"
                 onClick={onToggle}
                 className="text-foreground-muted hover:text-foreground hover:bg-surface-hover transition-colors cursor-pointer relative"
                 title={`Threads (${chats.length})`}

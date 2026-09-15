@@ -127,7 +127,7 @@ export function ContextRail({
         </span>
         <Button
           variant="ghost"
-          size="iconSm"
+          size="icon-sm"
           onClick={onToggle}
           className="text-foreground-muted hover:text-foreground hover:bg-surface-hover cursor-pointer shrink-0"
           title="Collapse panel"

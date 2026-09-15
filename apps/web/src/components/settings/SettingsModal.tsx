@@ -353,7 +353,7 @@ export function SettingsModal({
           <Button
             type="button"
             variant="ghost"
-            size="iconSm"
+            size="icon-sm"
             onClick={onClose}
             title="Close (Esc)"
             aria-label="Close"
@@ -444,7 +444,7 @@ export function SettingsModal({
                           <Button
                             type="button"
                             variant="ghost"
-                            size="iconSm"
+                            size="icon-sm"
                             onClick={() => setShowGeminiKey((prev) => !prev)}
                             className="size-6 p-0 text-foreground-muted hover:text-foreground"
                           >
@@ -472,7 +472,7 @@ export function SettingsModal({
                           <Button
                             type="button"
                             variant="ghost"
-                            size="iconSm"
+                            size="icon-sm"
                             onClick={() => setShowOpenAiKey((prev) => !prev)}
                             className="size-6 p-0 text-foreground-muted hover:text-foreground"
                           >
@@ -500,7 +500,7 @@ export function SettingsModal({
                           <Button
                             type="button"
                             variant="ghost"
-                            size="iconSm"
+                            size="icon-sm"
                             onClick={() => setShowAnthropicKey((prev) => !prev)}
                             className="size-6 p-0 text-foreground-muted hover:text-foreground"
                           >
@@ -528,7 +528,7 @@ export function SettingsModal({
                           <Button
                             type="button"
                             variant="ghost"
-                            size="iconSm"
+                            size="icon-sm"
                             onClick={() => setShowDeepseekKey((prev) => !prev)}
                             className="size-6 p-0 text-foreground-muted hover:text-foreground"
                           >
