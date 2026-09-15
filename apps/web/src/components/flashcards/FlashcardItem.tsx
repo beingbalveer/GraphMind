@@ -6,8 +6,9 @@ import { Surface } from "@/components/ui/surface";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
+import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
-import { Edit2, Trash2, Eye, EyeOff, Check, X } from "lucide-react";
+import { Edit2, Trash2, Eye, EyeOff, Check, X, MoreHorizontal } from "lucide-react";
 
 export interface FlashcardItemProps {
   card: Flashcard;
@@ -83,32 +84,35 @@ export function FlashcardItem({
         <Badge variant="secondary">
           Card {displayIndex ?? card.position + 1}
         </Badge>
-        <div className="flex items-center gap-0.5">
-          {!isEditing ? (
-            <>
+        {!isEditing ? (
+          <DropdownMenu
+            trigger={
               <IconButton
                 variant="ghost"
-                size="iconSm"
-                label="Edit flashcard"
-                title="Edit flashcard"
-                onClick={handleStartEdit}
+                label="Flashcard actions"
+                title="Flashcard actions"
                 disabled={isBusy}
               >
-                <Edit2 aria-hidden="true" className="size-3.5" />
+                <MoreHorizontal aria-hidden="true" className="size-4" />
               </IconButton>
-              <IconButton
-                variant="dangerGhost"
-                size="iconSm"
-                label="Delete flashcard"
-                title="Delete flashcard"
-                onClick={() => onRequestDelete(card)}
-                disabled={isBusy}
-              >
-                <Trash2 aria-hidden="true" className="size-3.5" />
-              </IconButton>
-            </>
-          ) : null}
-        </div>
+            }
+            items={[
+              {
+                label: "Edit flashcard",
+                icon: <Edit2 aria-hidden="true" />,
+                onClick: handleStartEdit,
+                disabled: isBusy,
+              },
+              {
+                label: "Delete flashcard",
+                icon: <Trash2 aria-hidden="true" />,
+                variant: "destructive",
+                onClick: () => onRequestDelete(card),
+                disabled: isBusy,
+              },
+            ]}
+          />
+        ) : null}
       </div>
 
       {isEditing ? (

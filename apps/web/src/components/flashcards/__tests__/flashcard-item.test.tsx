@@ -55,7 +55,8 @@ describe("FlashcardItem", () => {
       />
     );
 
-    const editButton = screen.getByRole("button", { name: /edit flashcard/i });
+    await user.click(screen.getByRole("button", { name: /flashcard actions/i }));
+    const editButton = screen.getByRole("menuitem", { name: /edit flashcard/i });
     await user.click(editButton);
 
     const qInput = screen.getByLabelText("Edit question");
@@ -92,7 +93,8 @@ describe("FlashcardItem", () => {
       />
     );
 
-    await user.click(screen.getByRole("button", { name: /edit flashcard/i }));
+    await user.click(screen.getByRole("button", { name: /flashcard actions/i }));
+    await user.click(screen.getByRole("menuitem", { name: /edit flashcard/i }));
     const qInput = screen.getByLabelText("Edit question");
     await user.type(qInput, "extra text");
 
@@ -115,7 +117,8 @@ describe("FlashcardItem", () => {
       />
     );
 
-    const deleteButton = screen.getByRole("button", { name: /delete flashcard/i });
+    await user.click(screen.getByRole("button", { name: /flashcard actions/i }));
+    const deleteButton = screen.getByRole("menuitem", { name: /delete flashcard/i });
     await user.click(deleteButton);
 
     expect(handleDelete).toHaveBeenCalledWith(mockCard);
@@ -133,8 +136,7 @@ describe("FlashcardItem", () => {
       />
     );
 
-    expect(screen.getByRole("button", { name: /edit flashcard/i })).toBeDisabled();
-    expect(screen.getByRole("button", { name: /delete flashcard/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /flashcard actions/i })).toBeDisabled();
 
     const showButton = screen.getByRole("button", { name: /show answer/i });
     expect(showButton).toBeEnabled();
@@ -154,7 +156,8 @@ describe("FlashcardItem", () => {
       />
     );
 
-    await user.click(screen.getByRole("button", { name: /edit flashcard/i }));
+    await user.click(screen.getByRole("button", { name: /flashcard actions/i }));
+    await user.click(screen.getByRole("menuitem", { name: /edit flashcard/i }));
     const qInput = screen.getByLabelText("Edit question");
     const aInput = screen.getByLabelText("Edit answer");
 
