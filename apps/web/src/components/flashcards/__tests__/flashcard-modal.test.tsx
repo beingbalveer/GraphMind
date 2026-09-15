@@ -40,7 +40,7 @@ describe("FlashcardModal", () => {
     vi.clearAllMocks();
   });
 
-  it("loads and displays existing flashcards without triggering generation", async () => {
+  it("loads the first study card without triggering generation", async () => {
     vi.mocked(flashcardApi.listNodeFlashcards).mockResolvedValueOnce(mockCards);
 
     render(
@@ -55,12 +55,41 @@ describe("FlashcardModal", () => {
 
     await waitFor(() => {
       expect(screen.getByText("What is WAL in Postgres?")).toBeInTheDocument();
-      expect(screen.getByText("Why use WAL?")).toBeInTheDocument();
     });
 
     expect(flashcardApi.listNodeFlashcards).toHaveBeenCalledWith("ws_test", "node_1");
     expect(flashcardApi.generateNodeFlashcards).not.toHaveBeenCalled();
-    expect(screen.getByText("2 cards")).toBeInTheDocument();
+    expect(screen.getByText("1 of 2")).toBeInTheDocument();
+  });
+
+  it("guides the learner through one card at a time with confidence feedback", async () => {
+    const user = userEvent.setup();
+    vi.mocked(flashcardApi.listNodeFlashcards).mockResolvedValueOnce(mockCards);
+
+    render(
+      <FlashcardModal
+        isOpen={true}
+        onClose={vi.fn()}
+        workspaceId="ws_test"
+        nodeId="node_1"
+      />
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("What is WAL in Postgres?")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("Why use WAL?")).not.toBeInTheDocument();
+    expect(screen.getByText("1 of 2")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /show answer/i }));
+    expect(screen.getByText("Write-Ahead Logging guarantees data integrity.")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /got it/i }));
+    await user.click(screen.getByRole("button", { name: /^next$/i }));
+
+    expect(screen.getByText("Why use WAL?")).toBeInTheDocument();
+    expect(screen.queryByText("What is WAL in Postgres?")).not.toBeInTheDocument();
+    expect(screen.getByText("2 of 2")).toBeInTheDocument();
   });
 
   it("automatically generates cards when no existing cards exist", async () => {
@@ -235,6 +264,8 @@ describe("FlashcardModal", () => {
     await waitFor(() => {
       expect(screen.getByText("What is WAL in Postgres?")).toBeInTheDocument();
     });
+
+    await user.click(screen.getByRole("button", { name: /manage cards/i }));
 
     const deleteButtons = screen.getAllByRole("button", { name: /delete flashcard/i });
     await user.click(deleteButtons[0]);

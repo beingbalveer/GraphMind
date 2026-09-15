@@ -109,7 +109,7 @@ describe("ChatMessage", () => {
     expect(closePreview).toHaveClass("text-foreground");
   });
 
-  it("renders flashcard action on eligible completed assistant messages and opens the modal on click", async () => {
+  it("renders flashcard action on eligible completed assistant messages and opens the study drawer", async () => {
     const user = userEvent.setup();
     render(
       <ChatMessage
@@ -122,7 +122,7 @@ describe("ChatMessage", () => {
     expect(flashcardButton).toBeInTheDocument();
 
     await user.click(flashcardButton);
-    expect(screen.getByRole("dialog", { name: "Response Flashcards" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "Study response" })).toBeInTheDocument();
   });
 
   it("does not render flashcard action on user messages or streaming assistant messages", () => {

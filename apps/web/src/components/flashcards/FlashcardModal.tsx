@@ -2,11 +2,12 @@
 
 import * as React from "react";
 import type { Flashcard, FlashcardUpdateInput } from "@graphmind/shared";
-import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
+import { Drawer } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { InlineFeedback } from "@/components/ui/feedback";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Surface } from "@/components/ui/surface";
 import { FlashcardItem } from "./FlashcardItem";
 import {
   listNodeFlashcards,
@@ -15,7 +16,15 @@ import {
   deleteNodeFlashcard,
   type FlashcardGenerationConfig,
 } from "@/lib/flashcardApi";
-import { Sparkles, RefreshCw, ExternalLink, BookOpen, Loader2 } from "lucide-react";
+import {
+  Sparkles,
+  RefreshCw,
+  ExternalLink,
+  BookOpen,
+  Loader2,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 
 export interface FlashcardModalProps {
   isOpen: boolean;
@@ -51,6 +60,10 @@ export function FlashcardModal({
   const [showRegenerateConfirm, setShowRegenerateConfirm] = React.useState(false);
   const [isRegenerating, setIsRegenerating] = React.useState(false);
   const [isForbiddenViewer, setIsForbiddenViewer] = React.useState(false);
+  const [activeCardIndex, setActiveCardIndex] = React.useState(0);
+  const [isAnswerRevealed, setIsAnswerRevealed] = React.useState(false);
+  const [confidenceByCardId, setConfidenceByCardId] = React.useState<Record<string, string>>({});
+  const [isManagingCards, setIsManagingCards] = React.useState(false);
 
   const truncatedPreview = React.useMemo(() => {
     if (!sourcePreview) return "";
@@ -63,6 +76,10 @@ export function FlashcardModal({
   React.useEffect(() => {
     if (!isOpen || !workspaceId || !nodeId) {
       setCards([]);
+      setActiveCardIndex(0);
+      setIsAnswerRevealed(false);
+      setConfidenceByCardId({});
+      setIsManagingCards(false);
       setError(null);
       setFailedPhase(null);
       setIsLoading(false);
@@ -87,6 +104,9 @@ export function FlashcardModal({
 
         if (existing.length > 0) {
           setCards(existing);
+          setActiveCardIndex(0);
+          setIsAnswerRevealed(false);
+          setConfidenceByCardId({});
           setIsLoading(false);
           setStatusMessage(null);
           return;
@@ -111,6 +131,9 @@ export function FlashcardModal({
 
         if (isCancelled) return;
         setCards(generated);
+        setActiveCardIndex(0);
+        setIsAnswerRevealed(false);
+        setConfidenceByCardId({});
         setIsLoading(false);
         setStatusMessage(null);
       } catch (err: unknown) {
@@ -163,6 +186,9 @@ export function FlashcardModal({
           ...generationConfig,
         });
         setCards(generated);
+        setActiveCardIndex(0);
+        setIsAnswerRevealed(false);
+        setConfidenceByCardId({});
       } else {
         setStatusMessage("Loading flashcards…");
         const existing = await listNodeFlashcards(workspaceId, nodeId);
@@ -176,6 +202,9 @@ export function FlashcardModal({
             ...generationConfig,
           });
           setCards(generated);
+          setActiveCardIndex(0);
+          setIsAnswerRevealed(false);
+          setConfidenceByCardId({});
         }
       }
       setFailedPhase(null);
@@ -228,6 +257,8 @@ export function FlashcardModal({
         const next = prev.filter((c) => c.id !== pendingDelete.id);
         return next.map((c, idx) => ({ ...c, position: idx }));
       });
+      setActiveCardIndex((index) => Math.max(0, Math.min(index, cards.length - 2)));
+      setIsAnswerRevealed(false);
       setPendingDelete(null);
     } catch (err: unknown) {
       const msg =
@@ -249,6 +280,10 @@ export function FlashcardModal({
         ...generationConfig,
       });
       setCards(fresh);
+      setActiveCardIndex(0);
+      setIsAnswerRevealed(false);
+      setConfidenceByCardId({});
+      setIsManagingCards(false);
       setShowRegenerateConfirm(false);
     } catch (err: unknown) {
       const msg =
@@ -261,32 +296,40 @@ export function FlashcardModal({
 
   const isMutating = isDeleting || isRegenerating;
   const isAnyBusy = isLoading || isMutating || Boolean(busyCardId);
+  const activeCard = cards[activeCardIndex];
+
+  const moveToCard = (index: number) => {
+    setActiveCardIndex(Math.max(0, Math.min(index, cards.length - 1)));
+    setIsAnswerRevealed(false);
+  };
+
+  const recordConfidence = (value: string) => {
+    if (!activeCard) return;
+    setConfidenceByCardId((previous) => ({ ...previous, [activeCard.id]: value }));
+  };
 
   return (
     <>
-      <Modal
+      <Drawer
         isOpen={isOpen}
         onClose={isMutating ? () => {} : onClose}
-        size="xl"
-        ariaLabel="Response Flashcards"
-        closeOnClickOutside={!isMutating}
-      >
-        <ModalHeader
-          icon={<BookOpen className="size-4 text-primary" />}
-          title={
-            <div className="flex items-center gap-2">
-              <span>Response Flashcards</span>
-              {cards.length > 0 && (
-                <Badge variant="secondary">
-                  {cards.length} {cards.length === 1 ? "card" : "cards"}
-                </Badge>
-              )}
-            </div>
-          }
-          description={truncatedPreview || "Study key concepts from this message"}
-          onClose={isMutating ? undefined : onClose}
-        >
-          {cards.length > 0 && !isLoading && canEdit && !isForbiddenViewer && (
+        title="Study response"
+        description={truncatedPreview || "Practice the key ideas from this message"}
+        icon={<BookOpen className="size-4" />}
+        hasBackdrop={false}
+        widthClassName="w-full sm:w-[440px] md:w-[500px]"
+        headerActions={
+          cards.length > 0 && !isLoading ? (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsManagingCards((value) => !value)}
+                disabled={isAnyBusy}
+              >
+                {isManagingCards ? "Study" : "Manage cards"}
+              </Button>
+              {canEdit && !isForbiddenViewer && (
             <Button
               variant="outline"
               size="sm"
@@ -297,10 +340,12 @@ export function FlashcardModal({
               <Sparkles className="size-3.5 mr-1.5 text-primary" />
               Regenerate
             </Button>
-          )}
-        </ModalHeader>
-
-        <ModalBody className="p-3.5 sm:p-4 flex flex-col gap-3 max-h-[65vh] overflow-y-auto">
+              )}
+            </>
+          ) : undefined
+        }
+      >
+        <div className="flex min-h-0 flex-1 flex-col gap-4 p-4">
           {error && (
             <InlineFeedback
               tone="destructive"
@@ -333,7 +378,7 @@ export function FlashcardModal({
               <Loader2 className="size-5 animate-spin text-primary" />
               <p className="text-xs">{statusMessage || "Loading flashcards…"}</p>
             </div>
-          ) : cards.length > 0 ? (
+          ) : cards.length > 0 && isManagingCards ? (
             <div className="flex flex-col gap-2">
               {cards.map((card, index) => (
                 <FlashcardItem
@@ -346,6 +391,75 @@ export function FlashcardModal({
                 />
               ))}
             </div>
+          ) : activeCard ? (
+            <div className="flex min-h-0 flex-1 flex-col gap-4">
+              <div className="flex items-center justify-between text-xs text-foreground-muted">
+                <span>{activeCardIndex + 1} of {cards.length}</span>
+                {confidenceByCardId[activeCard.id] ? (
+                  <Badge variant="secondary">{confidenceByCardId[activeCard.id]}</Badge>
+                ) : null}
+              </div>
+              <div
+                className="h-1 overflow-hidden rounded-full bg-background-secondary"
+                role="progressbar"
+                aria-label="Study progress"
+                aria-valuemin={1}
+                aria-valuemax={cards.length}
+                aria-valuenow={activeCardIndex + 1}
+              >
+                <div
+                  className="h-full bg-primary transition-all duration-200"
+                  style={{ width: `${((activeCardIndex + 1) / cards.length) * 100}%` }}
+                />
+              </div>
+              <Surface variant="base" radius="card" className="flex min-h-64 flex-1 flex-col justify-center gap-5 p-6 sm:p-8">
+                <p className="text-lg font-semibold leading-relaxed text-foreground">{activeCard.question}</p>
+                {isAnswerRevealed ? (
+                  <div className="border-t border-border-subtle pt-5">
+                    <p className="text-sm leading-relaxed text-foreground-muted">{activeCard.answer}</p>
+                    <div className="mt-6">
+                      <p className="mb-2 text-xs font-medium text-foreground-muted">How did that feel?</p>
+                      <div className="flex flex-wrap gap-2">
+                        {["Got it", "Almost", "Review again"].map((value) => (
+                          <Button
+                            key={value}
+                            variant={confidenceByCardId[activeCard.id] === value ? "default" : "secondary"}
+                            size="sm"
+                            onClick={() => recordConfidence(value)}
+                          >
+                            {value}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <Button variant="secondary" size="sm" onClick={() => setIsAnswerRevealed(true)}>
+                    Show answer
+                  </Button>
+                )}
+              </Surface>
+              <div className="flex items-center justify-between gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => moveToCard(activeCardIndex - 1)}
+                  disabled={activeCardIndex === 0}
+                >
+                  <ChevronLeft className="mr-1 size-3.5" />
+                  Previous
+                </Button>
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => moveToCard(activeCardIndex + 1)}
+                  disabled={activeCardIndex === cards.length - 1}
+                >
+                  Next
+                  <ChevronRight className="ml-1 size-3.5" />
+                </Button>
+              </div>
+            </div>
           ) : !error ? (
             <div className="py-8 text-center text-xs text-foreground-muted">
               {!canEdit || isForbiddenViewer
@@ -353,40 +467,25 @@ export function FlashcardModal({
                 : "No flashcards found for this response."}
             </div>
           ) : null}
-        </ModalBody>
-
-        <ModalFooter className="flex items-center justify-between sm:justify-between py-2.5 px-3.5 sm:px-4">
-          <div>
+          <div className="flex items-center justify-between border-t border-border-subtle pt-3">
             {onGoToSource ? (
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => {
                   onClose();
-                  requestAnimationFrame(() => {
-                    setTimeout(() => {
-                      onGoToSource();
-                    }, 60);
-                  });
+                  requestAnimationFrame(() => setTimeout(onGoToSource, 60));
                 }}
                 disabled={isMutating}
               >
-                <ExternalLink className="size-3.5 mr-1.5" />
+                <ExternalLink className="mr-1.5 size-3.5" />
                 Go to source
               </Button>
-            ) : null}
+            ) : <span />}
+            <Button variant="outline" size="sm" onClick={onClose} disabled={isMutating}>Close</Button>
           </div>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onClose}
-            disabled={isMutating}
-          >
-            Close
-          </Button>
-        </ModalFooter>
-      </Modal>
+        </div>
+      </Drawer>
 
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
