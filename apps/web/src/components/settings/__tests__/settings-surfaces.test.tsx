@@ -142,6 +142,8 @@ describe("WorkspaceModal Component", () => {
       expect(screen.getByText("Algorithms & DS")).toBeInTheDocument();
     });
 
+    expect(screen.getByRole("button", { name: "Select Algorithms & DS" })).toBeVisible();
+
     const deleteBtn = screen.getByLabelText("Delete Workspace");
     fireEvent.click(deleteBtn);
 

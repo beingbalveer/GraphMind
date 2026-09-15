@@ -77,11 +77,6 @@ export function WorkspaceModal({
     }
   };
 
-  const handleDelete = (e: React.MouseEvent, id: string) => {
-    e.stopPropagation();
-    setDeletingWorkspaceId(id);
-  };
-
   const confirmDeleteWorkspace = async () => {
     if (!deletingWorkspaceId) return;
     await deleteWorkspace(deletingWorkspaceId);
@@ -201,16 +196,22 @@ export function WorkspaceModal({
                 return (
                   <div
                     key={ws.id}
-                    onClick={() => {
-                      onSelectWorkspace(ws);
-                      onClose();
-                    }}
-                    className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
-                      isActive
-                        ? "border-primary bg-surface-hover shadow-2xs"
-                        : "border-border hover:border-border-subtle hover:bg-surface-hover"
-                    }`}
+                    className="flex items-center gap-1.5"
                   >
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        onSelectWorkspace(ws);
+                        onClose();
+                      }}
+                      aria-label={`Select ${ws.name}`}
+                      className={`h-auto min-w-0 flex-1 justify-start rounded-xl px-3 py-3 text-left ${
+                        isActive
+                          ? "border-primary bg-surface-hover shadow-2xs"
+                          : "border-border hover:border-border-subtle hover:bg-surface-hover"
+                      }`}
+                    >
                     <div className="min-w-0 pr-3">
                       <div className="flex items-center space-x-2">
                         <span className="text-xs font-semibold text-foreground truncate">
@@ -233,12 +234,13 @@ export function WorkspaceModal({
                         {new Date(ws.updatedAt).toLocaleDateString()}
                       </div>
                     </div>
+                    </Button>
 
                     <Button
                       type="button"
                       variant="ghost"
                       size="icon-sm"
-                      onClick={(e) => handleDelete(e, ws.id)}
+                      onClick={() => setDeletingWorkspaceId(ws.id)}
                       className="text-destructive hover:text-destructive hover:bg-destructive-bg"
                       title="Delete Workspace"
                       aria-label="Delete Workspace"
