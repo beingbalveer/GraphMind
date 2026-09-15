@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { cn } from "@/lib/utils";
 
-export type ViewMode = "chat" | "canvas" | "library";
+export type ViewMode = "chat" | "canvas" | "library" | "settings";
 
 export interface MainHeaderProps {
   viewMode?: ViewMode;

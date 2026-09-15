@@ -21,7 +21,7 @@ import { MasteryPanel } from "./MasteryPanel";
 import { GraphCanvas } from "../canvas/GraphCanvas";
 import { CommandPalette } from "../canvas/CommandPalette";
 import { WorkspaceModal } from "../workspace/WorkspaceModal";
-import { SettingsModal } from "../settings/SettingsModal";
+import { SettingsPage } from "../settings/SettingsPage";
 import { FileLibraryView } from "../library/FileLibraryView";
 import { SidePeekBranchSheet, SidePeekEntry } from "./SidePeekBranchSheet";
 import { Button } from "@/components/ui/button";
@@ -41,6 +41,7 @@ import {
   buildLibraryUrl,
   buildChatUrl,
   buildCanvasUrl,
+  buildSettingsUrl,
   buildNodeUrl,
   buildBranchUrl,
 } from "@/lib/urls";
@@ -109,7 +110,6 @@ export function ChatContainer({
 
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
   const [isWorkspaceModalOpen, setIsWorkspaceModalOpen] = useState(false);
-  const [isModelConfigOpen, setIsModelConfigOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState<boolean>(() => {
     const saved = safeGetItem("graphmind_right_sidebar_open_v1");
@@ -150,6 +150,12 @@ export function ChatContainer({
 
   const [syncStatus, setSyncStatus] = useState<"saved" | "syncing" | "offline">("saved");
   const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode);
+
+  const handleOpenSettings = useCallback(() => {
+    if (currentWorkspace) {
+      router.push(buildSettingsUrl(currentWorkspace.id));
+    }
+  }, [currentWorkspace, router]);
 
   // Notion-Style Side-Peek History Stack State
   const [sidePeekState, setSidePeekState] = useState<{
@@ -292,10 +298,10 @@ export function ChatContainer({
             }
           }
 
-          if (typeof window !== "undefined" && !targetChatId) {
+          if (typeof window !== "undefined" && !targetChatId && viewMode !== "settings") {
             // Only replace URL when no chatId is in the path yet
             router.replace(buildWorkspaceUrl(ws.id), { scroll: false });
-          } else if (typeof window !== "undefined" && targetChatId && ws) {
+          } else if (typeof window !== "undefined" && targetChatId && ws && viewMode !== "settings") {
             const url = viewMode === "canvas"
               ? buildCanvasUrl(ws.id, targetChatId, nodeId ? { node: nodeId } : undefined)
               : buildChatUrl(ws.id, targetChatId, branchId ? { branch: branchId } : nodeId ? { node: nodeId } : undefined);
@@ -314,11 +320,13 @@ export function ChatContainer({
   useEffect(() => {
     if (!currentWorkspace) return;
 
-    // 1. Sync viewMode from path: /canvas vs /library vs standard chat
+    // 1. Sync viewMode from the canonical route.
     const targetViewMode: ViewMode = pathname.endsWith("/canvas")
       ? "canvas"
       : pathname.endsWith("/library")
       ? "library"
+      : pathname.endsWith("/settings")
+      ? "settings"
       : "chat";
     setViewMode((prev) => (prev !== targetViewMode ? targetViewMode : prev));
 
@@ -1005,7 +1013,7 @@ export function ChatContainer({
     onCommandPalette: () => setIsPaletteOpen((prev) => !prev),
     onToggleSidebar: () => setIsSidebarOpen((prev) => !prev),
     onNewChat: handleNewChat,
-    onOpenSettings: () => setIsModelConfigOpen(true),
+    onOpenSettings: handleOpenSettings,
   });
 
 
@@ -1046,7 +1054,7 @@ export function ChatContainer({
             onRenameChat={handleRenameChat}
             onTogglePinChat={handleTogglePinChat}
             onOpenWorkspaceModal={() => setIsWorkspaceModalOpen(true)}
-            onOpenSettings={() => setIsModelConfigOpen(true)}
+            onOpenSettings={handleOpenSettings}
             onNewChat={handleNewChat}
             onOpenFileLibrary={() => {
               if (currentWorkspace) {
@@ -1073,7 +1081,7 @@ export function ChatContainer({
             syncStatus={syncStatus}
             workspaceName={currentWorkspace?.name || "Main Workspace"}
             onOpenWorkspaceModal={() => setIsWorkspaceModalOpen(true)}
-            onOpenModelConfig={() => setIsModelConfigOpen(true)}
+            onOpenModelConfig={handleOpenSettings}
             onOpenFileLibrary={() => {
               if (currentWorkspace) {
                 router.push(buildLibraryUrl(currentWorkspace.id));
@@ -1097,6 +1105,12 @@ export function ChatContainer({
                   <span className="text-foreground-subtle shrink-0">/</span>
                   <span className="shrink-0">File Library</span>
                 </div>
+              ) : viewMode === "settings" ? (
+                <div className="flex items-center gap-1.5 text-xs text-foreground font-medium select-none">
+                  <span className="text-foreground-muted shrink-0">Workspace</span>
+                  <span className="text-foreground-subtle shrink-0">/</span>
+                  <span className="shrink-0">Settings</span>
+                </div>
               ) : (
                 <BranchBreadcrumbs
                   steps={breadcrumbSteps}
@@ -1115,7 +1129,7 @@ export function ChatContainer({
             }
           />
         }
-        rail={
+        rail={viewMode === "settings" ? undefined : (
           <RightSidebar
             isOpen={isRightSidebarOpen}
             onToggle={handleToggleRightSidebar}
@@ -1135,9 +1149,23 @@ export function ChatContainer({
               />
             )}
           </RightSidebar>
-        }
+        )}
       >
-        {viewMode === "library" ? (
+        {viewMode === "settings" ? (
+          <SettingsPage
+            config={llmConfig}
+            onSaveConfig={updateLLMConfig}
+            onResetDefaults={resetLLMDefaults}
+            currentWorkspace={currentWorkspace}
+            onNavigateBack={() => {
+              if (currentWorkspace && activeChatId) {
+                router.push(buildChatUrl(currentWorkspace.id, activeChatId));
+              } else if (currentWorkspace) {
+                router.push(buildWorkspaceUrl(currentWorkspace.id));
+              }
+            }}
+          />
+        ) : viewMode === "library" ? (
           /* Full-Page File Library & Knowledge Assets View */
           <FileLibraryView
             workspaceId={currentWorkspace?.id || ""}
@@ -1395,16 +1423,6 @@ export function ChatContainer({
         currentWorkspace={currentWorkspace}
         onSelectWorkspace={handleSelectWorkspace}
         activeTree={tree}
-      />
-
-      {/* Comprehensive Multi-Tab Master-Detail Settings Modal */}
-      <SettingsModal
-        isOpen={isModelConfigOpen}
-        onClose={() => setIsModelConfigOpen(false)}
-        config={llmConfig}
-        onSaveConfig={updateLLMConfig}
-        onResetDefaults={resetLLMDefaults}
-        currentWorkspace={currentWorkspace}
       />
 
       {/* Non-intrusive Floating Toast Notification */}

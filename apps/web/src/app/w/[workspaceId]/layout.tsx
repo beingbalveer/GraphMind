@@ -31,6 +31,8 @@ export default function WorkspaceLayout({
     ? "canvas"
     : pathname.endsWith("/library")
     ? "library"
+    : pathname.endsWith("/settings")
+    ? "settings"
     : "chat";
   const nodeId = searchParams.get("node") ?? undefined;
   const branchId = searchParams.get("branch") ?? undefined;
@@ -46,4 +48,3 @@ export default function WorkspaceLayout({
     />
   );
 }
-

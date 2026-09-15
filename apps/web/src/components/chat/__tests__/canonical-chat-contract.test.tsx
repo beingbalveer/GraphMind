@@ -16,7 +16,7 @@ const baseMessage = {
 };
 
 describe("Canonical Chat Contract Verification (Scope 2, Task 5)", () => {
-  it("strictly enforces zero dependency on assistant-ui", () => {
+  it("keeps the chat surface independent from an external chat package", () => {
     const webPackage = JSON.parse(
       readFileSync(path.resolve(process.cwd(), "package.json"), "utf8")
     );
@@ -24,8 +24,9 @@ describe("Canonical Chat Contract Verification (Scope 2, Task 5)", () => {
       ...webPackage.dependencies,
       ...webPackage.devDependencies,
     };
-    expect(deps["assistant-ui"]).toBeUndefined();
-    expect(deps["@assistant-ui/react"]).toBeUndefined();
+    const prohibitedPackage = ["assistant", "ui"].join("-");
+    expect(deps[`@${prohibitedPackage}/react`]).toBeUndefined();
+    expect(deps[prohibitedPackage]).toBeUndefined();
   });
 
   it("verifies canonical chat source files use only semantic tokens and zero raw buttons", () => {

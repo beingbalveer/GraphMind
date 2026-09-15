@@ -20,12 +20,20 @@
   --color-foreground-subtle: var(--foreground-subtle);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-border: var(--border);
   --color-border-subtle: var(--border-subtle);
   --color-border-strong: var(--border-strong);
   --color-focus-ring: var(--focus-ring);
+  --color-ring: var(--focus-ring);
+  --color-input: var(--border);
+  --color-popover: var(--surface-raised);
+  --color-popover-foreground: var(--foreground);
+  --color-accent: var(--surface-hover);
+  --color-accent-foreground: var(--foreground);
   --color-overlay: var(--overlay);
   --color-canvas-edge: var(--canvas-edge);
   --color-canvas-edge-active: var(--canvas-edge-active);
@@ -74,6 +82,8 @@
     /* Brand / Primary (Monochrome) */
     --primary: #18181b;
     --primary-foreground: #ffffff;
+    --secondary: #f4f4f6;
+    --secondary-foreground: #18181b;
     --focus-ring: #18181b;
     --overlay: rgba(9, 9, 11, 0.44);
     --chat-content-max: 44rem;
@@ -159,6 +169,8 @@
     /* Brand / Primary (Monochrome) */
     --primary: #f4f4f5;
     --primary-foreground: #09090b;
+    --secondary: #27272a;
+    --secondary-foreground: #f4f4f5;
     --focus-ring: #f4f4f5;
     --overlay: rgba(0, 0, 0, 0.64);
 

@@ -8,6 +8,7 @@ import {
   buildCanvasUrl,
   buildNodeUrl,
   buildBranchUrl,
+  buildSettingsUrl,
 } from "@/lib/urls";
 
 describe("Routing & State Preservation Contract (Scope 3, Task 6)", () => {
@@ -23,6 +24,7 @@ describe("Routing & State Preservation Contract (Scope 3, Task 6)", () => {
 
     // Canvas view — viewMode is strictly a path segment
     expect(buildCanvasUrl(wsId, chatId)).toBe("/w/ws-123/chat/chat-456/canvas");
+    expect(buildSettingsUrl(wsId)).toBe("/w/ws-123/settings");
 
     // Deep link parameters are query params, but primary IDs stay in the path
     const nodeUrl = buildNodeUrl(wsId, chatId, "node-789");

@@ -13,6 +13,10 @@ export const buildWorkspaceUrl = (workspaceId: string): string =>
 export const buildLibraryUrl = (workspaceId: string): string =>
   `/w/${workspaceId}/library`;
 
+/** /w/{workspaceId}/settings — Workspace settings */
+export const buildSettingsUrl = (workspaceId: string): string =>
+  `/w/${workspaceId}/settings`;
+
 /** /w/{workspaceId}/chat/{chatId} — Chat / thread view */
 export const buildChatUrl = (
   workspaceId: string,

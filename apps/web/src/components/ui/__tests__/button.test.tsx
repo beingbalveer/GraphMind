@@ -11,7 +11,7 @@ describe("Button", () => {
     expect(button.querySelector("svg")).toHaveClass("motion-reduce:animate-none");
   });
 
-  it("uses the Assistant UI default button treatment", () => {
+  it("uses the default button treatment", () => {
     render(<Button>Save</Button>);
     const button = screen.getByRole("button", { name: "Save" });
 
@@ -19,13 +19,13 @@ describe("Button", () => {
     expect(button).toHaveClass("h-8", "rounded-lg", "font-medium", "bg-primary", "hover:bg-primary/80");
   });
 
-  it("supports Assistant UI's compact icon size", () => {
+  it("supports the compact icon size", () => {
     render(<Button size="icon-sm" aria-label="Open menu">Menu</Button>);
 
     expect(screen.getByRole("button", { name: "Open menu" })).toHaveClass("size-7");
   });
 
-  it("uses Assistant UI's low-emphasis destructive treatment", () => {
+  it("uses the low-emphasis destructive treatment", () => {
     render(<Button variant="destructive">Delete</Button>);
 
     expect(screen.getByRole("button", { name: "Delete" })).toHaveClass(

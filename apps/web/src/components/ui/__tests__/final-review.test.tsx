@@ -71,7 +71,7 @@ describe("final review regressions", () => {
     ["xs", "h-6"],
     ["sm", "h-7"],
     ["icon-sm", "size-7"],
-  ] as const)("keeps Assistant UI's compact %s control dimensions", (size, dimension) => {
+  ] as const)("keeps compact %s control dimensions", (size, dimension) => {
     expect(buttonVariants({ size })).toContain(dimension);
   });
 

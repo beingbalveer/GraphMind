@@ -109,7 +109,7 @@ export function ChatSidebar({
     setRenamingChatId(null);
   }, [renamingChatId, renameValue, onRenameChat]);
 
-  // Assistant-ui styled thread list item
+  // Shared design-system thread list item
   const renderChatItem = (chat: ChatItem) => {
     const isActive = !isLibraryActive && chat.id === activeChatId;
     const isRenaming = renamingChatId === chat.id;
