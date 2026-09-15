@@ -1,8 +1,22 @@
 import json
 
 import pytest
+from ai_core import GenerationResult, StreamChunk
 from httpx import ASGITransport, AsyncClient
 from main import app
+
+
+class PromptEchoProvider:
+    """Test double that exposes the system instruction received by the route."""
+
+    async def generate(self, messages, config, tools=None):  # type: ignore[no-untyped-def]
+        return GenerationResult(
+            content=config.system_prompt or "",
+            model_name=config.model_name,
+        )
+
+    async def stream(self, messages, config, tools=None):  # type: ignore[no-untyped-def]
+        yield StreamChunk(content=config.system_prompt or "")
 
 
 @pytest.mark.asyncio
@@ -36,6 +50,26 @@ async def test_chat_stream_mock_success() -> None:
         full_output = "".join(tokens)
         assert len(tokens) > 0
         assert "Hello GraphMind" in full_output
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("endpoint", ["/api/v1/chat/completions", "/api/v1/chat/stream"])
+async def test_chat_routes_apply_learning_default_prompt(
+    monkeypatch: pytest.MonkeyPatch, endpoint: str
+) -> None:
+    """Default chats must instruct every provider to teach, not merely answer."""
+    import routers.chat as chat_router
+
+    monkeypatch.setattr(chat_router, "get_provider", lambda *args, **kwargs: PromptEchoProvider())
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post(endpoint, json={"prompt": "Explain photosynthesis", "provider": "mock"})
+
+    assert response.status_code == 200
+    assert "help the user learn" in response.text.lower()
+    assert "beginner" in response.text.lower()
+    assert "misconceptions" in response.text.lower()
 
 
 @pytest.mark.asyncio

@@ -32,10 +32,14 @@ logger = structlog.get_logger()
 router = APIRouter(prefix="/api/v1/chat", tags=["Chat"])
 settings = get_settings()
 
-DEFAULT_CONCISE_SYSTEM_PROMPT = (
-    "You are GraphMind AI, a concise and high-precision technical assistant. "
-    "Provide crisp, direct, and focused answers. Keep explanations brief (2-3 short paragraphs max or clean bullet points) "
-    "without unnecessary conversational filler so the user can quickly grasp key technical concepts."
+DEFAULT_LEARNING_SYSTEM_PROMPT = (
+    "You are GraphMind AI, an educational assistant whose goal is to help the user learn, not merely receive an answer. "
+    "Assume a beginner-friendly starting point unless the user's language or request shows greater expertise, then match their level. "
+    "Give the direct answer first, then build understanding from intuition to detail in clear, progressive steps. "
+    "Define unfamiliar terms in plain language, use a concise example or analogy when it makes the idea clearer, and connect the topic to essential prerequisites when relevant. "
+    "Point out common misconceptions or pitfalls when they would prevent understanding. "
+    "Keep the response focused and appropriately concise; do not force a rigid lesson structure on simple requests. "
+    "When useful, end with a brief check-for-understanding question or a natural next topic to explore."
 )
 
 
@@ -305,7 +309,7 @@ async def create_chat_completion(body: ChatCompletionRequest) -> GenerationResul
     active_skills = (
         skill_registry.get_skills(body.enabled_skills) if body.enabled_skills is not None else []
     )
-    base_sys_prompt = body.system_prompt or DEFAULT_CONCISE_SYSTEM_PROMPT
+    base_sys_prompt = body.system_prompt or DEFAULT_LEARNING_SYSTEM_PROMPT
     final_sys_prompt = skill_registry.build_system_prompt(base_sys_prompt, active_skills)
 
     # Grounded RAG Retrieval across workspace documents
@@ -478,7 +482,7 @@ async def stream_chat(
     active_skills = (
         skill_registry.get_skills(body.enabled_skills) if body.enabled_skills is not None else []
     )
-    base_sys_prompt = body.system_prompt or DEFAULT_CONCISE_SYSTEM_PROMPT
+    base_sys_prompt = body.system_prompt or DEFAULT_LEARNING_SYSTEM_PROMPT
     final_sys_prompt = skill_registry.build_system_prompt(base_sys_prompt, active_skills)
 
     # Grounded RAG Retrieval across workspace documents
