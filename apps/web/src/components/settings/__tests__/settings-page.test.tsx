@@ -16,7 +16,7 @@ describe("SettingsPage", () => {
     render(<SettingsPage config={config} onSaveConfig={onSaveConfig} onResetDefaults={vi.fn()} onNavigateBack={vi.fn()} />);
 
     expect(screen.getByRole("main", { name: "Settings" })).toBeVisible();
-    expect(screen.getByRole("heading", { name: "Settings" })).toBeVisible();
+    expect(screen.queryByRole("heading", { name: "Settings" })).not.toBeInTheDocument();
     await user.clear(screen.getByRole("spinbutton", { name: "Temperature" }));
     await user.type(screen.getByRole("spinbutton", { name: "Temperature" }), "1.1");
     await user.click(screen.getByRole("button", { name: "Save changes" }));

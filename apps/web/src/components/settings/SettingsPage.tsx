@@ -67,7 +67,6 @@ export function SettingsPage({ config, onSaveConfig, onResetDefaults, currentWor
   const currentKey = provider === "gemini" || provider === "openai" || provider === "anthropic" || provider === "deepseek" ? provider : null;
 
   return <main className="flex min-h-0 flex-1 flex-col bg-background" aria-label="Settings">
-    <div className="flex items-center justify-between border-b border-border px-6 py-4"><div><h1 className="text-lg font-medium text-foreground">Settings</h1><p className="mt-1 text-sm text-foreground-muted">{currentWorkspace?.name ?? "Workspace"}</p></div><Button variant="ghost" onClick={onNavigateBack}>Back to workspace</Button></div>
     <Tabs defaultValue="models" orientation="vertical" className="min-h-0 flex-1 p-6 sm:flex-row">
       <TabsList variant="line" className="w-full shrink-0 sm:w-44">
         <TabsTrigger value="models">Models</TabsTrigger><TabsTrigger value="workspaces">Workspaces</TabsTrigger><TabsTrigger value="general">General</TabsTrigger><TabsTrigger value="appearance">Appearance</TabsTrigger><TabsTrigger value="shortcuts">Shortcuts</TabsTrigger><TabsTrigger value="about">About</TabsTrigger>
