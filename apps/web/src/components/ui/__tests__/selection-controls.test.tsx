@@ -15,7 +15,13 @@ describe("selection controls", () => {
     control.focus();
     await user.keyboard(" ");
 
-    expect(onCheckedChange).toHaveBeenCalledWith(true);
+    expect(onCheckedChange).toHaveBeenCalled();
+    expect(onCheckedChange.mock.calls[0][0]).toBe(true);
+  });
+
+  it("uses the compact shared control size when requested", () => {
+    render(<Switch checked onCheckedChange={vi.fn()} size="sm" />);
+    expect(screen.getByRole("switch")).toHaveAttribute("data-size", "sm");
   });
 
   it("exposes segmented choices as tabs", async () => {
