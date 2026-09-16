@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import { X } from "lucide-react";
 import { IconButton } from "./icon-button";
 import { cn } from "@/lib/utils";
@@ -39,6 +39,7 @@ export function Modal({
   role = "dialog",
 }: ModalProps) {
   const previouslyFocusedElement = React.useRef<HTMLElement | null>(null);
+  const popupRef = React.useRef<HTMLDivElement | null>(null);
   const hasSharedHeader = React.Children.toArray(children).some(
     (child) => React.isValidElement(child) && child.type === ModalHeader
   );
@@ -52,46 +53,27 @@ export function Modal({
   return (
     <DialogPrimitive.Root
       open={isOpen}
-      onOpenChange={(open) => {
-        if (!open) onClose();
+      disablePointerDismissal={!closeOnClickOutside}
+      onOpenChange={(open, details) => {
+        if (!open && !(details.reason === "escape-key" && !closeOnClickOutside)) onClose();
       }}
     >
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-overlay backdrop-blur-xs motion-reduce:transition-none" />
-        <DialogPrimitive.Content
+        <DialogPrimitive.Backdrop className="data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 fixed inset-0 isolate z-50 bg-overlay backdrop-blur-xs duration-100" />
+        <DialogPrimitive.Popup
+          ref={popupRef}
           aria-label={hasSharedHeader ? undefined : ariaLabel}
           className={cn(
             "fixed left-1/2 top-1/2 z-50 flex w-full -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-2xl border border-border bg-surface text-foreground shadow-modal motion-reduce:transition-none",
             sizeClasses[size],
             className
           )}
-          onEscapeKeyDown={(event) => {
-            if (!closeOnClickOutside) event.preventDefault();
-          }}
-          onOpenAutoFocus={(event) => {
-            const content = event.currentTarget as HTMLElement | null;
-            const field = content?.querySelector<HTMLElement>(
-              "input:not([disabled]), textarea:not([disabled]), select:not([disabled])"
-            );
-
-            if (field) {
-              event.preventDefault();
-              field.focus();
-            }
-          }}
-          onCloseAutoFocus={(event) => {
-            if (previouslyFocusedElement.current) {
-              event.preventDefault();
-              previouslyFocusedElement.current.focus();
-            }
-          }}
-          onPointerDownOutside={(event) => {
-            if (!closeOnClickOutside) event.preventDefault();
-          }}
+          initialFocus={() => popupRef.current?.querySelector<HTMLElement>("input:not([disabled]), textarea:not([disabled]), select:not([disabled])") ?? false}
+          finalFocus={() => previouslyFocusedElement.current}
           role={role}
         >
           {children}
-        </DialogPrimitive.Content>
+        </DialogPrimitive.Popup>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
   );
@@ -128,11 +110,11 @@ export function ModalHeader({
           </div>
         )}
         <div className="min-w-0">
-          <DialogPrimitive.Title className="truncate text-sm font-semibold leading-tight text-foreground">
+        <DialogPrimitive.Title className="truncate text-sm font-semibold leading-tight text-foreground">
             {title}
           </DialogPrimitive.Title>
           {description && (
-            <DialogPrimitive.Description className="truncate text-xs text-foreground-muted">
+          <DialogPrimitive.Description className="truncate text-xs text-foreground-muted">
               {description}
             </DialogPrimitive.Description>
           )}
