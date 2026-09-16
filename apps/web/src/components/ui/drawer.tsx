@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import { X } from "lucide-react";
 import { IconButton } from "./icon-button";
 import { cn } from "@/lib/utils";
@@ -37,39 +37,27 @@ export function Drawer({
 
   return (
     <DialogPrimitive.Root
-      modal={hasBackdrop}
       open={isOpen}
+      modal={hasBackdrop}
+      disablePointerDismissal={!hasBackdrop}
       onOpenChange={(open) => {
         if (!open) onClose();
       }}
     >
       <DialogPrimitive.Portal>
-        {hasBackdrop && <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-overlay motion-reduce:transition-none" />}
-        <DialogPrimitive.Content
+        {hasBackdrop && <DialogPrimitive.Backdrop className="fixed inset-0 z-50 bg-overlay motion-reduce:transition-none" />}
+        <DialogPrimitive.Popup
           aria-label={ariaLabel}
           className={cn(
             "fixed inset-y-0 right-0 z-50 flex flex-col border-l border-border bg-surface text-foreground shadow-modal transition-transform duration-200 ease-out motion-reduce:transition-none",
             widthClassName,
             className
           )}
-          onPointerDownOutside={(event) => {
-            if (!hasBackdrop) event.preventDefault();
-          }}
-          onFocusOutside={(event) => {
-            if (!hasBackdrop) event.preventDefault();
-          }}
-          onOpenAutoFocus={() => {
-            // Capture before Radix moves focus; this API has no Dialog.Trigger.
+          initialFocus={() => {
             openerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+            return true;
           }}
-          onCloseAutoFocus={(event) => {
-            event.preventDefault();
-            const activeElement = document.activeElement;
-            const content = event.target as HTMLElement;
-            const shouldRestore = hasBackdrop || activeElement === document.body || content.contains(activeElement);
-            if (shouldRestore && openerRef.current?.isConnected) openerRef.current.focus();
-            openerRef.current = null;
-          }}
+          finalFocus={() => openerRef.current}
         >
           {(hasTitle || Boolean(headerActions) || Boolean(onClose)) && (
             <div className="flex h-13 shrink-0 items-center justify-between border-b border-border bg-surface px-4">
@@ -103,7 +91,7 @@ export function Drawer({
           )}
 
           <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">{children}</div>
-        </DialogPrimitive.Content>
+        </DialogPrimitive.Popup>
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
   );

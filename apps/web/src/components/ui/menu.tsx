@@ -1,5 +1,6 @@
 import React from "react";
 import { cn } from "@/lib/utils";
+import { Button } from "./button";
 
 export type MenuCardProps = React.HTMLAttributes<HTMLDivElement>;
 
@@ -27,16 +28,14 @@ export interface MenuItemProps extends React.ButtonHTMLAttributes<HTMLButtonElem
 export const MenuItem = React.forwardRef<HTMLButtonElement, MenuItemProps>(
   ({ icon, active, trailing, variant = "default", className, children, ...props }, ref) => {
     return (
-      <button
+      <Button
         ref={ref}
         type="button"
+        variant={variant === "destructive" ? "destructive" : "ghost"}
+        size="default"
         className={cn(
-          "group relative flex w-full cursor-pointer select-none items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-normal outline-none transition-colors focus-visible:ring-2 focus-visible:ring-primary/30 disabled:pointer-events-none disabled:opacity-50",
-          variant === "destructive"
-            ? "text-destructive hover:bg-destructive-bg focus:bg-destructive-bg data-[highlighted]:bg-destructive-bg"
-            : active
-              ? "bg-surface-hover font-medium text-foreground"
-              : "text-foreground hover:bg-surface-hover focus:bg-surface-hover data-[highlighted]:bg-surface-hover",
+          "group relative flex h-9 w-full cursor-pointer select-none justify-between rounded-lg px-3 py-2 text-left text-sm font-normal outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+          active && "bg-surface-hover font-medium text-foreground",
           className
         )}
         {...props}
@@ -50,7 +49,7 @@ export const MenuItem = React.forwardRef<HTMLButtonElement, MenuItemProps>(
           <span className="truncate">{children}</span>
         </div>
         {trailing && <div className="ml-3 flex shrink-0 items-center">{trailing}</div>}
-      </button>
+      </Button>
     );
   }
 );

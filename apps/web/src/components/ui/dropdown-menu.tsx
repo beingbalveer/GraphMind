@@ -32,24 +32,13 @@ export function DropdownMenu({
 }: DropdownMenuProps) {
   return (
     <DropdownMenuPrimitive.Root onOpenChange={onOpenChange}>
-      <DropdownMenuPrimitive.Trigger asChild>
-        {trigger}
-      </DropdownMenuPrimitive.Trigger>
+      <DropdownMenuPrimitive.Trigger asChild>{trigger}</DropdownMenuPrimitive.Trigger>
       <DropdownMenuPrimitive.Portal>
-        <DropdownMenuPrimitive.Content
-          align={align === "right" ? "end" : "start"}
-          sideOffset={4}
-          className="z-dropdown outline-none"
-        >
+        <DropdownMenuPrimitive.Content align={align === "right" ? "end" : "start"} sideOffset={4} className="z-dropdown outline-none">
           <MenuCard className={cn("min-w-48", className)}>
             {items.map((item) => (
               <DropdownMenuPrimitive.Item key={item.label} disabled={item.disabled} asChild>
-                <MenuItem
-                  disabled={item.disabled}
-                  variant={item.variant}
-                  icon={item.icon}
-                  onClick={item.onClick}
-                >
+                <MenuItem disabled={item.disabled} variant={item.variant} icon={item.icon} onClick={item.onClick}>
                   {item.label}
                 </MenuItem>
               </DropdownMenuPrimitive.Item>

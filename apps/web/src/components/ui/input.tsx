@@ -1,6 +1,7 @@
 "use client";
 
 import React, { forwardRef } from "react";
+import { Input as InputPrimitive } from "@base-ui/react/input";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
@@ -69,7 +70,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
               {startIcon}
             </div>
           )}
-          <input
+          <InputPrimitive
             ref={ref}
             type={type}
             disabled={disabled}

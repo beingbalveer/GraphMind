@@ -1,6 +1,6 @@
 "use client";
 
-import * as TabsPrimitive from "@radix-ui/react-tabs";
+import { Tabs, TabsList, TabsTrigger } from "./tabs";
 import { Badge } from "./badge";
 import { cn } from "@/lib/utils";
 
@@ -27,26 +27,26 @@ export function SegmentedTabs<T extends string = string>({
   size = "md",
 }: SegmentedTabsProps<T>) {
   return (
-    <TabsPrimitive.Root value={value} onValueChange={(next) => onChange(next as T)}>
-      <TabsPrimitive.List className={cn("inline-flex rounded-xl border border-border bg-muted p-1", className)}>
+    <Tabs value={value} onValueChange={(next) => onChange(next as T)}>
+      <TabsList className={cn("inline-flex rounded-xl border border-border bg-muted p-1", className)}>
       {items.map((item) => {
         const Icon = item.icon;
         return (
-          <TabsPrimitive.Trigger
+          <TabsTrigger
             key={item.id}
             value={item.id}
             className={cn(
-              "inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-lg font-medium text-foreground-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-1 hover:text-foreground motion-reduce:transition-none data-[state=active]:bg-surface data-[state=active]:font-semibold data-[state=active]:text-foreground data-[state=active]:shadow-xs",
+              "inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-lg font-medium text-foreground-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-1 hover:text-foreground motion-reduce:transition-none data-active:bg-surface data-active:font-semibold data-active:text-foreground data-active:shadow-xs",
               size === "sm" ? "px-2.5 py-1 text-xs" : "px-3 py-1.5 text-xs"
             )}
           >
             {Icon && <Icon className="h-3.5 w-3.5" />}
             <span>{item.label}</span>
             {item.badge && <Badge variant="secondary">{item.badge}</Badge>}
-          </TabsPrimitive.Trigger>
+          </TabsTrigger>
         );
       })}
-      </TabsPrimitive.List>
-    </TabsPrimitive.Root>
+      </TabsList>
+    </Tabs>
   );
 }

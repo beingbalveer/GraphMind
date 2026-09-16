@@ -295,15 +295,17 @@ function LoginForm() {
                 startIcon={<Lock className="w-3.5 h-3.5" />}
                 inputSize="default"
                 endIcon={
-                  <button
+                  <Button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="text-zinc-400 hover:text-zinc-600 cursor-pointer transition-colors p-1"
+                    variant="ghost"
+                    size="icon-xs"
+                    className="text-foreground-muted hover:text-foreground"
                     tabIndex={-1}
                     aria-label={showPassword ? "Hide password" : "Show password"}
                   >
                     {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                  </button>
+                  </Button>
                 }
               />
             </div>
