@@ -371,12 +371,12 @@ export function ChatInput({
         className="relative"
       >
         <Surface
-          variant="raised"
+          variant="base"
           radius="card"
-          className={`flex flex-col space-y-2 p-3 transition-all motion-reduce:transition-none focus-within:border-border-strong focus-within:shadow-md ${
+          className={`flex flex-col space-y-2 p-3 transition-colors motion-reduce:transition-none focus-within:border-border-strong ${
           isDragOver
             ? "bg-info/10 ring-2 ring-info/50"
-            : "hover:shadow-md"
+            : "hover:bg-surface-hover"
         }`}
         >
         {/* Floating Slash Command Autocomplete Menu */}

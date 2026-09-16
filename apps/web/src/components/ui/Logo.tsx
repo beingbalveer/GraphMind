@@ -38,10 +38,10 @@ export function GraphMindIcon({ size = 20, className = "text-current", ...props 
       />
 
       {/* Precision Node Vertices */}
-      <circle cx="12" cy="18.5" r="2.25" fill="currentColor" />
-      <circle cx="6.5" cy="7" r="2.25" fill="currentColor" />
-      <circle cx="17.5" cy="7" r="2.25" fill="currentColor" />
-      <circle cx="12" cy="11.5" r="1.5" fill="currentColor" />
+      <circle cx="12" cy="18.5" r="2.25" fill="none" stroke="currentColor" strokeWidth="1.5" />
+      <circle cx="6.5" cy="7" r="2.25" fill="none" stroke="currentColor" strokeWidth="1.5" />
+      <circle cx="17.5" cy="7" r="2.25" fill="none" stroke="currentColor" strokeWidth="1.5" />
+      <circle cx="12" cy="11.5" r="1.5" fill="none" stroke="currentColor" strokeWidth="1.5" />
     </svg>
   );
 }
@@ -69,7 +69,7 @@ export function LogoBadge({ size = "md", className = "" }: LogoBadgeProps) {
 
   return (
     <div
-      className={`flex shrink-0 items-center justify-center bg-primary text-primary-foreground shadow-2xs ${sizeClasses[size]} ${className}`}
+      className={`flex shrink-0 items-center justify-center border border-foreground bg-transparent text-foreground ${sizeClasses[size]} ${className}`}
     >
       <GraphMindIcon size={iconSizes[size]} className="text-current" />
     </div>

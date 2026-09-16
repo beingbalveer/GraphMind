@@ -10,9 +10,10 @@ import { useAuth } from "@/context/AuthContext";
 interface UserMenuProps {
   collapsed?: boolean;
   placement?: "top" | "bottom";
+  className?: string;
 }
 
-export function UserMenu({ collapsed = false, placement = "bottom" }: UserMenuProps) {
+export function UserMenu({ collapsed = false, placement = "bottom", className }: UserMenuProps) {
   const { user, logout } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -81,7 +82,7 @@ export function UserMenu({ collapsed = false, placement = "bottom" }: UserMenuPr
     return (
       <Link
         href="/login"
-        className="h-9 w-full flex items-center gap-2 rounded-lg text-sm font-normal text-foreground-muted hover:text-foreground hover:bg-surface-hover transition-colors cursor-pointer group"
+        className={`${className ?? "w-full"} h-9 flex items-center gap-2 rounded-lg text-sm font-normal text-foreground-muted hover:text-foreground hover:bg-surface-hover transition-colors cursor-pointer group`}
         title="Sign In"
       >
         <div className="size-8 rounded-lg flex items-center justify-center shrink-0">
@@ -97,7 +98,7 @@ export function UserMenu({ collapsed = false, placement = "bottom" }: UserMenuPr
   const initial = (user.fullName?.[0] || user.email[0] || "U").toUpperCase();
 
   return (
-    <div className="relative shrink-0 w-full" ref={triggerRef}>
+    <div className={`relative shrink-0 ${className ?? "w-full"}`} ref={triggerRef}>
       <Button
         variant="ghost"
         onClick={() => setIsOpen(!isOpen)}
@@ -114,7 +115,7 @@ export function UserMenu({ collapsed = false, placement = "bottom" }: UserMenuPr
               className="w-6 h-6 rounded-full object-cover ring-1 ring-border"
             />
           ) : (
-            <div className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-semibold shadow-2xs">
+            <div className="w-6 h-6 rounded-full border border-foreground bg-transparent text-foreground flex items-center justify-center text-xs font-normal">
               {initial}
             </div>
           )}

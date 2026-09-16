@@ -88,7 +88,7 @@ export function ContextRail({
       >
         <div
           data-testid="context-rail-drawer-content"
-          className="flex-1 overflow-y-auto p-4 flex flex-col min-w-0 bg-background-secondary"
+          className="flex-1 overflow-y-auto p-4 flex flex-col min-w-0 bg-surface"
         >
           {children}
         </div>
@@ -102,7 +102,7 @@ export function ContextRail({
       suppressHydrationWarning
       style={{ width: isOpen ? `${width}px` : "0px" }}
       className={cn(
-        "inset-y-0 right-0 z-40 flex flex-col bg-background-secondary select-none relative overflow-hidden shrink-0 border-l border-border-subtle",
+        "inset-y-0 right-0 z-40 flex flex-col bg-surface select-none relative overflow-hidden shrink-0 border-l border-border-subtle",
         isOpen ? "translate-x-0" : "translate-x-full",
         isResizing ? "transition-none" : "transition-[width,transform] duration-200 ease-in-out",
         className
@@ -140,7 +140,7 @@ export function ContextRail({
       {/* Scrollable Content Area */}
       <div
         data-testid="context-rail-content"
-        className="flex-1 overflow-y-auto p-4 sm:p-5 flex flex-col min-w-0 bg-background-secondary"
+        className="flex-1 overflow-y-auto p-4 sm:p-5 flex flex-col min-w-0 bg-surface"
       >
         {children}
       </div>

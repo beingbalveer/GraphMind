@@ -85,6 +85,21 @@ describe("WorkspaceDashboard & Learning Dashboard Contract (Scope 4, Task 1)", (
     expect(mockPush).toHaveBeenCalledWith("/w/ws-100");
   });
 
+  it("renders the focused workspace dashboard toolbar", async () => {
+    vi.spyOn(workspaceApi, "fetchWorkspaces").mockResolvedValue([]);
+
+    render(<WorkspaceDashboard />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /my workspaces/i })).toBeInTheDocument();
+    });
+
+    expect(screen.getByRole("button", { name: /discover/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /generate roadmap/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /create new/i })).toBeInTheDocument();
+    expect(screen.queryByText(/learning workspaces/i)).not.toBeInTheDocument();
+  });
+
   it("renders empty state with actionable roadmap trigger when no workspaces exist", async () => {
     vi.spyOn(workspaceApi, "fetchWorkspaces").mockResolvedValue([]);
 

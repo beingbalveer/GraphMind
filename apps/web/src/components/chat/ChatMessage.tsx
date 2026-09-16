@@ -444,7 +444,7 @@ export function ChatMessage({
       return (
         <div id={message.id} className="bg-transparent px-4 py-3 sm:px-6">
           <div className="mx-auto flex max-w-[var(--chat-content-max)] flex-col items-end">
-            <Surface variant="raised" radius="card" className="w-full max-w-2xl space-y-2.5 p-3.5 shadow-md transition-all">
+            <Surface variant="base" radius="card" className="w-full max-w-2xl space-y-2.5 p-3.5 transition-colors">
               <textarea
                 ref={editTextareaRef}
                 value={editContent}
@@ -526,7 +526,7 @@ export function ChatMessage({
           )}
 
           {/* Bubble */}
-          <Surface variant="muted" radius="card" className="max-w-2xl border-0 bg-muted px-4 py-3 text-foreground shadow-2xs sm:px-5">
+          <Surface variant="muted" radius="card" className="max-w-2xl border-0 bg-muted px-4 py-3 text-foreground sm:px-5">
             {message.highlightedContext && (
               <div className="mb-2 inline-flex items-center gap-1.5 rounded-md border border-success/30 bg-success-bg px-2 py-0.5 text-2xs font-medium text-success shadow-2xs">
                 <GitBranch className="size-3 shrink-0" />

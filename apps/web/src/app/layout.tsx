@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   },
 };
 
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Public_Sans } from "next/font/google";
 import { AuthProvider } from "@/context/AuthContext";
 
 const geistSans = Geist({
@@ -30,13 +30,21 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const publicSans = Public_Sans({
+  variable: "--font-public-sans",
+  subsets: ["latin"],
+});
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
+    <html
+      lang="en"
+      className={`${geistSans.variable} ${geistMono.variable} ${publicSans.variable}`}
+    >
       <body className="antialiased">
         <AuthProvider>{children}</AuthProvider>
       </body>

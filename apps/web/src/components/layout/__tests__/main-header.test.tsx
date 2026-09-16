@@ -63,7 +63,7 @@ describe("MainHeader Component & Contract (Scope 3, Task 3)", () => {
     expect(handleToggle).toHaveBeenCalledTimes(1);
   });
 
-  it("supports mode switching between Chat and Canvas via SegmentedTabs", async () => {
+  it("supports mode switching between Chat and Canvas via separate buttons", async () => {
     const user = userEvent.setup();
     const handleViewModeChange = vi.fn();
 
@@ -74,11 +74,11 @@ describe("MainHeader Component & Contract (Scope 3, Task 3)", () => {
       />
     );
 
-    const chatTab = screen.getByRole("tab", { name: /chat/i });
-    const canvasTab = screen.getByRole("tab", { name: /canvas/i });
+    const chatTab = screen.getByRole("button", { name: /chat/i });
+    const canvasTab = screen.getByRole("button", { name: /canvas/i });
 
-    expect(chatTab).toHaveAttribute("data-state", "active");
-    expect(canvasTab).toHaveAttribute("data-state", "inactive");
+    expect(chatTab).toHaveAttribute("aria-pressed", "true");
+    expect(canvasTab).toHaveAttribute("aria-pressed", "false");
 
     await user.click(canvasTab);
     expect(handleViewModeChange).toHaveBeenCalledWith("canvas");
@@ -90,8 +90,8 @@ describe("MainHeader Component & Contract (Scope 3, Task 3)", () => {
       />
     );
 
-    expect(canvasTab).toHaveAttribute("data-state", "active");
-    expect(chatTab).toHaveAttribute("data-state", "inactive");
+    expect(canvasTab).toHaveAttribute("aria-pressed", "true");
+    expect(chatTab).toHaveAttribute("aria-pressed", "false");
   });
 
   it("renders contextual rail toggle and fires callback", async () => {

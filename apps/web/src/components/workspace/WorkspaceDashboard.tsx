@@ -10,13 +10,12 @@ import {
   Loader2,
   Compass,
   Sparkles,
-  ArrowRight,
+  Pin,
 } from "lucide-react";
 import { fetchWorkspaces, createWorkspace, WorkspaceItem } from "@/lib/workspaceApi";
 import { buildWorkspaceUrl } from "@/lib/urls";
 import { LogoBadge } from "@/components/ui/Logo";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Surface } from "@/components/ui/surface";
 import { InlineFeedback } from "@/components/ui/feedback";
 import { UserMenu } from "@/components/layout/UserMenu";
@@ -29,6 +28,7 @@ export function WorkspaceDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [isRoadmapOpen, setIsRoadmapOpen] = useState(false);
+  const [workspaceView, setWorkspaceView] = useState<"mine" | "discover">("mine");
 
   const loadWorkspaces = useCallback(async () => {
     setLoading(true);
@@ -61,7 +61,7 @@ export function WorkspaceDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-background-secondary">
+      <div className="min-h-screen w-full flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
           <LogoBadge size="lg" />
           <div className="text-sm text-foreground-muted font-medium animate-pulse">
@@ -73,52 +73,69 @@ export function WorkspaceDashboard() {
   }
 
   return (
-    <div className="min-h-screen w-full bg-background-secondary text-foreground flex flex-col">
-      <header className="h-13 border-b border-border bg-surface/90 backdrop-blur-md px-6 flex items-center justify-between shrink-0">
+    <div className="min-h-screen w-full bg-background text-foreground flex flex-col">
+      <header className="h-13 border-b border-border bg-surface px-6 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2.5">
           <LogoBadge size="sm" />
           <span className="font-semibold text-foreground text-sm tracking-tight">
             GraphMind
           </span>
         </div>
-        <UserMenu />
+        <UserMenu className="w-auto" />
       </header>
 
       <main className="flex-1 overflow-auto">
-        <div className="max-w-5xl mx-auto px-6 py-12">
-          {/* Header row with Title & Primary Actions */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-            <div>
-              <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2.5">
-                <LayoutGrid className="w-6 h-6 text-foreground-muted" />
-                Learning Workspaces
-              </h1>
-              <p className="text-xs text-foreground-muted mt-1">
-                Visual knowledge graphs, learning roadmaps, and branching conversation trees
-              </p>
+        <div className="max-w-6xl mx-auto px-6 py-10 sm:px-8 lg:py-14">
+          <div className="mb-8 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={() => setWorkspaceView("mine")}
+                aria-pressed={workspaceView === "mine"}
+                variant="outline"
+                size="lg"
+                className={
+                  workspaceView === "mine"
+                    ? "h-11 border-border-strong bg-muted px-5 text-sm hover:bg-muted"
+                    : "h-11 border-transparent bg-transparent px-5 text-sm"
+                }
+              >
+                <LayoutGrid className="size-4" />
+                My workspaces
+              </Button>
+              <Button
+                onClick={() => setWorkspaceView("discover")}
+                aria-pressed={workspaceView === "discover"}
+                variant="outline"
+                size="lg"
+                className={
+                  workspaceView === "discover"
+                    ? "h-11 border-border-strong bg-muted px-5 text-sm hover:bg-muted"
+                    : "h-11 border-transparent bg-transparent px-5 text-sm"
+                }
+              >
+                <Compass className="size-4" />
+                Discover
+              </Button>
             </div>
-
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-2">
               <Button
                 onClick={() => setIsRoadmapOpen(true)}
-                variant="default"
-                size="default"
+                variant="outline"
+                size="lg"
+                className="h-11 bg-muted px-5 text-sm hover:bg-muted/80"
               >
-                <Compass className="w-4 h-4 mr-1.5" />
-                <span>Generate Roadmap</span>
+                <Sparkles className="size-4" />
+                Generate roadmap
               </Button>
               <Button
                 onClick={handleCreateWorkspace}
                 disabled={isCreating}
-                variant="outline"
-                size="default"
+                variant="default"
+                size="lg"
+                className="h-11 px-5 text-sm"
               >
-                {isCreating ? (
-                  <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
-                ) : (
-                  <Plus className="w-4 h-4 mr-1.5" />
-                )}
-                <span>New Workspace</span>
+                {isCreating ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
+                Create new
               </Button>
             </div>
           </div>
@@ -180,11 +197,11 @@ export function WorkspaceDashboard() {
               </div>
             </Surface>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {workspaces.map((ws) => (
                 <Surface
                   key={ws.id}
-                  variant="raised"
+                  variant="base"
                   radius="card"
                   role="button"
                   tabIndex={0}
@@ -195,36 +212,37 @@ export function WorkspaceDashboard() {
                       router.push(buildWorkspaceUrl(ws.id));
                     }
                   }}
-                  className="group flex flex-col text-left p-5 hover:border-border-strong hover:shadow-xs transition-all cursor-pointer relative select-none"
+                  className="group relative flex cursor-pointer select-none flex-col p-5 text-left transition-colors hover:border-border-strong hover:bg-surface-hover"
                   aria-label={`Open workspace ${ws.name}`}
                 >
-                  <div className="flex items-start justify-between w-full mb-2.5">
-                    <h3 className="font-semibold text-foreground group-hover:text-foreground transition-colors truncate pr-3 text-sm">
-                      {ws.name}
-                    </h3>
-                    <ArrowRight className="w-4 h-4 text-foreground-muted group-hover:text-foreground group-hover:translate-x-0.5 transition-all shrink-0 mt-0.5" />
+                  <div className="mb-2.5 flex w-full items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <h3 className="truncate pr-1 text-base font-semibold leading-6 text-foreground">
+                        {ws.name}
+                      </h3>
+                      <span className="shrink-0 font-mono text-xs text-foreground-subtle">
+                        {ws.nodeCount || 0} nodes
+                      </span>
+                    </div>
+                    <Pin className="mt-0.5 size-4 shrink-0 text-foreground-subtle" />
                   </div>
 
-                  <p className="text-xs text-foreground-muted line-clamp-2 mb-4 leading-relaxed flex-1">
+                  <p className="mb-4 line-clamp-2 flex-1 text-base leading-6 text-foreground-muted">
                     {ws.description || "Interactive knowledge graph & chat workspace"}
                   </p>
 
-                  <div className="mt-auto pt-3 flex items-center justify-between text-2xs text-foreground-muted border-t border-border-subtle w-full">
-                    <div className="flex items-center gap-1.5">
-                      <Badge variant="secondary" className="gap-1 font-mono text-2xs">
-                        <MessageSquare className="w-3 h-3" />
-                        <span>{ws.nodeCount || 0} nodes</span>
-                      </Badge>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <Clock className="w-3.5 h-3.5" />
-                      <span>
-                        {new Date(ws.updatedAt).toLocaleDateString(undefined, {
-                          month: "short",
-                          day: "numeric",
-                        })}
-                      </span>
-                    </div>
+                  <div className="mt-auto flex w-full items-center justify-between border-t border-border-subtle pt-3 text-sm text-foreground-muted">
+                    <span className="flex min-w-0 items-center gap-1.5 truncate">
+                      <MessageSquare className="size-4 shrink-0" />
+                      <span className="truncate">Knowledge workspace</span>
+                    </span>
+                    <span className="ml-3 flex shrink-0 items-center gap-1.5 text-xs">
+                      <Clock className="size-3.5" />
+                      {new Date(ws.updatedAt).toLocaleDateString(undefined, {
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </span>
                   </div>
                 </Surface>
               ))}

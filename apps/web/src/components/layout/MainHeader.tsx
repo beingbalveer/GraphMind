@@ -8,7 +8,6 @@ import {
   PanelRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { cn } from "@/lib/utils";
 
 export type ViewMode = "chat" | "canvas" | "library" | "settings";
@@ -87,15 +86,38 @@ export function MainHeader({
       {/* Right Zone: Mode Switcher (Chat ↔ Canvas) & Contextual Rail Control */}
       <div className="flex items-center gap-2 shrink-0">
         {onViewModeChange && (
-          <SegmentedTabs
-            value={viewMode}
-            onChange={(val) => onViewModeChange(val as ViewMode)}
-            size="sm"
-            items={[
-              { id: "chat", label: "Chat", icon: MessageSquare },
-              { id: "canvas", label: "Canvas", icon: LayoutGrid },
-            ]}
-          />
+          <div className="flex items-center gap-2" aria-label="View mode">
+            <Button
+              variant="outline"
+              size="sm"
+              aria-pressed={viewMode === "chat"}
+              onClick={() => onViewModeChange("chat")}
+              className={cn(
+                "h-8 px-3 text-xs",
+                viewMode === "chat"
+                  ? "border-border-strong bg-muted text-foreground hover:bg-muted"
+                  : "border-transparent bg-transparent text-foreground-muted"
+              )}
+            >
+              <MessageSquare className="size-3.5" />
+              Chat
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              aria-pressed={viewMode === "canvas"}
+              onClick={() => onViewModeChange("canvas")}
+              className={cn(
+                "h-8 px-3 text-xs",
+                viewMode === "canvas"
+                  ? "border-border-strong bg-muted text-foreground hover:bg-muted"
+                  : "border-transparent bg-transparent text-foreground-muted"
+              )}
+            >
+              <LayoutGrid className="size-3.5" />
+              Canvas
+            </Button>
+          </div>
         )}
 
         {onToggleRightSidebar && (

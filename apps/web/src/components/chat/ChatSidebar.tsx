@@ -231,7 +231,7 @@ export function ChatSidebar({
       <aside
         suppressHydrationWarning
         style={{ width: isOpen ? `${width}px` : `${COLLAPSED_WIDTH}px` }}
-        className={`fixed md:static inset-y-0 left-0 z-40 flex flex-col bg-background-secondary select-none relative shrink-0 overflow-hidden border-r border-border-subtle ${
+        className={`fixed md:static inset-y-0 left-0 z-40 flex flex-col bg-surface select-none relative shrink-0 overflow-hidden border-r border-border-subtle ${
           isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         } ${isResizing ? "transition-none" : "transition-[width,transform] duration-200 ease-in-out"}`}
       >
