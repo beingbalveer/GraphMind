@@ -28,27 +28,25 @@ describe("MainHeader Component & Contract (Scope 3, Task 3)", () => {
     }
   });
 
-  it("conforms to standard 52px header height (h-13) and semantic styling", () => {
+  it("conforms to the 47px workspace header height and semantic styling", () => {
     const { container } = render(
       <MainHeader workspaceName="Test Workspace" />
     );
 
     const header = container.querySelector("header");
     expect(header).toBeInTheDocument();
-    expect(header).toHaveClass("h-13");
+    expect(header).toHaveClass("h-[47px]");
     expect(header).toHaveClass("bg-surface");
     expect(header).toHaveClass("border-b");
   });
 
-  it("omits redundant workspace name from header and renders sidebar toggle when collapsed", async () => {
-    const user = userEvent.setup();
-    const handleToggle = vi.fn();
+  it("omits redundant workspace name and duplicate sidebar toggle from the header", () => {
 
     render(
       <MainHeader
         workspaceName="Quantum Computing"
         isSidebarOpen={false}
-        onToggleSidebar={handleToggle}
+        onToggleSidebar={vi.fn()}
       />
     );
 
@@ -56,11 +54,7 @@ describe("MainHeader Component & Contract (Scope 3, Task 3)", () => {
     expect(screen.queryByRole("button", { name: /current workspace: quantum computing/i })).not.toBeInTheDocument();
     expect(screen.queryByText("Quantum Computing")).not.toBeInTheDocument();
 
-    // Sidebar toggle is rendered and functional
-    const toggleBtn = screen.getByRole("button", { name: "Expand sidebar" });
-    expect(toggleBtn).toBeInTheDocument();
-    await user.click(toggleBtn);
-    expect(handleToggle).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("button", { name: "Expand sidebar" })).not.toBeInTheDocument();
   });
 
   it("supports mode switching between Chat and Canvas via separate buttons", async () => {

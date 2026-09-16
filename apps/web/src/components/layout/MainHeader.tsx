@@ -4,7 +4,6 @@ import React from "react";
 import {
   MessageSquare,
   LayoutGrid,
-  PanelLeft,
   PanelRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -45,8 +44,8 @@ export function MainHeader({
   workspaceName: _workspaceName,
   onOpenWorkspaceModal: _onOpenWorkspaceModal,
   breadcrumbs,
-  isSidebarOpen = true,
-  onToggleSidebar,
+  isSidebarOpen: _isSidebarOpen = true,
+  onToggleSidebar: _onToggleSidebar,
   isRightSidebarOpen = false,
   onToggleRightSidebar,
   className,
@@ -55,28 +54,11 @@ export function MainHeader({
     <header
       data-testid="main-header"
       className={cn(
-        "h-13 bg-surface text-foreground px-3 sm:px-4 flex items-center justify-between z-30 shrink-0 select-none border-b border-border",
+        "h-[47px] bg-surface text-foreground px-3 sm:px-4 flex items-center justify-between z-30 shrink-0 select-none border-b border-border",
         className
       )}
     >
-      {/* Left Zone: Sidebar toggle (when collapsed or on mobile) */}
-      <div className="flex items-center gap-2 shrink-0 min-w-0">
-        {onToggleSidebar && (
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={onToggleSidebar}
-            className={cn(
-              "text-foreground-muted hover:text-foreground hover:bg-surface-hover transition-colors shrink-0",
-              isSidebarOpen ? "md:hidden" : "flex"
-            )}
-            title={isSidebarOpen ? "Collapse sidebar (⌘B)" : "Expand sidebar (⌘B)"}
-            aria-label={isSidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
-          >
-            <PanelLeft className="w-4 h-4" />
-          </Button>
-        )}
-      </div>
+      <div className="min-w-0 flex-1" />
 
       {/* Center Zone: Branch / Context Breadcrumbs */}
       <div className="hidden sm:flex items-center justify-center flex-1 mx-2 sm:mx-4 min-w-0">

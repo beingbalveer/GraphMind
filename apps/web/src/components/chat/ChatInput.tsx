@@ -598,55 +598,6 @@ export function ChatInput({
                       </MenuItem>
                     )}
 
-                    <div className="my-1 border-t border-border-subtle" />
-
-                    <MenuItem
-                      icon={<MessageSquare className="w-4 h-4 stroke-[1.75]" />}
-                      active={selectedSkill === null}
-                      trailing={selectedSkill === null ? <span className="font-medium text-foreground">✓</span> : null}
-                      onClick={() => {
-                        setSelectedSkill(null);
-                        setIsAttachMenuOpen(false);
-                      }}
-                    >
-                      Standard Chat
-                    </MenuItem>
-
-                    <MenuItem
-                      icon={<Compass className="w-4 h-4 stroke-[1.75]" />}
-                      active={selectedSkill === "deep_research"}
-                      trailing={selectedSkill === "deep_research" ? <span className="font-medium text-foreground">✓</span> : null}
-                      onClick={() => {
-                        setSelectedSkill("deep_research");
-                        setIsAttachMenuOpen(false);
-                      }}
-                    >
-                      Deep Research
-                    </MenuItem>
-
-                    <MenuItem
-                      icon={<Layers className="w-4 h-4 stroke-[1.75]" />}
-                      active={selectedSkill === "code_architect"}
-                      trailing={selectedSkill === "code_architect" ? <span className="font-medium text-foreground">✓</span> : null}
-                      onClick={() => {
-                        setSelectedSkill("code_architect");
-                        setIsAttachMenuOpen(false);
-                      }}
-                    >
-                      Code Architect
-                    </MenuItem>
-
-                    <MenuItem
-                      icon={<GraduationCap className="w-4 h-4 stroke-[1.75]" />}
-                      active={selectedSkill === "quiz_master"}
-                      trailing={selectedSkill === "quiz_master" ? <span className="font-medium text-foreground">✓</span> : null}
-                      onClick={() => {
-                        setSelectedSkill("quiz_master");
-                        setIsAttachMenuOpen(false);
-                      }}
-                    >
-                      Quiz Master
-                    </MenuItem>
                   </MenuCard>
                 </div>
               )}

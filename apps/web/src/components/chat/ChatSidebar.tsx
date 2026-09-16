@@ -11,7 +11,6 @@ import {
   PanelLeft,
   FolderOpen,
   MessageSquare,
-  ChevronDown,
 } from "lucide-react";
 import { ChatItem } from "@/lib/workspaceApi";
 import { Button } from "@/components/ui/button";
@@ -34,7 +33,6 @@ interface ChatSidebarProps {
   onDeleteChat: (id: string) => void;
   onRenameChat: (id: string, newTitle: string) => Promise<void>;
   onTogglePinChat?: (id: string, pinned: boolean) => Promise<void>;
-  onOpenWorkspaceModal?: () => void;
   onOpenSettings?: () => void;
   onNewChat?: () => void;
   onOpenFileLibrary?: () => void;
@@ -57,7 +55,6 @@ export function ChatSidebar({
   onDeleteChat,
   onRenameChat,
   onTogglePinChat,
-  onOpenWorkspaceModal,
   onOpenSettings,
   onNewChat,
   onOpenFileLibrary,
@@ -235,7 +232,22 @@ export function ChatSidebar({
         } ${isResizing ? "transition-none" : "transition-[width,transform] duration-200 ease-in-out"}`}
       >
         {/* Sidebar Header: Toggle button + GraphMind Icon & Workspace Name */}
-        <div className="h-13 px-3 flex items-center shrink-0 w-full">
+        <div className="h-13 px-3 flex items-center justify-between shrink-0 w-full">
+          <div className={`flex items-center gap-1.5 min-w-0 transition-opacity duration-150 ${isOpen ? "opacity-100" : "hidden"}`}>
+            <Link
+              href="/"
+              className="flex items-center justify-center rounded-lg hover:opacity-85 transition-opacity shrink-0 cursor-pointer"
+              title="GraphMind Home"
+              aria-label="Go to GraphMind Home"
+            >
+              <LogoBadge size="sm" />
+            </Link>
+
+            <span className="text-sm font-normal text-foreground tracking-tight truncate max-w-[145px] px-1.5 py-1">
+              {workspaceName}
+            </span>
+          </div>
+
           <Button
             variant="ghost"
             size="icon-sm"
@@ -246,36 +258,6 @@ export function ChatSidebar({
           >
             <PanelLeft className="w-4 h-4" />
           </Button>
-
-          <div className={`flex items-center gap-1.5 min-w-0 pl-2 transition-opacity duration-150 ${isOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
-            <Link
-              href="/"
-              className="flex items-center justify-center rounded-lg hover:opacity-85 transition-opacity shrink-0 cursor-pointer"
-              title="GraphMind Home"
-              aria-label="Go to GraphMind Home"
-            >
-              <LogoBadge size="sm" />
-            </Link>
-
-            {onOpenWorkspaceModal ? (
-              <Button
-                variant="ghost"
-                onClick={onOpenWorkspaceModal}
-                className="h-auto flex items-center gap-1 px-1.5 py-1 rounded-lg hover:bg-surface-hover text-foreground transition-colors cursor-pointer group min-w-0 font-normal shadow-none"
-                title="Switch or manage workspaces"
-                aria-label="Switch or manage workspaces"
-              >
-                <span className="text-sm font-semibold text-foreground tracking-tight truncate max-w-[135px]">
-                  {workspaceName}
-                </span>
-                <ChevronDown className="w-3.5 h-3.5 text-foreground-muted group-hover:text-foreground transition-colors shrink-0" />
-              </Button>
-            ) : (
-              <span className="text-sm font-semibold text-foreground tracking-tight truncate max-w-[145px] px-1.5 py-1">
-                {workspaceName}
-              </span>
-            )}
-          </div>
         </div>
 
         {/* Actions: New chat & Library */}
@@ -340,7 +322,7 @@ export function ChatSidebar({
               </div>
             ) : (
               <div className="space-y-0.5 pt-4 first:pt-2.5">
-                <div className="px-2.5 pb-1 pt-1 text-2xs font-medium text-foreground-muted select-none">
+                <div className="px-2.5 pb-1 pt-1 text-sm font-normal text-foreground-subtle select-none">
                   Conversations
                 </div>
                 {sortedChats.map(renderChatItem)}

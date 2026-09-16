@@ -20,7 +20,6 @@ import { RightSidebar } from "./RightSidebar";
 import { MasteryPanel } from "./MasteryPanel";
 import { GraphCanvas } from "../canvas/GraphCanvas";
 import { CommandPalette } from "../canvas/CommandPalette";
-import { WorkspaceModal } from "../workspace/WorkspaceModal";
 import { SettingsPage } from "../settings/SettingsPage";
 import { FileLibraryView } from "../library/FileLibraryView";
 import { SidePeekBranchSheet, SidePeekEntry } from "./SidePeekBranchSheet";
@@ -109,7 +108,6 @@ export function ChatContainer({
 
 
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
-  const [isWorkspaceModalOpen, setIsWorkspaceModalOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState<boolean>(() => {
     const saved = safeGetItem("graphmind_right_sidebar_open_v1");
@@ -488,38 +486,6 @@ export function ChatContainer({
       }
     },
     [currentWorkspace, updateNodeMetadata]
-  );
-
-
-
-  // Switch active workspace from Workspace Modal
-  const handleSelectWorkspace = useCallback(
-    async (ws: WorkspaceItem) => {
-      setCurrentWorkspace(ws);
-      lastProcessedBranchRef.current = null;
-      lastProcessedNodeRef.current = null;
-      setSidePeekState({ stack: [], index: 0 });
-
-      const workspaceChats = await refreshChats(ws.id);
-      const targetChat = workspaceChats.length > 0 ? workspaceChats[0] : null;
-      setActiveChatId(targetChat?.id || null);
-
-      if (targetChat) {
-        const snapshot = await fetchGraphSnapshot(ws.id, targetChat.id);
-        if (snapshot) {
-          const loadedTree = snapshotToTree(snapshot);
-          loadTree(loadedTree);
-        }
-      } else {
-        clearMessages();
-      }
-
-      const url = targetChat
-        ? buildChatUrl(ws.id, targetChat.id)
-        : buildWorkspaceUrl(ws.id);
-      router.push(url);
-    },
-    [refreshChats, loadTree, clearMessages, router]
   );
 
   // Auto-scroll when user is at the bottom in chat mode
@@ -991,14 +957,12 @@ export function ChatContainer({
   const handleEscape = useCallback(() => {
     if (isSidePeekOpen) {
       handleCloseSidePeek();
-    } else if (isWorkspaceModalOpen) {
-      setIsWorkspaceModalOpen(false);
     } else if (isPaletteOpen) {
       setIsPaletteOpen(false);
     } else if (activeBranch) {
       clearBranchContext();
     }
-  }, [isSidePeekOpen, handleCloseSidePeek, isWorkspaceModalOpen, isPaletteOpen, activeBranch, clearBranchContext]);
+  }, [isSidePeekOpen, handleCloseSidePeek, isPaletteOpen, activeBranch, clearBranchContext]);
 
 
   useKeyboardShortcuts({
@@ -1053,7 +1017,6 @@ export function ChatContainer({
             onDeleteChat={handleDeleteChat}
             onRenameChat={handleRenameChat}
             onTogglePinChat={handleTogglePinChat}
-            onOpenWorkspaceModal={() => setIsWorkspaceModalOpen(true)}
             onOpenSettings={handleOpenSettings}
             onNewChat={handleNewChat}
             onOpenFileLibrary={() => {
@@ -1080,7 +1043,6 @@ export function ChatContainer({
             }}
             syncStatus={syncStatus}
             workspaceName={currentWorkspace?.name || "Main Workspace"}
-            onOpenWorkspaceModal={() => setIsWorkspaceModalOpen(true)}
             onOpenModelConfig={handleOpenSettings}
             onOpenFileLibrary={() => {
               if (currentWorkspace) {
@@ -1100,13 +1062,13 @@ export function ChatContainer({
             }}
             breadcrumbs={
               viewMode === "library" ? (
-                <div className="flex items-center gap-1.5 text-xs text-foreground font-medium select-none">
+                <div className="flex items-center gap-1.5 text-sm text-foreground font-medium select-none">
                   <span className="text-foreground-muted shrink-0">Workspace</span>
                   <span className="text-foreground-subtle shrink-0">/</span>
                   <span className="shrink-0">File Library</span>
                 </div>
               ) : viewMode === "settings" ? (
-                <div className="flex items-center gap-1.5 text-xs text-foreground font-medium select-none">
+                <div className="flex items-center gap-1.5 text-sm text-foreground font-medium select-none">
                   <span className="text-foreground-muted shrink-0">Workspace</span>
                   <span className="text-foreground-subtle shrink-0">/</span>
                   <span className="shrink-0">Settings</span>
@@ -1414,15 +1376,6 @@ export function ChatContainer({
           clearMessages();
           handleCloseSidePeek();
         }}
-      />
-
-      {/* Workspace Switcher & Export Modal */}
-      <WorkspaceModal
-        isOpen={isWorkspaceModalOpen}
-        onClose={() => setIsWorkspaceModalOpen(false)}
-        currentWorkspace={currentWorkspace}
-        onSelectWorkspace={handleSelectWorkspace}
-        activeTree={tree}
       />
 
       {/* Non-intrusive Floating Toast Notification */}

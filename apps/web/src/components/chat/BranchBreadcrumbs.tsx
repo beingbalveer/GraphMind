@@ -28,7 +28,7 @@ export function BranchBreadcrumbs({
   return (
     <nav
       aria-label="Branch lineage"
-      className="flex items-center gap-1.5 text-xs text-foreground font-medium select-none overflow-x-auto max-w-full"
+      className="flex items-center gap-1.5 text-sm text-foreground font-medium select-none overflow-x-auto max-w-full"
     >
       <span className="text-foreground-muted shrink-0">{rootLabel}</span>
       <span className="text-foreground-subtle shrink-0">/</span>
@@ -54,7 +54,7 @@ export function BranchBreadcrumbs({
                 variant="ghost"
                 size="sm"
                 onClick={() => onSelectStep(step)}
-                className="h-auto p-0 font-medium text-foreground-muted hover:text-foreground hover:bg-transparent shadow-none max-w-[180px] truncate cursor-pointer shrink-0"
+                className="h-auto max-w-[180px] cursor-pointer truncate p-0 text-sm font-medium text-foreground-muted hover:bg-transparent hover:text-foreground shadow-none shrink-0"
                 title={step.isRoot ? `Main chat: ${step.title}` : `Branch: ${step.title}`}
               >
                 <span className="truncate">{step.title}</span>

@@ -130,7 +130,7 @@ export function UserMenu({ collapsed = false, placement = "bottom", className, o
         <div
           ref={menuRef}
           style={{ position: "fixed", top: coords.top, left: coords.left }}
-          className={`z-50 w-60 rounded-xl border border-border bg-surface py-2 shadow-none animate-in fade-in zoom-in-95 ${
+          className={`z-50 w-52 rounded-xl border border-border bg-surface py-2 shadow-none animate-in fade-in zoom-in-95 ${
             placement === "top" && !collapsed ? "-translate-y-full" : ""
           }`}
         >

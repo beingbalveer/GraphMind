@@ -192,7 +192,7 @@ describe("ChatSidebar & UserMenu Contract (Scope 3, Task 2)", () => {
     // Single unified section header
     const conversationsHeader = screen.getByText("Conversations");
     expect(conversationsHeader).toBeInTheDocument();
-    expect(conversationsHeader).toHaveClass("text-2xs", "font-medium", "text-foreground-muted");
+    expect(conversationsHeader).toHaveClass("text-sm", "font-normal", "text-foreground-subtle");
 
     // Date-based split section headers are gone
     expect(screen.queryByText("Pinned")).not.toBeInTheDocument();
