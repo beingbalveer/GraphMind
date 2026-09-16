@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import { LogOut, User as UserIcon } from "lucide-react";
+import { LogOut, Settings, User as UserIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 
@@ -11,9 +11,10 @@ interface UserMenuProps {
   collapsed?: boolean;
   placement?: "top" | "bottom";
   className?: string;
+  onOpenSettings?: () => void;
 }
 
-export function UserMenu({ collapsed = false, placement = "bottom", className }: UserMenuProps) {
+export function UserMenu({ collapsed = false, placement = "bottom", className, onOpenSettings }: UserMenuProps) {
   const { user, logout } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -36,7 +37,7 @@ export function UserMenu({ collapsed = false, placement = "bottom", className }:
         });
       } else {
         setCoords({
-          top: Math.max(8, rect.top - 120),
+          top: Math.max(8, rect.top - 8),
           left: rect.left,
         });
       }
@@ -95,8 +96,6 @@ export function UserMenu({ collapsed = false, placement = "bottom", className }:
     );
   }
 
-  const initial = (user.fullName?.[0] || user.email[0] || "U").toUpperCase();
-
   return (
     <div className={`relative shrink-0 ${className ?? "w-full"}`} ref={triggerRef}>
       <Button
@@ -115,8 +114,8 @@ export function UserMenu({ collapsed = false, placement = "bottom", className }:
               className="w-6 h-6 rounded-full object-cover ring-1 ring-border"
             />
           ) : (
-            <div className="w-6 h-6 rounded-full border border-foreground bg-transparent text-foreground flex items-center justify-center text-xs font-normal">
-              {initial}
+            <div className="w-6 h-6 flex items-center justify-center text-foreground">
+              <UserIcon className="size-3.5" />
             </div>
           )}
         </div>
@@ -131,24 +130,37 @@ export function UserMenu({ collapsed = false, placement = "bottom", className }:
         <div
           ref={menuRef}
           style={{ position: "fixed", top: coords.top, left: coords.left }}
-          className="w-56 bg-surface rounded-2xl shadow-lg border border-border py-1.5 z-50 animate-in fade-in zoom-in-95"
+          className={`z-50 w-60 rounded-xl border border-border bg-surface py-2 shadow-none animate-in fade-in zoom-in-95 ${
+            placement === "top" && !collapsed ? "-translate-y-full" : ""
+          }`}
         >
-          <div className="px-3.5 py-2.5 border-b border-border-subtle">
-            <p className="text-xs font-semibold text-foreground truncate">
-              {user.fullName || "User"}
-            </p>
-            <p className="text-2xs text-foreground-muted truncate">{user.email}</p>
-            <span className="inline-block mt-1 px-1.5 py-0.5 text-2xs font-medium bg-muted text-foreground-muted rounded-full capitalize">
-              {user.provider} account
-            </span>
+          <div className="flex items-center gap-2.5 border-b border-border-subtle px-4 py-3">
+            <UserIcon className="size-4 shrink-0 text-foreground-muted" />
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-foreground">
+                {user.fullName || "User"}
+              </p>
+              <p className="truncate text-xs text-foreground-muted">{user.email}</p>
+            </div>
           </div>
+          <Button
+            variant="ghost"
+            onClick={() => {
+              setIsOpen(false);
+              onOpenSettings?.();
+            }}
+            className="h-10 w-full justify-start items-center gap-2 px-4 text-sm font-normal text-foreground hover:bg-surface-hover transition cursor-pointer shadow-none"
+          >
+            <Settings className="w-3.5 h-3.5" />
+            <span>Settings</span>
+          </Button>
           <Button
             variant="ghost"
             onClick={async () => {
               setIsOpen(false);
               await logout();
             }}
-            className="w-full justify-start items-center gap-2 px-3.5 py-2 text-xs text-destructive hover:bg-destructive-bg hover:text-destructive transition cursor-pointer font-medium shadow-none h-auto"
+            className="h-10 w-full justify-start items-center gap-2 px-4 text-sm font-normal text-destructive hover:bg-destructive-bg hover:text-destructive transition cursor-pointer shadow-none"
           >
             <LogOut className="w-3.5 h-3.5" />
             <span>Sign Out</span>

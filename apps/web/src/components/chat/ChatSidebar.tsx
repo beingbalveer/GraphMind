@@ -7,7 +7,6 @@ import {
   PinOff,
   Pencil,
   Trash2,
-  Settings,
   Plus,
   PanelLeft,
   FolderOpen,
@@ -130,7 +129,7 @@ export function ChatSidebar({
           }
         }}
         className={cn(
-          "group relative flex h-9 w-full items-center px-2.5 rounded-lg text-sm transition-colors cursor-pointer select-none shadow-none",
+          "group relative flex h-[34px] w-full items-center px-2.5 rounded-lg text-sm transition-colors cursor-pointer select-none shadow-none",
           isActive
             ? "bg-surface-hover text-foreground font-medium"
             : "text-foreground-muted font-normal hover:text-foreground hover:bg-surface-hover"
@@ -285,7 +284,7 @@ export function ChatSidebar({
             <Button
               variant="ghost"
               onClick={onNewChat}
-              className="h-9 w-full justify-start items-center gap-2 rounded-lg text-sm font-normal text-foreground hover:bg-surface-hover transition-colors cursor-pointer group shadow-none px-0"
+              className="h-[34px] w-full justify-start items-center gap-2 rounded-lg text-sm font-normal text-foreground hover:bg-surface-hover transition-colors cursor-pointer group shadow-none px-0"
               title="New Chat (⌘N)"
               aria-label="New Chat"
             >
@@ -307,7 +306,7 @@ export function ChatSidebar({
               onClick={onOpenFileLibrary}
               aria-current={isLibraryActive ? "page" : undefined}
               className={cn(
-                "h-9 w-full justify-start items-center gap-2 rounded-lg text-sm transition-colors cursor-pointer group shadow-none px-0",
+                "h-[34px] w-full justify-start items-center gap-2 rounded-lg text-sm transition-colors cursor-pointer group shadow-none px-0",
                 isLibraryActive
                   ? "bg-surface-hover text-foreground font-medium"
                   : "text-foreground-muted font-normal hover:text-foreground hover:bg-surface-hover"
@@ -370,24 +369,7 @@ export function ChatSidebar({
 
         {/* Sidebar Footer */}
         <div className="p-3 shrink-0 space-y-1 relative w-full">
-          <UserMenu collapsed={!isOpen} placement="top" />
-
-          {onOpenSettings && (
-            <Button
-              variant="ghost"
-              onClick={onOpenSettings}
-              className="h-9 w-full justify-start items-center gap-2 rounded-lg text-sm font-normal text-foreground-muted hover:text-foreground hover:bg-surface-hover transition-colors cursor-pointer group shadow-none px-0"
-              title="Settings (⌘,)"
-              aria-label="Settings"
-            >
-              <div className="size-8 rounded-lg flex items-center justify-center shrink-0">
-                <Settings className="w-4 h-4 text-foreground-muted group-hover:text-foreground transition-colors" />
-              </div>
-              <div className={`flex-1 min-w-0 text-left pr-2 transition-opacity duration-150 ${isOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
-                <span className="truncate">Settings</span>
-              </div>
-            </Button>
-          )}
+          <UserMenu collapsed={!isOpen} placement="top" onOpenSettings={onOpenSettings} />
         </div>
 
         {/* Right-Edge Drag Handle */}
