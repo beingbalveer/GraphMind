@@ -46,6 +46,7 @@ import { PdfViewerModal } from "./PdfViewerModal";
 import { TableViewerModal } from "./TableViewerModal";
 import { AgentToolCallsBanner } from "./AgentToolCallsBanner";
 import { QuizCard } from "./QuizCard";
+import { LearningActions, type LearningActionId } from "./LearningActions";
 import { ToolCallItem } from "@/hooks/useChatStream";
 import { resolveFileUrl } from "@/lib/workspaceApi";
 
@@ -78,6 +79,7 @@ interface ChatMessageProps {
   onExploreBranch?: (messageId: string, highlightedText: string) => void;
   onOpenSideBranch?: (childNodeId: string, excerpt: string) => void;
   onRateResponse?: (nodeId: string, rating: "up" | "down" | null) => void;
+  onLearningAction?: (nodeId: string, action: LearningActionId) => void;
   workspaceId?: string;
   flashcardGenerationConfig?: FlashcardGenerationConfig;
   canEdit?: boolean;
@@ -334,6 +336,7 @@ export function ChatMessage({
   onExploreBranch,
   onOpenSideBranch,
   onRateResponse,
+  onLearningAction,
   workspaceId,
   flashcardGenerationConfig,
   canEdit = true,
@@ -942,6 +945,14 @@ export function ChatMessage({
               <span className="ml-1 inline-block h-4 w-0.5 animate-pulse rounded-full bg-foreground align-middle" />
             )}
           </div>
+
+          {!isUser &&
+            Boolean(message.content?.trim()) &&
+            !message.isStreaming &&
+            isLastAssistantMessage &&
+            onLearningAction && (
+              <LearningActions onSelect={(action) => onLearningAction(message.id, action)} />
+            )}
 
           {/* Action Row */}
           <div className="pt-1 flex flex-wrap items-center justify-between gap-2">

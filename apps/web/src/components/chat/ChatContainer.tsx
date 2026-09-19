@@ -12,6 +12,11 @@ import {
 } from "@graphmind/shared";
 
 import { ChatMessage } from "./ChatMessage";
+import {
+  buildLearningActionPrompt,
+  getLearningActionDisplayPrompt,
+  type LearningActionId,
+} from "./LearningActions";
 import { ChatInput } from "./ChatInput";
 import { BranchBreadcrumbs, BreadcrumbStep } from "./BranchBreadcrumbs";
 
@@ -726,7 +731,10 @@ export function ChatContainer({
       prompt: string,
       parentNodeId: string,
       highlightedText = "",
-      options?: { mode?: "open" | "push" | "replace_current" | "none" }
+      options?: {
+        mode?: "open" | "push" | "replace_current" | "none";
+        displayPrompt?: string;
+      }
     ) => {
       if (!currentWorkspace) return;
 
@@ -769,7 +777,7 @@ export function ChatContainer({
               id: userNodeId,
               parentId: parentNodeId,
               role: "user",
-              content: prompt.trim(),
+              content: options?.displayPrompt || prompt.trim(),
               highlightedContext: highlightedText || null,
               provider,
               model,
@@ -807,6 +815,21 @@ export function ChatContainer({
       await handleSendBranchStream(branchPrompt, parentNodeId, highlightedText, {
         mode: "open",
       });
+    },
+    [handleSendBranchStream]
+  );
+
+  const handleLearningAction = useCallback(
+    async (parentNodeId: string, action: LearningActionId) => {
+      await handleSendBranchStream(
+        buildLearningActionPrompt(action),
+        parentNodeId,
+        `Learning mode: ${action.replace("_", " ")}`,
+        {
+          mode: "open",
+          displayPrompt: getLearningActionDisplayPrompt(action),
+        }
+      );
     },
     [handleSendBranchStream]
   );
@@ -1242,6 +1265,7 @@ export function ChatContainer({
                               onEditUserMessage={handleEditUserMessage}
                               onSwitchBranch={switchBranch}
                               onExploreBranch={handleExplainBranchFromMain}
+                              onLearningAction={handleLearningAction}
                               onOpenSideBranch={(leafId, excerpt) => handleOpenSidePeek(leafId, excerpt)}
                               onRateResponse={handleRateResponse}
                             />
