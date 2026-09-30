@@ -54,7 +54,7 @@ export function MainHeader({
     <header
       data-testid="main-header"
       className={cn(
-        "h-[47px] bg-surface text-foreground px-3 sm:px-4 flex items-center justify-between z-30 shrink-0 select-none border-b border-border",
+        "h-13 bg-surface text-foreground px-3 sm:px-4 flex items-center justify-between z-30 shrink-0 select-none border-b border-border",
         className
       )}
     >

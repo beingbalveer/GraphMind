@@ -28,14 +28,14 @@ describe("MainHeader Component & Contract (Scope 3, Task 3)", () => {
     }
   });
 
-  it("conforms to the 47px workspace header height and semantic styling", () => {
+  it("conforms to the 52px (h-13) workspace header height and semantic styling", () => {
     const { container } = render(
       <MainHeader workspaceName="Test Workspace" />
     );
 
     const header = container.querySelector("header");
     expect(header).toBeInTheDocument();
-    expect(header).toHaveClass("h-[47px]");
+    expect(header).toHaveClass("h-13");
     expect(header).toHaveClass("bg-surface");
     expect(header).toHaveClass("border-b");
   });

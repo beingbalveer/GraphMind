@@ -128,12 +128,12 @@ export const ThreadGraphNode = memo(function ThreadGraphNode({
           ? "bg-surface border-foreground ring-2 ring-foreground/15 shadow-md z-10"
           : isHeatmapMode && masteryInfo
           ? masteryInfo.level === "mastered"
-            ? "bg-surface border-success ring-1 ring-success/30 shadow-[0_0_16px_rgba(16,185,129,0.14)] text-foreground"
+            ? "bg-surface border-success ring-1 ring-success/30 shadow-mastery-success text-foreground"
             : masteryInfo.level === "quizzed"
             ? "bg-surface border-foreground ring-1 ring-foreground/30 shadow-xs text-foreground"
             : masteryInfo.level === "stale"
-            ? "bg-surface border-warning ring-1 ring-warning/30 shadow-[0_0_16px_rgba(245,158,11,0.14)] text-foreground"
-            : "bg-surface border-info ring-1 ring-info/20 shadow-[0_0_16px_rgba(14,165,233,0.14)] text-foreground"
+            ? "bg-surface border-warning ring-1 ring-warning/30 shadow-mastery-warning text-foreground"
+            : "bg-surface border-info ring-1 ring-info/20 shadow-mastery-info text-foreground"
           : isRoot
           ? "bg-surface-raised border-border-strong text-foreground hover:border-border"
           : "bg-surface border-border text-foreground hover:border-border-strong hover:shadow-xs"

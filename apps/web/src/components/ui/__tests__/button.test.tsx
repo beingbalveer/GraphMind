@@ -16,7 +16,7 @@ describe("Button", () => {
     const button = screen.getByRole("button", { name: "Save" });
 
     expect(button).toHaveAttribute("data-slot", "button");
-    expect(button).toHaveClass("h-8", "rounded-lg", "font-medium", "bg-primary", "hover:bg-primary/80");
+    expect(button).toHaveClass("h-8", "rounded-full", "font-normal", "bg-primary", "hover:bg-primary/80");
   });
 
   it("supports the compact icon size", () => {

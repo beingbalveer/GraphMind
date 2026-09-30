@@ -317,7 +317,7 @@ export function SettingsModal({
                         <span className="truncate">{item.label}</span>
                       </div>
                       {item.badge && (
-                        <span className="text-2xs font-medium text-amber-700 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded-md shrink-0">
+                        <span className="text-2xs font-medium text-warning bg-warning-bg border-warning px-1.5 py-0.5 rounded-md shrink-0">
                           {item.badge}
                         </span>
                       )}
@@ -406,7 +406,7 @@ export function SettingsModal({
                               {p.name}
                             </span>
                             {p.badge && (
-                              <span className="text-2xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.2 rounded">
+                              <span className="text-2xs font-semibold text-success bg-success-bg border-success px-1.5 py-0.2 rounded">
                                 {p.badge}
                               </span>
                             )}
@@ -665,7 +665,7 @@ export function SettingsModal({
                   label="Database Persistence"
                   description="Conversations and branch nodes are saved to PostgreSQL."
                 >
-                  <span className="text-2xs font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                  <span className="text-2xs font-semibold text-success bg-success-bg border-success px-2 py-0.5 rounded">
                     Connected
                   </span>
                 </SettingRow>

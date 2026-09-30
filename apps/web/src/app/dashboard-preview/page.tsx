@@ -141,10 +141,10 @@ export default function DashboardPreviewPage() {
   const [workspaceView, setWorkspaceView] = useState<"mine" | "discover">("mine");
 
   return (
-    <main className="min-h-screen text-foreground" style={{ backgroundColor: "#ffffff" }}>
+    <main className="min-h-screen text-foreground bg-background">
       <header className="flex h-13 items-center justify-between border-b border-border bg-surface px-6">
         <div className="flex items-center gap-2.5">
-          <div className="flex size-6 items-center justify-center border border-foreground text-foreground">
+          <div className="flex size-6 items-center justify-center border border-border text-foreground">
             <LayoutGrid className="size-3.5" />
           </div>
           <span className="text-base font-semibold tracking-tight">GraphMind</span>

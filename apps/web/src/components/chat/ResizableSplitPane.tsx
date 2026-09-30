@@ -72,7 +72,7 @@ export function ResizableSplitPane({
   return (
     <div
       ref={containerRef}
-      className={`w-full h-full flex min-w-0 bg-white relative overflow-hidden select-auto ${
+      className={`w-full h-full flex min-w-0 bg-background relative overflow-hidden select-auto ${
         isDragging ? "select-none cursor-col-resize" : ""
       }`}
     >
@@ -80,7 +80,7 @@ export function ResizableSplitPane({
       <div
         suppressHydrationWarning
         style={{ width: effectiveLeftWidth }}
-        className={`h-full flex flex-col min-w-0 overflow-hidden bg-white relative ${transitionStyle}`}
+        className={`h-full flex flex-col min-w-0 overflow-hidden bg-background relative ${transitionStyle}`}
       >
         {leftPane}
       </div>
@@ -100,7 +100,7 @@ export function ResizableSplitPane({
       <div
         suppressHydrationWarning
         style={{ width: effectiveRightWidth }}
-        className={`h-full flex flex-col overflow-hidden bg-zinc-50/50 relative border-l border-zinc-200/70 ${
+        className={`h-full flex flex-col overflow-hidden bg-surface/50 relative border-l border-border/70 ${
           isOpen && rightPane
             ? "opacity-100 pointer-events-auto"
             : "opacity-0 border-none pointer-events-none"

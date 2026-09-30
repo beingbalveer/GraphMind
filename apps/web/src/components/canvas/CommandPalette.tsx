@@ -164,7 +164,7 @@ export function CommandPalette({
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-start justify-center pt-20 sm:pt-28 px-4 animate-in fade-in duration-150 select-none font-sans"
+      className="fixed inset-0 z-50 bg-overlay backdrop-blur-sm flex items-start justify-center pt-20 sm:pt-28 px-4 animate-in fade-in duration-150 select-none font-sans"
     >
       <div
         onClick={(e) => e.stopPropagation()}

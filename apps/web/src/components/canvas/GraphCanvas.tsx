@@ -343,7 +343,7 @@ function FlowCanvas({
   };
 
   return (
-    <div className="w-full h-full bg-white relative animate-in fade-in duration-200">
+    <div className="w-full h-full bg-background relative animate-in fade-in duration-200">
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -366,7 +366,7 @@ function FlowCanvas({
           variant={BackgroundVariant.Dots}
           gap={18}
           size={1.2}
-          color="var(--canvas-edge, #d4d4d8)"
+          color="var(--canvas-edge)"
         />
         <Controls
           showInteractive={false}
@@ -378,8 +378,8 @@ function FlowCanvas({
             nodeColor={(node) => {
               const data = node.data as ThreadNodeData;
               return data?.thread?.isActive
-                ? "var(--canvas-edge-active, #18181b)"
-                : "var(--border, #e4e4e7)";
+                ? "var(--canvas-edge-active)"
+                : "var(--border)";
             }}
             className="bg-surface/95 border border-border shadow-xs rounded-xl overflow-hidden hidden sm:block"
           />

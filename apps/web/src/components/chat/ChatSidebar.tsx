@@ -219,7 +219,7 @@ export function ChatSidebar({
       {isOpen && (
         <div
           onClick={onToggle}
-          className="fixed inset-0 z-30 bg-black/20 backdrop-blur-2xs md:hidden"
+          className="fixed inset-0 z-30 bg-overlay backdrop-blur-sm md:hidden"
         />
       )}
 

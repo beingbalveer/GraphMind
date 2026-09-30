@@ -173,7 +173,7 @@ export function CodeViewerModal({
       </div>
 
       {/* Code Viewer Body */}
-      <div className="flex-1 bg-zinc-950 overflow-auto text-zinc-200 font-mono text-xs flex flex-col min-h-0">
+      <div className="flex-1 bg-code-bg overflow-auto text-code-foreground font-mono text-xs flex flex-col min-h-0">
         {isMarkdown && viewMode === "preview" ? (
           <div className="p-6 sm:p-8 bg-surface text-foreground font-sans flex-1 overflow-y-auto">
             <div className="max-w-3xl mx-auto prose prose-zinc prose-sm sm:prose-base dark:prose-invert">
@@ -195,9 +195,9 @@ export function CodeViewerModal({
                       );
                     }
                     return (
-                      <div className="my-4 rounded-xl overflow-hidden border border-zinc-800 bg-code-bg text-zinc-100 font-mono text-xs leading-relaxed shadow-xs">
-                        <div className="px-4 py-2 bg-code-header-bg border-b border-zinc-800/80 text-xs text-zinc-400 font-medium flex items-center justify-between select-none">
-                          <span className="lowercase font-mono text-zinc-400">
+                      <div className="my-4 rounded-xl overflow-hidden border border-border bg-code-bg text-code-foreground font-mono text-xs leading-relaxed shadow-xs">
+                        <div className="px-4 py-2 bg-code-header-bg border-b border-border/80 text-xs text-foreground-muted font-medium flex items-center justify-between select-none">
+                          <span className="lowercase font-mono text-foreground-muted">
                             {match[1]}
                           </span>
                         </div>
@@ -220,7 +220,7 @@ export function CodeViewerModal({
         ) : (
           <div className="flex flex-1 overflow-auto min-h-0">
             {/* Line numbers gutter */}
-            <div className="py-4 pl-4 pr-3 select-none text-right text-zinc-600 font-mono text-xs bg-zinc-900/60 border-r border-zinc-800/80 shrink-0 min-w-[3.5rem]">
+            <div className="py-4 pl-4 pr-3 select-none text-right text-foreground-muted font-mono text-xs bg-code-header-bg/60 border-r border-border/80 shrink-0 min-w-[3.5rem]">
               {lines.map((_, i) => (
                 <div key={i} className="leading-6">
                   {i + 1}
@@ -229,7 +229,7 @@ export function CodeViewerModal({
             </div>
 
             {/* Raw code content */}
-            <pre className="p-4 overflow-auto flex-1 font-mono text-xs leading-6 text-zinc-200 whitespace-pre tab-4 select-text">
+            <pre className="p-4 overflow-auto flex-1 font-mono text-xs leading-6 text-code-foreground whitespace-pre tab-4 select-text">
               <code>{content}</code>
             </pre>
           </div>
@@ -237,7 +237,7 @@ export function CodeViewerModal({
       </div>
 
       {/* Footer bar */}
-      <div className="px-5 py-2 border-t border-zinc-800 bg-zinc-900 text-xs text-zinc-400 flex items-center justify-between shrink-0 select-none">
+      <div className="px-5 py-2 border-t border-border bg-code-header-bg text-xs text-foreground-muted flex items-center justify-between shrink-0 select-none">
         <div className="flex items-center gap-2">
           <span>{lines.length} lines</span>
           <span>•</span>
@@ -245,13 +245,13 @@ export function CodeViewerModal({
           {inferredLang && (
             <>
               <span>•</span>
-              <span className="uppercase font-medium text-zinc-300">
+              <span className="uppercase font-medium text-foreground">
                 {inferredLang}
               </span>
             </>
           )}
         </div>
-        <div className="text-zinc-400 text-xs">UTF-8</div>
+        <div className="text-foreground-muted text-xs">UTF-8</div>
       </div>
     </Modal>
   );
