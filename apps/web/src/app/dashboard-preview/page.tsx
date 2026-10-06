@@ -189,8 +189,11 @@ export default function DashboardPreviewPage() {
               </Button>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="lg" className="h-11 px-5 bg-muted text-sm hover:bg-muted/80">
-                <Sparkles className="size-4" />
+              <Button
+                variant="outline"
+                className="h-8 min-w-16 w-auto px-2 py-0 gap-1 rounded-lg border-0 bg-transparent text-[#1a1a1a] dark:text-foreground text-sm font-medium leading-[18px] outline outline-1 outline-black/12 dark:outline-white/12 -outline-offset-1 hover:bg-black/[0.04] dark:hover:bg-white/[0.04] transition-all duration-150"
+              >
+                <Sparkles className="size-3.5" />
                 Generate roadmap
               </Button>
               <Button variant="default" size="lg" className="h-11 px-5 text-sm">
