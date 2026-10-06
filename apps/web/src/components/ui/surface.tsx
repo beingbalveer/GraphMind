@@ -14,6 +14,7 @@ const surfaceVariants = cva("border", {
       control: "rounded-lg",
       widget: "rounded-xl",
       card: "rounded-2xl",
+      composer: "rounded-composer",
     },
   },
   defaultVariants: { variant: "base", radius: "card" },

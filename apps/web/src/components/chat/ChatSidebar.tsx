@@ -14,6 +14,8 @@ import {
 } from "lucide-react";
 import { ChatItem } from "@/lib/workspaceApi";
 import { Button } from "@/components/ui/button";
+import { NavigationItem } from "@/components/ui/navigation-item";
+import { Input } from "@/components/ui/input";
 import { LogoBadge } from "@/components/ui/Logo";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
@@ -38,7 +40,7 @@ interface ChatSidebarProps {
   onOpenFileLibrary?: () => void;
 }
 
-const DEFAULT_WIDTH = 260;
+const DEFAULT_WIDTH = 300;
 const COLLAPSED_WIDTH = 56;
 const MIN_WIDTH = 200;
 const MAX_WIDTH = 480;
@@ -126,7 +128,7 @@ export function ChatSidebar({
           }
         }}
         className={cn(
-          "group relative flex h-[34px] w-full items-center px-2.5 rounded-lg text-sm transition-colors cursor-pointer select-none shadow-none",
+          "group relative flex h-9 w-full items-center px-2.5 rounded-navigation text-sm transition-colors cursor-pointer select-none shadow-none",
           isActive
             ? "bg-surface-hover text-foreground font-medium"
             : "text-foreground-muted font-normal hover:text-foreground hover:bg-surface-hover"
@@ -134,7 +136,7 @@ export function ChatSidebar({
       >
         {isRenaming ? (
           /* Inline rename input */
-          <input
+          <Input
             ref={renameInputRef}
             type="text"
             value={renameValue}
@@ -227,7 +229,7 @@ export function ChatSidebar({
       <aside
         suppressHydrationWarning
         style={{ width: isOpen ? `${width}px` : `${COLLAPSED_WIDTH}px` }}
-        className={`fixed md:static inset-y-0 left-0 z-40 flex flex-col bg-surface select-none relative shrink-0 overflow-hidden border-r border-border-subtle ${
+        className={`fixed md:relative inset-y-0 left-0 z-40 flex max-w-[calc(100vw-3rem)] md:max-w-none flex-col bg-navigation select-none shrink-0 overflow-hidden border-r border-border-subtle ${
           isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         } ${isResizing ? "transition-none" : "transition-[width,transform] duration-200 ease-in-out"}`}
       >
@@ -261,60 +263,36 @@ export function ChatSidebar({
         </div>
 
         {/* Actions: New chat & Library */}
-        <div className="px-3 pt-1 pb-1 shrink-0 space-y-1 w-full">
+        <div className="px-2 pt-1 pb-1 shrink-0 space-y-1 w-full">
           {onNewChat && (
-            <Button
-              variant="ghost"
+            <NavigationItem
               onClick={onNewChat}
-              className="h-[34px] w-full justify-start items-center gap-2 rounded-lg text-sm font-normal text-foreground hover:bg-surface-hover transition-colors cursor-pointer group shadow-none px-0"
+              icon={<Plus />}
+              collapsed={!isOpen}
+              trailing={<span className="opacity-0 group-hover/button:opacity-100">⌘N</span>}
               title="New Chat (⌘N)"
               aria-label="New Chat"
             >
-              <div className="size-8 rounded-lg flex items-center justify-center shrink-0">
-                <Plus className="w-4 h-4 text-foreground-muted group-hover:text-foreground transition-colors" />
-              </div>
-              <div className={`flex-1 flex items-center justify-between min-w-0 pr-2 transition-opacity duration-150 ${isOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
-                <span className="truncate text-left">New Chat</span>
-                <span className="text-2xs text-foreground-muted opacity-0 group-hover:opacity-100 transition-opacity font-mono">
-                  ⌘N
-                </span>
-              </div>
-            </Button>
+              New Chat
+            </NavigationItem>
           )}
 
           {onOpenFileLibrary && (
-            <Button
-              variant="ghost"
+            <NavigationItem
               onClick={onOpenFileLibrary}
-              aria-current={isLibraryActive ? "page" : undefined}
-              className={cn(
-                "h-[34px] w-full justify-start items-center gap-2 rounded-lg text-sm transition-colors cursor-pointer group shadow-none px-0",
-                isLibraryActive
-                  ? "bg-surface-hover text-foreground font-medium"
-                  : "text-foreground-muted font-normal hover:text-foreground hover:bg-surface-hover"
-              )}
+              icon={<FolderOpen />}
+              collapsed={!isOpen}
+              active={isLibraryActive}
               title="Workspace File Library"
               aria-label="Workspace File Library"
             >
-              <div className="size-8 rounded-lg flex items-center justify-center shrink-0">
-                <FolderOpen
-                  className={cn(
-                    "w-4 h-4 transition-colors",
-                    isLibraryActive
-                      ? "text-foreground"
-                      : "text-foreground-muted group-hover:text-foreground"
-                  )}
-                />
-              </div>
-              <div className={`flex-1 min-w-0 text-left pr-2 transition-opacity duration-150 ${isOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
-                <span className="truncate">File Library</span>
-              </div>
-            </Button>
+              File Library
+            </NavigationItem>
           )}
         </div>
 
         {/* ThreadList Content */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-1 space-y-0.5 relative">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden px-2 py-1 space-y-0.5 relative">
           <div className={`transition-opacity duration-150 ${isOpen ? "opacity-100" : "opacity-0 pointer-events-none hidden"}`}>
             {sortedChats.length === 0 ? (
               <div className="py-8 px-2.5 text-center text-xs text-foreground-muted">
@@ -322,7 +300,7 @@ export function ChatSidebar({
               </div>
             ) : (
               <div className="space-y-0.5 pt-4 first:pt-2.5">
-                <div className="px-2.5 pb-1 pt-1 text-sm font-normal text-foreground-subtle select-none">
+                <div className="px-2.5 pb-2 pt-1 text-label font-normal text-foreground-subtle select-none">
                   Conversations
                 </div>
                 {sortedChats.map(renderChatItem)}

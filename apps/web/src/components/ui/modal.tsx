@@ -110,7 +110,7 @@ export function ModalHeader({
           </div>
         )}
         <div className="min-w-0">
-        <DialogPrimitive.Title className="truncate text-sm font-semibold leading-tight text-foreground">
+        <DialogPrimitive.Title className="truncate text-sm font-medium leading-tight text-foreground">
             {title}
           </DialogPrimitive.Title>
           {description && (

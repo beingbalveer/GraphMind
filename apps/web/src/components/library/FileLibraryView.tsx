@@ -160,61 +160,30 @@ export function FileLibraryView({
         </div>
       )}
 
-      {/* Streamlined Top Toolbar */}
-      <div className="border-b border-border bg-surface px-4 sm:px-6 py-3 shrink-0">
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5 min-w-0">
-            {onBack && (
-              <IconButton
-                label="Back to chat"
-                onClick={onBack}
-                variant="ghost"
-                className="shrink-0"
-              >
-                <ArrowLeft className="size-4" />
-              </IconButton>
-            )}
-
-            <SegmentedTabs
-              value={selectedCategory}
-              onChange={(val) => setSelectedCategory(val)}
-              size="sm"
-              items={[
-                { id: "all", label: "All" },
-                { id: "image", label: "Images", icon: ImageIcon },
-                { id: "tabular", label: "Tabular", icon: FileSpreadsheet },
-                { id: "code", label: "Code", icon: Code },
-                { id: "document", label: "Docs", icon: FileText },
-              ]}
+      {/* Library heading and functional search/upload controls. */}
+      <div className="flex shrink-0 flex-col gap-3 bg-background px-4 py-2.5 sm:h-13 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <div className="flex min-w-0 items-center gap-2.5">
+          {onBack && (
+            <IconButton label="Back to chat" onClick={onBack} variant="ghost"><ArrowLeft className="size-4" /></IconButton>
+          )}
+          <h1 className="text-lg font-medium text-foreground">Library</h1>
+          <Badge variant="secondary" className="text-xs font-normal">{files.length} {files.length === 1 ? "file" : "files"}</Badge>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="relative min-w-0 flex-1 sm:w-60">
+            <Input
+              type="search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              aria-label="Search files"
+              placeholder="Search files"
+              startIcon={<Search className="size-4" />}
+              className="bg-transparent pr-9"
             />
-
-            <Badge variant="secondary" className="font-mono text-2xs shrink-0 hidden md:inline-flex">
-              {files.length} {files.length === 1 ? "file" : "files"}
-            </Badge>
+            {searchQuery && (
+              <IconButton label="Clear search" variant="ghost" onClick={() => setSearchQuery("")} className="absolute right-1 top-1/2 size-6 -translate-y-1/2"><X className="size-3" /></IconButton>
+            )}
           </div>
-
-          <div className="flex items-center gap-2.5">
-            <div className="w-full sm:w-64 relative">
-              <Input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Filter by name..."
-                startIcon={<Search className="size-3.5 text-foreground-muted" />}
-                inputSize="sm"
-              />
-              {searchQuery && (
-                <IconButton
-                  label="Clear search"
-                  variant="ghost"
-                  onClick={() => setSearchQuery("")}
-                  className="absolute right-1 top-1/2 -translate-y-1/2 size-6"
-                >
-                  <X className="size-3" />
-                </IconButton>
-              )}
-            </div>
-
             <input
               type="file"
               ref={fileInputRef}
@@ -226,7 +195,6 @@ export function FileLibraryView({
             <Button
               type="button"
               variant="default"
-              size="sm"
               onClick={() => fileInputRef.current?.click()}
               disabled={isUploading}
               className="cursor-pointer shrink-0"
@@ -239,7 +207,21 @@ export function FileLibraryView({
               <span>Upload</span>
             </Button>
           </div>
-        </div>
+      </div>
+      <div className="shrink-0 overflow-x-auto px-4 py-2 sm:px-6">
+        <SegmentedTabs
+          variant="pills"
+          ariaLabel="File categories"
+          value={selectedCategory}
+          onChange={setSelectedCategory}
+          items={[
+            { id: "all", label: "All" },
+            { id: "document", label: "Docs", icon: FileText },
+            { id: "tabular", label: "Tabular", icon: FileSpreadsheet },
+            { id: "code", label: "Code", icon: Code },
+            { id: "image", label: "Images", icon: ImageIcon },
+          ]}
+        />
       </div>
 
       {/* Main Content: File Grid */}
@@ -252,6 +234,7 @@ export function FileLibraryView({
         ) : filteredFiles.length === 0 ? (
           <div className="h-96 flex items-center justify-center">
             <EmptyState
+              className="border-0 bg-transparent"
               icon={<FolderOpen className="size-8" />}
               title={searchQuery ? "No matching files" : "No files in this category"}
               description={
@@ -262,8 +245,8 @@ export function FileLibraryView({
               action={
                 <Button
                   type="button"
-                  variant="outline"
-                  size="sm"
+                  variant="default"
+                  size="lg"
                   onClick={() => {
                     if (searchQuery) setSearchQuery("");
                     else fileInputRef.current?.click();

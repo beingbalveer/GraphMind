@@ -18,11 +18,19 @@ export const metadata: Metadata = {
 };
 
 import { Geist_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import { AuthProvider } from "@/context/AuthContext";
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+});
+
+const libreBaskerville = localFont({
+  src: "./fonts/libre-baskerville-regular.ttf",
+  variable: "--font-libre-baskerville",
+  weight: "400",
+  display: "swap",
 });
 
 export default function RootLayout({
@@ -33,7 +41,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={geistMono.variable}
+      className={`${geistMono.variable} ${libreBaskerville.variable}`}
     >
       <body className="antialiased font-sans">
         <AuthProvider>{children}</AuthProvider>

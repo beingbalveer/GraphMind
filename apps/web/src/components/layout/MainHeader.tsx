@@ -5,8 +5,11 @@ import {
   MessageSquare,
   LayoutGrid,
   PanelRight,
+  PanelLeft,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
+import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { cn } from "@/lib/utils";
 
 export type ViewMode = "chat" | "canvas" | "library" | "settings";
@@ -44,8 +47,8 @@ export function MainHeader({
   workspaceName: _workspaceName,
   onOpenWorkspaceModal: _onOpenWorkspaceModal,
   breadcrumbs,
-  isSidebarOpen: _isSidebarOpen = true,
-  onToggleSidebar: _onToggleSidebar,
+  isSidebarOpen = true,
+  onToggleSidebar,
   isRightSidebarOpen = false,
   onToggleRightSidebar,
   className,
@@ -58,7 +61,18 @@ export function MainHeader({
         className
       )}
     >
-      <div className="min-w-0 flex-1" />
+      <div className="min-w-0 flex-1">
+        {onToggleSidebar && (
+          <IconButton
+            label={isSidebarOpen ? "Close navigation" : "Open navigation"}
+            aria-expanded={isSidebarOpen}
+            onClick={onToggleSidebar}
+            className="md:hidden"
+          >
+            <PanelLeft className="size-4" />
+          </IconButton>
+        )}
+      </div>
 
       {/* Center Zone: Branch / Context Breadcrumbs */}
       <div className="hidden sm:flex items-center justify-center flex-1 mx-2 sm:mx-4 min-w-0">
@@ -68,38 +82,15 @@ export function MainHeader({
       {/* Right Zone: Mode Switcher (Chat ↔ Canvas) & Contextual Rail Control */}
       <div className="flex items-center gap-2 shrink-0">
         {onViewModeChange && (
-          <div className="flex items-center gap-2" aria-label="View mode">
-            <Button
-              variant="outline"
-              size="sm"
-              aria-pressed={viewMode === "chat"}
-              onClick={() => onViewModeChange("chat")}
-              className={cn(
-                "h-8 px-3 text-xs",
-                viewMode === "chat"
-                  ? "border-border-strong bg-muted text-foreground hover:bg-muted"
-                  : "border-transparent bg-transparent text-foreground-muted"
-              )}
-            >
-              <MessageSquare className="size-3.5" />
-              Chat
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              aria-pressed={viewMode === "canvas"}
-              onClick={() => onViewModeChange("canvas")}
-              className={cn(
-                "h-8 px-3 text-xs",
-                viewMode === "canvas"
-                  ? "border-border-strong bg-muted text-foreground hover:bg-muted"
-                  : "border-transparent bg-transparent text-foreground-muted"
-              )}
-            >
-              <LayoutGrid className="size-3.5" />
-              Canvas
-            </Button>
-          </div>
+          <SegmentedTabs
+            ariaLabel="View mode"
+            value={viewMode}
+            onChange={onViewModeChange}
+            items={[
+              { id: "chat", label: "Chat", icon: MessageSquare },
+              { id: "canvas", label: "Canvas", icon: LayoutGrid },
+            ]}
+          />
         )}
 
         {onToggleRightSidebar && (

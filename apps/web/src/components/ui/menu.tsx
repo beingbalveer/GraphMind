@@ -8,7 +8,7 @@ export function MenuCard({ className, children, ...props }: MenuCardProps) {
   return (
     <div
       className={cn(
-        "flex flex-col gap-0.5 rounded-2xl border border-border bg-surface p-1.5 text-foreground shadow-lg",
+        "flex flex-col gap-0.5 rounded-xl border border-border-subtle bg-surface-raised p-1 text-foreground shadow-lg",
         className
       )}
       {...props}
@@ -34,7 +34,7 @@ export const MenuItem = React.forwardRef<HTMLButtonElement, MenuItemProps>(
         variant={variant === "destructive" ? "destructive" : "ghost"}
         size="default"
         className={cn(
-          "group relative flex h-9 w-full cursor-pointer select-none justify-between rounded-lg px-3 py-2 text-left text-sm font-normal outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
+          "group relative flex h-9 w-full cursor-pointer select-none justify-between rounded-navigation px-2.5 py-2 text-left text-sm font-normal outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
           active && "bg-surface-hover font-medium text-foreground",
           className
         )}

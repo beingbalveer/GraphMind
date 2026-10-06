@@ -46,7 +46,7 @@ export function EmptyState({ icon, title, description, action, className }: Empt
   return (
     <Surface variant="base" radius="card" className={cn("flex flex-col items-center p-6 text-center", className)}>
       {icon ? <div className="mb-3 text-foreground-muted">{icon}</div> : null}
-      <h2 className="text-base font-semibold text-foreground">{title}</h2>
+      <h2 className="text-base font-medium text-foreground">{title}</h2>
       <p className="mt-1 max-w-md text-sm text-foreground-muted">{description}</p>
       {action ? <div className="mt-4">{action}</div> : null}
     </Surface>

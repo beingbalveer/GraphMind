@@ -100,7 +100,7 @@ describe("FileLibraryView Full-Page Component", () => {
       expect(screen.getByText("architecture-diagram.png")).toBeInTheDocument();
     });
 
-    const searchInput = screen.getByPlaceholderText("Filter by name...");
+    const searchInput = screen.getByRole("searchbox", { name: "Search files" });
     fireEvent.change(searchInput, { target: { value: "data-analysis" } });
 
     expect(screen.getByText("data-analysis.csv")).toBeInTheDocument();

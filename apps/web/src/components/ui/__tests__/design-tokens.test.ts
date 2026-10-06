@@ -12,7 +12,7 @@ describe("GraphMind Calm token contract", () => {
     "--border-strong:",
     "--focus-ring:",
     "--overlay:",
-    "--chat-content-max: 44rem",
+    "--chat-content-max: 50rem",
   ])("defines %s in the theme", (token) => expect(css).toContain(token));
 
   it("defines every semantic role for dark mode", () => {

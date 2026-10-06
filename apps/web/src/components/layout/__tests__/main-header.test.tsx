@@ -36,7 +36,7 @@ describe("MainHeader Component & Contract (Scope 3, Task 3)", () => {
     const header = container.querySelector("header");
     expect(header).toBeInTheDocument();
     expect(header).toHaveClass("h-13");
-    expect(header).toHaveClass("bg-surface");
+    expect(header).toHaveClass("bg-background");
     expect(header).toHaveClass("border-b");
   });
 
@@ -57,7 +57,7 @@ describe("MainHeader Component & Contract (Scope 3, Task 3)", () => {
     expect(screen.queryByRole("button", { name: "Expand sidebar" })).not.toBeInTheDocument();
   });
 
-  it("supports mode switching between Chat and Canvas via separate buttons", async () => {
+  it("supports mode switching between Chat and Canvas via shared tabs", async () => {
     const user = userEvent.setup();
     const handleViewModeChange = vi.fn();
 
@@ -68,11 +68,11 @@ describe("MainHeader Component & Contract (Scope 3, Task 3)", () => {
       />
     );
 
-    const chatTab = screen.getByRole("button", { name: /chat/i });
-    const canvasTab = screen.getByRole("button", { name: /canvas/i });
+    const chatTab = screen.getByRole("tab", { name: /chat/i });
+    const canvasTab = screen.getByRole("tab", { name: /canvas/i });
 
-    expect(chatTab).toHaveAttribute("aria-pressed", "true");
-    expect(canvasTab).toHaveAttribute("aria-pressed", "false");
+    expect(chatTab).toHaveAttribute("aria-selected", "true");
+    expect(canvasTab).toHaveAttribute("aria-selected", "false");
 
     await user.click(canvasTab);
     expect(handleViewModeChange).toHaveBeenCalledWith("canvas");
@@ -84,8 +84,8 @@ describe("MainHeader Component & Contract (Scope 3, Task 3)", () => {
       />
     );
 
-    expect(canvasTab).toHaveAttribute("aria-pressed", "true");
-    expect(chatTab).toHaveAttribute("aria-pressed", "false");
+    expect(canvasTab).toHaveAttribute("aria-selected", "true");
+    expect(chatTab).toHaveAttribute("aria-selected", "false");
   });
 
   it("renders contextual rail toggle and fires callback", async () => {
@@ -112,6 +112,15 @@ describe("MainHeader Component & Contract (Scope 3, Task 3)", () => {
 
     const collapseBtn = screen.getByRole("button", { name: /collapse right panel/i });
     expect(collapseBtn).toBeInTheDocument();
+  });
+
+  it("lets phone users reopen the navigation after closing the sidebar", async () => {
+    const onToggleSidebar = vi.fn();
+    render(<MainHeader isSidebarOpen={false} onToggleSidebar={onToggleSidebar} />);
+    const control = screen.getByRole("button", { name: "Open navigation" });
+    expect(control).toHaveAttribute("aria-expanded", "false");
+    await userEvent.click(control);
+    expect(onToggleSidebar).toHaveBeenCalledOnce();
   });
 
   it("renders centered breadcrumbs slot", () => {

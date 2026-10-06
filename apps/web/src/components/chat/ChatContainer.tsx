@@ -1199,10 +1199,10 @@ export function ChatContainer({
                     <div className="flex-1 flex flex-col items-center justify-center max-w-2xl mx-auto px-4 py-8 text-center space-y-8 my-auto">
                       <div className="space-y-3">
                         <LogoBadge size="lg" className="mx-auto" />
-                        <h2 className="text-xl font-semibold text-foreground tracking-tight">
+                        <h2 className="font-display text-xl font-normal text-foreground sm:text-display-sm">
                           {currentWorkspace?.name || "Where knowledge connects"}
                         </h2>
-                        <p className="text-xs sm:text-sm text-foreground-muted max-w-sm mx-auto leading-relaxed">
+                        <p className="text-sm text-foreground-subtle max-w-md mx-auto leading-relaxed">
                           Ask a technical question, explore system architecture, or create new branches in this workspace.
                         </p>
                       </div>
@@ -1218,12 +1218,12 @@ export function ChatContainer({
                               onClick={() => {
                                 handleSendMessage(item.prompt);
                               }}
-                              className="h-auto p-3 rounded-xl border border-border-subtle bg-surface hover:bg-surface-hover text-left transition-all group cursor-pointer shadow-xs flex flex-col items-start justify-start"
+                              className="h-auto p-3 rounded-xl border border-border-subtle bg-surface hover:bg-surface-hover text-left whitespace-normal transition-colors group cursor-pointer shadow-none flex flex-col items-start justify-start"
                             >
                               <div className="w-6 h-6 rounded-md bg-background-secondary shadow-xs flex items-center justify-center mb-2 text-foreground-muted group-hover:text-foreground transition-colors">
                                 <Icon className="w-3.5 h-3.5" />
                               </div>
-                              <h3 className="text-xs font-semibold text-foreground mb-1 leading-snug">
+                              <h3 className="text-sm font-medium text-foreground mb-1 leading-snug">
                                 {item.title}
                               </h3>
                               <p className="text-xs text-foreground-muted line-clamp-2 leading-relaxed font-normal">

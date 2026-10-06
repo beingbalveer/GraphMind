@@ -372,11 +372,11 @@ export function ChatInput({
       >
         <Surface
           variant="base"
-          radius="card"
-          className={`flex flex-col space-y-2 p-3 transition-colors motion-reduce:transition-none focus-within:border-border-strong ${
+          radius="composer"
+          className={`flex min-h-30 flex-col space-y-2 border-border-strong p-3 transition-colors motion-reduce:transition-none focus-within:border-border-strong ${
           isDragOver
             ? "bg-info/10 ring-2 ring-info/50"
-            : "hover:bg-surface-hover"
+            : "bg-surface"
         }`}
         >
         {/* Floating Slash Command Autocomplete Menu */}
@@ -536,11 +536,11 @@ export function ChatInput({
           disabled={isStreaming}
           variant="ghost"
           maxRowsClassName="max-h-48"
-          className="min-h-0 border-0 bg-transparent px-3 py-1.5 text-base font-normal leading-relaxed shadow-none focus-visible:ring-0 focus:outline-none placeholder:text-foreground-muted/60"
+          className="min-h-composer-editor border-0 bg-transparent px-1 py-0.5 text-base font-normal leading-relaxed shadow-none focus-visible:ring-0 focus:outline-none placeholder:text-placeholder"
         />
 
         {/* Action Bar */}
-        <div className="flex items-center justify-between pt-1 px-1">
+        <div className="flex items-center justify-between px-0.5 pt-1">
           {/* Left tools: Unified Plus (+) menu and Active Mode Chip */}
           <div className="flex items-center space-x-2">
             <div className="relative flex items-center" ref={attachMenuRef}>
@@ -563,7 +563,7 @@ export function ChatInput({
                 onClick={() => setIsAttachMenuOpen((prev) => !prev)}
                 disabled={isStreaming || isUploading}
                 variant={isAttachMenuOpen ? "secondary" : "ghost"}
-                className={`rounded-xl ${
+                className={`size-8 rounded-full border border-border-subtle ${
                   isAttachMenuOpen
                     ? "text-foreground"
                     : "text-foreground-muted"
@@ -639,7 +639,8 @@ export function ChatInput({
               <Button
                 type="button"
                 variant="destructive"
-                size="icon-sm"
+                size="icon"
+                className="rounded-full"
                 onClick={onStopStreaming}
                 aria-label="Stop generating"
               >
@@ -649,7 +650,8 @@ export function ChatInput({
               <Button
                 type="submit"
                 variant="default"
-                size="icon-sm"
+                size="icon"
+                className="rounded-full disabled:bg-surface-hover disabled:text-foreground-subtle disabled:opacity-100"
                 disabled={!canSubmit}
                 aria-label="Send message"
               >

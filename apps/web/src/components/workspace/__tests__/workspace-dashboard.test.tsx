@@ -67,7 +67,7 @@ describe("WorkspaceDashboard & Learning Dashboard Contract (Scope 4, Task 1)", (
     render(<WorkspaceDashboard />);
 
     await waitFor(() => {
-      expect(screen.getByText("Distributed Systems")).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "Distributed Systems" })).toBeInTheDocument();
     });
 
     expect(screen.getByText(/14 nodes/i)).toBeInTheDocument();
@@ -91,10 +91,10 @@ describe("WorkspaceDashboard & Learning Dashboard Contract (Scope 4, Task 1)", (
     render(<WorkspaceDashboard />);
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: /my workspaces/i })).toBeInTheDocument();
+      expect(screen.getByRole("tab", { name: /my workspaces/i })).toHaveAttribute("aria-selected", "true");
     });
 
-    expect(screen.getByRole("button", { name: /discover/i })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: /discover/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /generate roadmap/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /create new/i })).toBeInTheDocument();
     expect(screen.queryByText(/learning workspaces/i)).not.toBeInTheDocument();

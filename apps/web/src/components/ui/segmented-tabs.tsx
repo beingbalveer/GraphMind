@@ -17,6 +17,8 @@ interface SegmentedTabsProps<T extends string = string> {
   onChange: (value: T) => void;
   className?: string;
   size?: "sm" | "md";
+  variant?: "segmented" | "pills";
+  ariaLabel?: string;
 }
 
 export function SegmentedTabs<T extends string = string>({
@@ -25,10 +27,19 @@ export function SegmentedTabs<T extends string = string>({
   onChange,
   className,
   size = "md",
+  variant = "segmented",
+  ariaLabel,
 }: SegmentedTabsProps<T>) {
   return (
     <Tabs value={value} onValueChange={(next) => onChange(next as T)}>
-      <TabsList className={cn("inline-flex rounded-xl border border-border bg-muted p-1", className)}>
+      <TabsList
+        aria-label={ariaLabel}
+        className={cn(
+          "max-w-full gap-1 rounded-lg border border-border-subtle bg-muted p-0.5 group-data-[orientation=horizontal]/tabs:h-auto",
+          variant === "pills" && "border-0 bg-transparent p-0",
+          className
+        )}
+      >
       {items.map((item) => {
         const Icon = item.icon;
         return (
@@ -36,8 +47,9 @@ export function SegmentedTabs<T extends string = string>({
             key={item.id}
             value={item.id}
             className={cn(
-              "inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-lg font-medium text-foreground-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-1 hover:text-foreground motion-reduce:transition-none data-active:bg-surface data-active:font-semibold data-active:text-foreground data-active:shadow-xs",
-              size === "sm" ? "px-2.5 py-1 text-xs" : "px-3 py-1.5 text-xs"
+              "inline-flex shrink-0 flex-none cursor-pointer items-center justify-center gap-1.5 rounded-lg px-2.5 py-0 font-normal text-foreground-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring hover:bg-surface-hover hover:text-foreground motion-reduce:transition-none data-active:bg-surface data-active:font-medium data-active:text-foreground",
+              size === "sm" ? "h-6 text-xs" : "h-7 text-sm",
+              variant === "pills" && "h-8 text-sm text-foreground-subtle data-active:bg-surface-hover"
             )}
           >
             {Icon && <Icon className="h-3.5 w-3.5" />}

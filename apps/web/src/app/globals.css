@@ -5,7 +5,15 @@
 @source "../../../packages/**/*.{js,ts,jsx,tsx}";
 
 @theme {
-  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-sans: -apple-system, system-ui, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol";
+  --font-display: var(--font-libre-baskerville), Georgia, Cambria, ui-serif, "Times New Roman", Times, serif;
+  --spacing-composer-editor: 3.125rem;
+  --radius-composer: 1.375rem;
+  --radius-navigation: 0.625rem;
+  --text-display-sm: 2.25rem;
+  --text-display-sm--line-height: 1.5;
+  --text-label: 0.8125rem;
+  --text-label--line-height: 1.125rem;
   --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, monospace;
   --color-background: var(--background);
   --color-background-secondary: var(--background-secondary);
@@ -19,6 +27,9 @@
   --color-foreground-muted: var(--foreground-muted);
   --color-foreground-subtle: var(--foreground-subtle);
   --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-navigation: var(--navigation);
+  --color-placeholder: var(--placeholder);
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
@@ -69,34 +80,38 @@
   :root {
     /* Backgrounds & Surfaces */
     --background: #f8f8f7;
-    --background-secondary: #fafafc;
-    --background-tertiary: #f4f4f7;
+    --background-secondary: #f3f3f3;
+    --background-tertiary: #f0f0ef;
     --surface: #ffffff;
     --surface-raised: #ffffff;
-    --surface-hover: #f0f0f3;
+    --surface-hover: rgba(55, 53, 47, 0.08);
     --card: #ffffff;
-    --card-foreground: #0d0d0d;
+    --card-foreground: #1a1a1a;
 
     /* Text & Foreground */
-    --foreground: #0d0d0d;
-    --foreground-muted: #3f3f46;
-    --foreground-subtle: #71717a;
+    --foreground: #1a1a1a;
+    --foreground-muted: #4d4d4d;
+    --foreground-subtle: #737373;
 
     /* Brand / Primary (Monochrome) */
-    --primary: #18181b;
+    --primary: #1a1a19;
+    --primary-hover: #2a2a29;
+    --navigation: #f0f0f0;
+    --placeholder: #858481;
+    --navigation-width: 300px;
     --primary-foreground: #ffffff;
-    --secondary: #f4f4f6;
-    --secondary-foreground: #18181b;
-    --focus-ring: #18181b;
+    --secondary: #f0f0ef;
+    --secondary-foreground: #1a1a1a;
+    --focus-ring: #1a1a19;
     --overlay: rgba(9, 9, 11, 0.44);
-    --chat-content-max: 44rem;
+    --chat-content-max: 50rem;
 
     /* Muted & Borders */
-    --muted: #f4f4f6;
-    --muted-foreground: #3f3f46;
-    --border: #e4e4e7;
-    --border-subtle: #f0f0f3;
-    --border-strong: #d4d4d8;
+    --muted: #f0f0ef;
+    --muted-foreground: #4d4d4d;
+    --border: rgba(0, 0, 0, 0.12);
+    --border-subtle: rgba(0, 0, 0, 0.06);
+    --border-strong: rgba(0, 0, 0, 0.20);
 
     /* Canvas Elements */
     --canvas-edge: #d4d4d8;
@@ -137,11 +152,11 @@
     --shadow-mastery-info: 0 0 16px var(--info-glow);
 
     /* Border Radii */
-    --radius-sm: 0.375rem;
-    --radius-md: 0.5rem;
-    --radius-lg: 0.75rem;
-    --radius-xl: 1rem;
-    --radius-2xl: 1.25rem;
+    --radius-sm: 0.25rem;
+    --radius-md: 0.375rem;
+    --radius-lg: 0.5rem;
+    --radius-xl: 0.75rem;
+    --radius-2xl: 1rem;
     --radius-full: 9999px;
 
     /* Transitions */
@@ -179,6 +194,9 @@
 
     /* Brand / Primary (Monochrome) */
     --primary: #f4f4f5;
+    --primary-hover: #e4e4e7;
+    --navigation: #121215;
+    --placeholder: #a1a1aa;
     --primary-foreground: #09090b;
     --secondary: #27272a;
     --secondary-foreground: #f4f4f5;
