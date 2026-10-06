@@ -16,6 +16,7 @@ import { fetchWorkspaces, createWorkspace, WorkspaceItem } from "@/lib/workspace
 import { buildWorkspaceUrl } from "@/lib/urls";
 import { LogoBadge } from "@/components/ui/Logo";
 import { Button } from "@/components/ui/button";
+import { ActionButton } from "@/components/ui/action-button";
 import { Surface } from "@/components/ui/surface";
 import { InlineFeedback } from "@/components/ui/feedback";
 import { UserMenu } from "@/components/layout/UserMenu";
@@ -81,7 +82,10 @@ export function WorkspaceDashboard() {
             GraphMind
           </span>
         </div>
-        <UserMenu className="w-auto" />
+        <div className="flex items-center gap-2">
+          <ActionButton>Action</ActionButton>
+          <UserMenu className="w-auto" />
+        </div>
       </header>
 
       <main className="flex-1 overflow-auto">
