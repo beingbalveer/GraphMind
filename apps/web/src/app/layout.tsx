@@ -17,21 +17,11 @@ export const metadata: Metadata = {
   },
 };
 
-import { Geist, Geist_Mono, Public_Sans } from "next/font/google";
+import { Geist_Mono } from "next/font/google";
 import { AuthProvider } from "@/context/AuthContext";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-const publicSans = Public_Sans({
-  variable: "--font-public-sans",
   subsets: ["latin"],
 });
 
@@ -43,9 +33,9 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${publicSans.variable}`}
+      className={geistMono.variable}
     >
-      <body className="antialiased">
+      <body className="antialiased font-sans">
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
