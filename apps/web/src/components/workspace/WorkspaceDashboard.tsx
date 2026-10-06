@@ -83,7 +83,7 @@ export function WorkspaceDashboard() {
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <ActionButton>Action</ActionButton>
+          <ActionButton>Sign in</ActionButton>
           <UserMenu className="w-auto" />
         </div>
       </header>
