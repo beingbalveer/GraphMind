@@ -16,13 +16,13 @@ describe("Button", () => {
     const button = screen.getByRole("button", { name: "Save" });
 
     expect(button).toHaveAttribute("data-slot", "button");
-    expect(button).toHaveClass("h-7", "min-w-[56px]", "rounded-lg", "font-medium", "text-xs", "bg-primary", "hover:bg-primary/90");
+    expect(button).toHaveClass("h-8", "min-w-16", "rounded-[7px]", "font-semibold", "text-sm", "bg-[#1a1a19]");
   });
 
   it("supports the compact icon size", () => {
     render(<Button size="icon-sm" aria-label="Open menu">Menu</Button>);
 
-    expect(screen.getByRole("button", { name: "Open menu" })).toHaveClass("size-6.5");
+    expect(screen.getByRole("button", { name: "Open menu" })).toHaveClass("size-7");
   });
 
   it("uses the low-emphasis destructive treatment", () => {

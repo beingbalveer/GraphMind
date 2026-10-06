@@ -3,20 +3,16 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Plus,
-  LayoutGrid,
   Clock,
   MessageSquare,
   Loader2,
   Compass,
-  Sparkles,
   Pin,
 } from "lucide-react";
 import { fetchWorkspaces, createWorkspace, WorkspaceItem } from "@/lib/workspaceApi";
 import { buildWorkspaceUrl } from "@/lib/urls";
 import { LogoBadge } from "@/components/ui/Logo";
 import { Button } from "@/components/ui/button";
-import { ActionButton } from "@/components/ui/action-button";
 import { Surface } from "@/components/ui/surface";
 import { InlineFeedback } from "@/components/ui/feedback";
 import { UserMenu } from "@/components/layout/UserMenu";
@@ -75,7 +71,7 @@ export function WorkspaceDashboard() {
 
   return (
     <div className="min-h-screen w-full bg-background text-foreground flex flex-col">
-      <header className="h-13 border-b border-border bg-surface px-6 flex items-center justify-between shrink-0">
+      <header className="h-13 border-b border-border bg-background px-6 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2.5">
           <LogoBadge size="sm" />
           <span className="font-semibold text-foreground text-sm tracking-tight">
@@ -83,7 +79,19 @@ export function WorkspaceDashboard() {
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <ActionButton>Sign in</ActionButton>
+          <Button
+            onClick={() => setIsRoadmapOpen(true)}
+            variant="outline"
+          >
+            Generate roadmap
+          </Button>
+          <Button
+            onClick={handleCreateWorkspace}
+            disabled={isCreating}
+            variant="default"
+          >
+            {isCreating ? <Loader2 className="size-3.5 animate-spin" /> : "Create new"}
+          </Button>
           <UserMenu className="w-auto" />
         </div>
       </header>
@@ -96,49 +104,25 @@ export function WorkspaceDashboard() {
                 onClick={() => setWorkspaceView("mine")}
                 aria-pressed={workspaceView === "mine"}
                 variant="outline"
-                size="lg"
                 className={
                   workspaceView === "mine"
-                    ? "h-11 border-border-strong bg-muted px-5 text-sm hover:bg-muted"
-                    : "h-11 border-transparent bg-transparent px-5 text-sm"
+                    ? "border-border-strong bg-muted text-foreground hover:bg-muted"
+                    : "border-transparent bg-transparent text-foreground-muted"
                 }
               >
-                <LayoutGrid className="size-4" />
                 My workspaces
               </Button>
               <Button
                 onClick={() => setWorkspaceView("discover")}
                 aria-pressed={workspaceView === "discover"}
                 variant="outline"
-                size="lg"
                 className={
                   workspaceView === "discover"
-                    ? "h-11 border-border-strong bg-muted px-5 text-sm hover:bg-muted"
-                    : "h-11 border-transparent bg-transparent px-5 text-sm"
+                    ? "border-border-strong bg-muted text-foreground hover:bg-muted"
+                    : "border-transparent bg-transparent text-foreground-muted"
                 }
               >
-                <Compass className="size-4" />
                 Discover
-              </Button>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                onClick={() => setIsRoadmapOpen(true)}
-                variant="outline"
-                className="h-8 min-w-16 w-auto px-2 py-0 gap-1 rounded-lg border-0 bg-transparent text-[#1a1a1a] dark:text-foreground text-sm font-medium leading-[18px] outline outline-1 outline-black/12 dark:outline-white/12 -outline-offset-1 hover:bg-black/[0.04] dark:hover:bg-white/[0.04] transition-all duration-150"
-              >
-                <Sparkles className="size-3.5" />
-                Generate roadmap
-              </Button>
-              <Button
-                onClick={handleCreateWorkspace}
-                disabled={isCreating}
-                variant="default"
-                size="lg"
-                className="h-11 px-5 text-sm"
-              >
-                {isCreating ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
-                Create new
               </Button>
             </div>
           </div>
@@ -179,23 +163,18 @@ export function WorkspaceDashboard() {
                 <Button
                   onClick={() => setIsRoadmapOpen(true)}
                   variant="default"
-                  size="default"
                 >
-                  <Sparkles className="w-4 h-4 mr-1.5" />
-                  <span>Generate AI Roadmap</span>
+                  Generate AI Roadmap
                 </Button>
                 <Button
                   onClick={handleCreateWorkspace}
                   disabled={isCreating}
                   variant="outline"
-                  size="default"
                 >
                   {isCreating ? (
-                    <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
-                  ) : (
-                    <Plus className="w-4 h-4 mr-1.5" />
-                  )}
-                  <span>Blank Workspace</span>
+                    <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                  ) : null}
+                  Blank Workspace
                 </Button>
               </div>
             </Surface>

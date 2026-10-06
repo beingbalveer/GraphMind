@@ -5,30 +5,31 @@ import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "group/button focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-xs font-medium leading-none whitespace-nowrap transition-all duration-150 ease-[cubic-bezier(0.4,0,0.2,1)] outline-none select-none focus-visible:ring-1 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:ring-1 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
+  "group/button box-border inline-flex shrink-0 items-center justify-center rounded-[7px] text-sm font-semibold leading-[18px] subpixel-antialiased tracking-[-0.01em] whitespace-nowrap select-none transition-all duration-150 ease-[cubic-bezier(0.4,0,0.2,1)] outline-none focus-visible:ring-2 focus-visible:ring-ring active:translate-y-px disabled:pointer-events-none disabled:opacity-40 disabled:cursor-not-allowed [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90",
+        default:
+          "border-0 bg-[#1a1a19] text-white hover:bg-[#2a2a29] dark:bg-[#f4f4f5] dark:text-[#09090b] dark:hover:bg-[#e4e4e7]",
         outline:
-          "bg-muted/70 text-foreground hover:bg-muted aria-expanded:bg-muted aria-expanded:text-foreground dark:bg-muted/50 dark:hover:bg-muted border-transparent",
+          "border border-black/15 bg-transparent text-[#1a1a1a] hover:bg-black/[0.04] dark:border-white/15 dark:text-foreground dark:hover:bg-white/[0.04]",
         secondary:
-          "bg-secondary text-secondary-foreground aria-expanded:bg-secondary aria-expanded:text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)]",
+          "border-0 bg-[#f0f0ef] text-[#1a1a1a] hover:bg-[#e4e4e3] dark:bg-[#27272a] dark:text-foreground dark:hover:bg-[#323236]",
         ghost:
-          "hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:hover:bg-muted/50",
+          "border-0 bg-transparent text-[#1a1a1a] hover:bg-black/[0.05] dark:text-foreground dark:hover:bg-white/[0.05]",
         destructive:
-          "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
-        link: "text-primary underline-offset-4 hover:underline",
+          "border border-destructive/20 bg-destructive/10 text-destructive hover:bg-destructive/20 dark:bg-destructive/20 dark:text-destructive-foreground dark:hover:bg-destructive/30",
+        link: "border-0 bg-transparent text-primary underline-offset-4 hover:underline p-0 h-auto min-w-0",
       },
       size: {
-        default: "h-7 min-w-[56px] gap-1 px-2.5 text-xs has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
-        xs: "h-5.5 gap-1 px-2 text-2xs in-data-[slot=button-group]:rounded-md has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
-        sm: "h-6.5 gap-1 px-2 text-xs in-data-[slot=button-group]:rounded-md has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
-        lg: "h-8 gap-1.5 px-3 text-sm has-data-[icon=inline-end]:pr-2.5 has-data-[icon=inline-start]:pl-2.5",
-        icon: "size-7",
-        "icon-xs": "size-5.5 in-data-[slot=button-group]:rounded-md [&_svg:not([class*='size-'])]:size-3",
-        "icon-sm": "size-6.5 in-data-[slot=button-group]:rounded-md",
-        "icon-lg": "size-8",
+        default: "h-8 min-w-16 gap-1 px-2.5 text-sm",
+        xs: "h-6 gap-1 px-2 text-2xs rounded-md [&_svg:not([class*='size-'])]:size-3",
+        sm: "h-7 gap-1 px-2 text-xs rounded-md [&_svg:not([class*='size-'])]:size-3",
+        lg: "h-9 gap-1.5 px-3 text-sm",
+        icon: "size-8 min-w-0 p-0",
+        "icon-xs": "size-6 min-w-0 p-0 rounded-md [&_svg:not([class*='size-'])]:size-3",
+        "icon-sm": "size-7 min-w-0 p-0 rounded-md",
+        "icon-lg": "size-9 min-w-0 p-0",
       },
     },
     defaultVariants: {
@@ -55,6 +56,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(function Button(
   children,
   "aria-busy": ariaBusy,
   "aria-label": ariaLabel,
+  style,
   ...props
 }: ButtonProps, ref) {
   return (
@@ -66,6 +68,11 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(function Button(
       className={cn(buttonVariants({ variant, size, className }))}
       data-slot="button"
       disabled={loading || disabled}
+      style={{
+        fontFamily:
+          '-apple-system, "system-ui", "Segoe UI Variable Display", "Segoe UI", Helvetica, Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol"',
+        ...style,
+      }}
     >
       {loading && <Loader2 aria-hidden="true" className="size-3 animate-spin motion-reduce:animate-none" />}
       {children}
