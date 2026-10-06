@@ -68,7 +68,7 @@
 @layer base {
   :root {
     /* Backgrounds & Surfaces */
-    --background: #ffffff;
+    --background: #f8f8f7;
     --background-secondary: #fafafc;
     --background-tertiary: #f4f4f7;
     --surface: #ffffff;
