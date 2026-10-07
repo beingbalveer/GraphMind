@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Roadmap setup design · Option A approved</title><style>body{margin:0;background:#f8f8f7;padding:28px;max-width:1250px;margin:auto}.rm-demo .cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.rm-demo .card.selected{border:2px solid #1a1a19}@media(max-width:900px){body{padding:18px}.rm-demo .cards{grid-template-columns:1fr}}</style></head><body>
+<style>
+.rm-demo{--paper:#f8f8f7;--ink:#1a1a1a;--muted:#737373;--line:rgba(0,0,0,.12);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:var(--ink)}
+.rm-demo *{box-sizing:border-box}.rm-demo .cards{align-items:start;gap:24px}.rm-demo .card{overflow:hidden;border-radius:16px;background:white}.rm-demo .card-image{padding:24px 18px;background:#efefed;min-height:740px;aspect-ratio:auto;height:auto;display:flex;align-items:flex-start;justify-content:center}.rm-demo .dialog{background:var(--paper);border:1px solid var(--line);border-radius:16px;box-shadow:0 12px 36px #0000000e;width:100%;max-width:480px}.rm-demo .head{padding:22px 24px 18px;border-bottom:1px solid #0000000a;display:flex;justify-content:space-between;gap:12px}.rm-demo .head h3{font-size:20px;line-height:1.3;letter-spacing:-.4px;font-weight:500;margin:0 0 6px}.rm-demo .hint{color:var(--muted);font-size:13px;line-height:1.5;margin:0}.rm-demo .close{color:var(--muted);font-size:22px;line-height:1}.rm-demo .fields{padding:22px 24px}.rm-demo .field{margin-bottom:20px}.rm-demo label{font-size:13px;font-weight:500;display:block;margin-bottom:8px}.rm-demo .optional{color:var(--muted);font-weight:400}.rm-demo input,.rm-demo textarea,.rm-demo select{display:block;font:inherit;font-size:14px;width:100%;border:1px solid var(--line);border-radius:8px;background:white;color:var(--ink);padding:10px 12px;outline-offset:3px}.rm-demo textarea{resize:vertical;line-height:1.55;min-height:114px}.rm-demo .row{display:grid;grid-template-columns:1fr 1fr;gap:14px}.rm-demo .row .field{margin-bottom:18px}.rm-demo .mini{font-size:12px;color:var(--muted);line-height:1.5;margin:7px 0 0}.rm-demo details{border-top:1px solid #0000000a;padding-top:16px}.rm-demo summary{font-size:13px;font-weight:500;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center}.rm-demo summary::-webkit-details-marker{display:none}.rm-demo .expanded{padding-top:20px}.rm-demo .file{border:1px dashed #00000025;border-radius:8px;padding:12px;font-size:13px;color:#4d4d4d;background:#fff}.rm-demo .footer{border-top:1px solid #0000000a;padding:16px 24px;display:flex;justify-content:space-between;align-items:center;gap:16px}.rm-demo .footer button{border:0;border-radius:8px;background:#1a1a19;color:white;padding:10px 16px;font:inherit;font-size:14px;font-weight:500;white-space:nowrap;cursor:pointer}.rm-demo .card-body{padding:20px 22px}.rm-demo .card-body h3{font-size:17px;color:var(--ink);margin:0 0 8px}.rm-demo .card-body p{font-size:14px;line-height:1.6;color:#4d4d4d;margin:0 0 14px}.rm-demo .choose{font:inherit;font-size:13px;border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:9px 13px;cursor:pointer;color:var(--ink)}.rm-demo .tag{font-size:11px;background:#e9e9e6;border-radius:5px;padding:4px 7px;margin-left:7px;vertical-align:middle;font-weight:500}.rm-demo .note{margin:20px 0;font-size:13px;line-height:1.7;color:#737373}.rm-demo .feedback{font-size:12px;color:#4d4d4d;line-height:1.5;padding:0 24px 14px;display:none}
+@media(max-width:900px){.rm-demo .cards{grid-template-columns:1fr}.rm-demo .card-image{min-height:0;padding:22px}.rm-demo .fields,.rm-demo .head{padding-left:18px;padding-right:18px}}
+</style>
+<div class="rm-demo">
+<h2>How should the setup popup feel?</h2>
+<p class="subtitle">Both options collect the same information. Compare clarity and how much you see at once.</p>
+<div class="cards">
+<article class="card" data-choice="focused-popup">
+ <div class="card-image">
+  <section class="dialog" aria-label="Focused setup popup mockup">
+   <div class="head"><div><h3>Create a learning roadmap</h3><p class="hint">Tell us where you want to go. We’ll research the path.</p></div><span class="close" aria-hidden="true">×</span></div>
+   <div class="fields">
+    <div class="field"><label for="a-title">Title <span class="optional">· optional</span></label><input id="a-title" value="My AI engineering journey" /></div>
+    <div class="field"><label for="a-prompt">What do you want to learn?</label><textarea id="a-prompt">I’m a backend developer. I want to build and deploy reliable AI applications, focusing on RAG, agents, and evaluation. Include practical projects.</textarea></div>
+    <div class="field"><label for="a-level">Current level</label><select id="a-level"><option>Beginner in this subject</option><option>Intermediate</option><option>Advanced</option></select></div>
+    <div class="row"><div class="field"><label for="a-duration">Target duration</label><select id="a-duration"><option>3 months</option><option>1 month</option><option>6 months</option><option>Custom duration</option><option>Unsure</option></select></div><div class="field"><label for="a-hours">Hours per week</label><input id="a-hours" type="number" min="1" value="6" /></div></div>
+    <p class="mini" style="margin:0 0 20px">Time budget is optional. Choose Unsure if you’re still exploring.</p>
+    <details><summary>Background &amp; references <span class="optional">Optional ＋</span></summary><div class="expanded"><div class="field"><label for="a-background">What do you already know?</label><textarea id="a-background" style="min-height:76px">Python, FastAPI, PostgreSQL, and Docker. New to machine learning.</textarea></div><div class="field"><label for="a-link">Reference link</label><input id="a-link" placeholder="Paste a roadmap, syllabus, or article URL" /></div><div class="field" style="margin:0"><label for="a-file">Reference files</label><input id="a-file" type="file" multiple /><p class="mini">A roadmap PDF, syllabus, or job description.</p></div></div></details>
+   </div>
+   <div class="footer"><p class="hint">Research continues in the background.</p><button type="button" onclick="this.closest('.dialog').querySelector('.feedback').style.display='block'">Generate roadmap ↗</button></div><p class="feedback">Design preview only. In GraphMind, this would start the background research job.</p>
+  </section>
+ </div>
+ <div class="card-body"><h3>A · Focused popup <span class="tag">Recommended</span></h3><p>Goal and simple questions stay visible. Background, links, and attachments expand when needed. One screen, one Generate action.</p><button class="choose" onclick="toggleSelect(this.closest('.card'))">Choose focused popup</button></div>
+</article>
+<article class="card" data-choice="all-visible-popup">
+ <div class="card-image">
+  <section class="dialog" aria-label="All fields visible popup mockup">
+   <div class="head"><div><h3>Create a learning roadmap</h3><p class="hint">Your goal, background, and sources in one place.</p></div><span class="close" aria-hidden="true">×</span></div>
+   <div class="fields">
+    <div class="field"><label for="b-title">Title <span class="optional">· optional</span></label><input id="b-title" value="My AI engineering journey" /></div>
+    <div class="field"><label for="b-prompt">What do you want to learn?</label><textarea id="b-prompt" style="min-height:96px">I’m a backend developer. I want to build and deploy reliable AI applications, focusing on RAG, agents, and evaluation. Include practical projects.</textarea></div>
+    <div class="field"><label for="b-level">Current level</label><select id="b-level"><option>Beginner in this subject</option><option>Intermediate</option><option>Advanced</option></select></div>
+    <div class="row"><div class="field"><label for="b-duration">Target duration</label><select id="b-duration"><option>3 months</option><option>1 month</option><option>6 months</option><option>Unsure</option></select></div><div class="field"><label for="b-hours">Hours per week</label><input id="b-hours" type="number" min="1" value="6" /></div></div>
+    <div class="field"><label for="b-background">What do you already know? <span class="optional">· optional</span></label><textarea id="b-background" style="min-height:70px">Python, FastAPI, PostgreSQL, and Docker. New to machine learning.</textarea></div>
+    <div class="field"><label for="b-link">Reference link <span class="optional">· optional</span></label><input id="b-link" placeholder="Paste a roadmap, syllabus, or article URL" /></div>
+    <div class="field" style="margin-bottom:0"><label for="b-file">Reference files <span class="optional">· optional</span></label><input id="b-file" type="file" multiple /></div>
+   </div>
+   <div class="footer"><p class="hint">Research continues in the background.</p><button type="button" onclick="this.closest('.dialog').querySelector('.feedback').style.display='block'">Generate roadmap ↗</button></div><p class="feedback">Design preview only. In GraphMind, this would start the background research job.</p>
+  </section>
+ </div>
+ <div class="card-body"><h3>B · Everything visible</h3><p>Every field is visible immediately. References are easy to discover, but the popup is longer and may require scrolling on smaller screens.</p><button class="choose" onclick="toggleSelect(this.closest('.card'))">Choose all fields visible</button></div>
+</article>
+</div>
+<p class="note">Brainstorming mockups, not production UI. Sample inputs illustrate layout; the final feature will use GraphMind’s shared components. “Generate” does not run an agent here, and attached files are not uploaded.</p>
+</div>
+<script>function toggleSelect(card){document.querySelectorAll(".card").forEach(c=>c.classList.toggle("selected",c===card));}</script>
+</body></html>
