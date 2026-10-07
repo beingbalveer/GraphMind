@@ -2,6 +2,7 @@ import { ConversationTree } from "@graphmind/shared";
 import { Node, Edge, MarkerType } from "@xyflow/react";
 import { extractConversationThreads, ConversationThread } from "./threadUtils";
 import { ThreadNodeData, ThreadMasteryInfo, ZoomMode } from "@/components/canvas/ThreadGraphNode";
+import { filterConversationByTime } from "./canvas/conversationProjection";
 
 export interface TreeToGraphOptions {
   activeNodeId?: string;
@@ -39,18 +40,7 @@ export function treeToGraph(
   // Filter tree nodes if cutoffTimestamp is specified for timeline replay
   let effectiveTree = tree;
   if (cutoffTimestamp && tree && tree.nodes) {
-    const cutoffTime = new Date(cutoffTimestamp).getTime();
-    const filteredNodes: typeof tree.nodes = {};
-    for (const [id, node] of Object.entries(tree.nodes)) {
-      const nodeTime = new Date(node.createdAt).getTime();
-      if (id === tree.rootNodeId || nodeTime <= cutoffTime) {
-        filteredNodes[id] = node;
-      }
-    }
-    effectiveTree = {
-      ...tree,
-      nodes: filteredNodes,
-    };
+    effectiveTree = filterConversationByTime(tree, cutoffTimestamp);
   }
 
   const { threads, edges: rawEdges } = extractConversationThreads(

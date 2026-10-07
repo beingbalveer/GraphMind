@@ -123,9 +123,9 @@ export function extractConversationThreads(
     startNodeId: string,
     parentThreadId?: string,
     sourceMessageId?: string
-  ): string {
+  ): string | undefined {
     const startNode = tree!.nodes[startNodeId];
-    if (!startNode) return startNodeId;
+    if (!startNode || visitedNodes.has(startNodeId)) return undefined;
 
     const threadId = startNodeId;
     const isRoot = startNodeId === tree!.rootNodeId;
@@ -136,12 +136,13 @@ export function extractConversationThreads(
     let leafNodeId = startNodeId;
 
     // Follow the linear chain downwards until we hit branches or end of chain
-    while (currentNode) {
+    while (currentNode && !visitedNodes.has(currentNode.id)) {
       visitedNodes.add(currentNode.id);
       threadMessages.push(currentNode);
       leafNodeId = currentNode.id;
 
-      const children = getNodeChildren(tree!, currentNode.id);
+      const children: TreeNode[] = getNodeChildren(tree!, currentNode.id)
+        .filter((child, index, all) => !visitedNodes.has(child.id) && all.findIndex(other => other.id === child.id) === index);
 
       if (children.length === 0) {
         break;
@@ -156,6 +157,7 @@ export function extractConversationThreads(
           if (child !== mainlineChild) {
             // Child Thread branch!
             const childThreadId = buildThread(child.id, threadId, branchingParentId);
+            if (!childThreadId) continue;
 
             const isEdgeActive = Boolean(
               activeNodeId &&

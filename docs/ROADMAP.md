@@ -28,8 +28,10 @@ Implementation uses `codex/roadmap-generator`, one verified task and commit at a
 
 - **Completed:** Backend test bootstrap now rejects live/implicit database settings;
   seven guard tests pass against a dedicated PostgreSQL test database.
-- **Active task:** Preserve conversation segments and actual branch origins.
-- **Next:** Approved shared canvas appearance, measured layout and versioned persistence.
+- **Completed:** Stable conversation segments retain actual nested branch origins,
+  with guarded cycle traversal and timeline ancestry.
+- **Active task:** Approved shared canvas cards and measured layout.
+- **Next:** Integrate the live renderer and versioned layout persistence.
 - **Following canvas delivery:** Typed curricula, durable researched generation,
   clean setup/progress, learning workspace, guided lessons, editing and refinement.
 
