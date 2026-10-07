@@ -48,6 +48,16 @@
   --color-overlay: var(--overlay);
   --color-canvas-edge: var(--canvas-edge);
   --color-canvas-edge-active: var(--canvas-edge-active);
+  --color-canvas-background: var(--canvas-background);
+  --color-canvas-milestone: var(--canvas-milestone);
+  --color-canvas-topic: var(--canvas-topic);
+  --color-canvas-group: var(--canvas-group);
+  --color-canvas-connector: var(--canvas-connector);
+  --color-roadmap-switch: var(--roadmap-switch);
+  --font-roadmap-display: Georgia, "Times New Roman", serif;
+  --text-roadmap-title: 2.125rem;
+  --text-canvas-title: 1.625rem;
+  --text-brief-title: 1.6875rem;
   --color-code-bg: var(--code-bg);
   --color-code-header-bg: var(--code-header-bg);
   --color-code-foreground: var(--code-foreground);
@@ -114,6 +124,12 @@
     --border-strong: rgba(0, 0, 0, 0.20);
 
     /* Canvas Elements */
+    --canvas-background: #f3f3f1;
+    --canvas-milestone: #e7e7e2;
+    --canvas-topic: #ffffff;
+    --canvas-group: #f8f8f7;
+    --canvas-connector: rgb(0 0 0 / 24%);
+    --roadmap-switch: #ecece9;
     --canvas-edge: #d4d4d8;
     --canvas-edge-active: #18181b;
 
@@ -211,6 +227,12 @@
     --border-strong: #3f3f46;
 
     /* Canvas Elements */
+    --canvas-background: #121215;
+    --canvas-milestone: #27272a;
+    --canvas-topic: #18181b;
+    --canvas-group: #202024;
+    --canvas-connector: rgb(244 244 245 / 32%);
+    --roadmap-switch: #27272a;
     --canvas-edge: #3f3f46;
     --canvas-edge-active: #fafafa;
 
