@@ -19,6 +19,22 @@
 
 ## 2. Completed Phase Deliverables Summary
 
+### Current delivery: Shared Canvas and Roadmap Generator
+
+Approved [design specification](superpowers/specs/2026-10-07-roadmap-generator-design.md)
+and linked [canvas](superpowers/plans/2026-10-07-canvas-redesign.md) /
+[roadmap](superpowers/plans/2026-10-07-roadmap-generator.md) implementation plans.
+Implementation uses `codex/roadmap-generator`, one verified task and commit at a time.
+
+- **Completed:** Backend test bootstrap now rejects live/implicit database settings;
+  seven guard tests pass against a dedicated PostgreSQL test database.
+- **Active task:** Preserve conversation segments and actual branch origins.
+- **Next:** Approved shared canvas appearance, measured layout and versioned persistence.
+- **Following canvas delivery:** Typed curricula, durable researched generation,
+  clean setup/progress, learning workspace, guided lessons, editing and refinement.
+
+No unfinished future actions are exposed in the application during this delivery.
+
 ### Phase 1: Production Core & Streamed Chat Engine
 - **AI Core (`packages/ai-core`)**: Provider-agnostic abstractions (`BaseProvider`, `BaseEmbeddingProvider`, `BaseTool`) decoupling business logic from OpenAI, Gemini, Anthropic, DeepSeek, and local Ollama.
 - **FastAPI SSE Streaming**: Async Server-Sent Events endpoint (`/api/v1/chat/stream`) with structured event payloads (`token`, `message_start`, `message_end`, `error`).

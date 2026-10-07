@@ -213,6 +213,50 @@ GraphMind enforces a strict, hierarchical URL design (see [`docs/URL_DESIGN.md`]
 
 ---
 
+## Running Tests
+
+Backend tests require **both** `ENVIRONMENT=test` and an explicit PostgreSQL
+`DATABASE_URL` whose database name ends in `_test`. Bootstrap rejects missing or
+live database settings before importing the application. Tests create and clean
+application records in that database; use a dedicated database, never a workspace
+database with a renamed connection variable.
+
+For Docker, create an independent test instance:
+
+```bash
+docker run --name graphmind-roadmap-tests \
+  -e POSTGRES_USER=graphmind -e POSTGRES_PASSWORD=graphmind_test_only \
+  -e POSTGRES_DB=graphmind_test -p 15432:5432 -d pgvector/pgvector:pg16
+export GRAPHMIND_TEST_DATABASE_URL=postgresql+asyncpg://graphmind:graphmind_test_only@localhost:15432/graphmind_test
+```
+
+Alternatively, create a separate database on your installed PostgreSQL server
+with pgvector available. This project's local Postgres.app setup uses:
+
+```bash
+/Applications/Postgres.app/Contents/Versions/latest/bin/createdb \
+  --no-password -h localhost -U balveerd graphmind_codex_roadmap_test
+export GRAPHMIND_TEST_DATABASE_URL=postgresql+asyncpg://balveerd@localhost:5432/graphmind_codex_roadmap_test
+```
+
+Run the guard first, then the suites:
+
+```bash
+ENVIRONMENT=test DATABASE_URL="$GRAPHMIND_TEST_DATABASE_URL" \
+  uv run pytest apps/api/tests/test_test_database_guard.py -q
+ENVIRONMENT=test DATABASE_URL="$GRAPHMIND_TEST_DATABASE_URL" uv run pytest
+pnpm --filter @graphmind/shared test
+pnpm --filter @graphmind/web test
+pnpm --filter @graphmind/web typecheck
+```
+
+When uv's normal cache is unavailable in a sandbox, use
+`UV_CACHE_DIR=/tmp/graphmind-uv-cache uv run --no-sync` with the installed environment.
+Migration tests use another disposable database, `graphmind_migration_test`, so
+model-created fixture tables cannot conceal a broken migration.
+
+---
+
 ## 🏛️ Documentation Index
 
 - 📋 [**Product Requirements & Manifesto (PRD)**](docs/PRD.md): Core product philosophy, MVP scope, personas, and functional requirements.
