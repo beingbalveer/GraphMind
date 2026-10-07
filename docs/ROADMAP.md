@@ -37,7 +37,9 @@ Implementation uses `codex/roadmap-generator`, one verified task and commit at a
 - **Completed:** Versioned layout persistence with authenticated membership checks,
   debounced saves, retry/reload recovery and confirmed real drag/refresh behavior.
   Additive migration round trip, frontend typecheck and isolated production build pass.
-- **Active task:** Canvas review, followed by typed curriculum contracts.
+- **Completed:** Fresh canvas review fixes pending-save navigation loss; 42 focused
+  frontend checks pass. See [verification](quality/canvas-redesign-2026-10-07.md).
+- **Active task:** Typed curriculum contracts and workload feasibility.
 - **Following canvas delivery:** Typed curricula, durable researched generation,
   clean setup/progress, learning workspace, guided lessons, editing and refinement.
 

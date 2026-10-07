@@ -12,7 +12,9 @@ export function readCanvasLayout(workspaceId: string, chatId: string, kind: Canv
 
 export function writeCanvasLayout(workspaceId: string, chatId: string, kind: CanvasKind,
   baseRevision: number, layout: CanvasLayout) {
+  const body = JSON.stringify({ baseRevision, layout });
   return apiFetch<StoredCanvasLayout>(endpoint(workspaceId, chatId, kind), {
-    method: "PUT", body: JSON.stringify({ baseRevision, layout }),
+    // Fetch keepalive has a 64KiB budget; large layouts retain the local recovery draft.
+    method: "PUT", body, keepalive: new TextEncoder().encode(body).byteLength < 60000,
   });
 }

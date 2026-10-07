@@ -4,7 +4,6 @@ import { describe, it, expect, vi } from "vitest";
 import type { ConversationTree } from "@graphmind/shared";
 import { GraphCanvas } from "../GraphCanvas";
 import { Button } from "@/components/ui/button";
-import userEvent from "@testing-library/user-event";
 import { ConversationCanvasCard } from "../ThreadGraphNode";
 
 const camera = vi.hoisted(() => ({fitView:vi.fn(),zoomIn:vi.fn(),zoomOut:vi.fn(),setViewport:vi.fn(),
@@ -100,8 +99,8 @@ describe("shared conversation canvas", () => {
     await waitFor(() => expect(camera.fitView).toHaveBeenCalled());
     fireEvent.click(screen.getByRole("button",{name:"Move branch card"}));
     expect(screen.getByTestId("segment:x")).toHaveAttribute("data-position",'{"x":600,"y":900}');
-    await userEvent.click(screen.getByRole("button",{name:"Canvas options"}));
-    await userEvent.click(screen.getByRole("menuitem",{name:"Open timeline"}));
+    fireEvent.pointerDown(screen.getByRole("button",{name:"Canvas options"}), {button:0, ctrlKey:false, pointerType:"mouse"});
+    fireEvent.click(screen.getByRole("menuitem",{name:"Open timeline"}));
     await waitFor(() => expect(screen.getByRole("button",{name:"Jump to Start"})).toBeVisible());
     fireEvent.click(screen.getByRole("button",{name:"Jump to Start"}));
     await waitFor(() => expect(screen.queryByTestId("segment:x")).not.toBeInTheDocument());
@@ -111,17 +110,19 @@ describe("shared conversation canvas", () => {
 
   it("confirms deletion using the original thread root and supports cancel", async () => {
     const onDelete=vi.fn();
-    render(<ConversationCanvasCard item={{id:"segment:last",kind:"conversation",title:"A branch",itemIds:["last"],
+    const canvasClick = vi.fn();
+    render(<div onClick={canvasClick}><ConversationCanvasCard item={{id:"segment:last",kind:"conversation",title:"A branch",itemIds:["last"],
       selectionId:"last",threadId:"original-root",lane:"side",parentId:"main",originId:"a",order:0}}
-      selected={false} streaming={false} onSelect={vi.fn()} onDelete={onDelete} />);
-    await userEvent.click(screen.getByRole("button",{name:"Actions for A branch"}));
-    await userEvent.click(screen.getByRole("menuitem",{name:"Delete branch"}));
+      selected={false} streaming={false} onSelect={vi.fn()} onDelete={onDelete} /></div>);
+    fireEvent.pointerDown(screen.getByRole("button",{name:"Actions for A branch"}), {button:0, ctrlKey:false, pointerType:"mouse"});
+    fireEvent.click(screen.getByRole("menuitem",{name:"Delete branch"}));
     expect(screen.getByRole("alertdialog",{name:"Delete branch?"})).toBeVisible();
-    await userEvent.click(screen.getByRole("button",{name:"Cancel"}));
+    fireEvent.click(screen.getByRole("button",{name:"Cancel"}));
     expect(onDelete).not.toHaveBeenCalled();
-    await userEvent.click(screen.getByRole("button",{name:"Actions for A branch"}));
-    await userEvent.click(screen.getByRole("menuitem",{name:"Delete branch"}));
-    await userEvent.click(screen.getByRole("button",{name:"Delete branch"}));
+    expect(canvasClick).not.toHaveBeenCalled();
+    fireEvent.pointerDown(screen.getByRole("button",{name:"Actions for A branch"}), {button:0, ctrlKey:false, pointerType:"mouse"});
+    fireEvent.click(screen.getByRole("menuitem",{name:"Delete branch"}));
+    fireEvent.click(screen.getByRole("button",{name:"Delete branch"}));
     expect(onDelete).toHaveBeenCalledWith("original-root");
   });
 });

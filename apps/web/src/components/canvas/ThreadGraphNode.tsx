@@ -26,7 +26,8 @@ export function ConversationCanvasCard({ item, selected, streaming, onSelect, on
   onSelect: (id: string) => void; onDelete?: (id: string) => void; mastery?: ThreadMasteryInfo;
 }) {
   const [confirm, setConfirm] = useState(false);
-  return <div className="relative">
+  // Portalled confirmation events still bubble through the React node tree.
+  return <div className="relative" onClick={event => event.stopPropagation()}>
     <CanvasCard item={item} selected={selected} streaming={streaming} onSelect={onSelect} />
     {onDelete && item.lane === "side" && <div className="nodrag absolute right-1 top-1" onClick={event => event.stopPropagation()}>
       <DropdownMenu trigger={<Button variant="ghost" size="iconSm" aria-label={`Actions for ${item.title}`}><MoreHorizontal /></Button>}
