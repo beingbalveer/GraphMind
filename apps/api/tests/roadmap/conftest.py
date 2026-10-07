@@ -244,3 +244,17 @@ def worker(scripted_executor, clock):
     return RoadmapWorker(
         get_session_factory(), scripted_executor, clock=clock.now, heartbeat_interval=0.01
     )
+
+
+@pytest.fixture
+async def auth_client(worker_job):
+    from httpx import ASGITransport, AsyncClient
+    from main import app
+    from services.auth_service import create_access_token
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+        cookies={"access_token": create_access_token(worker_job.owner_id)},
+    ) as client:
+        yield client

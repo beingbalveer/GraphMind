@@ -9,12 +9,18 @@
 export class ApiError extends Error {
   status: number;
   detail: string;
+  code?: string;
+  recoverable?: boolean;
+  nextAction?: string;
 
-  constructor(status: number, detail: string) {
+  constructor(status: number, detail: string, guidance?: { code?: string; recoverable?: boolean; nextAction?: string }) {
     super(detail || `API Request Failed with status ${status}`);
     this.name = "ApiError";
     this.status = status;
     this.detail = detail;
+    this.code = guidance?.code;
+    this.recoverable = guidance?.recoverable;
+    this.nextAction = guidance?.nextAction;
   }
 }
 
@@ -103,7 +109,7 @@ export async function apiFetch<T = unknown>(
     if (!retryResponse.ok) {
       const errData = await retryResponse.json().catch(() => ({}));
       const detail = errData.detail || errData.error?.message || retryResponse.statusText;
-      throw new ApiError(retryResponse.status, detail);
+      throw new ApiError(retryResponse.status, detail, errData.error);
     }
 
     if (retryResponse.status === 204) {
@@ -122,7 +128,7 @@ export async function apiFetch<T = unknown>(
       (typeof errorData.detail === "string" ? errorData.detail : null) ||
       errorData.error?.message ||
       response.statusText;
-    throw new ApiError(response.status, detail);
+    throw new ApiError(response.status, detail, errorData.error);
   }
 
   if (response.status === 204) {

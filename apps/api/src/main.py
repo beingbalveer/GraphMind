@@ -6,7 +6,9 @@ import structlog
 from config import get_settings
 from database import Base, get_engine
 from errors import (
+    RoadmapHTTPError,
     http_exception_handler,
+    roadmap_exception_handler,
     unhandled_exception_handler,
     validation_exception_handler,
 )
@@ -15,7 +17,19 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from middleware import RequestTracingMiddleware
 from pydantic import BaseModel
-from routers import auth, canvas, chat, curator, files, flashcards, mastery, roadmap, workspaces
+from routers import (
+    auth,
+    canvas,
+    chat,
+    curator,
+    curriculum,
+    files,
+    flashcards,
+    mastery,
+    roadmap,
+    roadmap_jobs,
+    workspaces,
+)
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 settings = get_settings()
@@ -106,10 +120,14 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
                     {"hp": admin_hp},
                 )
                 await conn.execute(
-                    text("UPDATE workspaces SET owner_id = 'usr_default_admin' WHERE owner_id IS NULL;")
+                    text(
+                        "UPDATE workspaces SET owner_id = 'usr_default_admin' WHERE owner_id IS NULL;"
+                    )
                 )
                 await conn.execute(
-                    text("CREATE INDEX IF NOT EXISTS idx_workspaces_owner_id ON workspaces (owner_id);")
+                    text(
+                        "CREATE INDEX IF NOT EXISTS idx_workspaces_owner_id ON workspaces (owner_id);"
+                    )
                 )
                 await conn.execute(
                     text(
@@ -122,7 +140,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
                         "ON CONFLICT DO NOTHING;"
                     )
                 )
-        logger.info("Database schema, pgvector extension, and performance indexes initialized successfully")
+        logger.info(
+            "Database schema, pgvector extension, and performance indexes initialized successfully"
+        )
     except Exception as e:
         logger.warning("Database synchronization deferred or failed", error=str(e))
 
@@ -155,6 +175,7 @@ app.add_middleware(
 app.add_exception_handler(StarletteHTTPException, http_exception_handler)
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
 app.add_exception_handler(Exception, unhandled_exception_handler)
+app.add_exception_handler(RoadmapHTTPError, roadmap_exception_handler)
 
 # Register API Routers
 app.include_router(auth.router)
@@ -162,6 +183,8 @@ app.include_router(chat.router)
 app.include_router(workspaces.router, prefix="/api/v1")
 app.include_router(canvas.router, prefix="/api/v1")
 app.include_router(roadmap.router, prefix="/api/v1")
+app.include_router(roadmap_jobs.router, prefix="/api/v1")
+app.include_router(curriculum.router, prefix="/api/v1")
 app.include_router(mastery.router, prefix="/api/v1")
 app.include_router(curator.router, prefix="/api/v1")
 app.include_router(flashcards.router, prefix="/api/v1")

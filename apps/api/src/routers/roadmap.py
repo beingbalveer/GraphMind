@@ -15,7 +15,7 @@ router = APIRouter(prefix="/roadmap", tags=["Roadmap Generator"])
     "/generate",
     response_model=RoadmapGenerateResponse,
     status_code=status.HTTP_201_CREATED,
-    summary="Generate an AI learning roadmap as a structured graph workspace",
+    summary="Legacy synchronous roadmap generation (compatibility only)",
 )
 async def generate_roadmap(
     data: RoadmapGenerateRequest,

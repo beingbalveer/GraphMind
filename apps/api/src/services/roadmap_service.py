@@ -7,6 +7,7 @@ from typing import Dict, List, Optional
 import structlog
 from ai_core import ChatMessage, ChatRole, ModelConfig, get_provider
 from config import get_settings
+from errors import RoadmapHTTPError
 from models.workspace import ConceptModel, EdgeModel, NodeModel, node_concepts
 from schemas.roadmap import (
     RoadmapGenerateRequest,
@@ -14,6 +15,7 @@ from schemas.roadmap import (
     RoadmapPlan,
     RoadmapTopic,
 )
+from schemas.roadmap_job import JobError
 from schemas.workspace import WorkspaceCreate
 from services.workspace_service import WorkspaceService
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -87,12 +89,14 @@ Requirements:
             topics: List[RoadmapTopic] = []
 
             for idx, item in enumerate(raw_topics):
-                tid = str(item.get("id") or f"t{idx+1}")
-                ttitle = str(item.get("title") or f"Topic {idx+1}")
+                tid = str(item.get("id") or f"t{idx + 1}")
+                ttitle = str(item.get("title") or f"Topic {idx + 1}")
                 tdesc = str(item.get("description") or "Core technical concept.")
                 depth = int(item.get("depth") or 1)
                 prereqs = [str(p) for p in item.get("prerequisites", [])]
-                key_c = [str(k) for k in (item.get("keyConcepts") or item.get("key_concepts") or [])]
+                key_c = [
+                    str(k) for k in (item.get("keyConcepts") or item.get("key_concepts") or [])
+                ]
                 hours = int(item.get("estimatedHours") or item.get("estimated_hours") or 2)
                 topics.append(
                     RoadmapTopic(
@@ -109,7 +113,7 @@ Requirements:
             if len(topics) >= 1:
                 return RoadmapPlan(title=title, description=desc, topics=topics)
         except Exception as e:
-            logger.warning("Failed to parse LLM roadmap JSON", error=str(e), raw_snippet=raw_text[:200])
+            logger.warning("Failed to parse LLM roadmap JSON", error_type=type(e).__name__)
 
         return None
 
@@ -188,7 +192,6 @@ Requirements:
     ) -> RoadmapGenerateResponse:
         logger.info(
             "Generating learning roadmap",
-            goal=request.goal,
             level=request.level,
             focus=request.focus,
             owner_id=owner_id,
@@ -223,13 +226,21 @@ Requirements:
             plan = cls._parse_plan_json(result.content)
         except Exception as e:
             logger.warning(
-                "LLM provider generation failed or unavailable; using fallback curriculum",
+                "Legacy roadmap generation unavailable",
                 provider=resolved_provider,
-                error=str(e),
+                error_type=type(e).__name__,
             )
 
         if not plan or not plan.topics:
-            plan = cls._generate_fallback_plan(request.goal, request.level, request.focus)
+            raise RoadmapHTTPError(
+                502,
+                JobError(
+                    code="GENERATION_UNAVAILABLE",
+                    message="Roadmap generation failed. Check provider configuration and retry.",
+                    recoverable=True,
+                    next_action="retry",
+                ),
+            )
 
         # 2. Persist Workspace
         ws_data = WorkspaceCreate(name=plan.title, description=plan.description)
@@ -296,7 +307,9 @@ Requirements:
                         primary_parent_id = topic_to_node_id[prereq_id]
                         break
 
-            key_concepts_list = "\n".join([f"- **{kc}**" for kc in topic.key_concepts]) or "- Core principles"
+            key_concepts_list = (
+                "\n".join([f"- **{kc}**" for kc in topic.key_concepts]) or "- Core principles"
+            )
             topic_markdown = (
                 f"### {topic.title}\n\n"
                 f"{topic.description}\n\n"

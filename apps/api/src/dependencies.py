@@ -15,6 +15,33 @@ logger = structlog.get_logger()
 settings = get_settings()
 
 
+async def get_roadmap_user(
+    request: Request, db: AsyncSession = Depends(get_db, scope="function")
+) -> User:
+    """Roadmap jobs never use the legacy anonymous test-admin fallback."""
+    authorization = request.headers.get("Authorization", "")
+    bearer = authorization[7:].strip() if authorization.startswith("Bearer ") else ""
+    if not request.cookies.get("access_token") and not bearer:
+        raise HTTPException(401, "Authentication required")
+    return await get_current_user(request, db)
+
+
+async def require_roadmap_read(
+    workspace_id: str,
+    current_user: User = Depends(get_roadmap_user),
+    db: AsyncSession = Depends(get_db, scope="function"),
+) -> Workspace:
+    return await require_workspace_read(workspace_id, current_user, db)
+
+
+async def require_roadmap_write(
+    workspace_id: str,
+    current_user: User = Depends(get_roadmap_user),
+    db: AsyncSession = Depends(get_db, scope="function"),
+) -> Workspace:
+    return await require_workspace_write(workspace_id, current_user, db)
+
+
 async def get_current_user(
     request: Request,
     db: AsyncSession = Depends(get_db),

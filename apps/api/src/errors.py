@@ -7,9 +7,35 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+from schemas.roadmap_job import JobError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 logger = structlog.get_logger()
+
+
+class RoadmapHTTPError(Exception):
+    def __init__(self, status_code: int, error: JobError) -> None:
+        self.status_code = status_code
+        self.error = error
+        super().__init__(error.message)
+
+
+async def roadmap_exception_handler(request: Request, exc: RoadmapHTTPError) -> JSONResponse:
+    req_id = get_request_id(request)
+    logger.warning(
+        "roadmap_request_failed",
+        code=exc.error.code,
+        status_code=exc.status_code,
+        request_id=req_id,
+        path=request.url.path,
+    )
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "error": {**exc.error.model_dump(mode="json", by_alias=True), "request_id": req_id}
+        },
+        headers={"X-Request-ID": req_id},
+    )
 
 
 class ErrorDetail(BaseModel):
@@ -59,6 +85,11 @@ async def validation_exception_handler(
         exc.errors(),
         custom_encoder={Exception: str, ValueError: str},
     )
+    if "/roadmap" in request.url.path:
+        sanitized_errors = [
+            {key: value for key, value in error.items() if key not in {"input", "ctx"}}
+            for error in sanitized_errors
+        ]
 
     logger.warning(
         "Request validation error",

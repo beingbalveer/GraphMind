@@ -59,3 +59,24 @@ export interface CurriculumView {
   profile: LearningProfile; candidate: CurriculumCandidate; sources: SourceData[];
   progress: Record<string, TopicProgressData>; validation: ValidationReport;
 }
+
+export type JobStatus = "queued" | "running" | "awaiting_input" | "cancel_requested" | "canceled" | "failed" | "completed";
+export type StageName = "understand" | "research" | "compose" | "personalize" | "validate" | "publish";
+export interface ClarificationQuestion { id: string; text: string; suggestions: string[] }
+export interface JobError { code: string; message: string; recoverable: boolean; nextAction: "retry" | "new_run" | "answer" | "configure_search" }
+export interface JobResult { workspaceId: string; roadmapId: string; revisionId: string; kind: "published" | "proposal" }
+export interface JobSnapshot {
+  id: string; operation: "generate" | "refine"; title: string | null; status: JobStatus;
+  stage: StageName; startupReady: boolean; summary: string; question: ClarificationQuestion | null;
+  questionCount: number; error: JobError | null; result: JobResult | null; lastSequence: number;
+  createdAt: string; updatedAt: string;
+}
+export interface JobEventData {
+  sequence: number; stage: StageName; type: string; summary: string;
+  metadata: Record<string, JsonValue>; createdAt: string;
+}
+export interface JobReferenceData {
+  id: string; kind: "file" | "link"; name: string;
+  status: "staged" | "inspected" | "unavailable" | "rejected";
+  sizeBytes: number; error: string | null; locator: string | null;
+}

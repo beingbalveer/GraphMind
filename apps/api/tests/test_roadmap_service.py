@@ -48,14 +48,60 @@ def test_roadmap_prompt_and_fallback_generation() -> None:
     assert plan.topics[1].prerequisites == ["t1"]
 
     # 3. Test fallback plan generation
-    fallback = RoadmapService._generate_fallback_plan("Kubernetes Orchestration", "intermediate", "projects")
+    fallback = RoadmapService._generate_fallback_plan(
+        "Kubernetes Orchestration", "intermediate", "projects"
+    )
     assert "Kubernetes Orchestration" in fallback.title
     assert len(fallback.topics) >= 5
     assert fallback.topics[0].prerequisites == []
 
 
 @pytest.mark.asyncio
-async def test_roadmap_generate_endpoint_and_graph_materialization() -> None:
+async def test_roadmap_generate_endpoint_and_graph_materialization(monkeypatch) -> None:
+    import json
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock
+
+    from ai_core import GenerationResult
+
+    topics = [
+        {
+            "id": f"t{i}",
+            "title": title,
+            "description": "Learn and practice " + title,
+            "depth": 1,
+            "prerequisites": [],
+            "keyConcepts": [title],
+            "estimatedHours": 2,
+        }
+        for i, title in enumerate(
+            [
+                "Python types",
+                "Async functions",
+                "HTTP routing",
+                "Pydantic validation",
+                "API testing",
+            ]
+        )
+    ]
+    provider = SimpleNamespace(
+        generate=AsyncMock(
+            return_value=GenerationResult(
+                model_name="test",
+                content=json.dumps(
+                    {
+                        "title": "FastAPI learning path",
+                        "description": "Build a tested API",
+                        "topics": topics,
+                    }
+                ),
+            )
+        )
+    )
+    monkeypatch.setattr("services.roadmap_service.get_provider", lambda *args, **kwargs: provider)
+    monkeypatch.setattr(
+        "services.semantic_service.SemanticService.compute_and_save_node_embedding", AsyncMock()
+    )
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         # 1. Call generate roadmap endpoint
         resp = await client.post(
