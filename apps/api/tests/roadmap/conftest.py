@@ -42,3 +42,64 @@ def small_profile() -> LearningProfile:
             duration={"value": 2, "unit": "weeks"},
         )
     )
+
+
+@pytest.fixture(autouse=True)
+def no_embedding_provider(monkeypatch: pytest.MonkeyPatch) -> None:
+    from unittest.mock import AsyncMock
+
+    monkeypatch.setattr(
+        "services.semantic_service.SemanticService.compute_and_save_node_embedding", AsyncMock()
+    )
+
+
+@pytest.fixture
+async def curriculum_session():
+    from database import get_session_factory
+
+    async with get_session_factory()() as session:
+        try:
+            yield session
+        finally:
+            await session.rollback()
+
+
+@pytest.fixture
+async def repository(curriculum_session):
+    from services.roadmap.curriculum_repository import CurriculumRepository
+
+    return CurriculumRepository(curriculum_session)
+
+
+@pytest.fixture
+async def curriculum_workspace(
+    repository, curriculum_session, small_candidate, small_profile, sources
+):
+    import uuid
+    from types import SimpleNamespace
+
+    from schemas.workspace import NodeCreate, WorkspaceCreate
+    from services.roadmap.validation import validate_curriculum
+    from services.workspace_service import WorkspaceService
+
+    owner_id = "usr_default_admin"
+    ws = await WorkspaceService.create_workspace(
+        curriculum_session, WorkspaceCreate(name="Curriculum test"), owner_id=owner_id
+    )
+    anchor = await WorkspaceService.add_node_and_edge(
+        curriculum_session,
+        ws.id,
+        NodeCreate(
+            id=f"node_{uuid.uuid4().hex[:12]}", role="user", content="Roadmap canvas anchor"
+        ),
+    )
+    view = await repository.create(
+        owner_id,
+        ws.id,
+        anchor.id,
+        small_profile,
+        small_candidate,
+        sources,
+        validate_curriculum(small_candidate, small_profile, sources),
+    )
+    return SimpleNamespace(view=view, owner_id=owner_id, session=curriculum_session)

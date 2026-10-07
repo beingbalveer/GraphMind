@@ -68,10 +68,10 @@ def validate_curriculum(
     seen_relations: set[tuple[str, str, str]] = set()
     for relation in candidate.relations:
         source, target = relation.source_id, relation.target_id
-        key = (source, target, relation.kind)
-        if key in seen_relations:
+        relation_key = (source, target, relation.kind)
+        if relation_key in seen_relations:
             issue("DUPLICATE_RELATION", "This relationship is listed twice.", target)
-        seen_relations.add(key)
+        seen_relations.add(relation_key)
         if source not in items or target not in items:
             issue("RELATION_ENDPOINT", "Relationship endpoints must exist.", target)
             continue
@@ -195,16 +195,16 @@ def validate_curriculum(
         issue("DUPLICATE_SOURCE", "Source identities must be unique.")
     resources: dict[str, list[str]] = defaultdict(list)
     for resource in candidate.resources:
-        topic, source = items.get(resource.topic_id), source_map.get(resource.source_id)
+        topic, resource_source = items.get(resource.topic_id), source_map.get(resource.source_id)
         if not topic or topic.kind != "topic":
             issue(
                 "RESOURCE_TOPIC", "Associate resources with actionable topics.", resource.topic_id
             )
         if (
-            not source
-            or source.status not in {"inspected", "grounded"}
-            or not source.evidence.strip()
-            or not (source.url or source.reference_id)
+            not resource_source
+            or resource_source.status not in {"inspected", "grounded"}
+            or not resource_source.evidence.strip()
+            or not (resource_source.url or resource_source.reference_id)
         ):
             issue(
                 "RESOURCE_SOURCE",
