@@ -334,7 +334,7 @@ export function FileLibraryView({
                   {/* Card Thumbnail / Preview Area */}
                   <div
                     onClick={isInteractive ? handleLaunchViewer : undefined}
-                    className={`relative flex h-32 w-full items-center justify-center overflow-hidden border-b border-border bg-background-secondary ${
+                    className={`relative flex h-20 w-full items-center justify-center overflow-hidden border-b border-border bg-background-secondary ${
                       isInteractive ? "cursor-pointer" : "cursor-not-allowed"
                     }`}
                   >
@@ -348,96 +348,75 @@ export function FileLibraryView({
                       />
                     ) : isPdf ? (
                       <div className="flex flex-col items-center justify-center text-foreground-muted group-hover:text-foreground transition-colors">
-                        <FileText className="size-8 stroke-[1.5] text-destructive" />
-                        <span className="text-2xs font-mono font-semibold uppercase mt-1 text-foreground-subtle">
+                        <FileText className="size-6 stroke-[1.5] text-destructive" />
+                        <span className="text-2xs font-mono font-semibold uppercase mt-0.5 text-foreground-subtle">
                           PDF
                         </span>
                       </div>
                     ) : isTabular ? (
                       <div className="flex flex-col items-center justify-center text-foreground-muted group-hover:text-foreground transition-colors">
-                        <FileSpreadsheet className="size-8 stroke-[1.5] text-success" />
-                        <span className="text-2xs font-mono font-semibold uppercase mt-1 text-foreground-subtle">
+                        <FileSpreadsheet className="size-6 stroke-[1.5] text-success" />
+                        <span className="text-2xs font-mono font-semibold uppercase mt-0.5 text-foreground-subtle">
                           DATA
                         </span>
                       </div>
                     ) : isCode ? (
                       <div className="flex flex-col items-center justify-center text-foreground-muted group-hover:text-foreground transition-colors">
-                        <Code className="size-8 stroke-[1.5] text-foreground" />
-                        <span className="text-2xs font-mono font-semibold uppercase mt-1 text-foreground-subtle">
+                        <Code className="size-6 stroke-[1.5] text-foreground" />
+                        <span className="text-2xs font-mono font-semibold uppercase mt-0.5 text-foreground-subtle">
                           CODE
                         </span>
                       </div>
                     ) : (
                       <div className="flex flex-col items-center justify-center text-foreground-muted group-hover:text-foreground transition-colors">
-                        <FileText className="size-8 stroke-[1.5]" />
-                        <span className="text-2xs font-mono font-semibold uppercase mt-1 text-foreground-subtle">
+                        <FileText className="size-6 stroke-[1.5]" />
+                        <span className="text-2xs font-mono font-semibold uppercase mt-0.5 text-foreground-subtle">
                           DOC
                         </span>
                       </div>
                     )}
 
                     {/* Status Badge */}
-                    <div className="absolute top-2 left-2 z-10">
+                    <div className="absolute top-1.5 left-1.5 z-10">
                       {status === "processing" ? (
-                        <Badge variant="warning" className="gap-1 shadow-2xs font-normal">
-                          <Loader2 className="size-2.5 animate-spin" />
+                        <Badge variant="warning" className="gap-1 shadow-2xs font-normal text-2xs py-0">
+                          <Loader2 className="size-2 animate-spin" />
                           <span>Processing</span>
                         </Badge>
                       ) : status === "failed" ? (
-                        <Badge variant="destructive" className="gap-1 shadow-2xs font-normal">
-                          <AlertCircle className="size-2.5" />
+                        <Badge variant="destructive" className="gap-1 shadow-2xs font-normal text-2xs py-0">
+                          <AlertCircle className="size-2" />
                           <span>Failed</span>
                         </Badge>
                       ) : status === "unavailable" ? (
-                        <Badge variant="secondary" className="shadow-2xs font-normal">
+                        <Badge variant="secondary" className="shadow-2xs font-normal text-2xs py-0">
                           Unavailable
                         </Badge>
                       ) : (
-                        <Badge variant="secondary" className="shadow-2xs font-normal">
+                        <Badge variant="secondary" className="shadow-2xs font-normal text-2xs py-0">
                           Ready
                         </Badge>
                       )}
                     </div>
                   </div>
 
-                  {/* Card Metadata & Actions */}
-                  <div className="flex flex-col flex-1 p-3 min-w-0 justify-between">
-                    <div className="min-w-0">
+                  {/* Card Metadata & Actions Inline with Title */}
+                  <div className="flex flex-col p-2.5 min-w-0">
+                    <div className="flex items-center justify-between gap-1.5 min-w-0">
                       <p
-                        className="truncate text-xs font-semibold text-foreground"
+                        className={`truncate text-xs font-semibold text-foreground ${
+                          isInteractive ? "cursor-pointer hover:underline" : ""
+                        }`}
                         title={file.name}
+                        onClick={isInteractive ? handleLaunchViewer : undefined}
                       >
                         {file.name}
                       </p>
-                      <div className="flex items-center gap-1.5 mt-1 text-2xs text-foreground-muted font-mono">
-                        <span>{formatBytes(file.sizeBytes || 0)}</span>
-                        <span>•</span>
-                        <span className="capitalize">{file.fileCategory}</span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between mt-3 pt-2 border-t border-border-subtle">
-                      <div className="flex items-center gap-1">
-                        {isInteractive && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={handleLaunchViewer}
-                            className="h-7 px-2 text-2xs font-medium cursor-pointer"
-                            title="Preview / open asset"
-                          >
-                            <ExternalLink className="size-3 mr-1" />
-                            <span>Preview</span>
-                          </Button>
-                        )}
-                      </div>
-
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-0.5 shrink-0">
                         <a
                           href={downloadUrl}
                           download={file.name}
-                          className="inline-flex items-center justify-center size-7 rounded-lg text-foreground-subtle hover:text-foreground hover:bg-surface-hover transition-colors"
+                          className="inline-flex items-center justify-center size-6 rounded-md text-foreground-subtle hover:text-foreground hover:bg-surface-hover transition-colors"
                           title="Download file"
                         >
                           <Download className="size-3.5 stroke-[1.75]" />
@@ -446,12 +425,17 @@ export function FileLibraryView({
                           label={`Delete ${file.name}`}
                           onClick={() => setFileToDelete(file)}
                           variant="destructive"
-                          className="size-7"
+                          className="size-6"
                           title="Delete file"
                         >
-                          <Trash2 className="size-3.5 stroke-[1.75]" />
+                          <Trash2 className="size-3 stroke-[1.75]" />
                         </IconButton>
                       </div>
+                    </div>
+                    <div className="flex items-center gap-1.5 mt-0.5 text-2xs text-foreground-muted font-mono">
+                      <span>{formatBytes(file.sizeBytes || 0)}</span>
+                      <span>•</span>
+                      <span className="capitalize">{file.fileCategory}</span>
                     </div>
                   </div>
                 </div>
