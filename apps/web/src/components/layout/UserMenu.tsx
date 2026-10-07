@@ -120,7 +120,7 @@ export function UserMenu({ collapsed = false, placement = "bottom", className, o
           )}
         </div>
         <div className={`flex-1 min-w-0 text-left pr-2 transition-opacity duration-150 ${collapsed ? "opacity-0 pointer-events-none" : "opacity-100"}`}>
-          <span className="truncate block text-foreground font-normal">
+          <span className="truncate block text-foreground font-medium">
             {user.fullName || user.email}
           </span>
         </div>

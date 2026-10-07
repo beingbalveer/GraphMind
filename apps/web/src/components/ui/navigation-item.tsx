@@ -19,15 +19,22 @@ export const NavigationItem = React.forwardRef<HTMLButtonElement, NavigationItem
       aria-current={active ? "page" : undefined}
       {...props}
       className={cn(
-        "h-9 w-full min-w-0 justify-start gap-2 rounded-navigation px-2.5 text-left text-sm font-normal text-foreground",
+        "h-9 w-full min-w-0 justify-start gap-2.5 rounded-navigation px-2.5 text-left text-sm font-normal text-foreground",
         active && "bg-surface-hover font-medium",
         collapsed && "justify-center px-0",
         className
       )}
     >
-      {icon && <span aria-hidden="true" className="flex size-5 shrink-0 items-center justify-center [&>svg]:size-4">{icon}</span>}
+      {icon && (
+        <span
+          aria-hidden="true"
+          className="flex size-5 shrink-0 items-center justify-center text-foreground [&>svg]:size-4 [&>svg]:stroke-[1.75]"
+        >
+          {icon}
+        </span>
+      )}
       {!collapsed && <span className="min-w-0 flex-1 truncate">{children}</span>}
-      {!collapsed && trailing && <span className="shrink-0 text-xs text-foreground-subtle">{trailing}</span>}
+      {!collapsed && trailing && <span className="shrink-0 text-xs text-foreground-muted">{trailing}</span>}
     </Button>
   )
 );

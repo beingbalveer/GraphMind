@@ -131,7 +131,7 @@ export function ChatSidebar({
           "group relative flex h-9 w-full items-center px-2.5 rounded-navigation text-sm transition-colors cursor-pointer select-none shadow-none",
           isActive
             ? "bg-surface-hover text-foreground font-medium"
-            : "text-foreground-muted font-normal hover:text-foreground hover:bg-surface-hover"
+            : "text-foreground font-normal hover:bg-surface-hover"
         )}
       >
         {isRenaming ? (
@@ -153,10 +153,11 @@ export function ChatSidebar({
         ) : (
           <>
             {/* Title trigger with pe-7 on hover so title never overlaps 3 dots */}
-            <div className="flex h-full min-w-0 flex-1 items-center text-start outline-none group-hover:pe-7 transition-[padding]">
+            <div className="flex h-full min-w-0 flex-1 items-center gap-2.5 text-start outline-none group-hover:pe-7 transition-[padding]">
+              <MessageSquare className="size-4 shrink-0 text-foreground stroke-[1.75]" />
               <span className="min-w-0 flex-1 truncate first-letter:uppercase">{formattedTitle}</span>
               {chat.pinned && (
-                <Pin className="size-3 text-foreground-muted shrink-0 ml-1.5" aria-label="Pinned" />
+                <Pin className="size-3 text-foreground shrink-0 ml-1" aria-label="Pinned" />
               )}
             </div>
 
@@ -245,7 +246,7 @@ export function ChatSidebar({
               <LogoBadge size="sm" />
             </Link>
 
-            <span className="text-sm font-normal text-foreground tracking-tight truncate max-w-[145px] px-1.5 py-1">
+            <span className="text-sm font-semibold text-foreground tracking-tight truncate max-w-[145px] px-1.5 py-1">
               {workspaceName}
             </span>
           </div>
@@ -254,7 +255,7 @@ export function ChatSidebar({
             variant="ghost"
             size="icon-sm"
             onClick={onToggle}
-            className="text-foreground-muted hover:text-foreground hover:bg-surface-hover transition-colors cursor-pointer shrink-0"
+            className="text-foreground hover:text-foreground hover:bg-surface-hover transition-colors cursor-pointer shrink-0"
             title={isOpen ? "Collapse sidebar (⌘B)" : "Expand sidebar (⌘B)"}
             aria-label={isOpen ? "Collapse sidebar" : "Expand sidebar"}
           >
@@ -269,7 +270,7 @@ export function ChatSidebar({
               onClick={onNewChat}
               icon={<Plus />}
               collapsed={!isOpen}
-              trailing={<span className="opacity-0 group-hover/button:opacity-100">⌘N</span>}
+              trailing={<span className="opacity-0 group-hover/button:opacity-100 font-medium text-foreground-muted">⌘N</span>}
               title="New Chat (⌘N)"
               aria-label="New Chat"
             >
@@ -295,12 +296,12 @@ export function ChatSidebar({
         <div className="flex-1 overflow-y-auto overflow-x-hidden px-2 py-1 space-y-0.5 relative">
           <div className={`transition-opacity duration-150 ${isOpen ? "opacity-100" : "opacity-0 pointer-events-none hidden"}`}>
             {sortedChats.length === 0 ? (
-              <div className="py-8 px-2.5 text-center text-xs text-foreground-muted">
+              <div className="py-2 px-2.5 text-left text-sm text-foreground-muted">
                 No conversations yet
               </div>
             ) : (
               <div className="space-y-0.5 pt-4 first:pt-2.5">
-                <div className="px-2.5 pb-2 pt-1 text-label font-normal text-foreground-subtle select-none">
+                <div className="px-2.5 pb-2 pt-1 text-sm font-medium text-foreground-muted select-none">
                   Conversations
                 </div>
                 {sortedChats.map(renderChatItem)}
