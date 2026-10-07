@@ -2,7 +2,7 @@
 
 Date: 2026-10-07
 
-Status: Design decisions agreed in discussion; written specification awaiting user review.
+Status: Approved by the user for implementation planning on 2026-10-07.
 
 Scope: Redesigned roadmap generation and learning workspaces, plus replacement of the existing conversation canvas appearance and layout.
 
