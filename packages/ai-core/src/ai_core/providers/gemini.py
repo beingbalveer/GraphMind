@@ -149,6 +149,9 @@ class GeminiProvider(BaseLLMProvider):
             temperature=cfg.temperature,
             max_output_tokens=cfg.max_tokens,
             tools=gemini_tools,
+            http_options=types.HttpOptions(retry_options=types.HttpRetryOptions(attempts=1))
+            if cfg.max_retries is not None
+            else None,
         )
 
     async def generate(
@@ -169,7 +172,8 @@ class GeminiProvider(BaseLLMProvider):
             )
 
         last_exception: Optional[Exception] = None
-        for attempt in range(1, MAX_RETRIES + 1):
+        attempts = cfg.max_retries + 1 if cfg.max_retries is not None else MAX_RETRIES
+        for attempt in range(1, attempts + 1):
             try:
                 response = await self.client.aio.models.generate_content(
                     model=cfg.model_name,
@@ -204,7 +208,7 @@ class GeminiProvider(BaseLLMProvider):
                 )
             except Exception as e:
                 last_exception = e
-                if _is_transient_error(e) and attempt < MAX_RETRIES:
+                if _is_transient_error(e) and attempt < attempts:
                     backoff = INITIAL_BACKOFF_SECONDS * (2 ** (attempt - 1))
                     logger.warning(
                         "Gemini API transient error, retrying with backoff",
@@ -241,7 +245,8 @@ class GeminiProvider(BaseLLMProvider):
             return
 
         last_exception: Optional[Exception] = None
-        for attempt in range(1, MAX_RETRIES + 1):
+        attempts = cfg.max_retries + 1 if cfg.max_retries is not None else MAX_RETRIES
+        for attempt in range(1, attempts + 1):
             try:
                 response_stream = await self.client.aio.models.generate_content_stream(
                     model=cfg.model_name,
@@ -275,7 +280,7 @@ class GeminiProvider(BaseLLMProvider):
                 return
             except Exception as e:
                 last_exception = e
-                if _is_transient_error(e) and attempt < MAX_RETRIES:
+                if _is_transient_error(e) and attempt < attempts:
                     backoff = INITIAL_BACKOFF_SECONDS * (2 ** (attempt - 1))
                     logger.warning(
                         "Gemini API stream transient error, retrying stream connection",

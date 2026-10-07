@@ -143,6 +143,12 @@ class ModelConfig(BaseModel):
         default=None, description="Optional overriding system instruction"
     )
     metadata: Dict[str, Any] = Field(default_factory=dict, description="Custom vendor parameters")
+    max_retries: Optional[int] = Field(
+        default=None,
+        ge=0,
+        le=10,
+        description="Optional transport retry override; zero reserves one external attempt",
+    )
 
 
 # Backward compatibility alias

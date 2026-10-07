@@ -233,7 +233,7 @@ class RoadmapWorker:
 
 
 async def main() -> None:
-    # Imported at process entry: typed orchestration is installed by the following plan tasks.
+    # Production composition remains separate from worker lease/heartbeat mechanics.
     from services.roadmap.stages import RoadmapStageExecutor
 
     worker = RoadmapWorker(get_session_factory(), RoadmapStageExecutor(get_session_factory()))

@@ -277,9 +277,12 @@ GraphMind is open-source software licensed under the [Apache License 2.0](LICENS
 
 Roadmap generation uses a separate durable worker. From the repository root, run
 `PYTHONPATH=apps/api/src:packages/ai-core/src uv run python -m services.roadmap.worker`
-alongside the API. The typed research executor is being installed as part of the
-roadmap implementation; enable generation only after the generator and topic actions
-are ready. In Docker, use `docker compose --profile roadmap up --build` to include
+alongside the API. Configure the selected `DEFAULT_PROVIDER`/`DEFAULT_MODEL` and
+its API key, plus `GEMINI_API_KEY` or `GOOGLE_API_KEY` for grounded research
+(`ROADMAP_SEARCH_MODEL` defaults to Gemini 2.5 Flash). Missing configuration
+produces a recoverable job error; roadmap generation has no offline mock fallback.
+Generation stays behind the feature flag until topic actions are ready.
+In Docker, use `docker compose --profile roadmap up --build` to include
 the worker. The API and worker share the `reference_storage` volume.
 
 Configure `ROADMAP_REFERENCE_DIR` consistently in both processes (default

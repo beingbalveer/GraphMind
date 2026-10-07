@@ -186,7 +186,12 @@ class OpenAIProvider(BaseLLMProvider):
             call_kwargs["tools"] = openai_tools
 
         try:
-            response = await self.client.chat.completions.create(**call_kwargs)
+            client = (
+                self.client.with_options(max_retries=cfg.max_retries)
+                if cfg.max_retries is not None
+                else self.client
+            )
+            response = await client.chat.completions.create(**call_kwargs)
             choice = response.choices[0]
             content = choice.message.content or ""
 
@@ -246,7 +251,12 @@ class OpenAIProvider(BaseLLMProvider):
             call_kwargs["tools"] = openai_tools
 
         try:
-            response_stream = await self.client.chat.completions.create(**call_kwargs)
+            client = (
+                self.client.with_options(max_retries=cfg.max_retries)
+                if cfg.max_retries is not None
+                else self.client
+            )
+            response_stream = await client.chat.completions.create(**call_kwargs)
             async for chunk in response_stream:
                 if chunk.choices:
                     delta = chunk.choices[0].delta

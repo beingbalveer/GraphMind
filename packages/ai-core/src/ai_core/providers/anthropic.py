@@ -234,7 +234,12 @@ class AnthropicProvider(BaseLLMProvider):
             kwargs["tools"] = anthropic_tools
 
         try:
-            response = await self.client.messages.create(**kwargs)
+            client = (
+                self.client.with_options(max_retries=cfg.max_retries)
+                if cfg.max_retries is not None
+                else self.client
+            )
+            response = await client.messages.create(**kwargs)
 
             content = ""
             parsed_tool_calls: Optional[List[ToolCall]] = None
@@ -302,7 +307,12 @@ class AnthropicProvider(BaseLLMProvider):
             kwargs["tools"] = anthropic_tools
 
         try:
-            async with self.client.messages.stream(**kwargs) as stream:
+            client = (
+                self.client.with_options(max_retries=cfg.max_retries)
+                if cfg.max_retries is not None
+                else self.client
+            )
+            async with client.messages.stream(**kwargs) as stream:
                 async for text in stream.text_stream:
                     yield StreamChunk(content=text)
 
