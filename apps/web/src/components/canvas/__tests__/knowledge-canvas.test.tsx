@@ -10,6 +10,9 @@ import { ConversationTree, TreeNode } from "@graphmind/shared";
 
 describe("Knowledge Canvas - Primitives & Semantic Tokens Compliance", () => {
   const canvasFiles = [
+    "CanvasCard.tsx",
+    "CanvasControls.tsx",
+    "CanvasSurface.tsx",
     "GraphCanvas.tsx",
     "ThreadGraphNode.tsx",
     "FocusDrawer.tsx",

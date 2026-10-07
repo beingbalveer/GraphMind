@@ -86,6 +86,11 @@
   z-index: var(--z-toast);
 }
 
+.canvas-compact .canvas-card-summary,
+.canvas-compact .canvas-card-meta {
+  visibility: hidden;
+}
+
 @layer base {
   :root {
     /* Backgrounds & Surfaces */

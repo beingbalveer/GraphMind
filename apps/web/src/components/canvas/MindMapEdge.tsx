@@ -11,6 +11,7 @@ export interface MindMapEdgeData {
   isActiveLineage?: boolean;
   highlightedContext?: string;
   isStreaming?: boolean;
+  relationKind?: string;
 }
 
 export const MindMapEdge = memo(function MindMapEdge({
@@ -49,10 +50,9 @@ export const MindMapEdge = memo(function MindMapEdge({
           ...style,
           stroke: isActive
             ? "var(--border-strong, currentColor)"
-            : "var(--border, currentColor)",
+            : "var(--canvas-connector, currentColor)",
           strokeWidth: isActive ? 2 : 1.5,
-          strokeDasharray: isStreaming ? "5,5" : undefined,
-          animation: isStreaming ? "dashdraw 0.6s linear infinite" : undefined,
+          strokeDasharray: edgeData.relationKind === "prerequisite" || edgeData.relationKind === "alternative" ? "4,4" : undefined,
           transition: "stroke 0.2s, stroke-width 0.2s",
         }}
       />

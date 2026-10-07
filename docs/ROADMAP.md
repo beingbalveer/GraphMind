@@ -32,8 +32,9 @@ Implementation uses `codex/roadmap-generator`, one verified task and commit at a
   with guarded cycle traversal and timeline ancestry.
 - **Completed:** Approved semantic canvas palette, accessible shared cards and
   measured non-overlapping spine layout.
-- **Active task:** Integrate the shared live canvas renderer.
-- **Next:** Versioned layout persistence and conversation regression verification.
+- **Completed:** Live shared canvas renderer with compact options, source-origin
+  connectors, stable streaming/selection placement and independent timeline layout.
+- **Active task:** Versioned layout persistence and conversation regression verification.
 - **Following canvas delivery:** Typed curricula, durable researched generation,
   clean setup/progress, learning workspace, guided lessons, editing and refinement.
 

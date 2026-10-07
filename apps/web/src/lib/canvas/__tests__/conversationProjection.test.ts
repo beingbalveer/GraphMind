@@ -52,6 +52,13 @@ describe("conversation canvas projection", () => {
     expect(projectConversation(tree)).toEqual({ items: [], links: [] });
   });
 
+  it("shows clean prose excerpts instead of Markdown formatting markers", () => {
+    const tree = conversation();
+    tree.nodes.x.content = "**Prioritization** with [a source](https://example.com).";
+    expect(projectConversation(tree).items.find(i => i.selectionId === "x")?.summary)
+      .toBe("Prioritization with a source.");
+  });
+
   it("retains undated messages and their full ancestor chain in timeline replay", () => {
     const tree = conversation();
     tree.nodes.a.createdAt = "2026-10-09T00:00:00Z";

@@ -2,6 +2,13 @@ import type { ConversationTree, TreeNode } from "@graphmind/shared";
 import { extractConversationThreads } from "../threadUtils";
 import type { CanvasGraph, CanvasItem } from "./types";
 
+function excerpt(content: string): string {
+  return content.replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/(\*\*|__|~~)(.*?)\1/g, "$2")
+    .replace(/`([^`]+)`/g, "$1").replace(/^#{1,6}\s+/gm, "")
+    .replace(/\s+/g, " ").trim().slice(0, 240);
+}
+
 /** Keep readable evidence and ancestry; malformed timestamps are undated. */
 export function filterConversationByTime(tree: ConversationTree, cutoff: string): ConversationTree {
   const limit = Date.parse(cutoff);
@@ -43,7 +50,7 @@ export function projectConversation(tree: ConversationTree): CanvasGraph {
       const last = messages[messages.length - 1];
       const item: CanvasItem = {
         id: `segment:${messages[0].id}`, kind: "conversation", title: thread.title,
-        summary: last.content.trim().slice(0, 240),
+        summary: excerpt(last.content),
         itemIds: messages.map(message => message.id), selectionId: last.id,
         lane: thread.parentThreadId ? "side" : "spine",
         parentId: previous?.id ?? null, originId: previous?.selectionId ?? thread.sourceMessageId ?? null,

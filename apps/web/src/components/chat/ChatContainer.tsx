@@ -1164,8 +1164,10 @@ export function ChatContainer({
           /* 2D Spatial Mind Map & Knowledge Graph Canvas View */
           <div className="w-full h-full relative">
               <GraphCanvas
+                key={`${currentWorkspace?.id}:${activeChatId}`}
                 tree={tree}
                 workspaceId={currentWorkspace?.id}
+                chatId={activeChatId ?? undefined}
                 isStreaming={isStreaming}
                 onSelectNode={handleSelectTreeNode}
                 onDeleteBranch={(nodeId) => currentWorkspace && deleteBranch(nodeId, currentWorkspace.id)}
