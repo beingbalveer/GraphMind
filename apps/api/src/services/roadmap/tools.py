@@ -246,9 +246,14 @@ class RoadmapTool(BaseTool):
 
     async def _perform(self, arguments: dict[str, Any]) -> JsonValue:
         if self.name == "search_web":
-            return (await self.context.search_backend.search(arguments["query"])).model_dump(
-                mode="json", by_alias=True
-            )
+            response = await self.context.search_backend.search(arguments["query"])
+            for result in response.results:
+                if result.provenance.get("supported") and result.snippet:
+                    result.provenance = {
+                        **result.provenance,
+                        "sourceId": self._source_id(result.url),
+                    }
+            return response.model_dump(mode="json", by_alias=True)
         if self.name == "fetch_source":
             existing = self._known_source(arguments["url"])
             source = existing or await self.context.source_fetcher.fetch(arguments["url"])

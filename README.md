@@ -298,3 +298,10 @@ are preserved on retry; `ROADMAP_MAX_*` settings configure new jobs. Two global
 worker slots are enforced through PostgreSQL. Optional references expire after
 24 hours for abandoned setup or seven days for failed/canceled runs; published
 references remain with their workspace.
+
+The researched roadmap popup is controlled by
+`NEXT_PUBLIC_ROADMAP_GENERATOR_ENABLED` (disabled during implementation).
+After enabling it, rebuild/restart the frontend so Next.js includes the setting.
+The learner sees one Generate action; job creation, staged references and start
+are handled automatically. Closing progress keeps the accepted job running;
+View activity shows persisted actions, and the dashboard reopens saved jobs.

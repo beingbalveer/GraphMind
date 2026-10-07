@@ -21,6 +21,7 @@ import { WorkspaceShell } from "@/components/layout/WorkspaceShell";
 import { Surface } from "@/components/ui/surface";
 import { InlineFeedback } from "@/components/ui/feedback";
 import { UserMenu } from "@/components/layout/UserMenu";
+import { RoadmapJobsNotice } from "@/components/roadmap/RoadmapJobsNotice";
 import { RoadmapModal } from "@/components/workspace/RoadmapModal";
 
 export function WorkspaceDashboard() {
@@ -30,6 +31,7 @@ export function WorkspaceDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [isRoadmapOpen, setIsRoadmapOpen] = useState(false);
+  const [resumeJobId, setResumeJobId] = useState<string | null>(null);
   const [workspaceView, setWorkspaceView] = useState<"mine" | "discover">("mine");
 
   const loadWorkspaces = useCallback(async () => {
@@ -142,6 +144,7 @@ export function WorkspaceDashboard() {
           </div>
 
           {/* Explicit Error State */}
+          <RoadmapJobsNotice onOpenJob={id => { setResumeJobId(id); setIsRoadmapOpen(true); }} />
           {error && (
             <div className="mb-6">
               <InlineFeedback
@@ -249,6 +252,7 @@ export function WorkspaceDashboard() {
       </WorkspaceShell>
 
       <RoadmapModal
+        resumeJobId={resumeJobId}
         isOpen={isRoadmapOpen}
         onClose={() => setIsRoadmapOpen(false)}
       />

@@ -285,13 +285,47 @@ async def test_link_reference_records_inspection_state(tool_context, curriculum_
     assert reference.status == "inspected" and reference.sections
 
 
-async def test_missing_search_configuration_does_not_consume_attempt(tool_context, job_repo, worker_job):
+async def test_missing_search_configuration_does_not_consume_attempt(
+    tool_context, job_repo, worker_job
+):
     from services.roadmap.search import GeminiSearchBackend
 
     tool_context.search_backend = GeminiSearchBackend(api_key="", model="test-model")
-    result = await build_roadmap_tools(tool_context)["search_web"].run({"query": "drawing curriculum"})
+    result = await build_roadmap_tools(tool_context)["search_web"].run(
+        {"query": "drawing curriculum"}
+    )
     assert result.is_error
     assert tool_context.last_error.code == "SEARCH_NOT_CONFIGURED"
     assert tool_context.last_error.recoverable
     usage = (await job_repo.read(worker_job.id, worker_job.owner_id)).usage
     assert usage.model_calls == 0 and usage.searches == 0
+
+
+async def test_search_returns_usable_source_ids_to_the_agent(tool_context):
+    result = await build_roadmap_tools(tool_context)["search_web"].run(
+        {"query": "drawing curriculum"}
+    )
+    data = json.loads(result.content)
+    source = next(s for s in tool_context.checkpoint.sources if s.url == data["results"][0]["url"])
+    assert data["results"][0]["provenance"]["sourceId"] == source.id
+
+
+async def test_understanding_tools_protect_request_background_before_profile_is_inferred(
+    worker_job, job_repo, curriculum_session, clock
+):
+    from config import Settings
+    from services.roadmap.stages import RoadmapStageExecutor
+
+    claim = await job_repo.claim("private-understanding", clock.now())
+    await curriculum_session.commit()
+    worker_job.request.background = "Confidential payroll account recovery procedure"
+    executor = RoadmapStageExecutor(
+        get_session_factory(),
+        settings=Settings(_env_file=None, GEMINI_API_KEY=None, GOOGLE_API_KEY=None),
+    )
+    tools = executor.tools(worker_job, claim)
+    result = await tools["search_web"].run(
+        {"query": "Confidential payroll account recovery tutorials"}
+    )
+    assert result.is_error
+    assert tools["search_web"].context.last_error.code == "PRIVATE_SEARCH_QUERY"

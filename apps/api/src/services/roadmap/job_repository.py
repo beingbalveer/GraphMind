@@ -331,6 +331,19 @@ class JobRepository:
         row.lease_until = now + timedelta(seconds=limits.lease_seconds)
         row.updated_at = now
         await self.session.flush()
+        await self._event(
+            row,
+            "stage_started",
+            {
+                "understand": "Understanding your goal",
+                "research": "Researching the path",
+                "compose": "Building your curriculum",
+                "personalize": "Planning your pace",
+                "validate": "Checking the roadmap",
+                "publish": "Preparing your workspace",
+            }[row.stage],
+            {},
+        )
         return Claim.model_validate(
             {
                 "job_id": row.id,

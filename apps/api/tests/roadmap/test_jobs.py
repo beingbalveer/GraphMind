@@ -370,3 +370,11 @@ async def test_completed_stage_event_identifies_stage_that_finished(
     events = await job_repo.events(ready_job.id, job_owner, 0)
     assert events[-1].type == "stage_completed" and events[-1].stage == "understand"
     assert (await job_repo.read(ready_job.id, job_owner)).stage == "research"
+
+
+async def test_claim_announces_actual_started_stage(job_repo, ready_job, job_owner, clock):
+    await job_repo.claim("observable-worker", clock.now())
+    events = await job_repo.events(ready_job.id, job_owner, 0)
+    assert events[-1].type == "stage_started"
+    assert events[-1].stage == "understand"
+    assert events[-1].summary == "Understanding your goal"

@@ -20,6 +20,7 @@ from services.roadmap.references import ReferenceService
 from services.roadmap.search import GeminiSearchBackend
 from services.roadmap.source_fetcher import SourceFetcher
 from services.roadmap.tools import RoadmapToolContext, SessionFactory, build_roadmap_tools
+from services.roadmap.workload import normalize_profile
 from services.skill_service import SkillRegistry
 
 
@@ -76,7 +77,7 @@ class RoadmapStageExecutor:
                 job.id,
                 job.owner_id,
                 claim,
-                job.checkpoint.profile,
+                job.checkpoint.profile or normalize_profile(job.request),
                 job.checkpoint,
                 self.sessions,
                 lambda session: ReferenceService(
