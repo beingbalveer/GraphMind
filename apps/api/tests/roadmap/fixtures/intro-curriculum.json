@@ -1,0 +1,164 @@
+{
+  "title": "Drawing foundations",
+  "outcome": "Complete a basic observed drawing with confident lines and simple forms.",
+  "assumptions": [],
+  "items": [
+    {
+      "brief": "A clear learning milestone.",
+      "objectives": [],
+      "exercise": null,
+      "format": null,
+      "path": "core",
+      "participation": "active",
+      "estimateMinutes": null,
+      "id": "root",
+      "kind": "root",
+      "title": "Drawing foundations",
+      "order": 0
+    },
+    {
+      "brief": "A clear learning milestone.",
+      "objectives": [],
+      "exercise": null,
+      "format": null,
+      "path": "core",
+      "participation": "active",
+      "estimateMinutes": null,
+      "id": "phase",
+      "kind": "phase",
+      "title": "Observe and draw",
+      "order": 0
+    },
+    {
+      "brief": "Practice line control with deliberate observation.",
+      "objectives": [
+        "Explain and demonstrate line control."
+      ],
+      "exercise": "Draw twenty varied lines and compare pressure.",
+      "format": "practice",
+      "path": "core",
+      "participation": "active",
+      "estimateMinutes": 90,
+      "id": "t1",
+      "kind": "topic",
+      "title": "Line control",
+      "order": 1
+    },
+    {
+      "brief": "Practice simple forms with deliberate observation.",
+      "objectives": [
+        "Explain and demonstrate simple forms."
+      ],
+      "exercise": "Draw a box and sphere from observation.",
+      "format": "practice",
+      "path": "core",
+      "participation": "active",
+      "estimateMinutes": 90,
+      "id": "t2",
+      "kind": "topic",
+      "title": "Simple forms",
+      "order": 2
+    },
+    {
+      "brief": "Practice observation study with deliberate observation.",
+      "objectives": [
+        "Explain and demonstrate observation study."
+      ],
+      "exercise": "Complete a small still life and review proportions.",
+      "format": "practice",
+      "path": "core",
+      "participation": "active",
+      "estimateMinutes": 90,
+      "id": "t3",
+      "kind": "topic",
+      "title": "Observation study",
+      "order": 3
+    }
+  ],
+  "relations": [
+    {
+      "sourceId": "root",
+      "targetId": "phase",
+      "kind": "contains"
+    },
+    {
+      "sourceId": "phase",
+      "targetId": "t1",
+      "kind": "contains"
+    },
+    {
+      "sourceId": "phase",
+      "targetId": "t2",
+      "kind": "contains"
+    },
+    {
+      "sourceId": "phase",
+      "targetId": "t3",
+      "kind": "contains"
+    },
+    {
+      "sourceId": "t1",
+      "targetId": "t2",
+      "kind": "prerequisite"
+    }
+  ],
+  "choices": [],
+  "sessions": [
+    {
+      "week": 1,
+      "topicId": "t1",
+      "sequence": 0,
+      "minutes": 90
+    },
+    {
+      "week": 1,
+      "topicId": "t2",
+      "sequence": 0,
+      "minutes": 90
+    },
+    {
+      "week": 1,
+      "topicId": "t3",
+      "sequence": 0,
+      "minutes": 90
+    }
+  ],
+  "resources": [
+    {
+      "topicId": "t1",
+      "sourceId": "s1",
+      "order": 0,
+      "rationale": "Relevant practical explanations and exercises for this learning objective."
+    },
+    {
+      "topicId": "t1",
+      "sourceId": "s2",
+      "order": 1,
+      "rationale": "Relevant practical explanations and exercises for this learning objective."
+    },
+    {
+      "topicId": "t2",
+      "sourceId": "s1",
+      "order": 0,
+      "rationale": "Relevant practical explanations and exercises for this learning objective."
+    },
+    {
+      "topicId": "t2",
+      "sourceId": "s2",
+      "order": 1,
+      "rationale": "Relevant practical explanations and exercises for this learning objective."
+    },
+    {
+      "topicId": "t3",
+      "sourceId": "s1",
+      "order": 0,
+      "rationale": "Relevant practical explanations and exercises for this learning objective."
+    },
+    {
+      "topicId": "t3",
+      "sourceId": "s2",
+      "order": 1,
+      "rationale": "Relevant practical explanations and exercises for this learning objective."
+    }
+  ]
+}
