@@ -114,5 +114,5 @@ export function MainHeader({
   );
 }
 
-// Backward-compatible alias
-export { MainHeader as Navbar };
+// Aliases for clear domain semantics and backward compatibility
+export { MainHeader as Navbar, MainHeader as ChatHeader };

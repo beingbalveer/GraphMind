@@ -38,7 +38,7 @@ import { useScrollAnchor } from "@/hooks/useScrollAnchor";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { safeGetItem, safeSetItem } from "@/lib/storage";
 
-import { Navbar, ViewMode } from "../layout/Navbar";
+import { ChatHeader, LibraryHeader, SettingsHeader, ViewMode } from "../layout/Navbar";
 import { WorkspaceShell } from "../layout/WorkspaceShell";
 import {
   buildWorkspaceUrl,
@@ -1050,53 +1050,51 @@ export function ChatContainer({
           />
         }
         header={
-          <Navbar
-            viewMode={viewMode}
-            onViewModeChange={(mode) => {
-              setViewMode(mode);
-              if (currentWorkspace) {
-                if (mode === "canvas") {
-                  router.push(activeChatId ? buildCanvasUrl(currentWorkspace.id, activeChatId) : buildWorkspaceUrl(currentWorkspace.id));
-                } else if (mode === "chat") {
-                  router.push(activeChatId ? buildChatUrl(currentWorkspace.id, activeChatId) : buildWorkspaceUrl(currentWorkspace.id));
-                } else if (mode === "library") {
+          viewMode === "library" ? (
+            <LibraryHeader
+              isSidebarOpen={isSidebarOpen}
+              onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
+            />
+          ) : viewMode === "settings" ? (
+            <SettingsHeader
+              isSidebarOpen={isSidebarOpen}
+              onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
+            />
+          ) : (
+            <ChatHeader
+              viewMode={viewMode}
+              onViewModeChange={(mode) => {
+                setViewMode(mode);
+                if (currentWorkspace) {
+                  if (mode === "canvas") {
+                    router.push(activeChatId ? buildCanvasUrl(currentWorkspace.id, activeChatId) : buildWorkspaceUrl(currentWorkspace.id));
+                  } else if (mode === "chat") {
+                    router.push(activeChatId ? buildChatUrl(currentWorkspace.id, activeChatId) : buildWorkspaceUrl(currentWorkspace.id));
+                  } else if (mode === "library") {
+                    router.push(buildLibraryUrl(currentWorkspace.id));
+                  }
+                }
+              }}
+              syncStatus={syncStatus}
+              workspaceName={currentWorkspace?.name || "Main Workspace"}
+              onOpenModelConfig={handleOpenSettings}
+              onOpenFileLibrary={() => {
+                if (currentWorkspace) {
                   router.push(buildLibraryUrl(currentWorkspace.id));
                 }
-              }
-            }}
-            syncStatus={syncStatus}
-            workspaceName={currentWorkspace?.name || "Main Workspace"}
-            onOpenModelConfig={handleOpenSettings}
-            onOpenFileLibrary={() => {
-              if (currentWorkspace) {
-                router.push(buildLibraryUrl(currentWorkspace.id));
-              }
-            }}
-            activeModelName={llmConfig.model}
-            messageCount={activeMessages.length}
-            isSidebarOpen={isSidebarOpen}
-            onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
-            isRightSidebarOpen={isRightSidebarOpen}
-            onToggleRightSidebar={handleToggleRightSidebar}
-            onNewChat={handleNewChat}
-            onClearChat={() => {
-              clearMessages();
-              handleCloseSidePeek();
-            }}
-            breadcrumbs={
-              viewMode === "library" ? (
-                <div className="flex items-center gap-1.5 text-sm text-foreground font-medium select-none">
-                  <span className="text-foreground-muted shrink-0">Workspace</span>
-                  <span className="text-foreground-subtle shrink-0">/</span>
-                  <span className="shrink-0">File Library</span>
-                </div>
-              ) : viewMode === "settings" ? (
-                <div className="flex items-center gap-1.5 text-sm text-foreground font-medium select-none">
-                  <span className="text-foreground-muted shrink-0">Workspace</span>
-                  <span className="text-foreground-subtle shrink-0">/</span>
-                  <span className="shrink-0">Settings</span>
-                </div>
-              ) : (
+              }}
+              activeModelName={llmConfig.model}
+              messageCount={activeMessages.length}
+              isSidebarOpen={isSidebarOpen}
+              onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
+              isRightSidebarOpen={isRightSidebarOpen}
+              onToggleRightSidebar={handleToggleRightSidebar}
+              onNewChat={handleNewChat}
+              onClearChat={() => {
+                clearMessages();
+                handleCloseSidePeek();
+              }}
+              breadcrumbs={
                 <BranchBreadcrumbs
                   steps={breadcrumbSteps}
                   suffix={viewMode === "canvas" ? "Canvas" : undefined}
@@ -1110,9 +1108,9 @@ export function ChatContainer({
                     }
                   }}
                 />
-              )
-            }
-          />
+              }
+            />
+          )
         }
         rail={viewMode === "settings" ? undefined : (
           <RightSidebar

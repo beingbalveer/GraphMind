@@ -20,7 +20,7 @@ interface BranchBreadcrumbsProps {
 export function BranchBreadcrumbs({
   steps,
   onSelectStep,
-  rootLabel = "Workspace",
+  rootLabel,
   suffix,
 }: BranchBreadcrumbsProps) {
   if (steps.length === 0) return null;
@@ -30,8 +30,12 @@ export function BranchBreadcrumbs({
       aria-label="Branch lineage"
       className="flex items-center gap-1.5 text-sm text-foreground font-medium select-none overflow-x-auto max-w-full"
     >
-      <span className="text-foreground-muted shrink-0">{rootLabel}</span>
-      <span className="text-foreground-subtle shrink-0">/</span>
+      {rootLabel && (
+        <>
+          <span className="text-foreground-muted shrink-0">{rootLabel}</span>
+          <span className="text-foreground-subtle shrink-0">/</span>
+        </>
+      )}
 
       {steps.map((step, index) => {
         const isCurrent = index === steps.length - 1 && !suffix;
