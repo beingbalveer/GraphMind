@@ -7,7 +7,7 @@
 @theme {
   --font-sans: -apple-system, system-ui, "Segoe UI Variable Display", "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol";
   --font-display: var(--font-libre-baskerville), Georgia, Cambria, ui-serif, "Times New Roman", Times, serif;
-  --spacing-composer-editor: 3.125rem;
+  --spacing-composer-editor: 1.875rem;
   --radius-composer: 1.375rem;
   --radius-navigation: 0.625rem;
   --text-display-sm: 2.25rem;

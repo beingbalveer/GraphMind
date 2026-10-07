@@ -49,6 +49,7 @@ export function FileLibraryView({
   onSelectFile,
 }: FileLibraryViewProps) {
   const [files, setFiles] = useState<FileAttachment[]>([]);
+  const [totalFilesCount, setTotalFilesCount] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -67,8 +68,18 @@ export function FileLibraryView({
     setIsLoading(true);
     try {
       const categoryParam = selectedCategory === "all" ? undefined : selectedCategory;
-      const data = await fetchWorkspaceFiles(workspaceId, categoryParam);
-      setFiles(data);
+      const [categoryData, allData] = await Promise.all([
+        fetchWorkspaceFiles(workspaceId, categoryParam),
+        selectedCategory === "all"
+          ? Promise.resolve(null)
+          : fetchWorkspaceFiles(workspaceId, undefined),
+      ]);
+      setFiles(categoryData);
+      if (selectedCategory === "all") {
+        setTotalFilesCount(categoryData.length);
+      } else if (allData) {
+        setTotalFilesCount(allData.length);
+      }
     } catch (err) {
       console.warn("Failed to load workspace files:", err);
     } finally {
@@ -128,6 +139,7 @@ export function FileLibraryView({
       const success = await deleteWorkspaceFile(workspaceId, fileId);
       if (success) {
         setFiles((prev) => prev.filter((f) => f.id !== fileId));
+        setTotalFilesCount((prev) => Math.max(0, prev - 1));
         if (previewFile?.id === fileId) setPreviewFile(null);
         if (viewingCodeFile?.id === fileId) setViewingCodeFile(null);
         if (viewingPdfFile?.id === fileId) setViewingPdfFile(null);
@@ -160,68 +172,78 @@ export function FileLibraryView({
         </div>
       )}
 
-      {/* Library heading and functional search/upload controls. */}
-      <div className="flex shrink-0 flex-col gap-3 bg-background px-4 py-2.5 sm:h-13 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-        <div className="flex min-w-0 items-center gap-2.5">
-          {onBack && (
-            <IconButton label="Back to chat" onClick={onBack} variant="ghost"><ArrowLeft className="size-4" /></IconButton>
-          )}
-          <h1 className="text-lg font-medium text-foreground">Library</h1>
-          <Badge variant="secondary" className="text-xs font-normal">{files.length} {files.length === 1 ? "file" : "files"}</Badge>
+      {/* Unified Single-Row Toolbar: Category Filters, Search, and Upload */}
+      <div className="flex shrink-0 items-center justify-between gap-3 bg-background px-4 py-2.5 sm:px-6 border-b border-border-subtle overflow-x-auto">
+        {/* Left: Category Filter Pills with permanent File Count Badge */}
+        <div className="min-w-0 shrink-0">
+          <SegmentedTabs
+            variant="pills"
+            size="sm"
+            ariaLabel="File categories"
+            value={selectedCategory}
+            onChange={setSelectedCategory}
+            items={[
+              {
+                id: "all",
+                label: "All",
+                badge: String(totalFilesCount),
+              },
+              { id: "document", label: "Docs", icon: FileText },
+              { id: "tabular", label: "Tabular", icon: FileSpreadsheet },
+              { id: "code", label: "Code", icon: Code },
+              { id: "image", label: "Images", icon: ImageIcon },
+            ]}
+          />
         </div>
-        <div className="flex items-center gap-2">
-          <div className="relative min-w-0 flex-1 sm:w-60">
+
+        {/* Right: Search & Upload */}
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="relative w-44 sm:w-60">
             <Input
               type="search"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               aria-label="Search files"
-              placeholder="Search files"
-              startIcon={<Search className="size-4" />}
-              className="bg-transparent pr-9"
+              placeholder="Search files..."
+              startIcon={<Search className="size-3.5" />}
+              className="bg-transparent pr-8 h-8 text-xs"
             />
             {searchQuery && (
-              <IconButton label="Clear search" variant="ghost" onClick={() => setSearchQuery("")} className="absolute right-1 top-1/2 size-6 -translate-y-1/2"><X className="size-3" /></IconButton>
+              <IconButton
+                label="Clear search"
+                variant="ghost"
+                onClick={() => setSearchQuery("")}
+                className="absolute right-1 top-1/2 size-5 -translate-y-1/2"
+              >
+                <X className="size-3" />
+              </IconButton>
             )}
           </div>
-            <input
-              type="file"
-              ref={fileInputRef}
-              multiple
-              accept="image/*,application/pdf,.pdf,.csv,.tsv,.xlsx,.jsonl,.ndjson,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,text/tab-separated-values,.txt,.md,.markdown,.py,.js,.jsx,.ts,.tsx,.json,.yaml,.yml,.toml,.sql,.html,.css,.scss,.sh,.bash,.zsh,.rs,.go,.c,.cpp,.h,.hpp,.java,.kt,.rb,.php,.cs,.swift,.dockerfile,.graphql,.proto,.vue,.svelte,.xml,.env,.log"
-              className="hidden"
-              onChange={handleFileInputChange}
-            />
-            <Button
-              type="button"
-              variant="default"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isUploading}
-              className="cursor-pointer shrink-0"
-            >
-              {isUploading ? (
-                <Loader2 className="size-3.5 animate-spin mr-1.5" />
-              ) : (
-                <Upload className="size-3.5 mr-1.5" />
-              )}
-              <span>Upload</span>
-            </Button>
-          </div>
-      </div>
-      <div className="shrink-0 overflow-x-auto px-4 py-2 sm:px-6">
-        <SegmentedTabs
-          variant="pills"
-          ariaLabel="File categories"
-          value={selectedCategory}
-          onChange={setSelectedCategory}
-          items={[
-            { id: "all", label: "All" },
-            { id: "document", label: "Docs", icon: FileText },
-            { id: "tabular", label: "Tabular", icon: FileSpreadsheet },
-            { id: "code", label: "Code", icon: Code },
-            { id: "image", label: "Images", icon: ImageIcon },
-          ]}
-        />
+
+          <input
+            type="file"
+            ref={fileInputRef}
+            multiple
+            accept="image/*,application/pdf,.pdf,.csv,.tsv,.xlsx,.jsonl,.ndjson,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,text/tab-separated-values,.txt,.md,.markdown,.py,.js,.jsx,.ts,.tsx,.json,.yaml,.yml,.toml,.sql,.html,.css,.scss,.sh,.bash,.zsh,.rs,.go,.c,.cpp,.h,.hpp,.java,.kt,.rb,.php,.cs,.swift,.dockerfile,.graphql,.proto,.vue,.svelte,.xml,.env,.log"
+            className="hidden"
+            onChange={handleFileInputChange}
+          />
+          <Button
+            type="button"
+            variant="default"
+            size="sm"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploading}
+            className="cursor-pointer shrink-0"
+          >
+            {isUploading ? (
+              <Loader2 className="size-3.5 animate-spin mr-1.5" />
+            ) : (
+              <Upload className="size-3.5 mr-1.5" />
+            )}
+            <span>Upload</span>
+          </Button>
+        </div>
       </div>
 
       {/* Main Content: File Grid */}

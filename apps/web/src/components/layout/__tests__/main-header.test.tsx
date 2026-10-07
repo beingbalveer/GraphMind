@@ -123,7 +123,7 @@ describe("MainHeader Component & Contract (Scope 3, Task 3)", () => {
     expect(onToggleSidebar).toHaveBeenCalledOnce();
   });
 
-  it("renders centered breadcrumbs slot", () => {
+  it("renders left-aligned breadcrumbs slot", () => {
     render(
       <MainHeader
         breadcrumbs={<div data-testid="test-breadcrumbs">Path / To / Node</div>}

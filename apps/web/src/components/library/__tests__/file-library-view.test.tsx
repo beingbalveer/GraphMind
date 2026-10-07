@@ -79,16 +79,17 @@ describe("FileLibraryView Full-Page Component", () => {
     expect(screen.getByText("Unavailable")).toBeInTheDocument();
   });
 
-  it("triggers onBack when back button is rendered and clicked", async () => {
-    vi.spyOn(workspaceApi, "fetchWorkspaceFiles").mockResolvedValue([]);
-    const handleBack = vi.fn();
+  it("renders the category filter tabs with total files count on the All tab", async () => {
+    vi.spyOn(workspaceApi, "fetchWorkspaceFiles").mockResolvedValue(mockFiles);
 
-    render(<FileLibraryView workspaceId="ws-1" onBack={handleBack} />);
+    render(<FileLibraryView workspaceId="ws-1" />);
 
-    const backBtn = screen.getByRole("button", { name: "Back to chat" });
-    expect(backBtn).toBeInTheDocument();
-    fireEvent.click(backBtn);
-    expect(handleBack).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(screen.getByText("architecture-diagram.png")).toBeInTheDocument();
+    });
+
+    expect(screen.getByRole("tab", { name: /All/ })).toBeInTheDocument();
+    expect(screen.getByText("4")).toBeInTheDocument();
   });
 
   it("filters files when typing in the search input", async () => {

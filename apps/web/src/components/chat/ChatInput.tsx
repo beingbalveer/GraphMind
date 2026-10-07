@@ -373,7 +373,7 @@ export function ChatInput({
         <Surface
           variant="base"
           radius="composer"
-          className={`flex min-h-30 flex-col space-y-2 border-border-strong p-3 transition-colors motion-reduce:transition-none focus-within:border-border-strong ${
+          className={`flex min-h-18 flex-col space-y-1.5 border-border-strong px-3 py-2 transition-colors motion-reduce:transition-none focus-within:border-border-strong ${
           isDragOver
             ? "bg-info/10 ring-2 ring-info/50"
             : "bg-surface"

@@ -19,6 +19,7 @@ import {
   FileText,
   FileSpreadsheet,
   BookOpen,
+  ExternalLink,
 } from "lucide-react";
 import { FlashcardModal } from "@/components/flashcards/FlashcardModal";
 import type { FlashcardGenerationConfig } from "@/lib/flashcardApi";
@@ -262,13 +263,12 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
             return (
               <Button
                 variant="ghost"
-                size="sm"
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
                   onOpenSideBranch?.(leafId, excerptText);
                 }}
-                className="inline h-auto rounded-none p-0 align-baseline font-medium text-primary underline decoration-primary/50 underline-offset-2 hover:bg-transparent hover:text-primary"
+                className="inline h-auto rounded-none p-0 align-baseline !text-base !leading-[1.8] !font-normal text-info underline decoration-info/60 underline-offset-4 hover:bg-transparent hover:text-info hover:decoration-info cursor-pointer transition-colors"
                 title={`Open branch for "${excerptText}" in parallel split pane`}
               >
                 {children}
@@ -281,9 +281,10 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
               href={href}
               target="_blank"
               rel="noopener noreferrer"
-              className="font-medium text-primary underline underline-offset-4 transition-colors hover:text-primary/80"
+              className="inline-flex items-center gap-0.5 text-base leading-[1.8] text-info underline decoration-info/60 underline-offset-4 transition-colors hover:text-info hover:decoration-info cursor-pointer"
             >
-              {children}
+              <span>{children}</span>
+              <ExternalLink className="size-3.5 inline-block shrink-0 opacity-70" />
             </a>
           );
         },

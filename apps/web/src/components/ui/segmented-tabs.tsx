@@ -47,7 +47,7 @@ export function SegmentedTabs<T extends string = string>({
             key={item.id}
             value={item.id}
             className={cn(
-              "inline-flex shrink-0 flex-none cursor-pointer items-center justify-center gap-1.5 rounded-lg px-2.5 py-0 font-normal text-foreground-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring hover:bg-surface-hover hover:text-foreground motion-reduce:transition-none data-active:bg-surface data-active:font-medium data-active:text-foreground",
+              "inline-flex shrink-0 flex-none cursor-pointer items-center justify-center gap-1.5 rounded-lg px-2.5 py-0 font-medium text-foreground-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring hover:bg-surface-hover hover:text-foreground motion-reduce:transition-none data-active:bg-surface data-active:text-foreground",
               size === "sm" ? "h-6 text-xs" : "h-7 text-sm",
               variant === "pills" && "h-8 text-sm text-foreground-subtle data-active:bg-surface-hover"
             )}

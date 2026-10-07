@@ -61,22 +61,23 @@ export function MainHeader({
         className
       )}
     >
-      <div className="min-w-0 flex-1">
+      {/* Left Zone: Navigation Toggle & Title / Breadcrumbs */}
+      <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 mr-2 sm:mr-4">
         {onToggleSidebar && (
           <IconButton
             label={isSidebarOpen ? "Close navigation" : "Open navigation"}
             aria-expanded={isSidebarOpen}
             onClick={onToggleSidebar}
-            className="md:hidden"
+            className="md:hidden shrink-0"
           >
             <PanelLeft className="size-4" />
           </IconButton>
         )}
-      </div>
-
-      {/* Center Zone: Branch / Context Breadcrumbs */}
-      <div className="hidden sm:flex items-center justify-center flex-1 mx-2 sm:mx-4 min-w-0">
-        {breadcrumbs}
+        {breadcrumbs && (
+          <div className="min-w-0 truncate">
+            {breadcrumbs}
+          </div>
+        )}
       </div>
 
       {/* Right Zone: Mode Switcher (Chat ↔ Canvas) & Contextual Rail Control */}
