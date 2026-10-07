@@ -82,6 +82,7 @@ class Settings(BaseSettings):
     ROADMAP_HEARTBEAT_SECONDS: int = Field(default=15, ge=1)
     ROADMAP_WORKER_SLOTS: int = Field(default=2, ge=1)
     ROADMAP_REFERENCE_DIR: str = Field(default="data/storage/roadmap")
+    ROADMAP_SEARCH_MODEL: str = Field(default="gemini-2.5-flash")
 
 
 @lru_cache(maxsize=1)

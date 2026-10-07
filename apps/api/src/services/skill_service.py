@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 import structlog
 from ai_core.skills import Skill, load_skills_from_dir
@@ -12,8 +12,11 @@ class SkillRegistry:
     Central repository for discovering, managing, and injecting procedural skills in GraphMind.
     """
 
-    def __init__(self, skills_dir: Optional[Path] = None) -> None:
+    def __init__(
+        self, skills_dir: Optional[Path] = None, *, scope: Literal["chat", "roadmap"] = "chat"
+    ) -> None:
         self._skills: Dict[str, Skill] = {}
+        self.scope = scope
 
         # Default to apps/api/skills relative to this file if not specified
         if skills_dir is None:
@@ -32,10 +35,19 @@ class SkillRegistry:
             return 0
 
         loaded = load_skills_from_dir(dir_path)
+        registered = 0
         for skill in loaded:
+            if ("roadmap" in skill.metadata.tags) != (self.scope == "roadmap"):
+                continue
             self.register(skill)
-        logger.info("Discovered and indexed agent skills", count=len(loaded), dir=str(dir_path))
-        return len(loaded)
+            registered += 1
+        logger.info(
+            "Discovered and indexed agent skills",
+            count=registered,
+            discovered_count=len(loaded),
+            dir=str(dir_path),
+        )
+        return registered
 
     def register(self, skill: Skill) -> None:
         """
