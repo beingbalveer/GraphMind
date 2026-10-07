@@ -4,6 +4,7 @@ import json
 import os
 import re
 import uuid
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -91,6 +92,77 @@ MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024  # 20 Megabytes
 
 # Storage root: data/storage/workspaces
 BASE_STORAGE_DIR = Path(os.getenv("STORAGE_DIR", "data/storage"))
+
+
+@dataclass(frozen=True)
+class ExtractedReference:
+    sections: list[tuple[str, str]]
+    limited: bool = False
+    error: str | None = None
+
+
+def bounded_utf8(text: str, limit: int) -> str:
+    return text.encode("utf-8")[:limit].decode("utf-8", errors="ignore")
+
+
+def extract_reference_text(data: bytes, content_type: str) -> ExtractedReference:
+    """Pure, bounded PDF/text extraction, with page/section locators and explicit limits."""
+    maximum = 2 * 1024 * 1024
+    section_limit = 16 * 1024
+    sections: list[tuple[str, str]] = []
+    used = 0
+    limited = False
+
+    def append(locator: str, value: str) -> None:
+        nonlocal used, limited
+        raw = value.strip().encode("utf-8")
+        available = maximum - used
+        if len(raw) > available:
+            raw = raw[:available]
+            limited = True
+        offset = 0
+        part = 1
+        while offset < len(raw):
+            text = raw[offset : offset + section_limit].decode("utf-8", errors="ignore")
+            # Keep Unicode boundaries intact when advancing the byte cursor.
+            length = len(text.encode("utf-8"))
+            if length == 0:
+                break
+            label = locator if part == 1 else f"{locator}, part {part}"
+            sections.append((label, text))
+            used += length
+            offset += length
+            part += 1
+
+    if content_type == "application/pdf":
+        try:
+            reader = pypdf.PdfReader(io.BytesIO(data))
+            if reader.is_encrypted:
+                return ExtractedReference(
+                    [], error="Encrypted PDFs cannot be read. Upload an unlocked copy."
+                )
+            for index, page in enumerate(reader.pages):
+                append(f"Page {index + 1}", page.extract_text() or "")
+                if used >= maximum:
+                    limited = limited or index + 1 < len(reader.pages)
+                    break
+        except Exception:
+            return ExtractedReference(
+                [], error="This PDF could not be read. Upload a text PDF, TXT or Markdown file."
+            )
+    else:
+        try:
+            value = data.decode("utf-8-sig")
+        except UnicodeDecodeError:
+            return ExtractedReference(
+                [], error="This text file is not valid UTF-8. Save it as UTF-8 and try again."
+            )
+        append("Text", value)
+    if not sections:
+        return ExtractedReference(
+            [], error="No readable text was found. Image-only PDFs need a text version."
+        )
+    return ExtractedReference(sections, limited=limited)
 
 
 def _sanitize_filename(filename: str) -> str:
