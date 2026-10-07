@@ -197,3 +197,16 @@ GraphMind's structure most closely mirrors **GitHub's** — a workspace (repo) c
 | **Phase 6** | Agent runtime dashboard | `/w/{wid}/agents` |
 | **Phase 6** | Specific agent session | `/w/{wid}/agents/{sessionId}` |
 | **Future** | Org/user home | `/{orgSlug}/w/{wid}/chat/{cid}` *(slug layer added on top)* |
+
+## 11. Roadmap workspaces
+
+A workspace with a published curriculum renders its ordered roadmap at
+`buildWorkspaceUrl(workspaceId)`. Its canvas is the canonical
+`buildCanvasUrl(workspaceId, canvasAnchorChatId)` supplied by the curriculum API.
+The anchor is protected from chat/branch deletion and excluded from ordinary chat
+lists; deleting the authorized workspace removes the roadmap as well.
+
+Topic tutoring uses ordinary persistent chat URLs and conversation canvases.
+Library and settings keep their existing routes. Back to roadmap returns to the
+workspace landing; page/canvas switching uses the published anchor. An ordinary
+workspace with `ROADMAP_NOT_FOUND` retains its existing chat landing behavior.

@@ -50,6 +50,17 @@ def selected_core_topics(candidate: CurriculumCandidate) -> list[CurriculumItemD
         return True
 
     topics = {i.id: i for i in candidate.items if i.kind == "topic" and included(i)}
+
+    def hierarchy_rank(key: str) -> tuple[tuple[int, str], ...]:
+        rank: list[tuple[int, str]] = []
+        seen: set[str] = set()
+        current = items.get(key)
+        while current and current.id not in seen:
+            seen.add(current.id)
+            rank.append((current.order, current.id))
+            current = items.get(parents.get(current.id, ""))
+        return tuple(reversed(rank))
+
     incoming = {key: 0 for key in topics}
     outgoing: dict[str, set[str]] = {key: set() for key in topics}
     for relation in candidate.relations:
@@ -62,7 +73,7 @@ def selected_core_topics(candidate: CurriculumCandidate) -> list[CurriculumItemD
         if relation.target_id not in outgoing[relation.source_id]:
             outgoing[relation.source_id].add(relation.target_id)
             incoming[relation.target_id] += 1
-    ready = [(topics[key].order, key) for key, count in incoming.items() if not count]
+    ready = [(hierarchy_rank(key), key) for key, count in incoming.items() if not count]
     heapq.heapify(ready)
     result = []
     while ready:
@@ -71,7 +82,7 @@ def selected_core_topics(candidate: CurriculumCandidate) -> list[CurriculumItemD
         for target in sorted(outgoing[key]):
             incoming[target] -= 1
             if not incoming[target]:
-                heapq.heappush(ready, (topics[target].order, target))
+                heapq.heappush(ready, (hierarchy_rank(target), target))
     if len(result) != len(topics):
         raise WorkloadError("ORDER_CYCLE")
     return result

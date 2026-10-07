@@ -23,6 +23,10 @@ import { BranchBreadcrumbs, BreadcrumbStep } from "./BranchBreadcrumbs";
 import { ChatSidebar } from "./ChatSidebar";
 import { RightSidebar } from "./RightSidebar";
 import { MasteryPanel } from "./MasteryPanel";
+import { useRoadmap } from "@/hooks/useRoadmap";
+import { RoadmapWorkspace } from "@/components/roadmap/RoadmapWorkspace";
+import { RoadmapHeader } from "@/components/roadmap/RoadmapHeader";
+import { roadmapRouteMode } from "@/lib/urls";
 import { GraphCanvas } from "../canvas/GraphCanvas";
 import { CommandPalette } from "../canvas/CommandPalette";
 import { SettingsPage } from "../settings/SettingsPage";
@@ -187,6 +191,12 @@ export function ChatContainer({
   } = useScrollAnchor({ threshold: 80 });
 
   // References to prevent duplicate re-initialization and route flicker
+  const roadmap = useRoadmap(process.env.NEXT_PUBLIC_ROADMAP_GENERATOR_ENABLED === "true" ? currentWorkspace?.id ?? initialWorkspaceId ?? null : null);
+  const roadmapMode = roadmapRouteMode(pathname, roadmap.view);
+  const waitingForRoadmap = process.env.NEXT_PUBLIC_ROADMAP_GENERATOR_ENABLED === "true" &&
+    (pathname === buildWorkspaceUrl(currentWorkspace?.id ?? initialWorkspaceId ?? "") || pathname.endsWith("/canvas")) &&
+    (roadmap.loading || Boolean(roadmap.error));
+
   const loadedChatIdRef = useRef<string | null>(initialChatId || null);
   const initializedWorkspaceIdRef = useRef<string | null>(null);
   // Capture initial values in refs so they never change across re-renders
@@ -1033,7 +1043,7 @@ export function ChatContainer({
             isOpen={isSidebarOpen}
             onToggle={() => setIsSidebarOpen((prev) => !prev)}
             workspaceName={currentWorkspace?.name || "Main Workspace"}
-            chats={chats}
+            chats={chats.filter(chat => chat.id !== roadmap.view?.canvasAnchorChatId)}
             activeChatId={activeChatId}
             isLibraryActive={viewMode === "library"}
             onSelectChat={handleSelectChat}
@@ -1050,7 +1060,9 @@ export function ChatContainer({
           />
         }
         header={
-          viewMode === "library" ? (
+          roadmapMode && roadmap.view ? (
+            <RoadmapHeader view={roadmap.view} mode={roadmapMode} onToggleSidebar={() => setIsSidebarOpen(prev => !prev)} />
+          ) : viewMode === "library" ? (
             <LibraryHeader
               isSidebarOpen={isSidebarOpen}
               onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
@@ -1112,7 +1124,7 @@ export function ChatContainer({
             />
           )
         }
-        rail={viewMode === "settings" ? undefined : (
+        rail={roadmapMode || waitingForRoadmap || viewMode === "settings" ? undefined : (
           <RightSidebar
             isOpen={isRightSidebarOpen}
             onToggle={handleToggleRightSidebar}
@@ -1134,7 +1146,14 @@ export function ChatContainer({
           </RightSidebar>
         )}
       >
-        {viewMode === "settings" ? (
+        {waitingForRoadmap ? (
+          <div className="flex h-full flex-col items-center justify-center gap-3 bg-background p-6 text-sm text-foreground-muted" role={roadmap.error ? "alert" : "status"}>
+            {roadmap.error ? roadmap.error.message : "Loading roadmap…"}
+            {roadmap.error && <Button variant="secondary" onClick={() => void roadmap.refresh()}>Retry</Button>}
+          </div>
+        ) : roadmapMode && roadmap.view ? (
+          <RoadmapWorkspace key={roadmap.view.roadmapId} view={roadmap.view} mode={roadmapMode} />
+        ) : viewMode === "settings" ? (
           <SettingsPage
             config={llmConfig}
             onSaveConfig={updateLLMConfig}

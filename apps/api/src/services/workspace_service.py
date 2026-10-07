@@ -2,7 +2,10 @@ from collections import deque
 from typing import Any, Dict, List, Optional, Tuple
 
 import structlog
+from errors import RoadmapHTTPError
+from models.roadmap import Roadmap
 from models.workspace import EdgeModel, NodeModel, Workspace
+from schemas.roadmap_job import JobError
 from schemas.workspace import (
     ChatSummary,
     EdgeResponse,
@@ -328,7 +331,16 @@ class WorkspaceService:
             return []
 
         # Find all root nodes (parent_id is None)
-        root_nodes = [n for n in ws.nodes if n.parent_id is None]
+        anchor_ids = set(
+            (
+                await session.scalars(
+                    select(Roadmap.canvas_anchor_chat_id).where(
+                        Roadmap.workspace_id == workspace_id
+                    )
+                )
+            ).all()
+        )
+        root_nodes = [n for n in ws.nodes if n.parent_id is None and n.id not in anchor_ids]
         if not root_nodes:
             return []
 
@@ -396,10 +408,31 @@ class WorkspaceService:
         return chats
 
     @staticmethod
+    async def protect_roadmap_anchor(
+        session: AsyncSession, workspace_id: str, node_id: str
+    ) -> None:
+        anchor = await session.scalar(
+            select(Roadmap.id).where(
+                Roadmap.workspace_id == workspace_id, Roadmap.canvas_anchor_chat_id == node_id
+            )
+        )
+        if anchor:
+            raise RoadmapHTTPError(
+                409,
+                JobError(
+                    code="ROADMAP_ANCHOR_PROTECTED",
+                    message="This chat anchors your roadmap canvas. Delete the workspace to remove the roadmap.",
+                    recoverable=False,
+                    next_action="new_run",
+                ),
+            )
+
+    @staticmethod
     async def delete_branch(session: AsyncSession, workspace_id: str, node_id: str) -> bool:
         """
         Delete a node and all its recursive descendants efficiently using a CTE.
         """
+        await WorkspaceService.protect_roadmap_anchor(session, workspace_id, node_id)
         stmt = text("""
             WITH RECURSIVE descendants AS (
                 SELECT id FROM nodes
@@ -433,6 +466,7 @@ class WorkspaceService:
         """
         Delete a conversation tree (chat) by deleting its root node and cascading to all descendants.
         """
+        await WorkspaceService.protect_roadmap_anchor(session, workspace_id, chat_root_id)
         stmt = select(NodeModel).where(
             NodeModel.id == chat_root_id, NodeModel.workspace_id == workspace_id
         )

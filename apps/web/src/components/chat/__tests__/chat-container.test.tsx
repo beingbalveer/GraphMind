@@ -32,7 +32,7 @@ vi.mock("@/hooks/useChatStream", () => ({
 }));
 
 vi.mock("next/navigation", () => ({
-  usePathname: () => "/w/ws_test",
+  usePathname: () => roadmapState.path,
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
   useSearchParams: () => new URLSearchParams(),
 }));
@@ -57,6 +57,10 @@ vi.mock("@/lib/workspaceApi", async (importOriginal) => {
 });
 
 import { ChatContainer } from "../ChatContainer";
+import { curriculumFixture } from "@/components/roadmap/__tests__/fixtures";
+const roadmapState = vi.hoisted(() => ({ path: "/w/ws_test", view: null as import("@/lib/roadmapTypes").CurriculumView|null, loading: false, error: null as Error|null }));
+vi.mock("@/hooks/useRoadmap", () => ({ useRoadmap: () => ({...roadmapState,refresh: vi.fn()}) }));
+vi.mock("@/components/roadmap/RoadmapCanvas",()=>({RoadmapCanvas:()=> <div>Curriculum canvas</div>}));
 
 describe("ChatContainer canonical composition", () => {
   it("constrains the conversation column and keeps the composer at the bottom", () => {
@@ -77,6 +81,8 @@ describe("ChatContainer canonical composition", () => {
 
   beforeEach(() => {
     mockUseChatStream.mockReturnValue({ ...defaultChatStreamState });
+    roadmapState.path="/w/ws_test"; roadmapState.view=null; roadmapState.loading=false; roadmapState.error=null;
+    vi.unstubAllEnvs();
   });
 
   it("renders starter prompt buttons without raw buttons and allows clicking them", () => {
@@ -123,11 +129,34 @@ describe("ChatContainer canonical composition", () => {
     expect(source).not.toMatch(/<button\b/);
   });
 
-  it("renders unified breadcrumbs matching library style for chat and new chat", () => {
+  it("renders the active conversation title in breadcrumbs", () => {
     render(<ChatContainer initialWorkspaceId="ws_test" initialViewMode="chat" />);
 
     const breadcrumbs = screen.getByRole("navigation", { name: "Branch lineage" });
-    expect(breadcrumbs).toHaveTextContent("Workspace");
     expect(breadcrumbs).toHaveTextContent("New Chat");
+  });
+});
+
+
+describe("Roadmap shell routing",()=>{
+  beforeEach(()=>{
+    vi.stubEnv("NEXT_PUBLIC_ROADMAP_GENERATOR_ENABLED","true");
+    roadmapState.view={...curriculumFixture(),workspaceId:"ws_test"};
+  });
+  it("renders roadmap landing instead of empty chat",()=>{
+    render(<ChatContainer initialWorkspaceId="ws_test"/>);
+    expect(screen.getByRole("heading",{name:"Drawing"})).toBeVisible();
+    expect(screen.queryByTestId("chat-composer-shell")).not.toBeInTheDocument();
+  });
+  it("uses only the published anchor for curriculum canvas",()=>{
+    roadmapState.path="/w/ws_test/chat/anchor/canvas";
+    render(<ChatContainer initialWorkspaceId="ws_test" initialChatId="anchor" initialViewMode="canvas"/>);
+    expect(screen.getByText("Curriculum canvas")).toBeVisible();
+  });
+  it("shows loading without empty chat flash",()=>{
+    roadmapState.path="/w/ws_test";roadmapState.view=null;roadmapState.loading=true;
+    render(<ChatContainer initialWorkspaceId="ws_test"/>);
+    expect(screen.getByText("Loading roadmap…")).toBeVisible();
+    expect(screen.queryByTestId("chat-composer-shell")).not.toBeInTheDocument();
   });
 });

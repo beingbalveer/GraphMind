@@ -118,3 +118,10 @@ The following architectural capabilities define GraphMind's enterprise scale-up 
 - **Canvas Tile Chunking**: Viewport-based node virtualization allowing smooth 60 FPS rendering on massive workspaces exceeding 10,000+ nodes.
 - **Connection Pooling & Read Replicas**: PgBouncer pooling for backend asyncpg connections and read-replica distribution for heavy semantic search queries.
 - **Offline-First PWA**: Client-side IndexedDB caching (via Dexie.js) allowing offline graph traversal with automatic sync upon reconnection.
+
+### Researched roadmap workspace — implementation branch
+
+The roadmap generator now has durable researched jobs and a concise setup/progress
+flow. The ordered page and shared curriculum canvas read the same immutable
+revision, with explicit prerequisite links and selected-core progress. The
+operator flag remains off pending functional tutoring/progress actions.

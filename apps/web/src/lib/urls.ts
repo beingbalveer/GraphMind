@@ -62,3 +62,11 @@ export const buildBranchUrl = (
   chatId: string,
   branchLeafId: string
 ): string => `/w/${workspaceId}/chat/${chatId}?branch=${encodeURIComponent(branchLeafId)}`;
+
+/** Curriculum navigation uses the published anchor, never a guessed chat ID. */
+export function roadmapRouteMode(pathname: string, view: import("./roadmapTypes").CurriculumView|null): "page"|"canvas"|null {
+  if (!view) return null;
+  if (pathname === buildWorkspaceUrl(view.workspaceId)) return "page";
+  if (pathname === buildCanvasUrl(view.workspaceId,view.canvasAnchorChatId)) return "canvas";
+  return null;
+}

@@ -83,3 +83,23 @@ def test_duration_rejects_fractional_weeks_and_out_of_bounds(duration: dict[str,
 def test_weekly_capacity_rejects_invalid_values(hours: object) -> None:
     with pytest.raises(ValidationError):
         RoadmapRequest(prompt="Learn careful line drawing", hours_per_week=hours)
+
+
+def test_phase_order_precedes_local_topic_order(small_candidate):
+    from schemas.curriculum import CurriculumRelationData
+
+    phase = next(i for i in small_candidate.items if i.kind == "phase")
+    later = phase.model_copy(update={"id": "later", "order": 1})
+    phase.order = 0
+    topics = [i for i in small_candidate.items if i.kind == "topic"]
+    topics[0].order, topics[1].order, topics[2].order = 0, 1, 0
+    small_candidate.items.append(later)
+    small_candidate.relations = [r for r in small_candidate.relations if r.kind == "contains"]
+    for relation in small_candidate.relations:
+        if relation.target_id == topics[2].id:
+            relation.source_id = later.id
+    root = next(i for i in small_candidate.items if i.kind == "root")
+    small_candidate.relations.append(
+        CurriculumRelationData(source_id=root.id, target_id=later.id, kind="contains")
+    )
+    assert [i.id for i in selected_core_topics(small_candidate)] == [i.id for i in topics]

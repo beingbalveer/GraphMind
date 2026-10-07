@@ -69,3 +69,45 @@ async def test_nonmember_and_anonymous_cannot_read_curriculum(
     assert (await auth_client.get(path)).status_code == 404
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         assert (await client.get(path)).status_code == 401
+
+
+@pytest.mark.parametrize("action", ["chats", "nodes"])
+async def test_direct_anchor_deletion_is_protected(
+    published_curriculum, curriculum_session, action
+):
+    view = published_curriculum.view
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+        cookies={"access_token": create_access_token("usr_default_admin")},
+    ) as client:
+        response = await client.delete(
+            f"/api/v1/workspaces/{view.workspace_id}/{action}/{view.canvas_anchor_chat_id}"
+        )
+        assert response.status_code == 409
+        assert response.json()["error"]["code"] == "ROADMAP_ANCHOR_PROTECTED"
+        assert (
+            await client.get(f"/api/v1/workspaces/{view.workspace_id}/roadmap")
+        ).status_code == 200
+
+
+async def test_anchor_is_not_an_ordinary_chat(published_curriculum, curriculum_session):
+    from services.workspace_service import WorkspaceService
+
+    view = published_curriculum.view
+    chats = await WorkspaceService.list_workspace_chats(curriculum_session, view.workspace_id)
+    assert view.canvas_anchor_chat_id not in [chat.id for chat in chats]
+
+
+async def test_workspace_delete_still_cascades_roadmap(published_curriculum, curriculum_session):
+    from models.roadmap import Roadmap
+
+    view = published_curriculum.view
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+        cookies={"access_token": create_access_token("usr_default_admin")},
+    ) as client:
+        assert (await client.delete(f"/api/v1/workspaces/{view.workspace_id}")).status_code == 204
+    await curriculum_session.rollback()
+    assert await curriculum_session.get(Roadmap, view.roadmap_id) is None
