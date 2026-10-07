@@ -153,13 +153,10 @@ export function ChatSidebar({
         ) : (
           <>
             {/* Title trigger with pe-7 on hover so title never overlaps 3 dots */}
-            <div className="flex h-full min-w-0 flex-1 items-center gap-2.5 text-start outline-none group-hover:pe-7 transition-[padding]">
-              <span className="flex size-5 shrink-0 items-center justify-center text-foreground [&>svg]:size-5 [&>svg]:stroke-[1.75]">
-                <MessageSquare />
-              </span>
+            <div className="flex h-full min-w-0 flex-1 items-center text-start outline-none group-hover:pe-7 transition-[padding]">
               <span className="min-w-0 flex-1 truncate first-letter:uppercase">{formattedTitle}</span>
               {chat.pinned && (
-                <Pin className="size-3.5 text-foreground shrink-0 ml-1" aria-label="Pinned" />
+                <Pin className="size-3.5 text-foreground shrink-0 ml-1.5" aria-label="Pinned" />
               )}
             </div>
 
