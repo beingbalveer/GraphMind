@@ -74,6 +74,12 @@ The active **view mode** (chat vs. canvas) is encoded as a sub-path:
 
 ## 5. Allowed Query Parameters
 
+Canvas layout persistence uses the auxiliary authenticated API endpoint
+`GET/PUT /api/v1/workspaces/{workspaceId}/chats/{chatId}/canvas-layout`.
+Its optional `kind=conversation|curriculum` parameter selects the stored graph
+layout (default `conversation`); it does not change primary navigation.
+Writes include `baseRevision` and reject stale revisions with HTTP 409.
+
 Query params are reserved **only** for transient, optional navigation state:
 
 | Param | Allowed on | Purpose |

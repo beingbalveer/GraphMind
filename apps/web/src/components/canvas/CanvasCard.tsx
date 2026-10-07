@@ -16,7 +16,7 @@ export function CanvasCard({ item, selected, streaming, onSelect }: CanvasCardPr
   return (
     <Button variant="ghost" aria-label={item.title.replace(/\s+/g, " ").trim()} aria-pressed={selected}
       onClick={(event) => { event.stopPropagation(); onSelect(item.selectionId); }}
-      className={cn("nodrag h-32 w-full min-w-0 flex-col items-start justify-start gap-2 whitespace-normal rounded-xl border p-3 text-left shadow-2xs",
+      className={cn("h-32 w-full min-w-0 flex-col items-start justify-start gap-2 whitespace-normal rounded-xl border p-3 text-left shadow-2xs",
         item.lane === "spine" ? "bg-canvas-milestone" : "bg-canvas-topic",
         selected ? "border-foreground" : "border-border")}
     >

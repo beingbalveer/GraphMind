@@ -34,7 +34,10 @@ Implementation uses `codex/roadmap-generator`, one verified task and commit at a
   measured non-overlapping spine layout.
 - **Completed:** Live shared canvas renderer with compact options, source-origin
   connectors, stable streaming/selection placement and independent timeline layout.
-- **Active task:** Versioned layout persistence and conversation regression verification.
+- **Completed:** Versioned layout persistence with authenticated membership checks,
+  debounced saves, retry/reload recovery and confirmed real drag/refresh behavior.
+  Additive migration round trip, frontend typecheck and isolated production build pass.
+- **Active task:** Canvas review, followed by typed curriculum contracts.
 - **Following canvas delivery:** Typed curricula, durable researched generation,
   clean setup/progress, learning workspace, guided lessons, editing and refinement.
 

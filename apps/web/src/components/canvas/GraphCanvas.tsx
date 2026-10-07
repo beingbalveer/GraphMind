@@ -11,6 +11,7 @@ import { CanvasSurface } from "./CanvasSurface";
 import { ConversationCanvasCard, type ThreadMasteryInfo } from "./ThreadGraphNode";
 import { TimelineReplayBar } from "./TimelineReplayBar";
 import { Button } from "@/components/ui/button";
+import { useCanvasLayout } from "@/hooks/useCanvasLayout";
 
 export interface GraphCanvasProps {
   tree: ConversationTree | null; workspaceId?: string; chatId?: string; isStreaming?: boolean;
@@ -25,7 +26,7 @@ export interface GraphCanvasProps {
   onPaneClick?: () => void; isSidePeekOpen?: boolean;
 }
 
-export function GraphCanvas({ tree, workspaceId, isStreaming = false, onSelectNode, onDeleteBranch,
+export function GraphCanvas({ tree, workspaceId, chatId, isStreaming = false, onSelectNode, onDeleteBranch,
   onFitViewRef, onCenterActiveRef, onAutoLayoutRef, onPaneClick, isSidePeekOpen = false }: GraphCanvasProps) {
   const [showMinimap, setShowMinimap] = useState(false);
   const [showMastery, setShowMastery] = useState(false);
@@ -70,18 +71,24 @@ export function GraphCanvas({ tree, workspaceId, isStreaming = false, onSelectNo
   const graph = useMemo(() => visibleTree ? projectConversation(visibleTree) : { items: [], links: [] }, [visibleTree]);
   const topology = canvasTopologyKey(liveGraph);
   const replayTopology = canvasTopologyKey(graph);
-  const [liveLayout, setLiveLayout] = useState(() => layoutSpine(liveGraph, {}));
+  const stored = useCanvasLayout(workspaceId, chatId ?? tree?.rootNodeId, "conversation");
+  const generated = useMemo(() => layoutSpine(liveGraph, {}), [topology]);
+  const liveLayout = stored.layout ?? generated;
+  const graphReady = Boolean(liveGraph.items.length && tree?.rootNodeId === (chatId ?? tree?.rootNodeId));
   const [replayLayout, setReplayLayout] = useState(() => layoutSpine(graph, {}));
-  useEffect(() => { setLiveLayout(current => reconcilePositions(current, layoutSpine(liveGraph, {}))); }, [topology]);
+  useEffect(() => {
+    if (stored.ready && graphReady) stored.setLayout(current => current ? reconcilePositions(current, generated) : generated);
+  }, [stored.ready, graphReady, generated, stored.setLayout]);
   useEffect(() => { if (replay) setReplayLayout(reconcilePositions(liveLayout, layoutSpine(graph, {}))); }, [replay, replayTopology]);
   const layout = replay ? replayLayout : liveLayout;
-  const setLayout = replay ? setReplayLayout : setLiveLayout;
+  const setLayout = replay ? setReplayLayout : stored.setLayout;
   const lineage = useMemo(() => new Set(tree ? getAncestorPath(tree, tree.activeNodeId).map(node => node.id) : []), [tree]);
   const activeItems = useMemo(() => new Set(graph.items.filter(item => item.itemIds.some(id => lineage.has(id))).map(item => item.id)), [graph, lineage]);
   const renderItem = useCallback((item: CanvasItem) => {
     const concepts = showMastery ? mastery?.concepts.filter(concept => concept.nodeIds?.some(id => item.itemIds.includes(id))) ?? [] : [];
     const evidence: ThreadMasteryInfo | undefined = concepts.length ? {
-      level: concepts[0].masteryLevel, score: concepts.reduce((sum, concept) => sum + concept.confidenceScore, 0) / concepts.length * 100,
+      level: concepts[0].masteryLevel, score: concepts.reduce((sum, concept) => sum + concept.confidenceScore, 0) / concepts.length,
+      primaryConcept: concepts[0].name, totalConcepts: concepts.length,
     } : undefined;
     return <ConversationCanvasCard item={item} selected={activeItems.has(item.id)}
       streaming={isStreaming && item.itemIds.includes(tree?.activeNodeId ?? "")} onSelect={onSelectNode}
@@ -93,13 +100,20 @@ export function GraphCanvas({ tree, workspaceId, isStreaming = false, onSelectNo
   return <div className="relative h-full w-full">
     <CanvasSurface graph={graph} renderItem={renderItem} layout={layout} onLayoutChange={setLayout}
       onSelect={onSelectNode} onPaneClick={onPaneClick} activeSelectionId={tree?.activeNodeId}
-      activeItemIds={activeItems} sidePanelWidth={isSidePeekOpen ? 540 : 0} readOnly={replay}
+      activeItemIds={activeItems} sidePanelWidth={isSidePeekOpen ? 540 : 0} readOnly={replay || !stored.ready}
+      ready={stored.ready && graphReady}
       showMinimap={showMinimap} onToggleMinimap={() => setShowMinimap(value => !value)}
       onFitViewRef={onFitViewRef} onCenterActiveRef={onCenterActiveRef} onAutoLayoutRef={onAutoLayoutRef}
       advancedItems={workspaceId ? [
         { label: showMastery ? "Hide mastery" : "Show mastery", onClick: () => setShowMastery(value => !value) },
         { label: replay ? "Exit timeline" : "Open timeline", onClick: () => setReplay(value => !value) },
       ] : []} />
+    {!replay && (stored.loadError || stored.saveState === "error") && <div role="alert" className="absolute bottom-4 right-4 z-20 flex items-center gap-2 rounded-xl border border-border bg-surface p-3 text-xs text-foreground-muted">
+      {stored.loadError ?? (stored.conflict ? "This canvas changed in another tab." : "Your canvas changes haven’t been saved.")}
+      <Button size="sm" variant="ghost" onClick={stored.loadError || stored.conflict ? () => { void stored.reload(); } : stored.retrySave}>
+        {stored.loadError ? "Retry load" : stored.conflict ? "Reload latest" : "Retry save"}
+      </Button>
+    </div>}
     {error && <div role="alert" className="absolute bottom-4 left-4 flex items-center gap-2 rounded-xl border border-border bg-surface p-3 text-xs text-foreground-muted">
       {error}<Button size="sm" variant="ghost" onClick={() => setError(null)}>Dismiss</Button>
     </div>}

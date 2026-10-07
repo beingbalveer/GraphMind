@@ -1,3 +1,4 @@
+from models.canvas import CanvasLayoutModel
 from models.flashcard import FlashcardModel
 from models.user import User, WorkspaceMember
 from models.workspace import (
@@ -11,6 +12,7 @@ from models.workspace import (
 )
 
 __all__ = [
+    "CanvasLayoutModel",
     "User",
     "WorkspaceMember",
     "Workspace",

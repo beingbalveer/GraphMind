@@ -12,6 +12,9 @@ describe("Scope 4 Product Surfaces - Master Verification Gate", () => {
     // Task 2: Knowledge Canvas
     "canvas/GraphCanvas.tsx",
     "canvas/ThreadGraphNode.tsx",
+    "canvas/CanvasCard.tsx",
+    "canvas/CanvasSurface.tsx",
+    "canvas/CanvasControls.tsx",
     "canvas/FocusDrawer.tsx",
     "canvas/TimelineReplayBar.tsx",
     "canvas/CommandPalette.tsx",
@@ -126,7 +129,12 @@ describe("Scope 4 Product Surfaces - Master Verification Gate", () => {
         content.includes("bg-muted") ||
         content.includes("bg-primary") ||
         content.includes("bg-card") ||
-        content.includes("var(--border");
+        content.includes("var(--border") ||
+        content.includes("var(--canvas-") ||
+        content.includes("bg-canvas-") ||
+        content.includes("text-foreground") ||
+        // Adapters delegate their card surface to this checked shared primitive.
+        content.includes('from "./CanvasCard"');
 
       expect(
         hasSemanticTokens,

@@ -13,6 +13,8 @@ it("keeps a long title accessible and selects the real message using Enter", asy
   render(<CanvasCard item={item} selected streaming={false} onSelect={onSelect} />);
   const card = screen.getByRole("button", { name: title.replace(/\s+/g, " ") });
   expect(card).toHaveAttribute("aria-pressed", "true");
+  // React Flow excludes every descendant of .nodrag from its drag gesture.
+  expect(card.closest(".nodrag")).toBeNull();
   card.focus();
   await userEvent.keyboard("{Enter}");
   expect(onSelect).toHaveBeenCalledWith("a");

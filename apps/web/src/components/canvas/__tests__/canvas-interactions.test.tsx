@@ -10,6 +10,11 @@ import { ConversationCanvasCard } from "../ThreadGraphNode";
 const camera = vi.hoisted(() => ({fitView:vi.fn(),zoomIn:vi.fn(),zoomOut:vi.fn(),setViewport:vi.fn(),
   setCenter:vi.fn(),getZoom:() => 0.9,getNodes:() => [],zoomTo:vi.fn()}));
 
+vi.mock("@/lib/canvasApi", () => ({
+  readCanvasLayout: vi.fn(async () => ({ layout: null, revision: 0 })),
+  writeCanvasLayout: vi.fn(async (_w, _c, _k, revision, layout) => ({ layout, revision: revision + 1 })),
+}));
+
 vi.mock("@/lib/workspaceApi", () => ({
   getWorkspaceMastery: vi.fn(async () => null),
   getWorkspaceTimeline: vi.fn(async () => ({workspaceId:"w",totalEvents:2,milestones:[],events:[
@@ -90,7 +95,9 @@ describe("shared conversation canvas", () => {
     const historyTree = {...tree,nodes:{...tree.nodes,
       r:{...tree.nodes.r,createdAt:"2026-10-01T00:00:00Z"},a:{...tree.nodes.a,createdAt:"2026-10-01T00:00:00Z"},
       b:{...tree.nodes.b,createdAt:"2026-10-02T00:00:00Z"},x:{...tree.nodes.x,createdAt:"2026-10-03T00:00:00Z"}}};
+    camera.fitView.mockClear();
     render(<GraphCanvas tree={historyTree} workspaceId="w" onSelectNode={vi.fn()} />);
+    await waitFor(() => expect(camera.fitView).toHaveBeenCalled());
     fireEvent.click(screen.getByRole("button",{name:"Move branch card"}));
     expect(screen.getByTestId("segment:x")).toHaveAttribute("data-position",'{"x":600,"y":900}');
     await userEvent.click(screen.getByRole("button",{name:"Canvas options"}));

@@ -32,9 +32,10 @@ export function ConversationCanvasCard({ item, selected, streaming, onSelect, on
       <DropdownMenu trigger={<Button variant="ghost" size="iconSm" aria-label={`Actions for ${item.title}`}><MoreHorizontal /></Button>}
         items={[{ label: "Delete branch", icon: <Trash2 className="size-3.5" />, variant: "destructive", onClick: () => setConfirm(true) }]} />
     </div>}
-    {mastery && <div className="pointer-events-none absolute bottom-3 right-3">
+    {mastery && <div className="pointer-events-none absolute bottom-3 right-3 max-w-3/5">
       <Badge variant={mastery.level === "mastered" ? "success" : mastery.level === "stale" ? "warning" : "secondary"}>
-        {mastery.level} · {Math.round(mastery.score)}%
+        {mastery.primaryConcept && <span className="truncate">{mastery.primaryConcept}</span>}
+        <span>{mastery.level}</span><span>{Math.round(mastery.score * 100)}%</span>
       </Badge>
     </div>}
     <ConfirmDialog isOpen={confirm} onClose={() => setConfirm(false)} title="Delete branch?"
