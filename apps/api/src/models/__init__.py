@@ -15,6 +15,7 @@ from models.roadmap import (
     TopicResource,
     WeeklyAssignment,
 )
+from models.roadmap_job import RoadmapJob, RoadmapJobEvent, RoadmapJobReference, RoadmapToolReceipt
 from models.user import User, WorkspaceMember
 from models.workspace import (
     ConceptModel,
@@ -27,6 +28,10 @@ from models.workspace import (
 )
 
 __all__ = [
+    "RoadmapJob",
+    "RoadmapJobEvent",
+    "RoadmapToolReceipt",
+    "RoadmapJobReference",
     "Roadmap",
     "CurriculumRevision",
     "CurriculumItem",

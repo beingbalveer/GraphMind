@@ -103,3 +103,57 @@ async def curriculum_workspace(
         validate_curriculum(small_candidate, small_profile, sources),
     )
     return SimpleNamespace(view=view, owner_id=owner_id, session=curriculum_session)
+
+
+class TestClock:
+    __test__ = False
+
+    def __init__(self):
+        self.value = datetime.now(timezone.utc)
+
+    def now(self):
+        return self.value
+
+    def advance(self, *, seconds):
+        from datetime import timedelta
+
+        self.value += timedelta(seconds=seconds)
+
+
+@pytest.fixture
+def clock():
+    return TestClock()
+
+
+@pytest.fixture
+async def job_owner(curriculum_session):
+    import uuid
+
+    from models.user import User
+
+    owner = User(
+        id=f"usr_{uuid.uuid4().hex[:12]}",
+        email=f"{uuid.uuid4().hex}@example.com",
+        full_name="Job test owner",
+        provider="local",
+    )
+    curriculum_session.add(owner)
+    await curriculum_session.flush()
+    return owner.id
+
+
+@pytest.fixture
+async def job_repo(curriculum_session, clock):
+    from services.roadmap.job_repository import JobRepository
+
+    return JobRepository(curriculum_session, clock=clock.now)
+
+
+@pytest.fixture
+async def ready_job(job_repo, job_owner):
+    import uuid
+
+    job = await job_repo.create(
+        job_owner, RoadmapRequest(prompt="Learn practical beginner drawing"), str(uuid.uuid4())
+    )
+    return await job_repo.start(job.id, job_owner)
