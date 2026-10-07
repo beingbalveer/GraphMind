@@ -28,7 +28,7 @@ export const NavigationItem = React.forwardRef<HTMLButtonElement, NavigationItem
       {icon && (
         <span
           aria-hidden="true"
-          className="flex size-5 shrink-0 items-center justify-center text-foreground [&>svg]:size-4 [&>svg]:stroke-[1.75]"
+          className="flex size-5 shrink-0 items-center justify-center text-foreground [&>svg]:size-5 [&>svg]:stroke-[1.75]"
         >
           {icon}
         </span>
