@@ -81,6 +81,7 @@ class Settings(BaseSettings):
     ROADMAP_LEASE_SECONDS: int = Field(default=60, ge=2)
     ROADMAP_HEARTBEAT_SECONDS: int = Field(default=15, ge=1)
     ROADMAP_WORKER_SLOTS: int = Field(default=2, ge=1)
+    ROADMAP_REFERENCE_DIR: str = Field(default="data/storage/roadmap")
 
 
 @lru_cache(maxsize=1)

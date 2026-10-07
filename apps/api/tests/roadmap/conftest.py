@@ -157,3 +157,90 @@ async def ready_job(job_repo, job_owner):
         job_owner, RoadmapRequest(prompt="Learn practical beginner drawing"), str(uuid.uuid4())
     )
     return await job_repo.start(job.id, job_owner)
+
+
+class ScriptedStageExecutor:
+    def __init__(self, results):
+        import asyncio
+
+        self.results = results
+        self.calls = []
+        self.block_stage = None
+        self.started = asyncio.Event()
+        self.release = asyncio.Event()
+        self.failure = None
+
+    async def run(self, stage, job, claim):
+        self.calls.append(stage)
+        if stage == self.block_stage:
+            self.started.set()
+            await self.release.wait()
+        if self.failure is not None:
+            raise self.failure
+        return self.results[stage].model_copy(deep=True)
+
+
+@pytest.fixture
+def scripted_executor(small_profile, small_candidate, sources):
+    from schemas.roadmap_job import JobCheckpoint, StageResult
+    from services.roadmap.validation import validate_curriculum
+
+    checkpoint = JobCheckpoint(
+        profile=small_profile,
+        candidate=small_candidate,
+        sources=sources,
+        validation=validate_curriculum(small_candidate, small_profile, sources),
+    )
+    return ScriptedStageExecutor(
+        {
+            stage: StageResult(checkpoint=checkpoint, summary=f"{stage} finished")
+            for stage in ["understand", "research", "compose", "personalize", "validate"]
+        }
+    )
+
+
+@pytest.fixture
+def publication(curriculum_session, clock):
+    from services.roadmap.publication import PublicationService
+
+    return PublicationService(curriculum_session, clock=clock.now)
+
+
+@pytest.fixture
+async def publish_claim(job_repo, ready_job, clock, scripted_executor):
+    for stage in ["understand", "research", "compose", "personalize", "validate"]:
+        claim = await job_repo.claim("test-worker", clock.now())
+        await job_repo.checkpoint(claim, stage, scripted_executor.results[stage])
+    return await job_repo.claim("test-worker", clock.now())
+
+
+@pytest.fixture
+async def worker_job(ready_job, curriculum_session):
+    from models.roadmap_job import RoadmapJob
+    from models.user import User
+    from models.workspace import Workspace
+    from sqlalchemy import delete
+
+    await curriculum_session.commit()
+    try:
+        yield ready_job
+    finally:
+        await curriculum_session.rollback()
+        await curriculum_session.execute(
+            delete(Workspace).where(Workspace.owner_id == ready_job.owner_id)
+        )
+        await curriculum_session.execute(
+            delete(RoadmapJob).where(RoadmapJob.owner_id == ready_job.owner_id)
+        )
+        await curriculum_session.execute(delete(User).where(User.id == ready_job.owner_id))
+        await curriculum_session.commit()
+
+
+@pytest.fixture
+def worker(scripted_executor, clock):
+    from database import get_session_factory
+    from services.roadmap.worker import RoadmapWorker
+
+    return RoadmapWorker(
+        get_session_factory(), scripted_executor, clock=clock.now, heartbeat_interval=0.01
+    )

@@ -272,3 +272,26 @@ model-created fixture tables cannot conceal a broken migration.
 ## 📄 License
 
 GraphMind is open-source software licensed under the [Apache License 2.0](LICENSE).
+
+## Roadmap worker
+
+Roadmap generation uses a separate durable worker. From the repository root, run
+`PYTHONPATH=apps/api/src:packages/ai-core/src uv run python -m services.roadmap.worker`
+alongside the API. The typed research executor is being installed as part of the
+roadmap implementation; enable generation only after the generator and topic actions
+are ready. In Docker, use `docker compose --profile roadmap up --build` to include
+the worker. The API and worker share the `reference_storage` volume.
+
+Configure `ROADMAP_REFERENCE_DIR` consistently in both processes (default
+`data/storage/roadmap`). PostgreSQL stores jobs, checkpoints, leases and activity;
+Redis is optional for the worker. A shutdown discards in-flight stage results and
+releases their leases when safe. A crash recovers through lease expiration. Closing
+the generation popup keeps the job running.
+
+Per-run defaults are 20 search attempts, 40 fetch attempts, 48 model calls, three
+repair attempts and 20 minutes of active execution. Waiting for clarification does
+not consume active execution time. These ceilings are saved when a job starts and
+are preserved on retry; `ROADMAP_MAX_*` settings configure new jobs. Two global
+worker slots are enforced through PostgreSQL. Optional references expire after
+24 hours for abandoned setup or seven days for failed/canceled runs; published
+references remain with their workspace.

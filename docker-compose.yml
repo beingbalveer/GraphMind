@@ -47,11 +47,17 @@ services:
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-graphmind}:${POSTGRES_PASSWORD:-graphmind_secret}@postgres:5432/${POSTGRES_DB:-graphmind_db}
       - REDIS_URL=redis://redis:6379/0
       - DEFAULT_PROVIDER=${DEFAULT_PROVIDER:-gemini}
+      - DEFAULT_MODEL=${DEFAULT_MODEL:-gemini-2.5-flash}
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-}
       - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434/v1}
+      - STORAGE_DIR=/app/data/storage
+      - ROADMAP_REFERENCE_DIR=/app/data/storage/roadmap
+    volumes:
+      - reference_storage:/app/data/storage
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -59,6 +65,35 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+
+  roadmap-worker:
+    profiles: ["roadmap"]
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    command: ["python", "-m", "services.roadmap.worker"]
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-graphmind}:${POSTGRES_PASSWORD:-graphmind_secret}@postgres:5432/${POSTGRES_DB:-graphmind_db}
+      - DEFAULT_PROVIDER=${DEFAULT_PROVIDER:-gemini}
+      - DEFAULT_MODEL=${DEFAULT_MODEL:-gemini-2.5-flash}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-}
+      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434/v1}
+      - STORAGE_DIR=/app/data/storage
+      - ROADMAP_REFERENCE_DIR=/app/data/storage/roadmap
+    volumes:
+      - reference_storage:/app/data/storage
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      api:
+        condition: service_started
 
   web:
     build:
@@ -77,3 +112,4 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  reference_storage:

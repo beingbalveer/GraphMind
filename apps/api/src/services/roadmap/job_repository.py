@@ -486,6 +486,20 @@ class JobRepository:
         await self._event(row, "failed", error.message, {"code": error.code})
         await self.session.flush()
 
+    async def release(self, claim: Claim) -> bool:
+        """Called only after the worker has stopped the external task and discarded its result."""
+        try:
+            row, _ = await self._claimed(claim, cancel_allowed=True)
+        except StaleLeaseError:
+            return False
+        row.status = "canceled" if row.status == "cancel_requested" else "queued"
+        self._release(row)
+        await self._event(
+            row, "interrupted", "Saved progress will resume with an available worker", {}
+        )
+        await self.session.flush()
+        return True
+
     def _exhausted(self) -> JobStateError:
         return JobStateError(
             "BUDGET_EXHAUSTED", "This run reached its research limit. Start a new run."
