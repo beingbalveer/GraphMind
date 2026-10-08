@@ -299,7 +299,8 @@ Per-run defaults are 20 search attempts, 40 fetch attempts, 48 model calls, thre
 repair attempts and 20 minutes of active execution. Waiting for clarification does
 not consume active execution time. These ceilings are saved when a job starts and
 are preserved on retry; `ROADMAP_MAX_*` settings configure new jobs. Two global
-worker slots are enforced through PostgreSQL. Optional references expire after
+worker slots are enforced through PostgreSQL. Model responses have a bounded
+180-second deadline; search and source inspection retain separate network deadlines. Optional references expire after
 24 hours for abandoned setup or seven days for failed/canceled runs; published
 references remain with their workspace.
 
@@ -310,3 +311,24 @@ After enabling it, rebuild/restart the frontend so Next.js includes the setting.
 The learner sees one Generate action; job creation, staged references and start
 are handled automatically. Closing progress keeps the accepted job running;
 View activity shows persisted actions, and the dashboard reopens saved jobs.
+
+
+A completed generation opens a dedicated learning workspace. Roadmap and Canvas
+use the same topic identities and completion state. Topic briefs open saved guided
+lessons; returning to a lesson reuses its history. Learners mark completion, with
+optional knowledge checks recorded separately from completion.
+
+Roadmap actions provide direct editing, immutable revision history and AI
+refinement. Refinement runs in the background and creates a reviewable proposal.
+Apply or Keep current is explicit; edits and restored revisions preserve saved
+lessons and progress. Concurrent structural changes require reloading the latest
+revision before applying a proposal.
+
+The old `/api/v1/roadmap/generate` endpoint remains for older clients. It uses
+synchronous generation and reports provider or parse failures explicitly; it
+cannot substitute a generic programming scaffold. The unused simulated AI Engineer
+agent has been removed. New clients use `/api/v1/roadmap/jobs`.
+
+Restart the API and worker together after changes to checkpoint contracts. See the
+[roadmap quality report](docs/quality/roadmap-generator-2026-10-07.md) for observed
+research evaluations, browser evidence and outstanding verification limits.

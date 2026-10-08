@@ -26,3 +26,12 @@ and ask only when the missing answer materially changes the curriculum.
 Run structure and workload checks after composition and after every repair. Address concrete
 validation issues; a valid graph alone does not establish educational quality or coverage.
 Retain stable IDs during refinement, including unchanged topics and shared prerequisites.
+
+Distinguish curriculum research from instructional recommendations. A curriculum
+that lists Python, embeddings or drawing proportions can inform sequencing, but
+that mention does not teach the topic. Find and inspect actual teaching sections
+for the selected core: explanations, exercises, tutorials, implementation examples
+and evaluation guidance. Prefer a small curated set of strong instructional pages
+that can serve several related topics. If coverage is absent, research a suitable
+replacement; do not justify a recommendation by saying that coverage is implied.
+Keep overview-only material as comparison evidence rather than recommended lessons.

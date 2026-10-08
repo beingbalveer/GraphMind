@@ -2,6 +2,7 @@
 
 import asyncio
 import ipaddress
+import re
 import socket
 import zlib
 from collections.abc import AsyncIterator, Awaitable, Callable, Iterable
@@ -177,17 +178,46 @@ class EvidenceHTMLParser(HTMLParser):
     def __init__(self) -> None:
         super().__init__(convert_charrefs=True)
         self.parts: list[str] = []
+        self.main_parts: list[str] = []
+        self.article_parts: list[str] = []
         self.title_parts: list[str] = []
         self.hidden = 0
         self.in_title = False
+        self.preformatted = 0
+        self.main_depth = 0
+        self.article_depth = 0
+
+    def append_text(self, text: str) -> None:
+        self.parts.append(text)
+        if self.main_depth:
+            self.main_parts.append(text)
+        if self.article_depth:
+            self.article_parts.append(text)
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         if tag in {"script", "style", "noscript", "template", "svg", "iframe"}:
             self.hidden += 1
         if tag == "title":
             self.in_title = True
-        if self.hidden == 0 and tag in {"h1", "h2", "h3", "h4", "p", "li", "div", "br", "tr"}:
-            self.parts.append(
+        if tag == "pre":
+            self.preformatted += 1
+        if tag == "main":
+            self.main_depth += 1
+        if tag == "article":
+            self.article_depth += 1
+        if self.hidden == 0 and tag in {
+            "h1",
+            "h2",
+            "h3",
+            "h4",
+            "p",
+            "li",
+            "div",
+            "br",
+            "tr",
+            "pre",
+        }:
+            self.append_text(
                 "\n" + ("#" * int(tag[1]) + " " if tag in {"h1", "h2", "h3", "h4"} else "")
             )
 
@@ -196,10 +226,16 @@ class EvidenceHTMLParser(HTMLParser):
             self.hidden = max(0, self.hidden - 1)
         if tag == "title":
             self.in_title = False
+        if tag == "pre":
+            self.preformatted = max(0, self.preformatted - 1)
+        if tag == "main":
+            self.main_depth = max(0, self.main_depth - 1)
+        if tag == "article":
+            self.article_depth = max(0, self.article_depth - 1)
 
     def handle_data(self, data: str) -> None:
         if self.hidden == 0:
-            self.parts.append(data)
+            self.append_text(data if self.preformatted else re.sub(r"\s+", " ", data))
             if self.in_title:
                 self.title_parts.append(data)
 
@@ -337,7 +373,19 @@ class SourceFetcher:
         if mime == "text/html":
             parser = EvidenceHTMLParser()
             parser.feed(data.decode(encoding or "utf-8", errors="replace"))
-            evidence = "".join(parser.parts).strip()
+            parts = next(
+                (
+                    parts
+                    for parts in (parser.article_parts, parser.main_parts)
+                    if "".join(parts).strip()
+                ),
+                parser.parts,
+            )
+            # Template indentation must not consume the bounded evidence window.
+            # Retain heading/paragraph boundaries and the actual quoted words.
+            evidence = "\n".join(
+                line.rstrip() for line in "".join(parts).splitlines() if line.strip()
+            )
             title = "".join(parser.title_parts).strip() or title
         else:
             extracted = extract_reference_text(data, mime)

@@ -1,7 +1,26 @@
-from unittest.mock import patch
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, patch
 
+import pytest
 from ai_core.base import ChatMessage, ChatRole, ModelConfig
 from ai_core.providers.gemini import GeminiProvider
+from google.genai import types
+
+
+@pytest.mark.asyncio
+async def test_generate_preserves_empty_response_finish_reason():
+    provider = GeminiProvider(api_key="fake-gemini-key")
+    response = types.GenerateContentResponse(
+        candidates=[types.Candidate(finish_reason=types.FinishReason.MALFORMED_FUNCTION_CALL)]
+    )
+    provider.client = SimpleNamespace(
+        aio=SimpleNamespace(
+            models=SimpleNamespace(generate_content=AsyncMock(return_value=response))
+        )
+    )
+    result = await provider.generate("Build a drawing curriculum", ModelConfig(max_retries=0))
+    assert result.content == "" and not result.tool_calls
+    assert result.finish_reason == "MALFORMED_FUNCTION_CALL"
 
 
 def test_gemini_to_contents_and_system_prompt_extraction() -> None:

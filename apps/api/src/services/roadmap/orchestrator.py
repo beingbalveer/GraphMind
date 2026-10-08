@@ -195,7 +195,11 @@ class RoadmapStageExecutor:
                     for detail in error.errors(include_input=False, include_context=False)[:30]
                 ]
                 logger.warning(
-                    "roadmap_stage_schema_rejected", job_id=job.id, stage=stage, issues=errors
+                    "roadmap_stage_schema_rejected",
+                    job_id=job.id,
+                    stage=stage,
+                    finish_reason=result.finish_reason,
+                    issues=errors,
                 )
                 if attempt == 2:
                     raise JobStateError(

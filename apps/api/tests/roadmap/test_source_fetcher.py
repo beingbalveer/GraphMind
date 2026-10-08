@@ -58,6 +58,44 @@ async def test_public_html_keeps_headings_and_quoted_evidence():
     assert "secret()" not in source.evidence and source.title == "Drawing curriculum"
 
 
+async def test_html_indentation_does_not_displace_instructional_evidence():
+    body = (
+        "<title>Drawing practice</title><div>"
+        + "\n    \t" * 5000
+        + "</div><h1>Proportions</h1><p>Compare width and height before drawing.</p>"
+    )
+    source = await fetcher(
+        lambda request: httpx.Response(200, headers={"Content-Type": "text/html"}, text=body)
+    ).fetch("https://example.com/practice")
+    assert "# Proportions" in source.evidence[:4096]
+    assert "Compare width and height" in source.evidence[:4096]
+    assert len(source.evidence) < 200
+
+
+async def test_preformatted_code_keeps_semantic_indentation():
+    body = "<h1>Python practice</h1><pre>def draw():\n    return 'outline'\n</pre>"
+    source = await fetcher(
+        lambda request: httpx.Response(200, headers={"Content-Type": "text/html"}, text=body)
+    ).fetch("https://example.com/code")
+    assert "def draw():\n    return 'outline'" in source.evidence
+
+
+@pytest.mark.parametrize("tag", ["main", "article"])
+async def test_instructional_content_takes_priority_over_large_navigation(tag):
+    body = (
+        "<title>Drawing course</title><nav>"
+        + "Repeated navigation link " * 3000
+        + f"</nav><{tag}><h1>Measuring proportions</h1>"
+        + f"<p>Compare the object's width and height.</p></{tag}>"
+    )
+    source = await fetcher(
+        lambda request: httpx.Response(200, headers={"Content-Type": "text/html"}, text=body)
+    ).fetch("https://example.com/lesson")
+    assert "# Measuring proportions" in source.evidence[:4096]
+    assert "Compare the object's width and height." in source.evidence[:4096]
+    assert "Repeated navigation" not in source.evidence
+
+
 async def test_dns_with_any_private_address_never_connects():
     async def resolve(host, port):
         return ["93.184.215.14", "10.0.0.2"]

@@ -200,11 +200,17 @@ class GeminiProvider(BaseLLMProvider):
                             )
                         )
 
+                candidates = getattr(response, "candidates", None)
+                reason = getattr(candidates[0], "finish_reason", None) if candidates else None
+                finish_reason = (
+                    getattr(reason, "value", reason) if isinstance(reason, str) else None
+                )
                 return GenerationResult(
                     content=content_text,
                     role=ChatRole.ASSISTANT,
                     model_name=cfg.model_name,
                     tool_calls=parsed_tool_calls,
+                    finish_reason=finish_reason,
                 )
             except Exception as e:
                 last_exception = e

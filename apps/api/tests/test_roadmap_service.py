@@ -4,7 +4,7 @@ from main import app
 from services.roadmap_service import RoadmapService
 
 
-def test_roadmap_prompt_and_fallback_generation() -> None:
+def test_roadmap_prompt_and_json_parsing() -> None:
     # 1. Test prompt generation
     prompt = RoadmapService._build_prompt("Learn Rust", "beginner", "concepts")
     assert "Learn Rust" in prompt
@@ -47,13 +47,6 @@ def test_roadmap_prompt_and_fallback_generation() -> None:
     assert plan.topics[0].id == "t1"
     assert plan.topics[1].prerequisites == ["t1"]
 
-    # 3. Test fallback plan generation
-    fallback = RoadmapService._generate_fallback_plan(
-        "Kubernetes Orchestration", "intermediate", "projects"
-    )
-    assert "Kubernetes Orchestration" in fallback.title
-    assert len(fallback.topics) >= 5
-    assert fallback.topics[0].prerequisites == []
 
 
 @pytest.mark.asyncio

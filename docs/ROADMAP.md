@@ -39,9 +39,14 @@ Implementation uses `codex/roadmap-generator`, one verified task and commit at a
   Additive migration round trip, frontend typecheck and isolated production build pass.
 - **Completed:** Fresh canvas review fixes pending-save navigation loss; 42 focused
   frontend checks pass. See [verification](quality/canvas-redesign-2026-10-07.md).
-- **Active task:** Typed curriculum contracts and workload feasibility.
-- **Following canvas delivery:** Typed curricula, durable researched generation,
-  clean setup/progress, learning workspace, guided lessons, editing and refinement.
+- **Completed:** Typed curricula, deterministic workload/prerequisite validation,
+  durable generation jobs, safe references and grounded search with registered skills.
+- **Completed:** Minimal setup, resumable progress/activity and dedicated roadmap /
+  canvas learning views with stable identities.
+- **Completed:** Guided saved lessons, learner-controlled completion and optional
+  knowledge checks; direct editing, revision history and explicit AI proposal review.
+- **Active task:** Final research quality evaluations and independent whole-branch
+  review. See [current verification](quality/roadmap-generator-2026-10-07.md).
 
 No unfinished future actions are exposed in the application during this delivery.
 
@@ -124,4 +129,5 @@ The following architectural capabilities define GraphMind's enterprise scale-up 
 The roadmap generator now has durable researched jobs and a concise setup/progress
 flow. The ordered page and shared curriculum canvas read the same immutable
 revision, with explicit prerequisite links and selected-core progress. The
-operator flag remains off pending functional tutoring/progress actions.
+operator flag is enabled after the real guided-lesson/progress journey. Native quality
+reruns and independent whole-branch review are the remaining acceptance checks.
