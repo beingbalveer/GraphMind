@@ -1,7 +1,7 @@
 # Researched roadmap generator — quality verification
 
 Branch: `codex/roadmap-generator`. Implementation through task 13: `772c31b`.
-Release regression fixes: `ea96039`, `1ce4bcb` and `97e4fe5`. Verification performed 8 October 2026.
+Release regression fixes: `ea96039`, `1ce4bcb`, `97e4fe5`; independent-review fixes: `8a0cfe2`. Verification performed 8 October 2026.
 Status: all fourteen tasks and five native evaluations verified; independent branch review completed and all four Important findings fixed.
 
 ## Verified behavior
@@ -302,3 +302,12 @@ reported above. Existing mypy failures and live migration-history reconciliation
 remain explicit limitations. Learning-profile/time-budget editing through refinement
 and semantic/paraphrased DLP remain outside this release's approved scope. Every
 set-aside behavior and its cost is preserved in the decision audit.
+
+Final committed fix revision: `8a0cfe2`. API `/healthz` is healthy, the refreshed
+worker loads the reviewed private-fetch boundary, and the completed native QA
+workspace remains accessible through the authenticated API with its original
+valid 1,080-minute curriculum. Local application entry point: http://localhost:3300.
+
+Detailed native records and verification logs are preserved outside the deleted
+execution scratch directory at
+`/Users/balveerd/.codex/visualizations/2026/10/06/01a11274-a96e-7ec0-8cfe-c0d46575019c/roadmap-verification-evidence/`.
