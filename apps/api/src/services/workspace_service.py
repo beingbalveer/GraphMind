@@ -584,7 +584,11 @@ class WorkspaceService:
 
     @staticmethod
     async def add_node_and_edge(
-        session: AsyncSession, workspace_id: str, data: NodeCreate
+        session: AsyncSession,
+        workspace_id: str,
+        data: NodeCreate,
+        *,
+        compute_embedding: bool = True,
     ) -> NodeResponse:
         """
         Add or update a conversation node in a workspace and ensure the directed edge from parent exists.
@@ -642,8 +646,9 @@ class WorkspaceService:
         try:
             from services.semantic_service import SemanticService
 
-            semantic_service = SemanticService()
-            await semantic_service.compute_and_save_node_embedding(session, node)
+            if compute_embedding:
+                semantic_service = SemanticService()
+                await semantic_service.compute_and_save_node_embedding(session, node)
         except Exception as e:
             logger.warning("Embedding generation deferred on node creation", error=str(e))
 

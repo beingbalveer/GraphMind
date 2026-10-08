@@ -6,10 +6,14 @@ export function TopicRow({
   topic,
   progress,
   onOpen,
+  effortMinutes = topic.estimateMinutes,
+  sessionSequence,
 }: {
   topic: CurriculumItemData;
   progress?: TopicProgressData;
   onOpen?: (id: string) => void;
+  effortMinutes?: number | null;
+  sessionSequence?: number;
 }) {
   const content = (
     <>
@@ -25,7 +29,10 @@ export function TopicRow({
         {topic.title}
       </span>
       <span className="shrink-0 text-xs font-normal text-foreground-subtle">
-        {topic.estimateMinutes ? `${topic.estimateMinutes} min` : "Self paced"}
+        {effortMinutes ? `${effortMinutes} min` : "Self paced"}
+        {sessionSequence !== undefined
+          ? ` · Session ${sessionSequence + 1}`
+          : ""}
         {progress?.status === "in_progress" ? " · In progress" : ""}
       </span>
       {onOpen && (

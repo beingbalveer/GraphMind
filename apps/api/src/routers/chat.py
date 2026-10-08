@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import json
 import os
@@ -5,6 +6,7 @@ from typing import Any, AsyncIterator, Dict, List, Optional
 
 import structlog
 from ai_core import (
+    BaseTool,
     ChatMessage,
     ChatRole,
     ConversationTree,
@@ -16,17 +18,23 @@ from ai_core import (
     get_provider,
     resolve_conversation_lineage,
 )
+from ai_core.providers import MockProvider
 from config import get_settings
 from database import get_session_factory
-from dependencies import get_optional_user, require_workspace_write
+from dependencies import get_optional_user, get_roadmap_user, require_workspace_write
+from errors import RoadmapHTTPError
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
+from models.roadmap import TopicChat
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from pydantic.alias_generators import to_camel
+from schemas.roadmap_job import JobError
 from services.file_service import parse_tabular_bytes
 from services.rag_service import GroundedContext, RAGService, rag_service
+from services.roadmap.tutor import INITIAL_PROMPT, TutorService
 from services.skill_service import get_skill_registry
 from services.tool_service import get_tool_registry
+from sqlalchemy import select
 
 logger = structlog.get_logger()
 router = APIRouter(prefix="/api/v1/chat", tags=["Chat"])
@@ -45,6 +53,9 @@ DEFAULT_LEARNING_SYSTEM_PROMPT = (
 
 class ChatStreamRequest(BaseModel):
     model_config = ConfigDict(populate_by_name=True, alias_generator=to_camel)
+
+    topic_session_id: Optional[str] = None
+    lesson_start: bool = False
 
     prompt: Optional[str] = Field(default=None, description="Single prompt string")
     messages: Optional[List[ChatMessage]] = Field(
@@ -111,6 +122,62 @@ class ChatStreamRequest(BaseModel):
 
 # Request alias for completion
 ChatCompletionRequest = ChatStreamRequest
+
+
+async def _verified_topic_context(
+    body: ChatStreamRequest, request: Request
+) -> tuple[list[ChatMessage], str | None]:
+    async with get_session_factory()() as session:
+        session_id = body.topic_session_id
+        if not session_id and body.tree:
+            session_id = await session.scalar(
+                select(TopicChat.id).where(TopicChat.chat_id == body.tree.root_node_id)
+            )
+        if not session_id:
+            if body.lesson_start:
+                raise HTTPException(422, "A topic session is required to start a lesson")
+            return [], None
+        user = await get_roadmap_user(request, session)
+        service = TutorService(session)
+        row, roadmap = await service.read_session(session_id, user.id)
+        if body.workspace_id != roadmap.workspace_id or (
+            body.tree and body.tree.root_node_id != row.chat_id
+        ):
+            raise HTTPException(404, "Topic session does not belong to this conversation")
+        if not body.tree and body.parent_node_id != row.chat_id:
+            raise HTTPException(404, "Topic session chat root is required")
+        body.topic_session_id = session_id
+        return await service.build_context(session_id, user.id), user.id
+
+
+async def _claim_initial_lesson(
+    body: ChatStreamRequest, owner_id: str | None
+) -> tuple[str, str, str] | None:
+    if not body.lesson_start:
+        return None
+    assert body.topic_session_id and owner_id
+    async with get_session_factory()() as session:
+        token = await TutorService(session).claim_lesson(body.topic_session_id, owner_id)
+        await session.commit()
+        return body.topic_session_id, owner_id, token
+
+
+async def _persist_initial_lesson(
+    claim: tuple[str, str, str] | None, content: str, completed: bool, provider: str, model: str
+) -> None:
+    if claim is None:
+        return
+    async with get_session_factory()() as session:
+        await TutorService(session).finish_lesson(
+            claim[0],
+            claim[1],
+            claim[2],
+            content,
+            completed=completed,
+            provider=provider,
+            model=model,
+        )
+        await session.commit()
 
 
 def _resolve_api_key(provider_name: str, custom_key: Optional[str] = None) -> Optional[str]:
@@ -276,11 +343,12 @@ async def list_available_skills() -> List[Dict[str, Any]]:
 
 
 @router.post("/completions", response_model=GenerationResult)
-async def create_chat_completion(body: ChatCompletionRequest) -> GenerationResult:
+async def create_chat_completion(body: ChatCompletionRequest, request: Request) -> GenerationResult:
     """
     Generate a complete, non-streaming AI response with usage metrics,
     supporting autonomous multi-turn tool execution loops and procedural skills.
     """
+    topic_context, topic_owner = await _verified_topic_context(body, request)
     resolved_provider = body.provider or settings.DEFAULT_PROVIDER
     resolved_model = body.model or settings.DEFAULT_MODEL
     api_key = _resolve_api_key(resolved_provider, body.api_key)
@@ -305,11 +373,25 @@ async def create_chat_completion(body: ChatCompletionRequest) -> GenerationResul
         logger.error("Failed to initialize AI provider", error=str(e))
         raise HTTPException(status_code=500, detail=f"Provider initialization failed: {str(e)}")
 
+    if topic_context and isinstance(provider, MockProvider):
+        raise RoadmapHTTPError(
+            503,
+            JobError(
+                code="MODEL_NOT_CONFIGURED",
+                message="Configure a real chat provider to start this lesson.",
+                recoverable=True,
+                next_action="retry",
+            ),
+        )
     skill_registry = get_skill_registry()
     active_skills = (
         skill_registry.get_skills(body.enabled_skills) if body.enabled_skills is not None else []
     )
-    base_sys_prompt = body.system_prompt or DEFAULT_LEARNING_SYSTEM_PROMPT
+    base_sys_prompt = (
+        DEFAULT_LEARNING_SYSTEM_PROMPT + "\n" + topic_context[0].content
+        if topic_context
+        else body.system_prompt or DEFAULT_LEARNING_SYSTEM_PROMPT
+    )
     final_sys_prompt = skill_registry.build_system_prompt(base_sys_prompt, active_skills)
 
     # Grounded RAG Retrieval across workspace documents
@@ -357,10 +439,22 @@ async def create_chat_completion(body: ChatCompletionRequest) -> GenerationResul
         model_kwargs["max_tokens"] = body.max_tokens
 
     config = ModelConfig(**model_kwargs)
-    conversation_input = _build_conversation_input(body)
+    conversation_input = (
+        (
+            topic_context[1:]
+            + (
+                [ChatMessage.user(INITIAL_PROMPT)]
+                if body.lesson_start
+                else _build_conversation_input(body)
+            )
+        )
+        if topic_context
+        else _build_conversation_input(body)
+    )
 
     tool_registry = get_tool_registry()
     skill_required_tools = skill_registry.resolve_required_tools(active_skills)
+    active_tools: Optional[List[BaseTool]]
     if skill_required_tools:
         requested_tool_names = list(body.enabled_tools) if body.enabled_tools is not None else []
         combined_tools = list(set(requested_tool_names) | set(skill_required_tools))
@@ -370,72 +464,90 @@ async def create_chat_completion(body: ChatCompletionRequest) -> GenerationResul
             tool_registry.get_tools(body.enabled_tools) if body.enabled_tools is not None else None
         )
 
+    lesson_claim = await _claim_initial_lesson(body, topic_owner)
     current_messages = list(conversation_input)
     max_turns = body.max_tool_iterations or 5
     iteration = 0
     tool_trace: List[Dict[str, Any]] = []
 
     try:
-        while True:
-            result = await provider.generate(current_messages, config, tools=active_tools)
-            if not result.tool_calls or iteration >= max_turns:
-                if tool_trace:
-                    result.metadata["tool_trace"] = tool_trace
-                if grounded_context and grounded_context.citations:
-                    result.metadata["rag_citations"] = grounded_context.citations
-                logger.info(
-                    "Chat completion generated successfully",
-                    model=result.model_name,
-                    total_tokens=result.usage.total_tokens,
-                    tool_iterations=iteration,
+        async with asyncio.timeout(150 if lesson_claim else None):
+            while True:
+                result = await provider.generate(current_messages, config, tools=active_tools)
+                if not result.tool_calls or iteration >= max_turns:
+                    if tool_trace:
+                        result.metadata["tool_trace"] = tool_trace
+                    if grounded_context and grounded_context.citations:
+                        result.metadata["rag_citations"] = grounded_context.citations
+                    logger.info(
+                        "Chat completion generated successfully",
+                        model=result.model_name,
+                        total_tokens=result.usage.total_tokens,
+                        tool_iterations=iteration,
+                    )
+                    await _persist_initial_lesson(
+                        lesson_claim, result.content, True, resolved_provider, resolved_model
+                    )
+                    return result
+
+                iteration += 1
+                assistant_msg = ChatMessage.assistant(
+                    content=result.content or "", tool_calls=result.tool_calls
                 )
-                return result
+                current_messages.append(assistant_msg)
 
-            iteration += 1
-            assistant_msg = ChatMessage.assistant(
-                content=result.content or "", tool_calls=result.tool_calls
-            )
-            current_messages.append(assistant_msg)
-
-            for tc in result.tool_calls:
-                target_tool = tool_registry.get(tc.name)
-                if target_tool:
-                    call_args = dict(tc.arguments) if tc.arguments else {}
-                    if (
-                        body.workspace_id
-                        and not call_args.get("workspace_id")
-                        and "workspace_id" in target_tool.to_json_schema().get("properties", {})
-                    ):
-                        call_args["workspace_id"] = body.workspace_id
-                    if (
-                        body.parent_node_id
-                        and (
-                            not call_args.get("parent_id")
-                            or str(call_args.get("parent_id")).strip().lower()
-                            in ("current_node_id", "current", "null", "undefined", "none", "root")
+                for tc in result.tool_calls:
+                    target_tool = tool_registry.get(tc.name)
+                    if target_tool:
+                        call_args = dict(tc.arguments) if tc.arguments else {}
+                        if (
+                            body.workspace_id
+                            and not call_args.get("workspace_id")
+                            and "workspace_id" in target_tool.to_json_schema().get("properties", {})
+                        ):
+                            call_args["workspace_id"] = body.workspace_id
+                        if (
+                            body.parent_node_id
+                            and (
+                                not call_args.get("parent_id")
+                                or str(call_args.get("parent_id")).strip().lower()
+                                in (
+                                    "current_node_id",
+                                    "current",
+                                    "null",
+                                    "undefined",
+                                    "none",
+                                    "root",
+                                )
+                            )
+                            and "parent_id" in target_tool.to_json_schema().get("properties", {})
+                        ):
+                            call_args["parent_id"] = body.parent_node_id
+                        tool_res = await target_tool.run(call_args, tool_call_id=tc.id)
+                    else:
+                        tool_res = ToolResult(
+                            tool_call_id=tc.id,
+                            name=tc.name,
+                            content=f"Tool '{tc.name}' not found in registry.",
+                            is_error=True,
                         )
-                        and "parent_id" in target_tool.to_json_schema().get("properties", {})
-                    ):
-                        call_args["parent_id"] = body.parent_node_id
-                    tool_res = await target_tool.run(call_args, tool_call_id=tc.id)
-                else:
-                    tool_res = ToolResult(
-                        tool_call_id=tc.id,
-                        name=tc.name,
-                        content=f"Tool '{tc.name}' not found in registry.",
-                        is_error=True,
+                    tool_trace.append(tool_res.model_dump())
+                    current_messages.append(
+                        ChatMessage.tool(
+                            content=tool_res.content,
+                            tool_call_id=tool_res.tool_call_id,
+                            name=tool_res.name,
+                        )
                     )
-                tool_trace.append(tool_res.model_dump())
-                current_messages.append(
-                    ChatMessage.tool(
-                        content=tool_res.content,
-                        tool_call_id=tool_res.tool_call_id,
-                        name=tool_res.name,
-                    )
-                )
     except Exception as e:
-        logger.error("Error during chat completion generation", error=str(e))
+        logger.error(
+            "Error during chat completion generation",
+            error=type(e).__name__ if topic_context else str(e),
+        )
         raise HTTPException(status_code=500, detail=f"Generation failed: {str(e)}")
+
+    finally:
+        await _persist_initial_lesson(lesson_claim, "", False, resolved_provider, resolved_model)
 
 
 @router.post("/stream")
@@ -447,6 +559,7 @@ async def stream_chat(
     Stream AI completion tokens in real-time as Server-Sent Events (SSE)
     with autonomous multi-turn tool execution and client disconnect monitoring.
     """
+    topic_context, topic_owner = await _verified_topic_context(body, request)
     resolved_provider = body.provider or settings.DEFAULT_PROVIDER
     resolved_model = body.model or settings.DEFAULT_MODEL
     api_key = _resolve_api_key(resolved_provider, body.api_key)
@@ -478,11 +591,25 @@ async def stream_chat(
         logger.error("Failed to initialize AI provider", error=str(e))
         raise HTTPException(status_code=500, detail=f"Provider initialization failed: {str(e)}")
 
+    if topic_context and isinstance(provider, MockProvider):
+        raise RoadmapHTTPError(
+            503,
+            JobError(
+                code="MODEL_NOT_CONFIGURED",
+                message="Configure a real chat provider to start this lesson.",
+                recoverable=True,
+                next_action="retry",
+            ),
+        )
     skill_registry = get_skill_registry()
     active_skills = (
         skill_registry.get_skills(body.enabled_skills) if body.enabled_skills is not None else []
     )
-    base_sys_prompt = body.system_prompt or DEFAULT_LEARNING_SYSTEM_PROMPT
+    base_sys_prompt = (
+        DEFAULT_LEARNING_SYSTEM_PROMPT + "\n" + topic_context[0].content
+        if topic_context
+        else body.system_prompt or DEFAULT_LEARNING_SYSTEM_PROMPT
+    )
     final_sys_prompt = skill_registry.build_system_prompt(base_sys_prompt, active_skills)
 
     # Grounded RAG Retrieval across workspace documents
@@ -530,10 +657,22 @@ async def stream_chat(
         stream_model_kwargs["max_tokens"] = body.max_tokens
 
     config = ModelConfig(**stream_model_kwargs)
-    conversation_input = _build_conversation_input(body)
+    conversation_input = (
+        (
+            topic_context[1:]
+            + (
+                [ChatMessage.user(INITIAL_PROMPT)]
+                if body.lesson_start
+                else _build_conversation_input(body)
+            )
+        )
+        if topic_context
+        else _build_conversation_input(body)
+    )
 
     tool_registry = get_tool_registry()
     skill_required_tools = skill_registry.resolve_required_tools(active_skills)
+    active_tools: Optional[List[BaseTool]]
     if skill_required_tools:
         requested_tool_names = list(body.enabled_tools) if body.enabled_tools is not None else []
         combined_tools = list(set(requested_tool_names) | set(skill_required_tools))
@@ -544,119 +683,154 @@ async def stream_chat(
         )
     max_turns = body.max_tool_iterations or 5
 
+    lesson_claim = await _claim_initial_lesson(body, topic_owner)
+
     async def event_generator() -> AsyncIterator[str]:
         current_messages = list(conversation_input)
         iteration = 0
+        lesson_content = ""
         try:
-            # Emit real-time rag_sources event before token streaming begins
-            if grounded_context and grounded_context.citations:
-                rag_payload = json.dumps(
-                    {
-                        "type": "rag_sources",
-                        "sources": grounded_context.citations,
-                        "totalChunks": grounded_context.total_chunks,
-                    }
-                )
-                yield f"event: rag_sources\ndata: {rag_payload}\n\n"
-
-            while True:
-                pending_tool_calls: List[ToolCall] = []
-                turn_content = ""
-
-                async for chunk in provider.stream(current_messages, config, tools=active_tools):
-                    # Check for client disconnect
-                    if await request.is_disconnected():
-                        logger.info("Client disconnected, terminating stream generator")
-                        return
-
-                    if chunk.tool_calls:
-                        for tc in chunk.tool_calls:
-                            pending_tool_calls.append(tc)
-
-                    if chunk.content:
-                        turn_content += chunk.content
-                        payload = json.dumps({"content": chunk.content})
-                        yield f"event: token\ndata: {payload}\n\n"
-
-                if not pending_tool_calls or iteration >= max_turns:
-                    # Final textual response reached or turn limit attained
-                    break
-
-                iteration += 1
-                assistant_msg = ChatMessage.assistant(
-                    content=turn_content, tool_calls=pending_tool_calls
-                )
-                current_messages.append(assistant_msg)
-
-                for tc in pending_tool_calls:
-                    # Emit tool_call_start
-                    start_payload = json.dumps(
+            async with asyncio.timeout(150 if lesson_claim else None):
+                # Emit real-time rag_sources event before token streaming begins
+                if grounded_context and grounded_context.citations:
+                    rag_payload = json.dumps(
                         {
-                            "type": "tool_call_start",
-                            "toolCall": {
-                                "id": tc.id,
-                                "name": tc.name,
-                                "arguments": tc.arguments,
-                            },
+                            "type": "rag_sources",
+                            "sources": grounded_context.citations,
+                            "totalChunks": grounded_context.total_chunks,
                         }
                     )
-                    yield f"event: tool_call_start\ndata: {start_payload}\n\n"
+                    yield f"event: rag_sources\ndata: {rag_payload}\n\n"
 
-                    target_tool = tool_registry.get(tc.name)
-                    if target_tool:
-                        call_args = dict(tc.arguments) if tc.arguments else {}
-                        if (
-                            body.workspace_id
-                            and not call_args.get("workspace_id")
-                            and "workspace_id" in target_tool.to_json_schema().get("properties", {})
-                        ):
-                            call_args["workspace_id"] = body.workspace_id
-                        if (
-                            body.parent_node_id
-                            and (
-                                not call_args.get("parent_id")
-                                or str(call_args.get("parent_id")).strip().lower()
-                                in ("current_node_id", "current", "null", "undefined", "none", "root")
+                while True:
+                    pending_tool_calls: List[ToolCall] = []
+                    turn_content = ""
+
+                    async for chunk in provider.stream(
+                        current_messages, config, tools=active_tools
+                    ):
+                        # Check for client disconnect
+                        if await request.is_disconnected():
+                            logger.info("Client disconnected, terminating stream generator")
+                            return
+
+                        if chunk.tool_calls:
+                            for tc in chunk.tool_calls:
+                                pending_tool_calls.append(tc)
+
+                        if chunk.content:
+                            turn_content += chunk.content
+                            lesson_content = turn_content
+                            payload = json.dumps({"content": chunk.content})
+                            yield f"event: token\ndata: {payload}\n\n"
+
+                    if not pending_tool_calls or iteration >= max_turns:
+                        # Final textual response reached or turn limit attained
+                        break
+
+                    iteration += 1
+                    assistant_msg = ChatMessage.assistant(
+                        content=turn_content, tool_calls=pending_tool_calls
+                    )
+                    current_messages.append(assistant_msg)
+
+                    for tc in pending_tool_calls:
+                        # Emit tool_call_start
+                        start_payload = json.dumps(
+                            {
+                                "type": "tool_call_start",
+                                "toolCall": {
+                                    "id": tc.id,
+                                    "name": tc.name,
+                                    "arguments": tc.arguments,
+                                },
+                            }
+                        )
+                        yield f"event: tool_call_start\ndata: {start_payload}\n\n"
+
+                        target_tool = tool_registry.get(tc.name)
+                        if target_tool:
+                            call_args = dict(tc.arguments) if tc.arguments else {}
+                            if (
+                                body.workspace_id
+                                and not call_args.get("workspace_id")
+                                and "workspace_id"
+                                in target_tool.to_json_schema().get("properties", {})
+                            ):
+                                call_args["workspace_id"] = body.workspace_id
+                            if (
+                                body.parent_node_id
+                                and (
+                                    not call_args.get("parent_id")
+                                    or str(call_args.get("parent_id")).strip().lower()
+                                    in (
+                                        "current_node_id",
+                                        "current",
+                                        "null",
+                                        "undefined",
+                                        "none",
+                                        "root",
+                                    )
+                                )
+                                and "parent_id"
+                                in target_tool.to_json_schema().get("properties", {})
+                            ):
+                                call_args["parent_id"] = body.parent_node_id
+                            tool_res = await target_tool.run(call_args, tool_call_id=tc.id)
+                        else:
+                            tool_res = ToolResult(
+                                tool_call_id=tc.id,
+                                name=tc.name,
+                                content=f"Tool '{tc.name}' not found in registry.",
+                                is_error=True,
                             )
-                            and "parent_id" in target_tool.to_json_schema().get("properties", {})
-                        ):
-                            call_args["parent_id"] = body.parent_node_id
-                        tool_res = await target_tool.run(call_args, tool_call_id=tc.id)
-                    else:
-                        tool_res = ToolResult(
-                            tool_call_id=tc.id,
-                            name=tc.name,
-                            content=f"Tool '{tc.name}' not found in registry.",
-                            is_error=True,
+
+                        # Emit tool_call_result
+                        res_payload = json.dumps(
+                            {
+                                "type": "tool_call_result",
+                                "toolResult": {
+                                    "toolCallId": tool_res.tool_call_id,
+                                    "name": tool_res.name,
+                                    "content": tool_res.content,
+                                    "isError": tool_res.is_error,
+                                },
+                            }
+                        )
+                        yield f"event: tool_call_result\ndata: {res_payload}\n\n"
+
+                        current_messages.append(
+                            ChatMessage.tool(
+                                content=tool_res.content,
+                                tool_call_id=tool_res.tool_call_id,
+                                name=tool_res.name,
+                            )
                         )
 
-                    # Emit tool_call_result
-                    res_payload = json.dumps(
-                        {
-                            "type": "tool_call_result",
-                            "toolResult": {
-                                "toolCallId": tool_res.tool_call_id,
-                                "name": tool_res.name,
-                                "content": tool_res.content,
-                                "isError": tool_res.is_error,
-                            },
-                        }
-                    )
-                    yield f"event: tool_call_result\ndata: {res_payload}\n\n"
-
-                    current_messages.append(
-                        ChatMessage.tool(
-                            content=tool_res.content,
-                            tool_call_id=tool_res.tool_call_id,
-                            name=tool_res.name,
-                        )
-                    )
-
-            yield "event: done\ndata: [DONE]\n\n"
+                await _persist_initial_lesson(
+                    lesson_claim, lesson_content, True, resolved_provider, resolved_model
+                )
+                yield "event: done\ndata: [DONE]\n\n"
         except Exception as e:
-            logger.error("Error during AI token streaming", error=str(e))
-            err_payload = json.dumps({"error": str(e)})
+            logger.error(
+                "Error during AI token streaming",
+                error=type(e).__name__ if topic_context else str(e),
+            )
+            err_payload = json.dumps(
+                {
+                    "error": "The lesson was interrupted. Resume when you’re ready."
+                    if topic_context
+                    else str(e)
+                }
+            )
             yield f"event: error\ndata: {err_payload}\n\n"
+
+        finally:
+            await asyncio.shield(
+                _persist_initial_lesson(
+                    lesson_claim, lesson_content, False, resolved_provider, resolved_model
+                )
+            )
 
     return StreamingResponse(
         event_generator(),

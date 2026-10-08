@@ -102,7 +102,15 @@ async def curriculum_workspace(
         sources,
         validate_curriculum(small_candidate, small_profile, sources),
     )
-    return SimpleNamespace(view=view, owner_id=owner_id, session=curriculum_session)
+    try:
+        yield SimpleNamespace(view=view, owner_id=owner_id, session=curriculum_session)
+    finally:
+        from models.workspace import Workspace
+        from sqlalchemy import delete
+
+        await curriculum_session.rollback()
+        await curriculum_session.execute(delete(Workspace).where(Workspace.id == ws.id))
+        await curriculum_session.commit()
 
 
 class TestClock:

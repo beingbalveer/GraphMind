@@ -120,3 +120,26 @@ export function projectCurriculum(
       });
   return graph;
 }
+
+/** Show the roadmap spine and the next core topic's ancestors; future branches stay quiet. */
+export function initialCurriculumExpansion(view: CurriculumView): Set<string> {
+  const expanded = new Set(
+    view.candidate.items
+      .filter((i) => i.kind === "root" && i.participation === "active")
+      .map((i) => i.id),
+  );
+  let id = selectedCoreTopics(view).find(
+    (i) => view.progress[i.id]?.status !== "completed",
+  )?.id;
+  const seen = new Set<string>();
+  while (id && !seen.has(id)) {
+    seen.add(id);
+    const parent = view.candidate.relations.find(
+      (r) => r.kind === "contains" && r.targetId === id,
+    )?.sourceId;
+    if (!parent) break;
+    expanded.add(parent);
+    id = parent;
+  }
+  return expanded;
+}

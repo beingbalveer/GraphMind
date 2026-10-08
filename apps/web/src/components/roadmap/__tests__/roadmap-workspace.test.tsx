@@ -75,10 +75,36 @@ it("keeps further learning inside a core phase out of the initial path", () => {
   expect(
     screen.queryByRole("button", { name: "further" }),
   ).not.toBeInTheDocument();
-  fireEvent.click(
-    screen.getByRole("button", { name: "Further learning" }),
-  );
+  fireEvent.click(screen.getByRole("button", { name: "Further learning" }));
+  expect(screen.getByRole("button", { name: "further" })).toBeVisible();
+});
+
+it("keeps future weekly details inside their collapsed phase and numbers phases by position", () => {
+  const view = curriculumFixture();
+  view.profile.weeklyMinutes = 120;
+  view.candidate.items.find((i) => i.id === "phase1")!.order = 7;
+  view.candidate.items.find((i) => i.id === "phase2")!.order = 8;
+  view.candidate.sessions = [
+    { week: 1, topicId: "chosen", sequence: 0, minutes: 60 },
+    { week: 2, topicId: "topic2", sequence: 0, minutes: 60 },
+  ];
+  render(<RoadmapWorkspace view={view} mode="page" onOpenTopic={vi.fn()} />);
+  expect(screen.getByRole("button", { name: "1 phase1" })).toBeVisible();
+  expect(screen.getByText("Week 1")).toBeVisible();
+  expect(screen.queryByText("Week 2")).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "2 phase2" }));
+  expect(screen.getByText("Week 2")).toBeVisible();
+});
+
+it("continues the next in-progress topic even when nothing is marked completed", () => {
+  const view = curriculumFixture();
+  view.progress.topic1 = {
+    topicId: "topic1",
+    status: "in_progress",
+    completedAt: null,
+  };
+  render(<RoadmapWorkspace view={view} mode="page" onStartTopic={vi.fn()} />);
   expect(
-    screen.getByRole("button", { name: "further" }),
+    screen.getByRole("button", { name: "Continue learning" }),
   ).toBeVisible();
 });

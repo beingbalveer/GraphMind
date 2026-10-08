@@ -1,6 +1,10 @@
 import { expect, it } from "vitest";
 import { curriculumFixture } from "@/components/roadmap/__tests__/fixtures";
-import { projectCurriculum, selectedCoreTopics } from "../curriculumProjection";
+import {
+  initialCurriculumExpansion,
+  projectCurriculum,
+  selectedCoreTopics,
+} from "../curriculumProjection";
 it("keeps ordered milestones, topic identity and explicit prerequisites", () => {
   const view = curriculumFixture();
   const graph = projectCurriculum(
@@ -62,4 +66,15 @@ it("prerequisites override hierarchy while unrelated topics preserve phase order
     "topic2",
     "chosen",
   ]);
+});
+
+it("initial canvas expansion keeps future phases collapsed", () => {
+  const view = curriculumFixture();
+  const expanded = initialCurriculumExpansion(view);
+  expect(expanded.has("root")).toBe(true);
+  expect(expanded.has("phase1")).toBe(true);
+  expect(expanded.has("phase2")).toBe(false);
+  const graph = projectCurriculum(view, expanded);
+  expect(graph.items.map((i) => i.id)).toContain("phase2");
+  expect(graph.items.map((i) => i.id)).not.toContain("topic2");
 });

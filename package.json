@@ -4,14 +4,14 @@
   "private": true,
   "description": "AI-native Knowledge Workspace",
   "scripts": {
-    "dev": "concurrently -n \"api,web\" -c \"cyan,magenta\" \"pnpm dev:api\" \"pnpm dev:web\"",
+    "dev": "concurrently -n \"api,web,roadmap\" -c \"cyan,magenta,yellow\" \"pnpm dev:api\" \"pnpm dev:web\" \"pnpm dev:roadmap\"",
     "dev:web": "pnpm --filter @graphmind/web dev",
-    "dev:api": "uv run --package graphmind-api uvicorn --app-dir apps/api/src main:app --port 8300 --reload",
+    "dev:api": "uv run --package graphmind-api uvicorn --app-dir apps/api/src main:app --port 8300 --reload --timeout-graceful-shutdown 5",
     "build": "pnpm --filter @graphmind/shared build && pnpm --filter @graphmind/web build",
     "lint:web": "pnpm --filter @graphmind/web lint",
     "lint:api": "uv run ruff check",
-    "lint": "pnpm lint:web && pnpm lint:api"
-
+    "lint": "pnpm lint:web && pnpm lint:api",
+    "dev:roadmap": "PYTHONPATH=apps/api/src:packages/ai-core/src uv run --package graphmind-api python -m services.roadmap.worker"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"

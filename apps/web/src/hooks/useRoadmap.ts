@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError } from "@/lib/apiClient";
 import { readRoadmap } from "@/lib/roadmapApi";
-import type { CurriculumView } from "@/lib/roadmapTypes";
+import type { CurriculumView, TopicProgressData } from "@/lib/roadmapTypes";
 export function useRoadmap(workspaceId: string | null) {
   const [state, setState] = useState<{
     workspaceId: string | null;
@@ -46,10 +46,29 @@ export function useRoadmap(workspaceId: string | null) {
       setState({ workspaceId: null, view: null, loading: false, error: null });
     return () => request.current?.abort();
   }, [workspaceId, refresh]);
+  const updateProgress = useCallback(
+    (progress: TopicProgressData) =>
+      setState((old) =>
+        old.workspaceId === workspaceId && old.view
+          ? {
+              ...old,
+              view: {
+                ...old.view,
+                progress: {
+                  ...old.view.progress,
+                  [progress.topicId]: progress,
+                },
+              },
+            }
+          : old,
+      ),
+    [workspaceId],
+  );
   return {
     ...(state.workspaceId === workspaceId
       ? state
       : { view: null, loading: Boolean(workspaceId), error: null }),
     refresh,
+    updateProgress,
   };
 }

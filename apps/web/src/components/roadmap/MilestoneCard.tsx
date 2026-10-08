@@ -3,11 +3,13 @@ import type { CurriculumItemData } from "@/lib/roadmapTypes";
 import { CurriculumGroup } from "./CurriculumGroup";
 export function MilestoneCard({
   phase,
+  ordinal,
   children,
   open,
   onToggle,
 }: {
   phase: CurriculumItemData;
+  ordinal: number;
   children: ReactNode;
   open: boolean;
   onToggle: () => void;
@@ -19,7 +21,7 @@ export function MilestoneCard({
         title={
           <span className="flex items-center gap-3">
             <span className="flex size-7 shrink-0 items-center justify-center rounded-full border border-border bg-background text-xs text-foreground-subtle">
-              {phase.order + 1}
+              {ordinal}
             </span>
             <span>{phase.title}</span>
           </span>

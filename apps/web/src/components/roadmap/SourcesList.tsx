@@ -1,9 +1,17 @@
 import type { SourceData } from "@/lib/roadmapTypes";
-export function SourcesList({ sources }: { sources: SourceData[] }) {
+export function SourcesList({
+  sources,
+  showHeading = true,
+  rationales = {},
+}: {
+  sources: SourceData[];
+  showHeading?: boolean;
+  rationales?: Record<string, string>;
+}) {
   const attributions = new Set<string>();
   return (
     <div className="space-y-3">
-      <h3 className="text-sm font-medium">Sources reviewed</h3>
+      {showHeading && <h3 className="text-sm font-medium">Sources reviewed</h3>}
       {sources.map((source) => {
         const html = source.provenance.attributionHtml;
         const attribution =
@@ -28,6 +36,11 @@ export function SourcesList({ sources }: { sources: SourceData[] }) {
                 source.title
               )}
             </p>
+            {rationales[source.id] && (
+              <p className="leading-5 text-foreground-muted">
+                {rationales[source.id]}
+              </p>
+            )}
             <p className="text-foreground-muted">
               {source.access === "free"
                 ? "Free"

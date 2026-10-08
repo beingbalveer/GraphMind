@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  useMemo,
+} from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { GitBranch, ArrowDown } from "lucide-react";
 
@@ -23,6 +29,10 @@ import { BranchBreadcrumbs, BreadcrumbStep } from "./BranchBreadcrumbs";
 import { ChatSidebar } from "./ChatSidebar";
 import { RightSidebar } from "./RightSidebar";
 import { MasteryPanel } from "./MasteryPanel";
+import { useTopicSession } from "@/hooks/useTopicSession";
+import { TopicBriefDrawer } from "@/components/roadmap/TopicBriefDrawer";
+import { TutorLearningBar } from "@/components/roadmap/TutorLearningBar";
+import { openTopicSession, recordTopicCheck } from "@/lib/roadmapApi";
 import { useRoadmap } from "@/hooks/useRoadmap";
 import { RoadmapWorkspace } from "@/components/roadmap/RoadmapWorkspace";
 import { RoadmapHeader } from "@/components/roadmap/RoadmapHeader";
@@ -42,7 +52,12 @@ import { useScrollAnchor } from "@/hooks/useScrollAnchor";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { safeGetItem, safeSetItem } from "@/lib/storage";
 
-import { ChatHeader, LibraryHeader, SettingsHeader, ViewMode } from "../layout/Navbar";
+import {
+  ChatHeader,
+  LibraryHeader,
+  SettingsHeader,
+  ViewMode,
+} from "../layout/Navbar";
 import { WorkspaceShell } from "../layout/WorkspaceShell";
 import {
   buildWorkspaceUrl,
@@ -113,9 +128,6 @@ export function ChatContainer({
     loadTree,
   } = useChatStream();
 
-
-
-
   const [isPaletteOpen, setIsPaletteOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState<boolean>(() => {
@@ -148,14 +160,24 @@ export function ChatContainer({
       baseUrl: getEffectiveBaseUrl(llmConfig.provider),
       apiKey: apiKey || undefined,
     };
-  }, [llmConfig.provider, llmConfig.model, getEffectiveApiKey, getEffectiveBaseUrl]);
+  }, [
+    llmConfig.provider,
+    llmConfig.model,
+    getEffectiveApiKey,
+    getEffectiveBaseUrl,
+  ]);
 
   // Two-Tier State: Workspaces (Outer Vault) and Chats (Inner Trees)
-  const [currentWorkspace, setCurrentWorkspace] = useState<WorkspaceItem | null>(null);
+  const [currentWorkspace, setCurrentWorkspace] =
+    useState<WorkspaceItem | null>(null);
   const [chats, setChats] = useState<ChatItem[]>([]);
-  const [activeChatId, setActiveChatId] = useState<string | null>(initialChatId || null);
+  const [activeChatId, setActiveChatId] = useState<string | null>(
+    initialChatId || null,
+  );
 
-  const [syncStatus, setSyncStatus] = useState<"saved" | "syncing" | "offline">("saved");
+  const [syncStatus, setSyncStatus] = useState<"saved" | "syncing" | "offline">(
+    "saved",
+  );
   const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode);
 
   const handleOpenSettings = useCallback(() => {
@@ -177,25 +199,83 @@ export function ChatContainer({
   const sidePeekIndex = sidePeekState.index;
   const isSidePeekOpen = sidePeekStack.length > 0;
 
-
   const fitViewRef = useRef<(() => void) | null>(null);
   const centerActiveRef = useRef<(() => void) | null>(null);
   const autoLayoutRef = useRef<(() => void) | null>(null);
 
-  const {
-    scrollRef,
-    bottomRef,
-    isAtBottom,
-    showScrollButton,
-    scrollToBottom,
-  } = useScrollAnchor({ threshold: 80 });
+  const { scrollRef, bottomRef, isAtBottom, showScrollButton, scrollToBottom } =
+    useScrollAnchor({ threshold: 80 });
 
   // References to prevent duplicate re-initialization and route flicker
-  const roadmap = useRoadmap(process.env.NEXT_PUBLIC_ROADMAP_GENERATOR_ENABLED === "true" ? currentWorkspace?.id ?? initialWorkspaceId ?? null : null);
+  const roadmap = useRoadmap(
+    process.env.NEXT_PUBLIC_ROADMAP_GENERATOR_ENABLED === "true"
+      ? (currentWorkspace?.id ?? initialWorkspaceId ?? null)
+      : null,
+  );
   const roadmapMode = roadmapRouteMode(pathname, roadmap.view);
-  const waitingForRoadmap = process.env.NEXT_PUBLIC_ROADMAP_GENERATOR_ENABLED === "true" &&
-    (pathname === buildWorkspaceUrl(currentWorkspace?.id ?? initialWorkspaceId ?? "") || pathname.endsWith("/canvas")) &&
+  const waitingForRoadmap =
+    process.env.NEXT_PUBLIC_ROADMAP_GENERATOR_ENABLED === "true" &&
+    (pathname ===
+      buildWorkspaceUrl(currentWorkspace?.id ?? initialWorkspaceId ?? "") ||
+      pathname.endsWith("/canvas")) &&
     (roadmap.loading || Boolean(roadmap.error));
+
+  const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
+  const [openingTopic, setOpeningTopic] = useState(false);
+  const [learningError, setLearningError] = useState<string | null>(null);
+  const [assessing, setAssessing] = useState(false);
+  const openingRef = useRef(false);
+  const startKeys = useRef(new Map<string, string>());
+  const routeRef = useRef(pathname);
+  routeRef.current = pathname;
+  const rootSessionId =
+    tree?.rootNodeId === activeChatId
+      ? tree?.nodes[tree.rootNodeId]?.metadata?.topicSessionId
+      : null;
+  const activeTopicSessionId =
+    typeof rootSessionId === "string" ? rootSessionId : null;
+  const topicSession = useTopicSession(
+    currentWorkspace?.id ?? null,
+    activeTopicSessionId,
+  );
+  const refreshTopicSession = topicSession.refresh;
+  const currentLessonProgress = topicSession.session?.progress;
+  const updateRoadmapProgress = roadmap.updateProgress;
+  useEffect(() => {
+    if (currentLessonProgress) updateRoadmapProgress(currentLessonProgress);
+  }, [currentLessonProgress, updateRoadmapProgress]);
+  const attemptedLessons = useRef(new Set<string>());
+  useEffect(() => {
+    if (!roadmapMode) setSelectedTopicId(null);
+  }, [roadmapMode]);
+  const startTopic = async (topicId: string) => {
+    if (!roadmap.view || openingRef.current) return;
+    openingRef.current = true;
+    setOpeningTopic(true);
+    setLearningError(null);
+    const startPath = pathname;
+    const workspaceId = roadmap.view.workspaceId;
+    let key = startKeys.current.get(topicId);
+    if (!key) {
+      key = crypto.randomUUID();
+      startKeys.current.set(topicId, key);
+    }
+    try {
+      const lesson = await openTopicSession(workspaceId, topicId, key, false);
+      await refreshChats(workspaceId);
+      if (routeRef.current === startPath)
+        router.push(buildChatUrl(workspaceId, lesson.chatId));
+    } catch (error) {
+      setLearningError(
+        error instanceof Error
+          ? error.message
+          : "Could not open your lesson. Try again.",
+      );
+    } finally {
+      openingRef.current = false;
+      setOpeningTopic(false);
+    }
+  };
 
   const loadedChatIdRef = useRef<string | null>(initialChatId || null);
   const initializedWorkspaceIdRef = useRef<string | null>(null);
@@ -218,6 +298,11 @@ export function ChatContainer({
       return [];
     }
   }, []);
+
+  useEffect(() => {
+    if (currentWorkspace?.id && activeChatId)
+      void refreshChats(currentWorkspace.id);
+  }, [currentWorkspace?.id, activeChatId, refreshChats]);
 
   // Jump smoothly to a specific message card in the active feed
   const handleJumpToMessage = useCallback((messageId: string) => {
@@ -261,17 +346,28 @@ export function ChatContainer({
               try {
                 const seedResult = await seedDemoWorkspace();
                 safeSetItem("graphmind_demo_seeded", "true");
-                const snapshot = await fetchGraphSnapshot(seedResult.workspaceId);
+                const snapshot = await fetchGraphSnapshot(
+                  seedResult.workspaceId,
+                );
                 if (snapshot) {
                   ws = snapshot.workspace;
                 }
               } catch (seedErr) {
-                console.error("Failed to seed demo workspace, falling back to blank", seedErr);
-                ws = await createWorkspace("Main Workspace", "Default knowledge vault");
+                console.error(
+                  "Failed to seed demo workspace, falling back to blank",
+                  seedErr,
+                );
+                ws = await createWorkspace(
+                  "Main Workspace",
+                  "Default knowledge vault",
+                );
               }
             }
             if (!ws) {
-              ws = await createWorkspace("Main Workspace", "Default knowledge vault");
+              ws = await createWorkspace(
+                "Main Workspace",
+                "Default knowledge vault",
+              );
             }
           }
         }
@@ -296,7 +392,12 @@ export function ChatContainer({
                   const node = loadedTree.nodes[branchId];
                   lastProcessedBranchRef.current = branchId;
                   setSidePeekState({
-                    stack: [{ nodeId: branchId, excerpt: node.highlightedContext || undefined }],
+                    stack: [
+                      {
+                        nodeId: branchId,
+                        excerpt: node.highlightedContext || undefined,
+                      },
+                    ],
                     index: 0,
                   });
                 }
@@ -311,13 +412,35 @@ export function ChatContainer({
             }
           }
 
-          if (typeof window !== "undefined" && !targetChatId && viewMode !== "settings") {
+          if (
+            typeof window !== "undefined" &&
+            !targetChatId &&
+            viewMode !== "settings"
+          ) {
             // Only replace URL when no chatId is in the path yet
             router.replace(buildWorkspaceUrl(ws.id), { scroll: false });
-          } else if (typeof window !== "undefined" && targetChatId && ws && viewMode !== "settings") {
-            const url = viewMode === "canvas"
-              ? buildCanvasUrl(ws.id, targetChatId, nodeId ? { node: nodeId } : undefined)
-              : buildChatUrl(ws.id, targetChatId, branchId ? { branch: branchId } : nodeId ? { node: nodeId } : undefined);
+          } else if (
+            typeof window !== "undefined" &&
+            targetChatId &&
+            ws &&
+            viewMode !== "settings"
+          ) {
+            const url =
+              viewMode === "canvas"
+                ? buildCanvasUrl(
+                    ws.id,
+                    targetChatId,
+                    nodeId ? { node: nodeId } : undefined,
+                  )
+                : buildChatUrl(
+                    ws.id,
+                    targetChatId,
+                    branchId
+                      ? { branch: branchId }
+                      : nodeId
+                        ? { node: nodeId }
+                        : undefined,
+                  );
             router.replace(url, { scroll: false });
           }
         }
@@ -326,7 +449,7 @@ export function ChatContainer({
       }
     }
     initWorkspace();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Empty deps = run once on mount only
 
   // Reactive URL listener for browser Back/Forward navigation and external route changes
@@ -337,10 +460,10 @@ export function ChatContainer({
     const targetViewMode: ViewMode = pathname.endsWith("/canvas")
       ? "canvas"
       : pathname.endsWith("/library")
-      ? "library"
-      : pathname.endsWith("/settings")
-      ? "settings"
-      : "chat";
+        ? "library"
+        : pathname.endsWith("/settings")
+          ? "settings"
+          : "chat";
     setViewMode((prev) => (prev !== targetViewMode ? targetViewMode : prev));
 
     // 2. Sync chatId from path: /w/{workspaceId}/chat/{chatId}
@@ -358,7 +481,11 @@ export function ChatContainer({
           }
         }
       });
-    } else if (!targetChatId && loadedChatIdRef.current && pathname === buildWorkspaceUrl(currentWorkspace.id)) {
+    } else if (
+      !targetChatId &&
+      loadedChatIdRef.current &&
+      pathname === buildWorkspaceUrl(currentWorkspace.id)
+    ) {
       loadedChatIdRef.current = null;
       setActiveChatId(null);
       clearMessages();
@@ -399,8 +526,14 @@ export function ChatContainer({
         }, 150);
       }
     }
-  }, [pathname, searchParams, currentWorkspace, loadTree, clearMessages, handleJumpToMessage]);
-
+  }, [
+    pathname,
+    searchParams,
+    currentWorkspace,
+    loadTree,
+    clearMessages,
+    handleJumpToMessage,
+  ]);
 
   // Start a completely fresh chat tree inside the current workspace
   const handleNewChat = useCallback(() => {
@@ -430,7 +563,9 @@ export function ChatContainer({
 
       // Use replace (not push) with scroll:false so Next.js syncs the URL
       // WITHOUT triggering a full RSC page re-fetch or unmounting ChatContainer.
-      router.replace(buildChatUrl(currentWorkspace.id, chat.id), { scroll: false });
+      router.replace(buildChatUrl(currentWorkspace.id, chat.id), {
+        scroll: false,
+      });
 
       // Fetch snapshot in background — tree swaps without clearing visible messages
       const snapshot = await fetchGraphSnapshot(currentWorkspace.id, chat.id);
@@ -441,7 +576,7 @@ export function ChatContainer({
         }
       }
     },
-    [currentWorkspace, activeChatId, loadTree, router]
+    [currentWorkspace, activeChatId, loadTree, router],
   );
 
   // Delete a chat from the workspace
@@ -458,7 +593,13 @@ export function ChatContainer({
         }
       }
     },
-    [currentWorkspace, activeChatId, refreshChats, handleSelectChat, handleNewChat]
+    [
+      currentWorkspace,
+      activeChatId,
+      refreshChats,
+      handleSelectChat,
+      handleNewChat,
+    ],
   );
 
   // Rename a chat in the sidebar — updates metadata title on the backend then refreshes list
@@ -468,7 +609,7 @@ export function ChatContainer({
       await renameWorkspaceChat(currentWorkspace.id, chatId, newTitle.trim());
       await refreshChats(currentWorkspace.id);
     },
-    [currentWorkspace, refreshChats]
+    [currentWorkspace, refreshChats],
   );
 
   // Pin or unpin a chat in the sidebar — updates metadata on the backend then refreshes list
@@ -478,7 +619,7 @@ export function ChatContainer({
       await togglePinWorkspaceChat(currentWorkspace.id, chatId, pinned);
       await refreshChats(currentWorkspace.id);
     },
-    [currentWorkspace, refreshChats]
+    [currentWorkspace, refreshChats],
   );
 
   // Rename a branch tab — updates local state and persists to backend
@@ -486,10 +627,12 @@ export function ChatContainer({
     async (rootNodeId: string, newTitle: string) => {
       updateNodeMetadata(rootNodeId, { title: newTitle });
       if (currentWorkspace) {
-        await updateWorkspaceNodeMetadata(currentWorkspace.id, rootNodeId, { title: newTitle });
+        await updateWorkspaceNodeMetadata(currentWorkspace.id, rootNodeId, {
+          title: newTitle,
+        });
       }
     },
-    [currentWorkspace, updateNodeMetadata]
+    [currentWorkspace, updateNodeMetadata],
   );
 
   // Pin or unpin a branch tab — updates local state and persists to backend
@@ -497,10 +640,12 @@ export function ChatContainer({
     async (rootNodeId: string, pinned: boolean) => {
       updateNodeMetadata(rootNodeId, { pinned });
       if (currentWorkspace) {
-        await updateWorkspaceNodeMetadata(currentWorkspace.id, rootNodeId, { pinned });
+        await updateWorkspaceNodeMetadata(currentWorkspace.id, rootNodeId, {
+          pinned,
+        });
       }
     },
-    [currentWorkspace, updateNodeMetadata]
+    [currentWorkspace, updateNodeMetadata],
   );
 
   // Auto-scroll when user is at the bottom in chat mode
@@ -515,8 +660,8 @@ export function ChatContainer({
     if (!initialNodeId || activeMessages.length === 0) return;
     const timeout = setTimeout(() => handleJumpToMessage(initialNodeId), 300);
     return () => clearTimeout(timeout);
-  // Only run once when messages first populate
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Only run once when messages first populate
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialNodeId, activeMessages.length > 0]);
 
   // Send message, persist nodes to PostgreSQL, and update chat list
@@ -524,11 +669,12 @@ export function ChatContainer({
     async (
       prompt: string,
       attachments?: FileAttachment[],
-      activeSkill?: string | null
+      activeSkill?: string | null,
     ) => {
       if (!currentWorkspace) return;
 
-      const isFirstMessageInNewChat = !activeChatId || !tree || Object.keys(tree.nodes).length === 0;
+      const isFirstMessageInNewChat =
+        !activeChatId || !tree || Object.keys(tree.nodes).length === 0;
 
       let createdUserNodeId: string | null = null;
       let createdAssistantNodeId: string | null = null;
@@ -541,10 +687,16 @@ export function ChatContainer({
       // Determine the target parent ID based on the currently active visible thread:
       // If the user has an active highlighted branch context, use its parentNodeId.
       // Otherwise, append strictly to the leaf of the active visible conversation messages.
-      const currentActiveLeaf = activeMessages.length > 0 ? activeMessages[activeMessages.length - 1].id : null;
+      const currentActiveLeaf =
+        activeMessages.length > 0
+          ? activeMessages[activeMessages.length - 1].id
+          : null;
       const targetParentId = isFirstMessageInNewChat
         ? null
-        : (activeBranch?.parentNodeId || currentActiveLeaf || tree?.activeNodeId || null);
+        : activeBranch?.parentNodeId ||
+          currentActiveLeaf ||
+          tree?.activeNodeId ||
+          null;
 
       const result = await sendMessage(prompt, provider, model, {
         apiKey: effectiveApiKey,
@@ -552,9 +704,11 @@ export function ChatContainer({
         temperature: llmConfig.temperature,
         maxTokens: llmConfig.maxTokens,
         systemPrompt: llmConfig.systemPrompt || undefined,
-        attachments: attachments && attachments.length > 0 ? attachments : undefined,
+        attachments:
+          attachments && attachments.length > 0 ? attachments : undefined,
         enabledSkills: activeSkill ? [activeSkill] : undefined,
         workspaceId: currentWorkspace.id,
+        topicSessionId: activeTopicSessionId ?? undefined,
         targetParentId,
         onNodeCreated: ({ userNodeId, assistantNodeId, parentId }) => {
           createdUserNodeId = userNodeId;
@@ -563,7 +717,9 @@ export function ChatContainer({
           if (isFirstMessageInNewChat) {
             setActiveChatId(userNodeId);
             loadedChatIdRef.current = userNodeId;
-            router.replace(buildChatUrl(currentWorkspace.id, userNodeId), { scroll: false });
+            router.replace(buildChatUrl(currentWorkspace.id, userNodeId), {
+              scroll: false,
+            });
           }
 
           // Persist user node immediately to backend with exact parentId
@@ -574,14 +730,16 @@ export function ChatContainer({
             content: prompt.trim(),
             provider,
             model,
-            metadata: attachments && attachments.length > 0 ? { attachments } : {},
+            metadata:
+              attachments && attachments.length > 0 ? { attachments } : {},
           }).then(() => refreshChats(currentWorkspace.id));
         },
       });
 
       scrollToBottom(true);
 
-      const targetAssistantId = result?.assistantNodeId || createdAssistantNodeId;
+      const targetAssistantId =
+        result?.assistantNodeId || createdAssistantNodeId;
       const targetUserId = result?.userNodeId || createdUserNodeId;
       const assistantContent = result?.content || "";
 
@@ -600,7 +758,21 @@ export function ChatContainer({
         }, 1000);
       }
     },
-    [currentWorkspace, activeChatId, tree, activeMessages, activeBranch, llmConfig, getEffectiveApiKey, getEffectiveBaseUrl, sendMessage, scrollToBottom, refreshChats, router]
+    [
+      currentWorkspace,
+      activeChatId,
+      activeTopicSessionId,
+      tree,
+      activeMessages,
+      activeBranch,
+      llmConfig,
+      getEffectiveApiKey,
+      getEffectiveBaseUrl,
+      sendMessage,
+      scrollToBottom,
+      refreshChats,
+      router,
+    ],
   );
 
   // Synchronize sync status
@@ -614,12 +786,18 @@ export function ChatContainer({
     (nodeId: string) => {
       if (!currentWorkspace || !activeChatId) return;
       if (viewMode === "canvas") {
-        router.replace(buildCanvasUrl(currentWorkspace.id, activeChatId, { node: nodeId }), { scroll: false });
+        router.replace(
+          buildCanvasUrl(currentWorkspace.id, activeChatId, { node: nodeId }),
+          { scroll: false },
+        );
       } else {
-        router.replace(buildBranchUrl(currentWorkspace.id, activeChatId, nodeId), { scroll: false });
+        router.replace(
+          buildBranchUrl(currentWorkspace.id, activeChatId, nodeId),
+          { scroll: false },
+        );
       }
     },
-    [currentWorkspace, activeChatId, viewMode, router]
+    [currentWorkspace, activeChatId, viewMode, router],
   );
 
   // Open / Push into Notion-style Side-Peek History Stack
@@ -630,7 +808,7 @@ export function ChatContainer({
       setSidePeekState({ stack: [{ nodeId, excerpt }], index: 0 });
       syncSidePeekUrl(nodeId);
     },
-    [syncSidePeekUrl]
+    [syncSidePeekUrl],
   );
 
   const handlePushSidePeekBranch = useCallback(
@@ -638,12 +816,15 @@ export function ChatContainer({
       lastProcessedBranchRef.current = nodeId;
       lastProcessedNodeRef.current = nodeId;
       setSidePeekState((prev) => {
-        const nextStack = [...prev.stack.slice(0, prev.index + 1), { nodeId, excerpt }];
+        const nextStack = [
+          ...prev.stack.slice(0, prev.index + 1),
+          { nodeId, excerpt },
+        ];
         return { stack: nextStack, index: nextStack.length - 1 };
       });
       syncSidePeekUrl(nodeId);
     },
-    [syncSidePeekUrl]
+    [syncSidePeekUrl],
   );
 
   const handleSwitchSidePeekSiblingTab = useCallback(
@@ -659,7 +840,7 @@ export function ChatContainer({
       });
       syncSidePeekUrl(leafId);
     },
-    [syncSidePeekUrl]
+    [syncSidePeekUrl],
   );
 
   // Sync URL after back/forward navigation via a separate effect-driven approach
@@ -710,7 +891,7 @@ export function ChatContainer({
         viewMode === "canvas"
           ? buildCanvasUrl(currentWorkspace.id, activeChatId)
           : buildChatUrl(currentWorkspace.id, activeChatId),
-        { scroll: false }
+        { scroll: false },
       );
     }
   }, [currentWorkspace, activeChatId, viewMode, router]);
@@ -726,13 +907,23 @@ export function ChatContainer({
         setViewMode("chat");
       }
       if (currentWorkspace && activeChatId) {
-        router.replace(buildNodeUrl(currentWorkspace.id, activeChatId, leafNodeId), { scroll: false });
+        router.replace(
+          buildNodeUrl(currentWorkspace.id, activeChatId, leafNodeId),
+          { scroll: false },
+        );
       }
       setTimeout(() => {
         handleJumpToMessage(leafNodeId);
       }, 100);
     },
-    [switchBranch, viewMode, currentWorkspace, activeChatId, router, handleJumpToMessage]
+    [
+      switchBranch,
+      viewMode,
+      currentWorkspace,
+      activeChatId,
+      router,
+      handleJumpToMessage,
+    ],
   );
 
   // Send branch message and persist both user and assistant nodes to PostgreSQL
@@ -744,7 +935,7 @@ export function ChatContainer({
       options?: {
         mode?: "open" | "push" | "replace_current" | "none";
         displayPrompt?: string;
-      }
+      },
     ) => {
       if (!currentWorkspace) return;
 
@@ -756,47 +947,48 @@ export function ChatContainer({
       const effectiveApiKey = getEffectiveApiKey(provider);
       const effectiveBaseUrl = getEffectiveBaseUrl(provider);
 
-      const result = await sendMessage(
-        prompt,
-        provider,
-        model,
-        {
-          branchOverride: { parentNodeId, highlightedText },
-          preserveActiveNodeId: true,
-          apiKey: effectiveApiKey,
-          baseUrl: effectiveBaseUrl,
-          temperature: llmConfig.temperature,
-          maxTokens: llmConfig.maxTokens,
-          systemPrompt: llmConfig.systemPrompt || undefined,
-          onNodeCreated: ({ userNodeId, assistantNodeId }) => {
-            createdUserNodeId = userNodeId;
-            createdAssistantNodeId = assistantNodeId;
+      const result = await sendMessage(prompt, provider, model, {
+        workspaceId: currentWorkspace.id,
+        topicSessionId: activeTopicSessionId ?? undefined,
+        branchOverride: { parentNodeId, highlightedText },
+        preserveActiveNodeId: true,
+        apiKey: effectiveApiKey,
+        baseUrl: effectiveBaseUrl,
+        temperature: llmConfig.temperature,
+        maxTokens: llmConfig.maxTokens,
+        systemPrompt: llmConfig.systemPrompt || undefined,
+        onNodeCreated: ({ userNodeId, assistantNodeId }) => {
+          createdUserNodeId = userNodeId;
+          createdAssistantNodeId = assistantNodeId;
 
-            if (options?.mode === "push") {
-              handlePushSidePeekBranch(assistantNodeId, highlightedText || undefined);
-            } else if (options?.mode === "replace_current") {
-              handleSwitchSidePeekSiblingTab(assistantNodeId);
-            } else if (options?.mode === "none") {
-              // in-branch follow-up: leave stack intact
-            } else {
-              handleOpenSidePeek(assistantNodeId, highlightedText || undefined);
-            }
+          if (options?.mode === "push") {
+            handlePushSidePeekBranch(
+              assistantNodeId,
+              highlightedText || undefined,
+            );
+          } else if (options?.mode === "replace_current") {
+            handleSwitchSidePeekSiblingTab(assistantNodeId);
+          } else if (options?.mode === "none") {
+            // in-branch follow-up: leave stack intact
+          } else {
+            handleOpenSidePeek(assistantNodeId, highlightedText || undefined);
+          }
 
-            // Persist user branch node immediately to backend
-            addNodeToWorkspace(currentWorkspace.id, {
-              id: userNodeId,
-              parentId: parentNodeId,
-              role: "user",
-              content: options?.displayPrompt || prompt.trim(),
-              highlightedContext: highlightedText || null,
-              provider,
-              model,
-            }).then(() => refreshChats(currentWorkspace.id));
-          },
-        }
-      );
+          // Persist user branch node immediately to backend
+          addNodeToWorkspace(currentWorkspace.id, {
+            id: userNodeId,
+            parentId: parentNodeId,
+            role: "user",
+            content: options?.displayPrompt || prompt.trim(),
+            highlightedContext: highlightedText || null,
+            provider,
+            model,
+          }).then(() => refreshChats(currentWorkspace.id));
+        },
+      });
 
-      const targetAssistantId = result?.assistantNodeId || createdAssistantNodeId;
+      const targetAssistantId =
+        result?.assistantNodeId || createdAssistantNodeId;
       const targetUserId = result?.userNodeId || createdUserNodeId;
       const assistantContent = result?.content || "";
 
@@ -815,18 +1007,34 @@ export function ChatContainer({
         }, 500);
       }
     },
-    [currentWorkspace, handleOpenSidePeek, handlePushSidePeekBranch, handleSwitchSidePeekSiblingTab, llmConfig, getEffectiveApiKey, getEffectiveBaseUrl, sendMessage, refreshChats]
+    [
+      currentWorkspace,
+      activeTopicSessionId,
+      handleOpenSidePeek,
+      handlePushSidePeekBranch,
+      handleSwitchSidePeekSiblingTab,
+      llmConfig,
+      getEffectiveApiKey,
+      getEffectiveBaseUrl,
+      sendMessage,
+      refreshChats,
+    ],
   );
 
   // Handle "🌿 Explain this" action from text selection tooltip in Main Chat
   const handleExplainBranchFromMain = useCallback(
     async (parentNodeId: string, highlightedText: string) => {
       const branchPrompt = `Explain "${highlightedText}" in concise, direct detail with key takeaways.`;
-      await handleSendBranchStream(branchPrompt, parentNodeId, highlightedText, {
-        mode: "open",
-      });
+      await handleSendBranchStream(
+        branchPrompt,
+        parentNodeId,
+        highlightedText,
+        {
+          mode: "open",
+        },
+      );
     },
-    [handleSendBranchStream]
+    [handleSendBranchStream],
   );
 
   const handleLearningAction = useCallback(
@@ -838,21 +1046,163 @@ export function ChatContainer({
         {
           mode: "open",
           displayPrompt: getLearningActionDisplayPrompt(action),
-        }
+        },
       );
     },
-    [handleSendBranchStream]
+    [handleSendBranchStream],
   );
+
+  const startInitialLesson = useCallback(async () => {
+    if (
+      !currentWorkspace ||
+      !activeTopicSessionId ||
+      !tree ||
+      tree.rootNodeId !== activeChatId ||
+      isStreaming
+    )
+      return;
+    const startPath = pathname;
+    setLearningError(null);
+    await sendMessage(
+      "Teach me this topic with a manageable first lesson.",
+      llmConfig.provider,
+      llmConfig.model,
+      {
+        workspaceId: currentWorkspace.id,
+        topicSessionId: activeTopicSessionId,
+        lessonStart: true,
+        apiKey: getEffectiveApiKey(llmConfig.provider),
+        baseUrl: getEffectiveBaseUrl(llmConfig.provider),
+        temperature: llmConfig.temperature,
+        maxTokens: llmConfig.maxTokens,
+        enableRag: false,
+      },
+    );
+    await refreshTopicSession();
+    if (routeRef.current === startPath) {
+      const snapshot = await fetchGraphSnapshot(
+        currentWorkspace.id,
+        tree.rootNodeId,
+      );
+      if (snapshot && routeRef.current === startPath) {
+        const saved = snapshotToTree(snapshot);
+        if (saved) loadTree(saved);
+      }
+    }
+  }, [
+    currentWorkspace,
+    activeTopicSessionId,
+    tree,
+    activeChatId,
+    isStreaming,
+    pathname,
+    sendMessage,
+    llmConfig,
+    getEffectiveApiKey,
+    getEffectiveBaseUrl,
+    refreshTopicSession,
+    loadTree,
+  ]);
+  useEffect(() => {
+    if (
+      topicSession.session?.lessonStartState !== "pending" ||
+      !activeTopicSessionId ||
+      !currentWorkspace ||
+      isStreaming ||
+      pathname !== buildChatUrl(currentWorkspace.id, activeChatId ?? "") ||
+      attemptedLessons.current.has(activeTopicSessionId)
+    )
+      return;
+    attemptedLessons.current.add(activeTopicSessionId);
+    void startInitialLesson();
+  }, [
+    topicSession.session?.lessonStartState,
+    activeTopicSessionId,
+    currentWorkspace,
+    isStreaming,
+    pathname,
+    activeChatId,
+    startInitialLesson,
+  ]);
+  useEffect(() => {
+    if (
+      topicSession.session?.lessonStartState !== "completed" ||
+      !tree ||
+      isStreaming ||
+      tree.nodes[`${tree.rootNodeId}_lesson`]?.content
+    )
+      return;
+    const controller = new AbortController();
+    const startPath = pathname;
+    void fetchGraphSnapshot(currentWorkspace!.id, tree.rootNodeId).then(
+      (snapshot) => {
+        if (
+          !controller.signal.aborted &&
+          routeRef.current === startPath &&
+          snapshot
+        ) {
+          const saved = snapshotToTree(snapshot);
+          if (saved) loadTree(saved);
+        }
+      },
+    );
+    return () => controller.abort();
+  }, [
+    topicSession.session?.lessonStartState,
+    tree,
+    isStreaming,
+    pathname,
+    currentWorkspace,
+    loadTree,
+  ]);
+  const assessAnswer = async () => {
+    if (!currentWorkspace || !topicSession.session || assessing) return;
+    setAssessing(true);
+    setLearningError(null);
+    try {
+      await recordTopicCheck(
+        currentWorkspace.id,
+        topicSession.session.topicId,
+        topicSession.session.id,
+      );
+      await refreshTopicSession();
+    } catch (error) {
+      setLearningError(
+        error instanceof Error
+          ? error.message
+          : "Could not assess the saved answer.",
+      );
+    } finally {
+      setAssessing(false);
+    }
+  };
+  const retryCurrentLesson = () => {
+    if (
+      activeTopicSessionId &&
+      ["pending", "interrupted"].includes(
+        topicSession.session?.lessonStartState ?? "",
+      )
+    )
+      void startInitialLesson();
+    else if (
+      activeTopicSessionId &&
+      topicSession.session?.lessonStartState === "started"
+    )
+      void topicSession.refresh();
+    else retryLastMessage();
+  };
 
   // Handle response rating (👍 / 👎) with real-time PostgreSQL persistence
   const handleRateResponse = useCallback(
     async (nodeId: string, rating: "up" | "down" | null) => {
       updateNodeMetadata(nodeId, { rating });
       if (currentWorkspace) {
-        await updateWorkspaceNodeMetadata(currentWorkspace.id, nodeId, { rating });
+        await updateWorkspaceNodeMetadata(currentWorkspace.id, nodeId, {
+          rating,
+        });
       }
     },
-    [currentWorkspace, updateNodeMetadata]
+    [currentWorkspace, updateNodeMetadata],
   );
 
   // Track all branch points along the active lineage for breadcrumbs
@@ -877,7 +1227,11 @@ export function ChatContainer({
     }
     const rootMessage = tree.nodes[tree.rootNodeId];
     const rawPrompt = rootMessage?.content || fallbackTitle;
-    const rootTitle = activeChat?.title || (rawPrompt.length > 24 ? rawPrompt.slice(0, 22) + "…" : rawPrompt);
+    const rootMetadataTitle = tree.nodes[tree.rootNodeId]?.metadata?.title;
+    const rootTitle =
+      activeChat?.title ||
+      (typeof rootMetadataTitle === "string" ? rootMetadataTitle : null) ||
+      (rawPrompt.length > 24 ? rawPrompt.slice(0, 22) + "…" : rawPrompt);
 
     const rootLeaf = getBranchLinearLeafNode(tree, tree.rootNodeId);
     const rootLeafId = rootLeaf ? rootLeaf.id : tree.rootNodeId;
@@ -909,25 +1263,33 @@ export function ChatContainer({
     async (userNodeId: string, newContent: string) => {
       await editUserMessage(userNodeId, newContent);
       if (currentWorkspace) {
-        await updateWorkspaceNodeContent(currentWorkspace.id, userNodeId, newContent);
+        await updateWorkspaceNodeContent(
+          currentWorkspace.id,
+          userNodeId,
+          newContent,
+        );
       }
     },
-    [currentWorkspace, editUserMessage]
+    [currentWorkspace, editUserMessage],
   );
-
 
   const handleSendNewSiblingBranch = useCallback(
     async (prompt: string, parentNodeId: string, highlightedText: string) => {
-      await handleSendBranchStream(prompt, parentNodeId, highlightedText, { mode: "replace_current" });
+      await handleSendBranchStream(prompt, parentNodeId, highlightedText, {
+        mode: "replace_current",
+      });
     },
-    [handleSendBranchStream]
+    [handleSendBranchStream],
   );
 
   // Switch to canvas node and open side peek
-  const handleSelectTreeNode = useCallback((nodeId: string) => {
-    switchBranch(nodeId);
-    handleOpenSidePeek(nodeId);
-  }, [switchBranch, handleOpenSidePeek]);
+  const handleSelectTreeNode = useCallback(
+    (nodeId: string) => {
+      switchBranch(nodeId);
+      handleOpenSidePeek(nodeId);
+    },
+    [switchBranch, handleOpenSidePeek],
+  );
 
   // Transition smoothly from Canvas view to Chat view focusing on a specific node
   const handleSwitchToChat = useCallback(
@@ -935,13 +1297,15 @@ export function ChatContainer({
       switchBranch(nodeId);
       setViewMode("chat");
       if (currentWorkspace && activeChatId) {
-        router.push(buildNodeUrl(currentWorkspace.id, activeChatId, nodeId), { scroll: false });
+        router.push(buildNodeUrl(currentWorkspace.id, activeChatId, nodeId), {
+          scroll: false,
+        });
       }
       setTimeout(() => {
         handleJumpToMessage(nodeId);
       }, 100);
     },
-    [switchBranch, handleJumpToMessage, currentWorkspace, activeChatId, router]
+    [switchBranch, handleJumpToMessage, currentWorkspace, activeChatId, router],
   );
 
   // Keyboard navigation helpers
@@ -953,7 +1317,8 @@ export function ChatContainer({
         const siblings = getNodeChildren(tree, node.parentId);
         if (siblings.length > 1) {
           const currentIndex = siblings.findIndex((s) => s.id === node.id);
-          const prevIndex = (currentIndex - 1 + siblings.length) % siblings.length;
+          const prevIndex =
+            (currentIndex - 1 + siblings.length) % siblings.length;
           switchBranch(siblings[prevIndex].id);
           return;
         }
@@ -995,11 +1360,15 @@ export function ChatContainer({
     } else if (activeBranch) {
       clearBranchContext();
     }
-  }, [isSidePeekOpen, handleCloseSidePeek, isPaletteOpen, activeBranch, clearBranchContext]);
-
+  }, [
+    isSidePeekOpen,
+    handleCloseSidePeek,
+    isPaletteOpen,
+    activeBranch,
+    clearBranchContext,
+  ]);
 
   useKeyboardShortcuts({
-
     onPrevBranch: handlePrevBranch,
     onNextBranch: handleNextBranch,
     onJumpToRoot: handleJumpToRoot,
@@ -1007,31 +1376,35 @@ export function ChatContainer({
     onFitView: () => fitViewRef.current?.(),
     onCenterActive: () => centerActiveRef.current?.(),
     onAutoLayout: () => autoLayoutRef.current?.(),
-    onCommandPalette: () => setIsPaletteOpen((prev) => !prev),
+    onCommandPalette: roadmapMode
+      ? undefined
+      : () => setIsPaletteOpen((prev) => !prev),
     onToggleSidebar: () => setIsSidebarOpen((prev) => !prev),
-    onNewChat: handleNewChat,
+    onNewChat: roadmap.view ? undefined : handleNewChat,
     onOpenSettings: handleOpenSettings,
   });
-
 
   const starterPrompts = [
     {
       title: "Explain LangGraph & State Machines",
       subtitle: "How cyclical graph workflows differ from DAGs in AI systems",
       icon: GitBranch,
-      prompt: "Explain how LangGraph state machines manage cyclical multi-agent workflows and how they differ from linear DAG execution.",
+      prompt:
+        "Explain how LangGraph state machines manage cyclical multi-agent workflows and how they differ from linear DAG execution.",
     },
     {
       title: "Raft vs Paxos Consensus",
       subtitle: "Leader election, log replication, and split-brain safety",
       icon: GitBranch,
-      prompt: "Compare Raft vs Paxos consensus mechanisms in distributed systems. Focus on leader election and split-brain mitigation.",
+      prompt:
+        "Compare Raft vs Paxos consensus mechanisms in distributed systems. Focus on leader election and split-brain mitigation.",
     },
     {
       title: "Database Vector Indexing (HNSW vs IVFFlat)",
       subtitle: "Trade-offs in approximate nearest neighbor search",
       icon: GitBranch,
-      prompt: "Break down the architectural trade-offs between HNSW and IVFFlat vector indexing for pgvector semantic search.",
+      prompt:
+        "Break down the architectural trade-offs between HNSW and IVFFlat vector indexing for pgvector semantic search.",
     },
   ];
 
@@ -1043,7 +1416,9 @@ export function ChatContainer({
             isOpen={isSidebarOpen}
             onToggle={() => setIsSidebarOpen((prev) => !prev)}
             workspaceName={currentWorkspace?.name || "Main Workspace"}
-            chats={chats.filter(chat => chat.id !== roadmap.view?.canvasAnchorChatId)}
+            chats={chats.filter(
+              (chat) => chat.id !== roadmap.view?.canvasAnchorChatId,
+            )}
             activeChatId={activeChatId}
             isLibraryActive={viewMode === "library"}
             onSelectChat={handleSelectChat}
@@ -1051,7 +1426,7 @@ export function ChatContainer({
             onRenameChat={handleRenameChat}
             onTogglePinChat={handleTogglePinChat}
             onOpenSettings={handleOpenSettings}
-            onNewChat={handleNewChat}
+            onNewChat={roadmap.view ? undefined : handleNewChat}
             onOpenFileLibrary={() => {
               if (currentWorkspace) {
                 router.push(buildLibraryUrl(currentWorkspace.id));
@@ -1061,7 +1436,11 @@ export function ChatContainer({
         }
         header={
           roadmapMode && roadmap.view ? (
-            <RoadmapHeader view={roadmap.view} mode={roadmapMode} onToggleSidebar={() => setIsSidebarOpen(prev => !prev)} />
+            <RoadmapHeader
+              view={roadmap.view}
+              mode={roadmapMode}
+              onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
+            />
           ) : viewMode === "library" ? (
             <LibraryHeader
               isSidebarOpen={isSidebarOpen}
@@ -1079,9 +1458,17 @@ export function ChatContainer({
                 setViewMode(mode);
                 if (currentWorkspace) {
                   if (mode === "canvas") {
-                    router.push(activeChatId ? buildCanvasUrl(currentWorkspace.id, activeChatId) : buildWorkspaceUrl(currentWorkspace.id));
+                    router.push(
+                      activeChatId
+                        ? buildCanvasUrl(currentWorkspace.id, activeChatId)
+                        : buildWorkspaceUrl(currentWorkspace.id),
+                    );
                   } else if (mode === "chat") {
-                    router.push(activeChatId ? buildChatUrl(currentWorkspace.id, activeChatId) : buildWorkspaceUrl(currentWorkspace.id));
+                    router.push(
+                      activeChatId
+                        ? buildChatUrl(currentWorkspace.id, activeChatId)
+                        : buildWorkspaceUrl(currentWorkspace.id),
+                    );
                   } else if (mode === "library") {
                     router.push(buildLibraryUrl(currentWorkspace.id));
                   }
@@ -1100,8 +1487,10 @@ export function ChatContainer({
               isSidebarOpen={isSidebarOpen}
               onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
               isRightSidebarOpen={isRightSidebarOpen}
-              onToggleRightSidebar={handleToggleRightSidebar}
-              onNewChat={handleNewChat}
+              onToggleRightSidebar={
+                activeTopicSessionId ? undefined : handleToggleRightSidebar
+              }
+              onNewChat={roadmap.view ? undefined : handleNewChat}
               onClearChat={() => {
                 clearMessages();
                 handleCloseSidePeek();
@@ -1116,7 +1505,10 @@ export function ChatContainer({
                     switchBranch(step.leafId);
                     setSidePeekState({ stack: [], index: 0 });
                     if (currentWorkspace && activeChatId) {
-                      router.replace(buildChatUrl(currentWorkspace.id, activeChatId), { scroll: false });
+                      router.replace(
+                        buildChatUrl(currentWorkspace.id, activeChatId),
+                        { scroll: false },
+                      );
                     }
                   }}
                 />
@@ -1124,35 +1516,73 @@ export function ChatContainer({
             />
           )
         }
-        rail={roadmapMode || waitingForRoadmap || viewMode === "settings" ? undefined : (
-          <RightSidebar
-            isOpen={isRightSidebarOpen}
-            onToggle={handleToggleRightSidebar}
-          >
-            {currentWorkspace?.id && (
-              <MasteryPanel
-                workspaceId={currentWorkspace.id}
-                onQuizConcept={(conceptName) => {
-                  handleSendMessage(`Quiz me on ${conceptName} with a short conceptual check.`);
-                }}
-                onExploreGap={(gap) => {
-                  handleSendMessage(`Explain the knowledge gap regarding ${gap.conceptName}: ${gap.rationale}`);
-                }}
-                onStartTopic={(topic) => {
-                  handleSendMessage(topic.suggestedPrompt || `Let's explore ${topic.topicName}: ${topic.rationale}`);
-                }}
-              />
-            )}
-          </RightSidebar>
-        )}
+        rail={
+          activeTopicSessionId ||
+          roadmapMode ||
+          waitingForRoadmap ||
+          viewMode === "settings" ? undefined : (
+            <RightSidebar
+              isOpen={isRightSidebarOpen}
+              onToggle={handleToggleRightSidebar}
+            >
+              {currentWorkspace?.id && (
+                <MasteryPanel
+                  workspaceId={currentWorkspace.id}
+                  onQuizConcept={(conceptName) => {
+                    handleSendMessage(
+                      `Quiz me on ${conceptName} with a short conceptual check.`,
+                    );
+                  }}
+                  onExploreGap={(gap) => {
+                    handleSendMessage(
+                      `Explain the knowledge gap regarding ${gap.conceptName}: ${gap.rationale}`,
+                    );
+                  }}
+                  onStartTopic={(topic) => {
+                    handleSendMessage(
+                      topic.suggestedPrompt ||
+                        `Let's explore ${topic.topicName}: ${topic.rationale}`,
+                    );
+                  }}
+                />
+              )}
+            </RightSidebar>
+          )
+        }
       >
         {waitingForRoadmap ? (
-          <div className="flex h-full flex-col items-center justify-center gap-3 bg-background p-6 text-sm text-foreground-muted" role={roadmap.error ? "alert" : "status"}>
+          <div
+            className="flex h-full flex-col items-center justify-center gap-3 bg-background p-6 text-sm text-foreground-muted"
+            role={roadmap.error ? "alert" : "status"}
+          >
             {roadmap.error ? roadmap.error.message : "Loading roadmap…"}
-            {roadmap.error && <Button variant="secondary" onClick={() => void roadmap.refresh()}>Retry</Button>}
+            {roadmap.error && (
+              <Button
+                variant="secondary"
+                onClick={() => void roadmap.refresh()}
+              >
+                Retry
+              </Button>
+            )}
           </div>
         ) : roadmapMode && roadmap.view ? (
-          <RoadmapWorkspace key={roadmap.view.roadmapId} view={roadmap.view} mode={roadmapMode} />
+          <>
+            <RoadmapWorkspace
+              key={roadmap.view.roadmapId}
+              view={roadmap.view}
+              mode={roadmapMode}
+              onOpenTopic={setSelectedTopicId}
+              onStartTopic={startTopic}
+              opening={openingTopic}
+              actionError={learningError}
+            />
+            <TopicBriefDrawer
+              view={roadmap.view}
+              topicId={selectedTopicId}
+              onClose={() => setSelectedTopicId(null)}
+              onProgress={roadmap.updateProgress}
+            />
+          </>
         ) : viewMode === "settings" ? (
           <SettingsPage
             config={llmConfig}
@@ -1182,244 +1612,279 @@ export function ChatContainer({
         ) : viewMode === "canvas" ? (
           /* 2D Spatial Mind Map & Knowledge Graph Canvas View */
           <div className="w-full h-full relative">
-              <GraphCanvas
-                key={`${currentWorkspace?.id}:${activeChatId}`}
-                tree={tree}
-                workspaceId={currentWorkspace?.id}
-                chatId={activeChatId ?? undefined}
-                isStreaming={isStreaming}
-                onSelectNode={handleSelectTreeNode}
-                onDeleteBranch={(nodeId) => currentWorkspace && deleteBranch(nodeId, currentWorkspace.id)}
-                onExploreBranch={(nodeId, text) => {
-                  handleOpenSidePeek(nodeId, text || undefined);
+            <GraphCanvas
+              key={`${currentWorkspace?.id}:${activeChatId}`}
+              tree={tree}
+              workspaceId={currentWorkspace?.id}
+              chatId={activeChatId ?? undefined}
+              isStreaming={isStreaming}
+              onSelectNode={handleSelectTreeNode}
+              onDeleteBranch={(nodeId) =>
+                currentWorkspace && deleteBranch(nodeId, currentWorkspace.id)
+              }
+              onExploreBranch={(nodeId, text) => {
+                handleOpenSidePeek(nodeId, text || undefined);
+              }}
+              onSwitchToChat={handleSwitchToChat}
+              onRetry={retryCurrentLesson}
+              onFitViewRef={fitViewRef}
+              onCenterActiveRef={centerActiveRef}
+              onAutoLayoutRef={autoLayoutRef}
+              onPaneClick={handleCloseSidePeek}
+              isSidePeekOpen={isSidePeekOpen}
+            />
+          </div>
+        ) : (
+          /* Linear Mainline Stream Chat View */
+          <div className="w-full h-full flex flex-col min-w-0 relative">
+            {topicSession.session && currentWorkspace && (
+              <TutorLearningBar
+                workspaceId={currentWorkspace.id}
+                session={topicSession.session}
+                onResume={() => void startInitialLesson()}
+                onAsk={() =>
+                  tree && void handleLearningAction(tree.activeNodeId, "quiz")
+                }
+                onAssess={() => void assessAnswer()}
+                onProgress={(progress) => {
+                  topicSession.updateProgress(progress);
+                  roadmap.updateProgress(progress);
                 }}
-                onSwitchToChat={handleSwitchToChat}
-                onRetry={retryLastMessage}
-                onFitViewRef={fitViewRef}
-                onCenterActiveRef={centerActiveRef}
-                onAutoLayoutRef={autoLayoutRef}
-                onPaneClick={handleCloseSidePeek}
-                isSidePeekOpen={isSidePeekOpen}
+                busy={isStreaming || assessing}
+                error={learningError ?? topicSession.error}
               />
-            </div>
-          ) : (
-            /* Linear Mainline Stream Chat View */
-            <div className="w-full h-full flex flex-col min-w-0 relative">
-              <main
-                ref={scrollRef}
-                className="flex-1 overflow-y-auto min-h-0 flex flex-col bg-background"
-              >
-                <div
-                  data-testid="chat-content-column"
-                  className="w-full flex-1 flex flex-col max-w-[var(--chat-content-max)] mx-auto px-4"
-                >
-                  {activeMessages.length === 0 ? (
-                    /* Clean Empty State */
-                    <div className="flex-1 flex flex-col items-center justify-center max-w-2xl mx-auto px-4 py-8 text-center space-y-8 my-auto">
-                      <div className="space-y-3">
-                        <LogoBadge size="lg" className="mx-auto" />
-                        <h2 className="font-display text-xl font-normal text-foreground sm:text-display-sm">
-                          {currentWorkspace?.name || "Where knowledge connects"}
-                        </h2>
-                        <p className="text-sm text-foreground-subtle max-w-md mx-auto leading-relaxed">
-                          Ask a technical question, explore system architecture, or create new branches in this workspace.
-                        </p>
-                      </div>
-
-                      {/* Quick Starter Cards */}
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 w-full text-left">
-                        {starterPrompts.map((item, index) => {
-                          const Icon = item.icon;
-                          return (
-                            <Button
-                              key={index}
-                              variant="outline"
-                              onClick={() => {
-                                handleSendMessage(item.prompt);
-                              }}
-                              className="h-auto p-3 rounded-xl border border-border-subtle bg-surface hover:bg-surface-hover text-left whitespace-normal transition-colors group cursor-pointer shadow-none flex flex-col items-start justify-start"
-                            >
-                              <div className="w-6 h-6 rounded-md bg-background-secondary shadow-xs flex items-center justify-center mb-2 text-foreground-muted group-hover:text-foreground transition-colors">
-                                <Icon className="w-3.5 h-3.5" />
-                              </div>
-                              <h3 className="text-sm font-medium text-foreground mb-1 leading-snug">
-                                {item.title}
-                              </h3>
-                              <p className="text-xs text-foreground-muted line-clamp-2 leading-relaxed font-normal">
-                                {item.subtitle}
-                              </p>
-                            </Button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ) : (
-                    /* Active Lineage Message Stream */
-                    <div className="w-full pb-4">
-                      {(() => {
-                        const lastUserIndex = activeMessages.map((m) => m.role).lastIndexOf("user");
-                        const lastAssistantIndex = activeMessages.map((m) => m.role).lastIndexOf("assistant");
-
-                        return activeMessages.map((node, index) => {
-                          const isLastAssistant =
-                            index === activeMessages.length - 1 &&
-                            node.role === "assistant" &&
-                            isStreaming &&
-                            streamingNodeId === node.id;
-
-                          return (
-                            <ChatMessage
-                              key={node.id}
-                              workspaceId={currentWorkspace?.id}
-                              flashcardGenerationConfig={flashcardGenerationConfig}
-                              message={{
-                                ...node,
-                                isStreaming: isLastAssistant,
-                              }}
-                              tree={tree}
-                              isLastUserMessage={index === lastUserIndex}
-                              isLastAssistantMessage={index === lastAssistantIndex}
-                              onRetry={retryLastMessage}
-                              onRegenerate={regenerateResponse}
-                              onEditUserMessage={handleEditUserMessage}
-                              onSwitchBranch={switchBranch}
-                              onExploreBranch={handleExplainBranchFromMain}
-                              onLearningAction={handleLearningAction}
-                              onOpenSideBranch={(leafId, excerpt) => handleOpenSidePeek(leafId, excerpt)}
-                              onRateResponse={handleRateResponse}
-                            />
-                          );
-                        });
-                      })()}
-                      <div ref={bottomRef} />
-                    </div>
-                  )}
-
-                  {error && (
-                    <div className="pb-4 pt-1">
-                      <InlineFeedback
-                        tone="destructive"
-                        title="Stream error"
-                        action={
-                          <div className="flex items-center gap-2">
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={retryLastMessage}
-                            >
-                              Retry
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={clearError}
-                            >
-                              Dismiss
-                            </Button>
-                          </div>
-                        }
-                      >
-                        {error}
-                      </InlineFeedback>
-                    </div>
-                  )}
-                </div>
-              </main>
-
-              {/* Chat Input Bar */}
+            )}
+            <main
+              ref={scrollRef}
+              className="flex-1 overflow-y-auto min-h-0 flex flex-col bg-background"
+            >
               <div
-                data-testid="chat-composer-shell"
-                className="relative shrink-0 bg-gradient-to-t from-background via-background to-transparent pt-2 z-20"
+                data-testid="chat-content-column"
+                className="w-full flex-1 flex flex-col max-w-[var(--chat-content-max)] mx-auto px-4"
               >
-                {showScrollButton && activeMessages.length > 0 && (
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => scrollToBottom(true)}
-                    className="absolute -top-9 left-1/2 -translate-x-1/2 shadow-md gap-1.5 animate-in fade-in-50 slide-in-from-bottom-2 duration-150 motion-reduce:animate-none"
-                  >
-                    <span>Scroll to bottom</span>
-                    <ArrowDown className="w-3 h-3" />
-                  </Button>
+                {activeMessages.length === 0 ? (
+                  /* Clean Empty State */
+                  <div className="flex-1 flex flex-col items-center justify-center max-w-2xl mx-auto px-4 py-8 text-center space-y-8 my-auto">
+                    <div className="space-y-3">
+                      <LogoBadge size="lg" className="mx-auto" />
+                      <h2 className="font-display text-xl font-normal text-foreground sm:text-display-sm">
+                        {currentWorkspace?.name || "Where knowledge connects"}
+                      </h2>
+                      <p className="text-sm text-foreground-subtle max-w-md mx-auto leading-relaxed">
+                        Ask a technical question, explore system architecture,
+                        or create new branches in this workspace.
+                      </p>
+                    </div>
+
+                    {/* Quick Starter Cards */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 w-full text-left">
+                      {starterPrompts.map((item, index) => {
+                        const Icon = item.icon;
+                        return (
+                          <Button
+                            key={index}
+                            variant="outline"
+                            onClick={() => {
+                              handleSendMessage(item.prompt);
+                            }}
+                            className="h-auto p-3 rounded-xl border border-border-subtle bg-surface hover:bg-surface-hover text-left whitespace-normal transition-colors group cursor-pointer shadow-none flex flex-col items-start justify-start"
+                          >
+                            <div className="w-6 h-6 rounded-md bg-background-secondary shadow-xs flex items-center justify-center mb-2 text-foreground-muted group-hover:text-foreground transition-colors">
+                              <Icon className="w-3.5 h-3.5" />
+                            </div>
+                            <h3 className="text-sm font-medium text-foreground mb-1 leading-snug">
+                              {item.title}
+                            </h3>
+                            <p className="text-xs text-foreground-muted line-clamp-2 leading-relaxed font-normal">
+                              {item.subtitle}
+                            </p>
+                          </Button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  /* Active Lineage Message Stream */
+                  <div className="w-full pb-4">
+                    {(() => {
+                      const lastUserIndex = activeMessages
+                        .map((m) => m.role)
+                        .lastIndexOf("user");
+                      const lastAssistantIndex = activeMessages
+                        .map((m) => m.role)
+                        .lastIndexOf("assistant");
+
+                      return activeMessages.map((node, index) => {
+                        const isLastAssistant =
+                          index === activeMessages.length - 1 &&
+                          node.role === "assistant" &&
+                          isStreaming &&
+                          streamingNodeId === node.id;
+
+                        return (
+                          <ChatMessage
+                            key={node.id}
+                            workspaceId={currentWorkspace?.id}
+                            flashcardGenerationConfig={
+                              flashcardGenerationConfig
+                            }
+                            message={{
+                              ...node,
+                              isStreaming: isLastAssistant,
+                            }}
+                            tree={tree}
+                            isLastUserMessage={index === lastUserIndex}
+                            isLastAssistantMessage={
+                              index === lastAssistantIndex
+                            }
+                            onRetry={retryCurrentLesson}
+                            onRegenerate={regenerateResponse}
+                            onEditUserMessage={handleEditUserMessage}
+                            onSwitchBranch={switchBranch}
+                            onExploreBranch={handleExplainBranchFromMain}
+                            onLearningAction={handleLearningAction}
+                            onOpenSideBranch={(leafId, excerpt) =>
+                              handleOpenSidePeek(leafId, excerpt)
+                            }
+                            onRateResponse={handleRateResponse}
+                          />
+                        );
+                      });
+                    })()}
+                    <div ref={bottomRef} />
+                  </div>
                 )}
 
-                <ChatInput
-                  workspaceId={currentWorkspace?.id}
-                  onSendMessage={handleSendMessage}
-                  onStopStreaming={stopStreaming}
-                  isStreaming={isStreaming}
-                  activeBranch={activeBranch}
-                  onClearBranch={clearBranchContext}
-                />
+                {error && (
+                  <div className="pb-4 pt-1">
+                    <InlineFeedback
+                      tone="destructive"
+                      title="Stream error"
+                      action={
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={retryCurrentLesson}
+                          >
+                            Retry
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={clearError}
+                          >
+                            Dismiss
+                          </Button>
+                        </div>
+                      }
+                    >
+                      {error}
+                    </InlineFeedback>
+                  </div>
+                )}
               </div>
+            </main>
+
+            {/* Chat Input Bar */}
+            <div
+              data-testid="chat-composer-shell"
+              className="relative shrink-0 bg-gradient-to-t from-background via-background to-transparent pt-2 z-20"
+            >
+              {showScrollButton && activeMessages.length > 0 && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => scrollToBottom(true)}
+                  className="absolute -top-9 left-1/2 -translate-x-1/2 shadow-md gap-1.5 animate-in fade-in-50 slide-in-from-bottom-2 duration-150 motion-reduce:animate-none"
+                >
+                  <span>Scroll to bottom</span>
+                  <ArrowDown className="w-3 h-3" />
+                </Button>
+              )}
+
+              <ChatInput
+                workspaceId={currentWorkspace?.id}
+                onSendMessage={handleSendMessage}
+                onStopStreaming={stopStreaming}
+                isStreaming={isStreaming}
+                activeBranch={activeBranch}
+                onClearBranch={clearBranchContext}
+              />
             </div>
-          )}
+          </div>
+        )}
 
-          {/* Interactive Notion-Style Side-Peek Branch Sheet */}
-          <SidePeekBranchSheet
-            isOpen={isSidePeekOpen}
-            hasBackdrop={viewMode !== "canvas"}
-            tree={tree}
-            workspaceId={currentWorkspace?.id}
-            flashcardGenerationConfig={flashcardGenerationConfig}
-            historyStack={sidePeekStack}
-            historyIndex={sidePeekIndex}
-            isStreaming={isStreaming}
-            streamingNodeId={streamingNodeId}
-            onClose={handleCloseSidePeek}
-            onNavigateBack={handleNavigateSidePeekBack}
-            onNavigateForward={handleNavigateSidePeekForward}
-            onPushBranch={handlePushSidePeekBranch}
-            onOpenBranch={handleOpenSidePeek}
-            onPromoteToPrimary={handlePromoteSidePeekToPrimary}
-            onSendMessage={(prompt, parentNodeId) => {
-              handleSendBranchStream(prompt, parentNodeId, "", { mode: "none" });
-            }}
-            onSendNewSiblingBranch={handleSendNewSiblingBranch}
-            onSelectSiblingTab={handleSwitchSidePeekSiblingTab}
-            onDeleteBranch={(nodeId) => currentWorkspace && deleteBranch(nodeId, currentWorkspace.id)}
-            onRenameBranch={handleRenameBranch}
-            onTogglePinBranch={handleTogglePinBranch}
-            onExploreBranch={(parentNodeId, highlightedText) => {
-              handleSendBranchStream(
-                `Explain "${highlightedText}" in concise, direct detail with key takeaways.`,
-                parentNodeId,
-                highlightedText,
-                { mode: "push" }
-              );
-            }}
-            onRegenerate={regenerateResponse}
-            onEditUserMessage={handleEditUserMessage}
-            onSwitchBranch={switchBranch}
-            onRateResponse={handleRateResponse}
-          />
-        </WorkspaceShell>
-
-        {/* Global Command Palette (⌘K) */}
-        <CommandPalette
-        isOpen={isPaletteOpen}
-        onClose={() => setIsPaletteOpen(false)}
-        tree={tree}
-        viewMode={viewMode}
-        onSelectNode={handleSelectTreeNode}
-        onToggleViewMode={() => {
-          const nextMode = viewMode === "chat" ? "canvas" : "chat";
-          setViewMode(nextMode);
-          if (currentWorkspace && activeChatId) {
-            const url = nextMode === "canvas"
-              ? buildCanvasUrl(currentWorkspace.id, activeChatId)
-              : buildChatUrl(currentWorkspace.id, activeChatId);
-            router.push(url);
+        {/* Interactive Notion-Style Side-Peek Branch Sheet */}
+        <SidePeekBranchSheet
+          isOpen={isSidePeekOpen}
+          hasBackdrop={viewMode !== "canvas"}
+          tree={tree}
+          workspaceId={currentWorkspace?.id}
+          flashcardGenerationConfig={flashcardGenerationConfig}
+          historyStack={sidePeekStack}
+          historyIndex={sidePeekIndex}
+          isStreaming={isStreaming}
+          streamingNodeId={streamingNodeId}
+          onClose={handleCloseSidePeek}
+          onNavigateBack={handleNavigateSidePeekBack}
+          onNavigateForward={handleNavigateSidePeekForward}
+          onPushBranch={handlePushSidePeekBranch}
+          onOpenBranch={handleOpenSidePeek}
+          onPromoteToPrimary={handlePromoteSidePeekToPrimary}
+          onSendMessage={(prompt, parentNodeId) => {
+            handleSendBranchStream(prompt, parentNodeId, "", { mode: "none" });
+          }}
+          onSendNewSiblingBranch={handleSendNewSiblingBranch}
+          onSelectSiblingTab={handleSwitchSidePeekSiblingTab}
+          onDeleteBranch={(nodeId) =>
+            currentWorkspace && deleteBranch(nodeId, currentWorkspace.id)
           }
-        }}
-        onFitView={() => fitViewRef.current?.()}
-        onCenterActive={() => centerActiveRef.current?.()}
-        onAutoLayout={() => autoLayoutRef.current?.()}
-        onClearChat={() => {
-          clearMessages();
-          handleCloseSidePeek();
-        }}
-      />
+          onRenameBranch={handleRenameBranch}
+          onTogglePinBranch={handleTogglePinBranch}
+          onExploreBranch={(parentNodeId, highlightedText) => {
+            handleSendBranchStream(
+              `Explain "${highlightedText}" in concise, direct detail with key takeaways.`,
+              parentNodeId,
+              highlightedText,
+              { mode: "push" },
+            );
+          }}
+          onRegenerate={regenerateResponse}
+          onEditUserMessage={handleEditUserMessage}
+          onSwitchBranch={switchBranch}
+          onRateResponse={handleRateResponse}
+        />
+      </WorkspaceShell>
+
+      {/* Global Command Palette (⌘K) */}
+      {!roadmapMode && (
+        <CommandPalette
+          isOpen={isPaletteOpen}
+          onClose={() => setIsPaletteOpen(false)}
+          tree={tree}
+          viewMode={viewMode}
+          onSelectNode={handleSelectTreeNode}
+          onToggleViewMode={() => {
+            const nextMode = viewMode === "chat" ? "canvas" : "chat";
+            setViewMode(nextMode);
+            if (currentWorkspace && activeChatId) {
+              const url =
+                nextMode === "canvas"
+                  ? buildCanvasUrl(currentWorkspace.id, activeChatId)
+                  : buildChatUrl(currentWorkspace.id, activeChatId);
+              router.push(url);
+            }
+          }}
+          onFitView={() => fitViewRef.current?.()}
+          onCenterActive={() => centerActiveRef.current?.()}
+          onAutoLayout={() => autoLayoutRef.current?.()}
+          onClearChat={() => {
+            clearMessages();
+            handleCloseSidePeek();
+          }}
+        />
+      )}
 
       {/* Non-intrusive Floating Toast Notification */}
       <Toast message={error} onDismiss={clearError} />

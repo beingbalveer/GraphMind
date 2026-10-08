@@ -275,15 +275,19 @@ GraphMind is open-source software licensed under the [Apache License 2.0](LICENS
 
 ## Roadmap worker
 
-Roadmap generation uses a separate durable worker. From the repository root, run
+`pnpm dev` starts the API, frontend and native roadmap worker together.
+Roadmap generation uses a separate durable worker. To run it independently, from the repository root run
 `PYTHONPATH=apps/api/src:packages/ai-core/src uv run python -m services.roadmap.worker`
 alongside the API. Configure the selected `DEFAULT_PROVIDER`/`DEFAULT_MODEL` and
 its API key, plus `GEMINI_API_KEY` or `GOOGLE_API_KEY` for grounded research
 (`ROADMAP_SEARCH_MODEL` defaults to Gemini 2.5 Flash). Missing configuration
 produces a recoverable job error; roadmap generation has no offline mock fallback.
-Generation stays behind the feature flag until topic actions are ready.
+Topic briefs, persisted guided lessons and learner-controlled completion are available.
+Optional AI assessments use saved answers and never mark a topic complete.
 In Docker, use `docker compose --profile roadmap up --build` to include
 the worker. The API and worker share the `reference_storage` volume.
+The development API allows five seconds for graceful shutdown so open activity
+streams cannot stall a source reload; worker jobs recover from saved checkpoints.
 
 Configure `ROADMAP_REFERENCE_DIR` consistently in both processes (default
 `data/storage/roadmap`). PostgreSQL stores jobs, checkpoints, leases and activity;
@@ -300,7 +304,8 @@ worker slots are enforced through PostgreSQL. Optional references expire after
 references remain with their workspace.
 
 The researched roadmap popup is controlled by
-`NEXT_PUBLIC_ROADMAP_GENERATOR_ENABLED` (disabled during implementation).
+`NEXT_PUBLIC_ROADMAP_GENERATOR_ENABLED=true` (enabled in `.env.example`).
+Set it in the frontend environment; set `false` to retain the legacy popup.
 After enabling it, rebuild/restart the frontend so Next.js includes the setting.
 The learner sees one Generate action; job creation, staged references and start
 are handled automatically. Closing progress keeps the accepted job running;

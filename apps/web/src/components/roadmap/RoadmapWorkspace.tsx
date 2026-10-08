@@ -16,11 +16,15 @@ export function RoadmapWorkspace({
   mode,
   onOpenTopic,
   onStartTopic,
+  opening = false,
+  actionError,
 }: {
   view: CurriculumView;
   mode: "page" | "canvas";
   onOpenTopic?: (id: string) => void;
   onStartTopic?: (id: string) => void;
+  opening?: boolean;
+  actionError?: string | null;
 }) {
   const topics = selectedCoreTopics(view);
   const next = topics.find((i) => view.progress[i.id]?.status !== "completed");
@@ -85,15 +89,86 @@ export function RoadmapWorkspace({
         )}
       </>
     );
+    const descendants = new Set<string>();
+    const collect = (id: string) =>
+      curriculumChildren(view, id).forEach((child) => {
+        if (descendants.has(child.id)) return;
+        descendants.add(child.id);
+        collect(child.id);
+      });
+    if (item.kind === "phase") collect(item.id);
+    const sessions = view.profile.weeklyMinutes
+      ? view.candidate.sessions.filter((session) =>
+          descendants.has(session.topicId),
+        )
+      : [];
+    const weekly = sessions.length ? (
+      <div className="space-y-4">
+        {[...new Set(sessions.map((session) => session.week))]
+          .sort((a, b) => a - b)
+          .map((week) => (
+            <div key={week}>
+              <h3 className="mb-1 text-xs font-medium text-foreground-subtle">
+                Week {week}
+              </h3>
+              {sessions
+                .filter((session) => session.week === week)
+                .map((session) => {
+                  const topic = view.candidate.items.find(
+                    (i) => i.id === session.topicId,
+                  )!;
+                  const split =
+                    view.candidate.sessions.filter(
+                      (s) => s.topicId === topic.id,
+                    ).length > 1;
+                  return (
+                    <TopicRow
+                      key={`${session.topicId}-${session.sequence}`}
+                      topic={topic}
+                      progress={view.progress[topic.id]}
+                      onOpen={onOpenTopic}
+                      effortMinutes={session.minutes}
+                      sessionSequence={split ? session.sequence : undefined}
+                    />
+                  );
+                })}
+            </div>
+          ))}
+        {view.candidate.choices
+          .filter((choice) => descendants.has(choice.choiceId))
+          .map((choice) => (
+            <CurriculumGroup
+              key={choice.choiceId}
+              id={`${choice.choiceId}-weekly-options`}
+              title="Other options"
+              open={expanded.has(`${choice.choiceId}-weekly-options`)}
+              onToggle={() => toggle(`${choice.choiceId}-weekly-options`)}
+            >
+              <p className="mb-2 text-xs text-foreground-muted">
+                {choice.rationale}
+              </p>
+              {curriculumChildren(view, choice.choiceId)
+                .filter((i) => i.id !== choice.selectedId)
+                .map((i) => renderItem(i))}
+            </CurriculumGroup>
+          ))}
+      </div>
+    ) : null;
     if (item.kind === "phase")
       return (
         <MilestoneCard
           key={item.id}
           phase={item}
+          ordinal={
+            view.candidate.items
+              .filter((i) => i.kind === "phase" && i.participation === "active")
+              .sort((a, b) => a.order - b.order || a.id.localeCompare(b.id))
+              .findIndex((i) => i.id === item.id) + 1
+          }
           open={expanded.has(item.id)}
           onToggle={() => toggle(item.id)}
         >
-          {content}
+          {weekly ?? content}
         </MilestoneCard>
       );
     return (
@@ -137,8 +212,12 @@ export function RoadmapWorkspace({
             {completed} of {topics.length} topics completed
           </p>
           {next && onStartTopic && (
-            <Button onClick={() => onStartTopic(next.id)}>
-              {completed ? "Continue learning" : "Start learning"}
+            <Button disabled={opening} onClick={() => onStartTopic(next.id)}>
+              {opening
+                ? "Opening lesson…"
+                : completed || view.progress[next.id]?.status === "in_progress"
+                  ? "Continue learning"
+                  : "Start learning"}
             </Button>
           )}
           {!next && (
@@ -147,39 +226,14 @@ export function RoadmapWorkspace({
             </p>
           )}
         </div>
+        {actionError && (
+          <p role="alert" className="text-xs text-destructive">
+            {actionError}
+          </p>
+        )}
         <div className="space-y-3">
           {children.filter((i) => i.path === "core").map((i) => renderItem(i))}
         </div>
-        {view.profile.weeklyMinutes && view.candidate.sessions.length > 0 && (
-          <section className="space-y-3">
-            <h2 className="text-sm font-medium">Weekly milestones</h2>
-            {[...new Set(view.candidate.sessions.map((s) => s.week))]
-              .sort((a, b) => a - b)
-              .map((week) => (
-                <div
-                  key={week}
-                  className="rounded-xl border border-border bg-surface p-4"
-                >
-                  <h3 className="mb-2 text-sm font-medium">Week {week}</h3>
-                  {view.candidate.sessions
-                    .filter((s) => s.week === week)
-                    .sort((a, b) => a.sequence - b.sequence)
-                    .map((s) => (
-                      <p
-                        key={`${s.topicId}-${s.sequence}`}
-                        className="py-1 text-xs text-foreground-muted"
-                      >
-                        {
-                          view.candidate.items.find((i) => i.id === s.topicId)
-                            ?.title
-                        }{" "}
-                        · {s.minutes} min · Session {s.sequence + 1}
-                      </p>
-                    ))}
-                </div>
-              ))}
-          </section>
-        )}
         <CurriculumGroup
           id="further-learning"
           title="Further learning"

@@ -58,37 +58,65 @@ vi.mock("@/lib/workspaceApi", async (importOriginal) => {
 
 import { ChatContainer } from "../ChatContainer";
 import { curriculumFixture } from "@/components/roadmap/__tests__/fixtures";
-const roadmapState = vi.hoisted(() => ({ path: "/w/ws_test", view: null as import("@/lib/roadmapTypes").CurriculumView|null, loading: false, error: null as Error|null }));
-vi.mock("@/hooks/useRoadmap", () => ({ useRoadmap: () => ({...roadmapState,refresh: vi.fn()}) }));
-vi.mock("@/components/roadmap/RoadmapCanvas",()=>({RoadmapCanvas:()=> <div>Curriculum canvas</div>}));
+const roadmapState = vi.hoisted(() => ({
+  path: "/w/ws_test",
+  view: null as import("@/lib/roadmapTypes").CurriculumView | null,
+  loading: false,
+  error: null as Error | null,
+}));
+vi.mock("@/hooks/useRoadmap", () => ({
+  useRoadmap: () => ({
+    ...roadmapState,
+    refresh: vi.fn(),
+    updateProgress: vi.fn(),
+  }),
+}));
+vi.mock("@/components/roadmap/RoadmapCanvas", () => ({
+  RoadmapCanvas: () => <div>Curriculum canvas</div>,
+}));
 
 describe("ChatContainer canonical composition", () => {
   it("constrains the conversation column and keeps the composer at the bottom", () => {
-    render(<ChatContainer initialWorkspaceId="ws_test" initialViewMode="chat" />);
+    render(
+      <ChatContainer initialWorkspaceId="ws_test" initialViewMode="chat" />,
+    );
 
     expect(screen.getByTestId("chat-content-column")).toHaveClass(
-      "max-w-[var(--chat-content-max)]"
+      "max-w-[var(--chat-content-max)]",
     );
     expect(screen.getByTestId("chat-composer-shell")).toBeVisible();
   });
 
   it("keeps contextual mastery outside the answer body", () => {
-    render(<ChatContainer initialWorkspaceId="ws_test" initialViewMode="chat" />);
+    render(
+      <ChatContainer initialWorkspaceId="ws_test" initialViewMode="chat" />,
+    );
 
-    expect(screen.getByRole("button", { name: "Open right panel" })).toBeVisible();
-    expect(screen.queryByText("Mastery", { selector: "article *" })).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Open right panel" }),
+    ).toBeVisible();
+    expect(
+      screen.queryByText("Mastery", { selector: "article *" }),
+    ).not.toBeInTheDocument();
   });
 
   beforeEach(() => {
     mockUseChatStream.mockReturnValue({ ...defaultChatStreamState });
-    roadmapState.path="/w/ws_test"; roadmapState.view=null; roadmapState.loading=false; roadmapState.error=null;
+    roadmapState.path = "/w/ws_test";
+    roadmapState.view = null;
+    roadmapState.loading = false;
+    roadmapState.error = null;
     vi.unstubAllEnvs();
   });
 
   it("renders starter prompt buttons without raw buttons and allows clicking them", () => {
-    render(<ChatContainer initialWorkspaceId="ws_test" initialViewMode="chat" />);
+    render(
+      <ChatContainer initialWorkspaceId="ws_test" initialViewMode="chat" />,
+    );
 
-    const starterBtn = screen.getByRole("button", { name: /Explain LangGraph & State Machines/i });
+    const starterBtn = screen.getByRole("button", {
+      name: /Explain LangGraph & State Machines/i,
+    });
     expect(starterBtn).toBeVisible();
     fireEvent.click(starterBtn);
   });
@@ -103,7 +131,9 @@ describe("ChatContainer canonical composition", () => {
       clearError: clearErrorMock,
     });
 
-    render(<ChatContainer initialWorkspaceId="ws_test" initialViewMode="chat" />);
+    render(
+      <ChatContainer initialWorkspaceId="ws_test" initialViewMode="chat" />,
+    );
 
     const alert = screen.getByText("Stream error").closest('[role="alert"]');
     expect(alert).not.toBeNull();
@@ -122,7 +152,7 @@ describe("ChatContainer canonical composition", () => {
   it("keeps ChatContainer styles on semantic color tokens and uses no raw buttons", () => {
     const source = readFileSync(
       path.resolve(process.cwd(), "src/components/chat/ChatContainer.tsx"),
-      "utf8"
+      "utf8",
     );
 
     expect(source).not.toMatch(/\b(?:bg|text|border|ring)-(?:white|zinc)-/);
@@ -130,33 +160,83 @@ describe("ChatContainer canonical composition", () => {
   });
 
   it("renders the active conversation title in breadcrumbs", () => {
-    render(<ChatContainer initialWorkspaceId="ws_test" initialViewMode="chat" />);
+    render(
+      <ChatContainer initialWorkspaceId="ws_test" initialViewMode="chat" />,
+    );
 
-    const breadcrumbs = screen.getByRole("navigation", { name: "Branch lineage" });
+    const breadcrumbs = screen.getByRole("navigation", {
+      name: "Branch lineage",
+    });
     expect(breadcrumbs).toHaveTextContent("New Chat");
   });
 });
 
-
-describe("Roadmap shell routing",()=>{
-  beforeEach(()=>{
-    vi.stubEnv("NEXT_PUBLIC_ROADMAP_GENERATOR_ENABLED","true");
-    roadmapState.view={...curriculumFixture(),workspaceId:"ws_test"};
+describe("Roadmap shell routing", () => {
+  beforeEach(() => {
+    vi.stubEnv("NEXT_PUBLIC_ROADMAP_GENERATOR_ENABLED", "true");
+    roadmapState.view = { ...curriculumFixture(), workspaceId: "ws_test" };
   });
-  it("renders roadmap landing instead of empty chat",()=>{
-    render(<ChatContainer initialWorkspaceId="ws_test"/>);
-    expect(screen.getByRole("heading",{name:"Drawing"})).toBeVisible();
+  it("renders roadmap landing instead of empty chat", () => {
+    render(<ChatContainer initialWorkspaceId="ws_test" />);
+    expect(screen.getByRole("heading", { name: "Drawing" })).toBeVisible();
     expect(screen.queryByTestId("chat-composer-shell")).not.toBeInTheDocument();
   });
-  it("uses only the published anchor for curriculum canvas",()=>{
-    roadmapState.path="/w/ws_test/chat/anchor/canvas";
-    render(<ChatContainer initialWorkspaceId="ws_test" initialChatId="anchor" initialViewMode="canvas"/>);
+  it("uses only the published anchor for curriculum canvas", () => {
+    roadmapState.path = "/w/ws_test/chat/anchor/canvas";
+    render(
+      <ChatContainer
+        initialWorkspaceId="ws_test"
+        initialChatId="anchor"
+        initialViewMode="canvas"
+      />,
+    );
     expect(screen.getByText("Curriculum canvas")).toBeVisible();
   });
-  it("shows loading without empty chat flash",()=>{
-    roadmapState.path="/w/ws_test";roadmapState.view=null;roadmapState.loading=true;
-    render(<ChatContainer initialWorkspaceId="ws_test"/>);
+  it("shows loading without empty chat flash", () => {
+    roadmapState.path = "/w/ws_test";
+    roadmapState.view = null;
+    roadmapState.loading = true;
+    render(<ChatContainer initialWorkspaceId="ws_test" />);
     expect(screen.getByText("Loading roadmap…")).toBeVisible();
     expect(screen.queryByTestId("chat-composer-shell")).not.toBeInTheDocument();
   });
+});
+
+it("keeps conversation-only creation actions out of curriculum landing", () => {
+  vi.stubEnv("NEXT_PUBLIC_ROADMAP_GENERATOR_ENABLED", "true");
+  roadmapState.view = { ...curriculumFixture(), workspaceId: "ws_test" };
+  roadmapState.path = "/w/ws_test";
+  render(<ChatContainer initialWorkspaceId="ws_test" />);
+  expect(
+    screen.queryByRole("button", { name: "New Chat" }),
+  ).not.toBeInTheDocument();
+});
+
+it("does not show generic mastery recommendations in a roadmap topic lesson", () => {
+  roadmapState.path = "/w/ws_test/chat/tutor";
+  roadmapState.view = { ...curriculumFixture(), workspaceId: "ws_test" };
+  mockUseChatStream.mockReturnValue({
+    ...defaultChatStreamState,
+    tree: {
+      id: "tree",
+      rootNodeId: "tutor",
+      activeNodeId: "tutor",
+      nodes: {
+        tutor: {
+          id: "tutor",
+          role: "user",
+          content: "Teach me",
+          metadata: { topicSessionId: "lesson" },
+          childrenIds: [],
+          parentId: null,
+        },
+      },
+      createdAt: "now",
+      updatedAt: "now",
+    } as never,
+  });
+  render(<ChatContainer initialWorkspaceId="ws_test" initialChatId="tutor" />);
+  expect(
+    screen.queryByRole("button", { name: "Open right panel" }),
+  ).not.toBeInTheDocument();
 });

@@ -188,3 +188,16 @@ class CurriculumView(CurriculumSchema):
     sources: list[SourceData] = Field(max_length=600)
     progress: dict[str, TopicProgressData]
     validation: ValidationReport
+
+
+class TopicSessionData(CurriculumSchema):
+    id: str
+    chat_id: str
+    topic_id: str
+    revision_id: str
+    is_new: bool
+    archived: bool = False
+    topic_title: str | None = None
+    progress: TopicProgressData | None = None
+    checks: list[KnowledgeCheckData] = Field(default_factory=list, max_length=100)
+    lesson_start_state: Literal["pending", "started", "completed", "interrupted"]

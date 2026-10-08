@@ -4,7 +4,10 @@ import { CanvasSurface } from "@/components/canvas/CanvasSurface";
 import { CanvasCard } from "@/components/canvas/CanvasCard";
 import { Button } from "@/components/ui/button";
 import { useCanvasLayout } from "@/hooks/useCanvasLayout";
-import { projectCurriculum } from "@/lib/canvas/curriculumProjection";
+import {
+  projectCurriculum,
+  initialCurriculumExpansion,
+} from "@/lib/canvas/curriculumProjection";
 import { layoutSpine } from "@/lib/canvas/spineLayout";
 import { reconcilePositions } from "@/lib/canvas/layoutState";
 import type { CurriculumView } from "@/lib/roadmapTypes";
@@ -16,13 +19,8 @@ export function RoadmapCanvas({
   view: CurriculumView;
   onOpenTopic?: (id: string) => void;
 }) {
-  const [expanded, setExpanded] = useState(
-    () =>
-      new Set(
-        view.candidate.items
-          .filter((i) => i.kind === "root" || i.kind === "phase")
-          .map((i) => i.id),
-      ),
+  const [expanded, setExpanded] = useState(() =>
+    initialCurriculumExpansion(view),
   );
   const [selected, setSelected] = useState<string>();
   const [minimap, setMinimap] = useState(false);
@@ -76,7 +74,7 @@ export function RoadmapCanvas({
     [view.progress, selected, select],
   );
   return (
-    <div className="relative h-full min-h-0">
+    <div className="relative h-full min-h-0 w-full">
       <CanvasSurface
         graph={graph}
         renderItem={render}
