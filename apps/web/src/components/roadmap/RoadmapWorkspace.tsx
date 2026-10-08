@@ -6,6 +6,8 @@ import {
   curriculumChildren,
   selectedCoreTopics,
 } from "@/lib/canvas/curriculumProjection";
+import { CapacityWarning } from "./CapacityWarning";
+import { RoadmapActions } from "./RoadmapActions";
 import { RoadmapCanvas } from "./RoadmapCanvas";
 import { TopicRow } from "./TopicRow";
 import { MilestoneCard } from "./MilestoneCard";
@@ -18,6 +20,8 @@ export function RoadmapWorkspace({
   onStartTopic,
   opening = false,
   actionError,
+  onSaved,
+  onReload,
 }: {
   view: CurriculumView;
   mode: "page" | "canvas";
@@ -25,6 +29,8 @@ export function RoadmapWorkspace({
   onStartTopic?: (id: string) => void;
   opening?: boolean;
   actionError?: string | null;
+  onSaved?: (view: CurriculumView) => void;
+  onReload?: () => Promise<void>;
 }) {
   const topics = selectedCoreTopics(view);
   const next = topics.find((i) => view.progress[i.id]?.status !== "completed");
@@ -184,14 +190,33 @@ export function RoadmapWorkspace({
     );
   };
   if (mode === "canvas")
-    return <RoadmapCanvas view={view} onOpenTopic={onOpenTopic} />;
+    return (
+      <div className="relative h-full w-full">
+        <RoadmapCanvas view={view} onOpenTopic={onOpenTopic} />
+        <div className="absolute bottom-4 left-4 max-w-sm">
+          <CapacityWarning
+            validation={view.validation}
+            onReview={
+              onOpenTopic && topics[0]
+                ? () => onOpenTopic(topics[0].id)
+                : undefined
+            }
+          />
+        </div>
+        {onSaved && (
+          <div className="absolute right-4 top-4">
+            <RoadmapActions view={view} onSaved={onSaved} onReload={onReload} />
+          </div>
+        )}
+      </div>
+    );
   const root = view.candidate.items.find((i) => i.kind === "root");
   const children = root ? curriculumChildren(view, root.id) : [];
   const completed = topics.filter(
     (i) => view.progress[i.id]?.status === "completed",
   ).length;
   return (
-    <main className="h-full overflow-y-auto bg-background">
+    <main className="h-full w-full overflow-y-auto bg-background">
       <div className="mx-auto w-full max-w-3xl space-y-6 px-5 py-8 sm:px-8 sm:py-10">
         <div className="space-y-3">
           <p className="text-xs capitalize text-foreground-subtle">
@@ -202,6 +227,15 @@ export function RoadmapWorkspace({
               ? ` · ${view.profile.weeklyMinutes / 60} hours/week`
               : " · Self paced"}
           </p>
+          {onSaved && (
+            <div className="float-right">
+              <RoadmapActions
+                view={view}
+                onSaved={onSaved}
+                onReload={onReload}
+              />
+            </div>
+          )}
           <h1 className="font-roadmap-display text-2xl font-normal leading-tight text-foreground sm:text-roadmap-title">
             {view.candidate.title}
           </h1>
@@ -226,6 +260,14 @@ export function RoadmapWorkspace({
             </p>
           )}
         </div>
+        <CapacityWarning
+          validation={view.validation}
+          onReview={
+            onOpenTopic && topics[0]
+              ? () => onOpenTopic(topics[0].id)
+              : undefined
+          }
+        />
         {actionError && (
           <p role="alert" className="text-xs text-destructive">
             {actionError}

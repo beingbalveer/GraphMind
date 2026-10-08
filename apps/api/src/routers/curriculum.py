@@ -11,13 +11,28 @@ from schemas.curriculum import (
     CurriculumSchema,
     CurriculumView,
     KnowledgeCheckData,
+    SourceData,
     TopicBrief,
     TopicProgressData,
     TopicSessionData,
 )
+from schemas.roadmap_edit import (
+    ArchivedTopic,
+    EditRequest,
+    InspectSourceRequest,
+    RevisionRequest,
+    RevisionSummary,
+)
 from schemas.roadmap_job import JobError
 from services.roadmap.curriculum_repository import CurriculumRepository
 from services.roadmap.progress import ProgressService
+from services.roadmap.revision_service import (
+    HistoryRemovalRequiredError,
+    RevisionConflictError,
+    RevisionService,
+    RevisionValidationError,
+)
+from services.roadmap.source_fetcher import SourceFetcher, SourceFetchError
 from services.roadmap.tutor import TutorService
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -121,3 +136,98 @@ async def check_topic(
     return await service.record_check(
         workspace_id, topic_id, user.id, body.session_id, prepared=prepared
     )
+
+
+def revision_error(error: ValueError) -> RoadmapHTTPError:
+    action: Literal["retry", "new_run", "answer", "configure_search"] = "answer"
+    if isinstance(error, RevisionConflictError):
+        code, status_code = "REVISION_CONFLICT", 409
+    elif isinstance(error, HistoryRemovalRequiredError):
+        code, status_code = "HISTORY_REMOVAL_ACK_REQUIRED", 409
+    else:
+        code, status_code = "REVISION_INVALID", 422
+    message = str(error)
+    if isinstance(error, RevisionValidationError) and error.report:
+        message = "; ".join(
+            issue.message for issue in error.report.issues if issue.severity == "error"
+        )[:2000]
+    return RoadmapHTTPError(
+        status_code, JobError(code=code, message=message, recoverable=True, next_action=action)
+    )
+
+
+@router.patch("", response_model=CurriculumView)
+async def edit_curriculum(
+    workspace_id: str, body: EditRequest, db: DB, user: Actor, access: WriteAccess
+) -> CurriculumView:
+    try:
+        result = await RevisionService(db).edit(workspace_id, user.id, body)
+        await db.commit()
+        return result
+    except (RevisionConflictError, HistoryRemovalRequiredError, RevisionValidationError) as error:
+        raise revision_error(error) from None
+
+
+@router.get("/revisions", response_model=list[RevisionSummary])
+async def revision_history(
+    workspace_id: str, db: DB, user: Actor, access: Access
+) -> list[RevisionSummary]:
+    return await RevisionService(db).history(workspace_id, user.id)
+
+
+@router.get("/archived-topics", response_model=list[ArchivedTopic])
+async def archived_topics(
+    workspace_id: str, db: DB, user: Actor, access: Access
+) -> list[ArchivedTopic]:
+    return await RevisionService(db).archived_topics(workspace_id, user.id)
+
+
+@router.post("/revisions/{revision_id}/restore", response_model=CurriculumView)
+async def restore_revision(
+    workspace_id: str,
+    revision_id: str,
+    body: RevisionRequest,
+    db: DB,
+    user: Actor,
+    access: WriteAccess,
+) -> CurriculumView:
+    try:
+        result = await RevisionService(db).restore(
+            workspace_id, user.id, revision_id, body.base_revision_id, body.history_removal_ack
+        )
+        await db.commit()
+        return result
+    except (RevisionConflictError, HistoryRemovalRequiredError, RevisionValidationError) as error:
+        raise revision_error(error) from None
+
+
+@router.post("/sources/inspect", response_model=SourceData)
+async def inspect_source(
+    workspace_id: str, body: InspectSourceRequest, db: DB, user: Actor, access: WriteAccess
+) -> SourceData:
+    owner_id = user.id
+    await db.commit()  # Close authorization reads before bounded network inspection.
+    try:
+        source = await SourceFetcher().fetch(body.url)
+    except SourceFetchError as error:
+        raise RoadmapHTTPError(
+            422,
+            JobError(code=error.code, message=str(error), recoverable=True, next_action="answer"),
+        ) from None
+    if source.status == "unavailable":
+        raise RoadmapHTTPError(
+            422,
+            JobError(
+                code="SOURCE_UNAVAILABLE",
+                message="This link could not be inspected. Choose a usable public source.",
+                recoverable=True,
+                next_action="answer",
+            ),
+        )
+    db.expire_all()
+    try:
+        result = await RevisionService(db).associate_source(workspace_id, owner_id, source)
+    except RevisionValidationError as error:
+        raise revision_error(error) from None
+    await db.commit()
+    return result

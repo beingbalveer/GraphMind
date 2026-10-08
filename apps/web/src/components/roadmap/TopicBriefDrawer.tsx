@@ -10,6 +10,7 @@ import type {
   TopicBrief,
   TopicProgressData,
 } from "@/lib/roadmapTypes";
+import { TopicEditor } from "./TopicEditor";
 import { CurriculumGroup } from "./CurriculumGroup";
 import { SourcesList } from "./SourcesList";
 import { TopicProgressControl } from "./TopicProgressControl";
@@ -18,12 +19,17 @@ export function TopicBriefDrawer({
   topicId,
   onClose,
   onProgress,
+  onSaved,
+  onReload,
 }: {
   view: CurriculumView;
   topicId: string | null;
   onClose: () => void;
   onProgress: (progress: TopicProgressData) => void;
+  onSaved?: (view: CurriculumView) => void;
+  onReload?: () => Promise<void>;
 }) {
+  const [editing, setEditing] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
   const requestScope = useRef(0);
@@ -111,170 +117,194 @@ export function TopicBriefDrawer({
     onProgress(progress);
   }
   return (
-    <Drawer
-      isOpen={Boolean(topicId)}
-      onClose={close}
-      title="Learning brief"
-      widthClassName="w-full sm:w-[480px]"
-    >
-      <div className="min-h-0 flex-1 overflow-y-auto p-6">
-        {!brief ? (
-          <div className="space-y-3">
-            {error ? (
-              <>
-                <p role="alert" className="text-sm text-foreground-muted">
+    <>
+      <Drawer
+        isOpen={Boolean(topicId)}
+        onClose={close}
+        title="Learning brief"
+        widthClassName="w-full sm:w-[480px]"
+      >
+        <div className="min-h-0 flex-1 overflow-y-auto p-6">
+          {!brief ? (
+            <div className="space-y-3">
+              {error ? (
+                <>
+                  <p role="alert" className="text-sm text-foreground-muted">
+                    {error}
+                  </p>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setReload((old) => old + 1)}
+                  >
+                    Retry
+                  </Button>
+                </>
+              ) : (
+                <p role="status" className="text-sm text-foreground-muted">
+                  Loading topic…
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-5">
+              <div className="space-y-3">
+                <h2 className="font-roadmap-display text-brief-title font-normal leading-tight">
+                  {brief.item.title}
+                </h2>
+                <p className="text-xs text-foreground-subtle">
+                  {brief.item.path === "further"
+                    ? "Further learning"
+                    : "Core path"}{" "}
+                  ·{" "}
+                  {brief.item.estimateMinutes
+                    ? `${brief.item.estimateMinutes} min`
+                    : "Self paced"}
+                </p>
+                <p className="text-sm leading-6 text-foreground-muted">
+                  {brief.item.brief}
+                </p>
+              </div>
+              <section className="space-y-2">
+                <h3 className="text-sm font-medium">What you’ll learn</h3>
+                <ul className="list-disc space-y-2 pl-5 text-sm text-foreground-muted">
+                  {brief.item.objectives.map((objective, index) => (
+                    <li key={index}>{objective}</li>
+                  ))}
+                </ul>
+              </section>
+              {brief.item.exercise && (
+                <section className="space-y-2">
+                  <h3 className="text-sm font-medium">Try it</h3>
+                  <p className="rounded-xl bg-background p-4 text-sm leading-6 text-foreground-muted">
+                    {brief.item.exercise}
+                  </p>
+                </section>
+              )}
+              <CurriculumGroup
+                id="topic-resources"
+                title="Resources"
+                open={expanded.has("resources")}
+                onToggle={() => toggle("resources")}
+              >
+                <div className="space-y-4">
+                  <SourcesList
+                    showHeading={false}
+                    sources={[...brief.resources]
+                      .sort((a, b) => a.order - b.order)
+                      .map((resource) => resource.source)}
+                    rationales={Object.fromEntries(
+                      brief.resources.map((resource) => [
+                        resource.source.id,
+                        resource.rationale,
+                      ]),
+                    )}
+                  />
+                  {!brief.resources.length && (
+                    <p className="text-xs text-foreground-muted">
+                      No resources available in this revision.
+                    </p>
+                  )}
+                </div>
+              </CurriculumGroup>
+              <CurriculumGroup
+                id="topic-prerequisites"
+                title="Prerequisites"
+                open={expanded.has("prerequisites")}
+                onToggle={() => toggle("prerequisites")}
+              >
+                <div className="space-y-2">
+                  {brief.prerequisites.map((item) => (
+                    <p key={item.id} className="text-sm text-foreground-muted">
+                      {item.title} ·{" "}
+                      {view.progress[item.id]?.status === "completed"
+                        ? "Completed"
+                        : "Not completed"}
+                    </p>
+                  ))}
+                  {!brief.prerequisites.length && (
+                    <p className="text-xs text-foreground-muted">
+                      No required earlier topics.
+                    </p>
+                  )}
+                </div>
+              </CurriculumGroup>
+              <CurriculumGroup
+                id="learning-details"
+                title="Learning details"
+                open={expanded.has("details")}
+                onToggle={() => toggle("details")}
+              >
+                <div className="space-y-3">
+                  {onSaved && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setEditing(true)}
+                    >
+                      Edit topic
+                    </Button>
+                  )}
+                  {brief.latestCheck && (
+                    <div className="rounded-xl border border-border p-3 text-xs text-foreground-muted">
+                      <p className="font-medium">
+                        Latest AI assessment ·{" "}
+                        {new Date(
+                          brief.latestCheck.createdAt,
+                        ).toLocaleDateString()}
+                      </p>
+                      <p>{String(brief.latestCheck.result.rating ?? "")}</p>
+                      <p>{String(brief.latestCheck.result.nextStep ?? "")}</p>
+                    </div>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={pending}
+                    onClick={() => void start(true)}
+                  >
+                    Start fresh session
+                  </Button>
+                </div>
+              </CurriculumGroup>
+              {error && (
+                <p role="alert" className="text-xs text-destructive">
                   {error}
                 </p>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => setReload((old) => old + 1)}
-                >
-                  Retry
-                </Button>
-              </>
-            ) : (
-              <p role="status" className="text-sm text-foreground-muted">
-                Loading topic…
-              </p>
-            )}
-          </div>
-        ) : (
-          <div className="space-y-5">
-            <div className="space-y-3">
-              <h2 className="font-roadmap-display text-brief-title font-normal leading-tight">
-                {brief.item.title}
-              </h2>
-              <p className="text-xs text-foreground-subtle">
-                {brief.item.path === "further"
-                  ? "Further learning"
-                  : "Core path"}{" "}
-                ·{" "}
-                {brief.item.estimateMinutes
-                  ? `${brief.item.estimateMinutes} min`
-                  : "Self paced"}
-              </p>
-              <p className="text-sm leading-6 text-foreground-muted">
-                {brief.item.brief}
-              </p>
+              )}
             </div>
-            <section className="space-y-2">
-              <h3 className="text-sm font-medium">What you’ll learn</h3>
-              <ul className="list-disc space-y-2 pl-5 text-sm text-foreground-muted">
-                {brief.item.objectives.map((objective, index) => (
-                  <li key={index}>{objective}</li>
-                ))}
-              </ul>
-            </section>
-            {brief.item.exercise && (
-              <section className="space-y-2">
-                <h3 className="text-sm font-medium">Try it</h3>
-                <p className="rounded-xl bg-background p-4 text-sm leading-6 text-foreground-muted">
-                  {brief.item.exercise}
-                </p>
-              </section>
-            )}
-            <CurriculumGroup
-              id="topic-resources"
-              title="Resources"
-              open={expanded.has("resources")}
-              onToggle={() => toggle("resources")}
-            >
-              <div className="space-y-4">
-                <SourcesList
-                  showHeading={false}
-                  sources={[...brief.resources]
-                    .sort((a, b) => a.order - b.order)
-                    .map((resource) => resource.source)}
-                  rationales={Object.fromEntries(
-                    brief.resources.map((resource) => [
-                      resource.source.id,
-                      resource.rationale,
-                    ]),
-                  )}
-                />
-                {!brief.resources.length && (
-                  <p className="text-xs text-foreground-muted">
-                    No resources available in this revision.
-                  </p>
-                )}
-              </div>
-            </CurriculumGroup>
-            <CurriculumGroup
-              id="topic-prerequisites"
-              title="Prerequisites"
-              open={expanded.has("prerequisites")}
-              onToggle={() => toggle("prerequisites")}
-            >
-              <div className="space-y-2">
-                {brief.prerequisites.map((item) => (
-                  <p key={item.id} className="text-sm text-foreground-muted">
-                    {item.title} ·{" "}
-                    {view.progress[item.id]?.status === "completed"
-                      ? "Completed"
-                      : "Not completed"}
-                  </p>
-                ))}
-                {!brief.prerequisites.length && (
-                  <p className="text-xs text-foreground-muted">
-                    No required earlier topics.
-                  </p>
-                )}
-              </div>
-            </CurriculumGroup>
-            <CurriculumGroup
-              id="learning-details"
-              title="Learning details"
-              open={expanded.has("details")}
-              onToggle={() => toggle("details")}
-            >
-              <div className="space-y-3">
-                {brief.latestCheck && (
-                  <div className="rounded-xl border border-border p-3 text-xs text-foreground-muted">
-                    <p className="font-medium">
-                      Latest AI assessment ·{" "}
-                      {new Date(
-                        brief.latestCheck.createdAt,
-                      ).toLocaleDateString()}
-                    </p>
-                    <p>{String(brief.latestCheck.result.rating ?? "")}</p>
-                    <p>{String(brief.latestCheck.result.nextStep ?? "")}</p>
-                  </div>
-                )}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  disabled={pending}
-                  onClick={() => void start(true)}
-                >
-                  Start fresh session
-                </Button>
-              </div>
-            </CurriculumGroup>
-            {error && (
-              <p role="alert" className="text-xs text-destructive">
-                {error}
-              </p>
-            )}
-          </div>
+          )}
+        </div>
+        {brief && (
+          <footer className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-border p-4">
+            <TopicProgressControl
+              workspaceId={view.workspaceId}
+              progress={brief.progress}
+              onChange={change}
+            />
+            <Button disabled={pending} onClick={() => void start()}>
+              {pending
+                ? "Opening…"
+                : brief.defaultChatId
+                  ? "Continue lesson"
+                  : "Start learning"}
+            </Button>
+          </footer>
         )}
-      </div>
-      {brief && (
-        <footer className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-border p-4">
-          <TopicProgressControl
-            workspaceId={view.workspaceId}
-            progress={brief.progress}
-            onChange={change}
-          />
-          <Button disabled={pending} onClick={() => void start()}>
-            {pending
-              ? "Opening…"
-              : brief.defaultChatId
-                ? "Continue lesson"
-                : "Start learning"}
-          </Button>
-        </footer>
+      </Drawer>
+      {editing && brief && onSaved && (
+        <TopicEditor
+          view={view}
+          topicId={brief.item.id}
+          onClose={() => setEditing(false)}
+          onSaved={(next) => {
+            onSaved(next);
+            setEditing(false);
+            setReload((old) => old + 1);
+          }}
+          onReload={onReload}
+        />
       )}
-    </Drawer>
+    </>
   );
 }

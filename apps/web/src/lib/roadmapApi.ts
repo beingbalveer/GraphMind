@@ -132,3 +132,44 @@ export const recordTopicCheck = (
     `${curriculumPath(workspaceId)}/topics/${encodeURIComponent(topicId)}/checks`,
     { method: "POST", body: JSON.stringify({ sessionId }) },
   );
+
+import type {
+  EditRequest,
+  RevisionSummary,
+  ArchivedTopic,
+  SourceData,
+} from "./roadmapTypes";
+export const saveRoadmapEdits = (workspaceId: string, request: EditRequest) =>
+  apiFetch<CurriculumView>(curriculumPath(workspaceId), {
+    method: "PATCH",
+    body: JSON.stringify(request),
+  });
+export const listRoadmapRevisions = (
+  workspaceId: string,
+  signal?: AbortSignal,
+) =>
+  apiFetch<RevisionSummary[]>(`${curriculumPath(workspaceId)}/revisions`, {
+    signal,
+  });
+export const readArchivedTopics = (workspaceId: string, signal?: AbortSignal) =>
+  apiFetch<ArchivedTopic[]>(`${curriculumPath(workspaceId)}/archived-topics`, {
+    signal,
+  });
+export const restoreRoadmapRevision = (
+  workspaceId: string,
+  revisionId: string,
+  baseRevisionId: string,
+  historyRemovalAck = false,
+) =>
+  apiFetch<CurriculumView>(
+    `${curriculumPath(workspaceId)}/revisions/${encodeURIComponent(revisionId)}/restore`,
+    {
+      method: "POST",
+      body: JSON.stringify({ baseRevisionId, historyRemovalAck }),
+    },
+  );
+export const inspectRoadmapSource = (workspaceId: string, url: string) =>
+  apiFetch<SourceData>(`${curriculumPath(workspaceId)}/sources/inspect`, {
+    method: "POST",
+    body: JSON.stringify({ url }),
+  });

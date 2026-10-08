@@ -108,3 +108,20 @@ it("continues the next in-progress topic even when nothing is marked completed",
     screen.getByRole("button", { name: "Continue learning" }),
   ).toBeVisible();
 });
+
+it("shows capacity warnings without opening plan details", () => {
+  const view = curriculumFixture();
+  view.validation.issues = [
+    {
+      code: "CAPACITY_EXCEEDED",
+      itemId: null,
+      severity: "warning",
+      message: "This core path exceeds the available study time.",
+    },
+  ];
+  render(<RoadmapWorkspace view={view} mode="page" onOpenTopic={vi.fn()} />);
+  expect(screen.getByRole("alert")).toHaveTextContent("exceeds");
+  expect(
+    screen.getByRole("button", { name: "Review topic effort" }),
+  ).toBeEnabled();
+});

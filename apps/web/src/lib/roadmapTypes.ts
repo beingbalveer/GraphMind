@@ -219,3 +219,41 @@ export interface TopicSessionData {
   progress?: TopicProgressData | null;
   checks?: KnowledgeCheckData[];
 }
+
+export type CurriculumPatch =
+  | {
+      op: "update_item";
+      itemId: string;
+      title?: string;
+      brief?: string;
+      objectives?: string[];
+      exercise?: string | null;
+      estimateMinutes?: number;
+    }
+  | { op: "add_topic"; item: CurriculumItemData; parentId: string }
+  | { op: "remove_topic"; itemId: string }
+  | { op: "move_item"; itemId: string; parentId: string; order: number }
+  | { op: "replace_resources"; itemId: string; resources: ResourceData[] }
+  | { op: "assign_week"; sessions: WeeklySession[] }
+  | { op: "select_alternative"; choiceId: string; selectedId: string };
+export interface EditRequest {
+  baseRevisionId: string;
+  patches: CurriculumPatch[];
+  historyRemovalAck?: boolean;
+}
+export interface RevisionSummary {
+  id: string;
+  baseRevisionId: string | null;
+  status: string;
+  title: string;
+  createdAt: string;
+  added: string[];
+  changed: string[];
+  removed: string[];
+  hasLearningHistory: boolean;
+}
+export interface ArchivedTopic {
+  item: CurriculumItemData;
+  progress: TopicProgressData;
+  sessions: TopicSessionData[];
+}

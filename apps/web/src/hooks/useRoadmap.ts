@@ -64,7 +64,16 @@ export function useRoadmap(workspaceId: string | null) {
       ),
     [workspaceId],
   );
+  const updateView = useCallback(
+    (view: CurriculumView) => {
+      if (view.workspaceId !== workspaceId) return;
+      request.current?.abort();
+      setState({ workspaceId, view, loading: false, error: null });
+    },
+    [workspaceId],
+  );
   return {
+    updateView,
     ...(state.workspaceId === workspaceId
       ? state
       : { view: null, loading: Boolean(workspaceId), error: null }),

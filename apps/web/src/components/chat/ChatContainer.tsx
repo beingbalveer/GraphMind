@@ -1575,12 +1575,16 @@ export function ChatContainer({
               onStartTopic={startTopic}
               opening={openingTopic}
               actionError={learningError}
+              onSaved={roadmap.updateView}
+              onReload={roadmap.refresh}
             />
             <TopicBriefDrawer
               view={roadmap.view}
               topicId={selectedTopicId}
               onClose={() => setSelectedTopicId(null)}
               onProgress={roadmap.updateProgress}
+              onSaved={roadmap.updateView}
+              onReload={roadmap.refresh}
             />
           </>
         ) : viewMode === "settings" ? (
