@@ -379,7 +379,7 @@ async def test_workspace_file_chunk_model() -> None:
     session_factory = get_session_factory()
     async with session_factory() as session:
         # 1. Create Workspace and WorkspaceFile
-        ws = Workspace(name="Chunk Test WS")
+        ws = Workspace(name="Chunk Test WS", owner_id="usr_default_admin")
         session.add(ws)
         await session.flush()
 

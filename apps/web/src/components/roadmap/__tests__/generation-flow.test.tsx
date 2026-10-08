@@ -183,9 +183,42 @@ it("opens the completed roadmap workspace while progress is being watched", asyn
   await waitFor(() => expect(mock.push).toHaveBeenCalledWith("/w/ws_drawing"));
 });
 
-it("a completed refinement never uses generation's automatic workspace navigation",async()=>{
- vi.mocked(api.readRoadmap).mockRejectedValue(new Error("Temporary unavailability"));
- mock.job={...queued,id:"refine",operation:"refine",status:"completed",result:{workspaceId:"existing",revisionId:"proposal",roadmapId:"roadmap",kind:"proposal",proposalState:"candidate"}};
- render(<RoadmapModal isOpen onClose={vi.fn()} resumeJobId="refine"/>);
- await waitFor(()=>expect(mock.push).not.toHaveBeenCalled());
+it("a completed refinement never uses generation's automatic workspace navigation", async () => {
+  vi.mocked(api.readRoadmap).mockRejectedValue(
+    new Error("Temporary unavailability"),
+  );
+  mock.job = {
+    ...queued,
+    id: "refine",
+    operation: "refine",
+    status: "completed",
+    result: {
+      workspaceId: "existing",
+      revisionId: "proposal",
+      roadmapId: "roadmap",
+      kind: "proposal",
+      proposalState: "candidate",
+    },
+  };
+  render(<RoadmapModal isOpen onClose={vi.fn()} resumeJobId="refine" />);
+  await waitFor(() => expect(mock.push).not.toHaveBeenCalled());
+});
+
+it("does not open an old completed job when switching the resumed job", async () => {
+  mock.job = { ...queued, id: "old-job", operation: "generate" };
+  const close = vi.fn();
+  const { rerender } = render(
+    <RoadmapModal isOpen resumeJobId="old-job" onClose={close} />,
+  );
+  mock.job = {
+    ...queued,
+    id: "old-job",
+    operation: "generate",
+    status: "completed",
+    result: { kind: "published", workspaceId: "old-workspace" },
+  };
+  rerender(<RoadmapModal isOpen resumeJobId="new-job" onClose={close} />);
+  await waitFor(() => expect(screen.getByText("Drawing")).toBeInTheDocument());
+  expect(mock.push).not.toHaveBeenCalled();
+  expect(close).not.toHaveBeenCalled();
 });

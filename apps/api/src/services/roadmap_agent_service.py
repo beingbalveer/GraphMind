@@ -1,8 +1,12 @@
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
 
-from collections.abc import AsyncIterator
-
-from schemas.roadmap_agent import RoadmapBlueprint, RoadmapBlueprintNode, RoadmapProgressEvent, RoadmapSource
+from schemas.roadmap_agent import (
+    RoadmapBlueprint,
+    RoadmapBlueprintNode,
+    RoadmapProgressEvent,
+    RoadmapSource,
+)
 
 
 class RoadmapValidationError(ValueError):

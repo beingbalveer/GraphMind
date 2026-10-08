@@ -11,7 +11,7 @@ async def test_rag_hybrid_search_and_grounded_context() -> None:
 
     async with session_factory() as session:
         # 1. Create Workspace
-        ws = Workspace(name="RAG Test Workspace")
+        ws = Workspace(name="RAG Test Workspace", owner_id="usr_default_admin")
         session.add(ws)
         await session.flush()
 

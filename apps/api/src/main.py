@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
-from typing import AsyncIterator
+from typing import AsyncIterator, cast
 
 import structlog
 from config import get_settings
@@ -31,6 +31,7 @@ from routers import (
     workspaces,
 )
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.types import HTTPExceptionHandler
 
 settings = get_settings()
 
@@ -172,10 +173,14 @@ app.add_middleware(
 )
 
 # Standardized Exception Handlers
-app.add_exception_handler(StarletteHTTPException, http_exception_handler)
-app.add_exception_handler(RequestValidationError, validation_exception_handler)
+app.add_exception_handler(
+    StarletteHTTPException, cast(HTTPExceptionHandler, http_exception_handler)
+)
+app.add_exception_handler(
+    RequestValidationError, cast(HTTPExceptionHandler, validation_exception_handler)
+)
 app.add_exception_handler(Exception, unhandled_exception_handler)
-app.add_exception_handler(RoadmapHTTPError, roadmap_exception_handler)
+app.add_exception_handler(RoadmapHTTPError, cast(HTTPExceptionHandler, roadmap_exception_handler))
 
 # Register API Routers
 app.include_router(auth.router)

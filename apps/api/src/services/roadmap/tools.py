@@ -123,6 +123,7 @@ class RoadmapTool(BaseTool):
                 "PRIVATE_SEARCH_QUERY", "Search using subject keywords without private identifiers"
             )
         private_text = [self.context.profile.background or ""] if self.context.profile else []
+        private_text.extend(self.context.checkpoint.clarification_answers)
         async with self.context.session_factory() as session:
             await self._authorize(self._repo(session))
             references = (

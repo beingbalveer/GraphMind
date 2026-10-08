@@ -1,3 +1,4 @@
+import asyncio
 import json
 from unittest.mock import AsyncMock
 
@@ -6,6 +7,40 @@ from ai_core.base import BaseTool, ChatMessage, GenerationResult, ModelConfig, T
 from database import get_session_factory
 from services.roadmap.job_repository import JobStateError
 from services.roadmap.orchestrator import run_tool_cycle
+
+
+async def test_slow_curriculum_response_can_finish_within_bounded_deadline(monkeypatch):
+    real_timeout = asyncio.timeout
+    monkeypatch.setattr(asyncio, "timeout", lambda seconds: real_timeout(seconds / 1000))
+
+    async def slow_response(*args, **kwargs):
+        await asyncio.sleep(0.12)
+        return GenerationResult(model_name="test", content="complete")
+
+    provider = AsyncMock()
+    provider.generate.side_effect = slow_response
+    result = await run_tool_cycle(
+        provider, ModelConfig(), [], {}, before_call=AsyncMock(), save_receipt=AsyncMock()
+    )
+    assert result.content == "complete"
+
+
+async def test_model_deadline_stops_call_before_tools_and_reports_retryable_timeout(monkeypatch):
+    real_timeout = asyncio.timeout
+    monkeypatch.setattr(asyncio, "timeout", lambda seconds: real_timeout(0.01))
+
+    async def stalled_response(*args, **kwargs):
+        await asyncio.sleep(1)
+
+    provider = AsyncMock()
+    provider.generate.side_effect = stalled_response
+    charge, receipt = AsyncMock(), AsyncMock()
+    with pytest.raises(TimeoutError, match="Roadmap model response exceeded"):
+        await run_tool_cycle(
+            provider, ModelConfig(), [], {}, before_call=charge, save_receipt=receipt
+        )
+    charge.assert_awaited_once()
+    receipt.assert_not_awaited()
 
 
 class ReadOnlyTool(BaseTool):
@@ -77,6 +112,27 @@ async def test_detailed_goal_preserves_request_without_clarification(executor_se
     assert result.checkpoint.profile.prompt == job.request.prompt
     async with repos() as repo:
         assert (await repo.read(job.id, job.owner_id)).usage.model_calls == 1
+
+
+async def test_schema_retry_names_invalid_field_without_echoing_input(
+    executor_setup, small_profile
+):
+    executor, provider, claim, job, _ = executor_setup
+    profile = small_profile.model_dump(mode="json", by_alias=True)
+    invalid = {**profile, "level": "private-invalid-input"}
+
+    async def respond(messages, *args, **kwargs):
+        if provider.generate.await_count == 1:
+            return answer({"profile": invalid})
+        feedback = messages[-1].content
+        assert "profile.level" in feedback
+        assert "literal_error" in feedback
+        assert "private-invalid-input" not in feedback
+        return answer({"profile": profile})
+
+    provider.generate.side_effect = respond
+    result = await executor.run("understand", job, claim)
+    assert result.checkpoint.profile is not None
 
 
 async def test_question_three_ceiling_returns_actionable_error(executor_setup):
@@ -417,3 +473,26 @@ async def test_sdk_retry_override_is_per_call(name):
         await provider.generate("Draw perspective", ModelConfig(max_retries=0))
     original.with_options.assert_called_once_with(max_retries=0)
     assert create.await_count == 1 and provider.client is original
+
+
+async def test_repair_feedback_identifies_topic_and_missing_schema_field(
+    executor_setup, clock, small_profile, small_candidate, sources
+):
+    executor, provider, _, _, _ = executor_setup
+    broken = small_candidate.model_copy(deep=True)
+    broken.items[2].brief = ""
+    claim, job = await move_to_stage(
+        executor_setup, "validate", clock, small_profile, broken, sources
+    )
+    provider.generate.side_effect = [
+        answer(small_candidate.model_dump(mode="json", by_alias=True)),
+        answer({"approved": True, "issues": []}),
+    ]
+    result = await executor.run("validate", job, claim)
+    assert result.checkpoint.validation.valid
+    messages = provider.generate.call_args_list[0].args[0]
+    data = json.loads(next(m.content.split("\n", 1)[1] for m in messages if m.role == "user"))
+    assert any(
+        "t1" in issue and "brief" in issue and "TOPIC_INCOMPLETE" in issue
+        for issue in data["repairIssues"]
+    )

@@ -129,19 +129,26 @@ def validate_curriculum(
         if item.participation != "active":
             continue
         if item.kind == "topic":
-            if (
-                not item.title.strip()
-                or not item.brief.strip()
-                or not item.objectives
-                or any(not objective.strip() for objective in item.objectives)
-                or not item.exercise
-                or not item.exercise.strip()
-                or not item.estimate_minutes
-                or not item.format
-            ):
+            missing = [
+                name
+                for name, valid in (
+                    ("title", bool(item.title.strip())),
+                    ("brief", bool(item.brief.strip())),
+                    (
+                        "objectives",
+                        bool(item.objectives)
+                        and all(objective.strip() for objective in item.objectives),
+                    ),
+                    ("exercise", bool(item.exercise and item.exercise.strip())),
+                    ("estimateMinutes", bool(item.estimate_minutes and item.estimate_minutes > 0)),
+                    ("format", bool(item.format)),
+                )
+                if not valid
+            ]
+            if missing:
                 issue(
                     "TOPIC_INCOMPLETE",
-                    "Provide a purpose, objectives, exercise, format and positive effort.",
+                    "Provide nonempty topic fields: " + ", ".join(missing) + ".",
                     item.id,
                 )
         elif not children[item.id]:

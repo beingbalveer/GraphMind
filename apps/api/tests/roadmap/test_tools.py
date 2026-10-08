@@ -329,3 +329,14 @@ async def test_understanding_tools_protect_request_background_before_profile_is_
     )
     assert result.is_error
     assert tools["search_web"].context.last_error.code == "PRIVATE_SEARCH_QUERY"
+
+
+async def test_clarification_answers_cannot_be_copied_into_public_queries(tool_context):
+    tool_context.checkpoint.clarification_answers = [
+        "Confidential project Blue Orchid payroll launch"
+    ]
+    result = await build_roadmap_tools(tool_context)["search_web"].run(
+        {"query": "Blue Orchid payroll launch curriculum"}
+    )
+    assert result.is_error
+    assert tool_context.search_backend.calls == 0

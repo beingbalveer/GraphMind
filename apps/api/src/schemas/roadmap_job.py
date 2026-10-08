@@ -38,6 +38,12 @@ class JobLimits(CurriculumSchema):
     worker_slots: int = Field(default=2, ge=1)
 
 
+class AnsweredClarification(CurriculumSchema):
+    question_id: str = Field(min_length=1, max_length=64)
+    question: str = Field(min_length=1, max_length=500)
+    answer: str = Field(min_length=1, max_length=4000)
+
+
 class JobCheckpoint(CurriculumSchema):
     workspace_id: str | None = None
     original_candidate: CurriculumCandidate | None = None
@@ -50,6 +56,7 @@ class JobCheckpoint(CurriculumSchema):
     validation: ValidationReport | None = None
     loaded_skills: list[str] = Field(default_factory=list, max_length=20)
     clarification_answers: list[str] = Field(default_factory=list, max_length=3)
+    clarification_context: list[AnsweredClarification] = Field(default_factory=list, max_length=3)
     completed_stages: list[StageName] = Field(default_factory=list, max_length=6)
 
 

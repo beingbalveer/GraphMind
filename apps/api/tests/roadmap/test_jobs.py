@@ -227,6 +227,9 @@ async def test_waiting_answer_preserves_job_and_excludes_waiting_time(
     answered = await job_repo.answer(ready_job.id, job_owner, "q1", "Sketch for fun")
     assert answered.status == "queued" and answered.usage.active_seconds == 20
     assert answered.checkpoint.clarification_answers == ["Sketch for fun"]
+    assert answered.checkpoint.clarification_context[0].question_id == "q1"
+    assert answered.checkpoint.clarification_context[0].question == question.text
+    assert answered.checkpoint.clarification_context[0].answer == "Sketch for fun"
     with pytest.raises(JobStateError):
         await job_repo.answer(ready_job.id, job_owner, "q1", "A stale answer")
 

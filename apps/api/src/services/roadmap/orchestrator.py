@@ -29,10 +29,13 @@ from services.roadmap.tools import RoadmapTool
 from services.roadmap.validation import validate_curriculum
 from services.roadmap.workload import WorkloadError, normalize_profile, schedule_core
 from sqlalchemy import select
+from structlog import get_logger
 
 T = TypeVar("T", bound=CurriculumSchema)
 RepositoryFactory = Callable[[], AbstractAsyncContextManager[JobRepository]]
 ToolsFactory = Callable[[JobSnapshot, Claim], dict[str, BaseTool]]
+MODEL_RESPONSE_TIMEOUT_SECONDS = 180
+logger = get_logger()
 
 
 async def run_tool_cycle(
@@ -46,8 +49,15 @@ async def run_tool_cycle(
 ) -> GenerationResult:
     for _ in range(48):
         await before_call()
-        async with asyncio.timeout(90):
-            result = await provider.generate(messages, config, tools=list(tools.values()) or None)
+        try:
+            async with asyncio.timeout(MODEL_RESPONSE_TIMEOUT_SECONDS):
+                result = await provider.generate(
+                    messages, config, tools=list(tools.values()) or None
+                )
+        except TimeoutError as error:
+            raise TimeoutError(
+                f"Roadmap model response exceeded {MODEL_RESPONSE_TIMEOUT_SECONDS} seconds"
+            ) from error
         if not result.tool_calls:
             return result
         if len(result.tool_calls) > 40:
@@ -178,7 +188,15 @@ class RoadmapStageExecutor:
                 if content.startswith("```json") and content.endswith("```"):
                     content = content[7:-3].strip()
                 return schema.model_validate_json(content)
-            except ValidationError:
+            except ValidationError as error:
+                errors = [
+                    f"{'.'.join(str(part) for part in detail['loc']) or '$'} "
+                    f"[{detail['type']}]: {detail['msg'][:200]}"
+                    for detail in error.errors(include_input=False, include_context=False)[:30]
+                ]
+                logger.warning(
+                    "roadmap_stage_schema_rejected", job_id=job.id, stage=stage, issues=errors
+                )
                 if attempt == 2:
                     raise JobStateError(
                         "STAGE_OUTPUT_INVALID",
@@ -188,7 +206,9 @@ class RoadmapStageExecutor:
                     [
                         ChatMessage.assistant(result.content),
                         ChatMessage.user(
-                            "The output did not match the required JSON schema. Correct the structure; do not invent evidence."
+                            "The output did not match the required JSON schema. Correct these "
+                            "fields and return complete JSON; do not invent evidence:\n"
+                            + "\n".join(errors)
                         ),
                     ]
                 )
@@ -319,7 +339,11 @@ class RoadmapStageExecutor:
             report = validate_curriculum(
                 job.checkpoint.candidate, job.checkpoint.profile, job.checkpoint.sources
             )
-            issues = [issue.message for issue in report.issues if issue.severity == "error"]
+            issues = [
+                f"[{issue.code}] {issue.item_id or 'curriculum'}: {issue.message}"
+                for issue in report.issues
+                if issue.severity == "error"
+            ]
             if report.valid:
                 review = await self._typed(stage, QualityReview, job, claim, tools)
                 issues.extend(review.issues)

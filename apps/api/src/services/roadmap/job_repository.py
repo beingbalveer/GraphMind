@@ -402,6 +402,7 @@ class JobRepository:
         checkpoint = result.checkpoint.model_copy(deep=True)
         checkpoint.completed_stages = prior.completed_stages.copy()
         checkpoint.clarification_answers = prior.clarification_answers.copy()
+        checkpoint.clarification_context = prior.clarification_context.copy()
         if result.question is not None:
             if row.question_count >= 3:
                 raise JobStateError(
@@ -442,6 +443,13 @@ class JobRepository:
             raise JobStateError("INVALID_ANSWER", "Answer using 1–4000 characters")
         checkpoint = JobCheckpoint.model_validate(row.checkpoint)
         checkpoint.clarification_answers.append(answer)
+        from schemas.roadmap_job import AnsweredClarification
+
+        checkpoint.clarification_context.append(
+            AnsweredClarification(
+                question_id=question_id, question=row.question["text"], answer=answer
+            )
+        )
         row.checkpoint = checkpoint.model_dump(mode="json")
         row.question = None
         row.status = "queued"

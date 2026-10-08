@@ -50,14 +50,17 @@ describe("FlashcardModal", () => {
         workspaceId="ws_test"
         nodeId="node_1"
         sourcePreview="PostgreSQL WAL explanation"
-      />
+      />,
     );
 
     await waitFor(() => {
       expect(screen.getByText("What is WAL in Postgres?")).toBeInTheDocument();
     });
 
-    expect(flashcardApi.listNodeFlashcards).toHaveBeenCalledWith("ws_test", "node_1");
+    expect(flashcardApi.listNodeFlashcards).toHaveBeenCalledWith(
+      "ws_test",
+      "node_1",
+    );
     expect(flashcardApi.generateNodeFlashcards).not.toHaveBeenCalled();
     expect(screen.getByText("1 of 2")).toBeInTheDocument();
   });
@@ -72,7 +75,7 @@ describe("FlashcardModal", () => {
         onClose={vi.fn()}
         workspaceId="ws_test"
         nodeId="node_1"
-      />
+      />,
     );
 
     await waitFor(() => {
@@ -82,19 +85,25 @@ describe("FlashcardModal", () => {
     expect(screen.getByText("1 of 2")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /show answer/i }));
-    expect(screen.getByText("Write-Ahead Logging guarantees data integrity.")).toBeInTheDocument();
+    expect(
+      screen.getByText("Write-Ahead Logging guarantees data integrity."),
+    ).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /got it/i }));
     await user.click(screen.getByRole("button", { name: /^next$/i }));
 
     expect(screen.getByText("Why use WAL?")).toBeInTheDocument();
-    expect(screen.queryByText("What is WAL in Postgres?")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("What is WAL in Postgres?"),
+    ).not.toBeInTheDocument();
     expect(screen.getByText("2 of 2")).toBeInTheDocument();
   });
 
   it("automatically generates cards when no existing cards exist", async () => {
     vi.mocked(flashcardApi.listNodeFlashcards).mockResolvedValueOnce([]);
-    vi.mocked(flashcardApi.generateNodeFlashcards).mockResolvedValueOnce(mockCards);
+    vi.mocked(flashcardApi.generateNodeFlashcards).mockResolvedValueOnce(
+      mockCards,
+    );
 
     render(
       <FlashcardModal
@@ -103,18 +112,25 @@ describe("FlashcardModal", () => {
         workspaceId="ws_test"
         nodeId="node_1"
         sourcePreview="PostgreSQL WAL explanation"
-      />
+      />,
     );
 
     await waitFor(() => {
       expect(screen.getByText("What is WAL in Postgres?")).toBeInTheDocument();
     });
 
-    expect(flashcardApi.listNodeFlashcards).toHaveBeenCalledWith("ws_test", "node_1");
-    expect(flashcardApi.generateNodeFlashcards).toHaveBeenCalledWith("ws_test", "node_1", {
-      count: 5,
-      replaceExisting: false,
-    });
+    expect(flashcardApi.listNodeFlashcards).toHaveBeenCalledWith(
+      "ws_test",
+      "node_1",
+    );
+    expect(flashcardApi.generateNodeFlashcards).toHaveBeenCalledWith(
+      "ws_test",
+      "node_1",
+      {
+        count: 5,
+        replaceExisting: false,
+      },
+    );
   });
 
   it("displays error with retry on load failure", async () => {
@@ -129,7 +145,7 @@ describe("FlashcardModal", () => {
         onClose={vi.fn()}
         workspaceId="ws_test"
         nodeId="node_1"
-      />
+      />,
     );
 
     await waitFor(() => {
@@ -158,7 +174,7 @@ describe("FlashcardModal", () => {
         workspaceId="ws_test"
         nodeId="node_1"
         onGoToSource={handleGoToSource}
-      />
+      />,
     );
 
     await waitFor(() => {
@@ -184,23 +200,29 @@ describe("FlashcardModal", () => {
         workspaceId="ws_test"
         nodeId="node_1"
         canEdit={false}
-      />
+      />,
     );
 
     await waitFor(() => {
       expect(
-        screen.getByText(/No flashcards have been generated for this response yet\. An editor or workspace owner can generate flashcards\./i)
+        screen.getByText(
+          /No flashcards have been generated for this response yet\. An editor or workspace owner can generate flashcards\./i,
+        ),
       ).toBeInTheDocument();
     });
 
     expect(flashcardApi.generateNodeFlashcards).not.toHaveBeenCalled();
-    expect(screen.queryByRole("button", { name: /regenerate flashcards/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /regenerate flashcards/i }),
+    ).not.toBeInTheDocument();
   });
 
   it("handles 403 Forbidden on auto-generation gracefully for viewers", async () => {
     vi.mocked(flashcardApi.listNodeFlashcards).mockResolvedValueOnce([]);
     vi.mocked(flashcardApi.generateNodeFlashcards).mockRejectedValueOnce(
-      new Error("403 Forbidden: Only editors and owners can generate flashcards")
+      new Error(
+        "403 Forbidden: Only editors and owners can generate flashcards",
+      ),
     );
 
     render(
@@ -209,23 +231,27 @@ describe("FlashcardModal", () => {
         onClose={vi.fn()}
         workspaceId="ws_test"
         nodeId="node_1"
-      />
+      />,
     );
 
     await waitFor(() => {
       expect(
-        screen.getByText(/No flashcards have been generated for this response yet/i)
+        screen.getByText(
+          /No flashcards have been generated for this response yet/i,
+        ),
       ).toBeInTheDocument();
     });
 
     // Error banner should not be displayed
     expect(screen.queryByText(/Flashcard Error/i)).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /retry/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /retry/i }),
+    ).not.toBeInTheDocument();
   });
 
   it("includes accessible live status and allows dismiss during loading", async () => {
     vi.mocked(flashcardApi.listNodeFlashcards).mockImplementationOnce(
-      () => new Promise(() => {}) // never resolves to keep in loading state
+      () => new Promise(() => {}), // never resolves to keep in loading state
     );
     const handleClose = vi.fn();
 
@@ -235,7 +261,7 @@ describe("FlashcardModal", () => {
         onClose={handleClose}
         workspaceId="ws_test"
         nodeId="node_1"
-      />
+      />,
     );
 
     const loadingStatus = screen.getByRole("status");
@@ -250,7 +276,9 @@ describe("FlashcardModal", () => {
   it("deletes a card via confirmation dialog", async () => {
     const user = userEvent.setup();
     vi.mocked(flashcardApi.listNodeFlashcards).mockResolvedValueOnce(mockCards);
-    vi.mocked(flashcardApi.deleteNodeFlashcard).mockResolvedValueOnce(undefined);
+    vi.mocked(flashcardApi.deleteNodeFlashcard).mockResolvedValueOnce(
+      undefined,
+    );
 
     render(
       <FlashcardModal
@@ -258,7 +286,7 @@ describe("FlashcardModal", () => {
         onClose={vi.fn()}
         workspaceId="ws_test"
         nodeId="node_1"
-      />
+      />,
     );
 
     await waitFor(() => {
@@ -267,10 +295,17 @@ describe("FlashcardModal", () => {
 
     await user.click(screen.getByRole("button", { name: /manage cards/i }));
 
-    const deleteButtons = screen.getAllByRole("button", { name: /delete flashcard/i });
-    await user.click(deleteButtons[0]);
+    const actionButtons = screen.getAllByRole("button", {
+      name: "Flashcard actions",
+    });
+    await user.click(actionButtons[0]);
+    await user.click(
+      await screen.findByRole("menuitem", { name: "Delete flashcard" }),
+    );
 
-    expect(screen.getByText(/Are you sure you want to delete Card 1\?/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Are you sure you want to delete Card 1\?/i),
+    ).toBeInTheDocument();
 
     const confirmDeleteBtn = screen.getByRole("button", { name: /^delete$/i });
     await user.click(confirmDeleteBtn);
@@ -279,9 +314,11 @@ describe("FlashcardModal", () => {
       expect(flashcardApi.deleteNodeFlashcard).toHaveBeenCalledWith(
         "ws_test",
         "node_1",
-        "card_1"
+        "card_1",
       );
-      expect(screen.queryByText("What is WAL in Postgres?")).not.toBeInTheDocument();
+      expect(
+        screen.queryByText("What is WAL in Postgres?"),
+      ).not.toBeInTheDocument();
       expect(screen.getByText("Why use WAL?")).toBeInTheDocument();
     });
   });
@@ -302,7 +339,9 @@ describe("FlashcardModal", () => {
     ];
 
     vi.mocked(flashcardApi.listNodeFlashcards).mockResolvedValueOnce(mockCards);
-    vi.mocked(flashcardApi.generateNodeFlashcards).mockResolvedValueOnce(freshCards);
+    vi.mocked(flashcardApi.generateNodeFlashcards).mockResolvedValueOnce(
+      freshCards,
+    );
 
     render(
       <FlashcardModal
@@ -310,21 +349,25 @@ describe("FlashcardModal", () => {
         onClose={vi.fn()}
         workspaceId="ws_test"
         nodeId="node_1"
-      />
+      />,
     );
 
     await waitFor(() => {
       expect(screen.getByText("What is WAL in Postgres?")).toBeInTheDocument();
     });
 
-    const regenBtn = screen.getByRole("button", { name: /regenerate flashcards/i });
+    const regenBtn = screen.getByRole("button", {
+      name: /regenerate flashcards/i,
+    });
     await user.click(regenBtn);
 
     expect(
-      screen.getByText(/Are you sure you want to regenerate all flashcards\?/i)
+      screen.getByText(/Are you sure you want to regenerate all flashcards\?/i),
     ).toBeInTheDocument();
 
-    const confirmRegenBtn = screen.getByRole("button", { name: /^regenerate$/i });
+    const confirmRegenBtn = screen.getByRole("button", {
+      name: /^regenerate$/i,
+    });
     await user.click(confirmRegenBtn);
 
     await waitFor(() => {
@@ -334,10 +377,14 @@ describe("FlashcardModal", () => {
         {
           count: 5,
           replaceExisting: true,
-        }
+        },
       );
-      expect(screen.getByText("Brand new generated question?")).toBeInTheDocument();
-      expect(screen.queryByText("What is WAL in Postgres?")).not.toBeInTheDocument();
+      expect(
+        screen.getByText("Brand new generated question?"),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByText("What is WAL in Postgres?"),
+      ).not.toBeInTheDocument();
     });
   });
 });

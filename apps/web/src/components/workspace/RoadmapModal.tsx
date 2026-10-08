@@ -153,6 +153,7 @@ function RoadmapSetup({
       job?.operation === "refine" ||
       job?.status !== "completed" ||
       !job.result ||
+      (resumeJobId && resumeJobId !== job.id) ||
       openedResult.current === job.id
     )
       return;
@@ -170,7 +171,7 @@ function RoadmapSetup({
       if (onSuccess) onSuccess(job.result.workspaceId);
       else router.push(buildWorkspaceUrl(job.result.workspaceId));
     }
-  }, [job, watchingId, isOpen, path, onClose, onSuccess, router]);
+  }, [job, watchingId, resumeJobId, isOpen, path, onClose, onSuccess, router]);
   function startOver() {
     accepted.current = null;
     key.current = null;
