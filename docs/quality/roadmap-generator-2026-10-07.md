@@ -1,8 +1,8 @@
 # Researched roadmap generator — quality verification
 
 Branch: `codex/roadmap-generator`. Implementation through task 13: `772c31b`.
-Release regression fixes: `ea96039`, `1ce4bcb` and the final provider-budget regression commit. Verification performed 8 October 2026.
-Status: final native reruns and independent branch review in progress.
+Release regression fixes: `ea96039`, `1ce4bcb` and `97e4fe5`. Verification performed 8 October 2026.
+Status: implementation and five native evaluations verified; independent branch review in progress.
 
 ## Verified behavior
 
@@ -98,9 +98,19 @@ bounded separately. All learning requests are disposable public QA examples.
   advanced prompting, deployment and monitoring. Weekly sessions sum to the same
   1,720 minutes and resources remain at most three per topic. Manual resource audit
   then found overview-only links for Python/embeddings/evaluation: this counts as
-  structural success, **not full instructional quality acceptance**. Stronger
-  source guidance and article/main extraction are being checked in final fresh
-  run `job_b8649ed9dddb4242856ca46c03218fc7`. The preceding run
+  structural success, **not full instructional quality acceptance**. Final fresh
+  run `job_b8649ed9dddb4242856ca46c03218fc7` completed in 312.3 wall seconds
+  (305.14 active seconds), with 23 model calls, six searches, two fetches and one
+  repair. It published `ws_554827f13a4b`,
+  `roadmap_e1267cbfe95749dda280efb57683b0ec`, revision
+  `rev_5694270b44d246c29ab16f97f71b7bb8`. Eleven core topics total 1,080 minutes
+  within 1,920 capacity, with two further topics and at most two resources per
+  topic. All weekly sessions total 1,080 minutes; topic briefs and practical
+  exercises are complete. Actual LazyLLM/SuperML/GitHub RAG instruction and
+  Patronus/GeeksforGeeks evaluation guidance replace inferred evaluation coverage.
+  Basic programming/Python proficiency is an explicit assumption, verified visible
+  under About this plan; this evaluates a beginner in AI, not a promise of teaching
+  programming from zero. The preceding run
   `job_21a2622fd182459ab490b773cd346561` hit an input-token quota, preserved its
   research on Retry, then encountered empty/truncated model responses and was
   canceled by the evaluation timer without publication. Observed total usage:
@@ -223,3 +233,44 @@ that output allowance includes thinking and that thinking budget can vary.
 Ordinary chat and other providers retain their defaults. Exhausted schema retries
 with `MAX_TOKENS` now offer Retry with saved research, rather than forcing a new
 job. Both changes have behavioral regression coverage.
+
+The later backend and prior-knowledge cases add 22 recommended URL checks.
+Seven of nine backend links and ten of thirteen prior-knowledge links were
+re-inspected successfully; two and three respectively were unavailable during
+this audit. Unavailable links are not claimed inspected or free. Search-grounded
+records keep their original provenance/access labels. Publisher instruction
+examples include the following (inspected 8 October 2026):
+
+- backend-to-ai: [Learn RAG from Scratch – Python AI Tutorial from a LangChain Engineer](https://www.freecodecamp.org/news/mastering-rag-from-scratch/); recorded access `unknown`.
+- backend-to-ai: [RAG Tutorial for Beginners: Build a Retrieval Pipeline in Python | LogicWiz](https://logicwiz.ai/genai/guides/rag-tutorial-for-beginners/); recorded access `unknown`.
+- backend-to-ai: [Ragas Evaluation: The Complete RAG Metrics Tutorial (2026) | QASkills.sh](https://qaskills.sh/blog/ragas-llm-evaluation-guide); recorded access `unknown`.
+- backend-to-ai: [Using DeepEval for Large Language Model (LLM) Evaluation in Python | Codecademy](https://www.codecademy.com/article/using-deepeval-for-llm-evaluation-python); recorded access `unknown`.
+- backend-to-ai: [A complete guide to RAG evaluation: metrics, testing and best practices](https://www.evidentlyai.com/llm-guide/rag-evaluation); recorded access `unknown`.
+- backend-to-ai: [Production-Ready FastAPI Deployment Using Docker and Uvicorn | seenode blog](https://seenode.com/blog/deploy-fastapi-docker-and-uvicorn); recorded access `unknown`.
+- backend-to-ai: [Your First Containerized Machine Learning Deployment with Docker and FastAPI - MachineLearningMastery.comYour First Containerized Machine Learning Deployment with Docker and FastAPI - MachineLearningMastery.com](https://machinelearningmastery.com/your-first-containerized-machine-learning-deployment-with-docker-and-fastapi/); recorded access `unknown`.
+- prior-knowledge: [Lesson 6: Observational Drawings — Free Online Painting Course](https://www.painting-course.com/the-painting-course-1/lesson-6-observational-drawings); recorded access `unknown`.
+- prior-knowledge: [7 Observational Drawing Exercises – Artistcoveries](https://artistcoveries.com/2025/05/21/7-observational-drawing-exercises/); recorded access `unknown`.
+- prior-knowledge: [Lesson 3: Drawing an Object from Observation - Studio in a School](https://createart.studioinaschool.org/lesson-plan/lesson-3-drawing-an-object-from-observation/); recorded access `unknown`.
+- prior-knowledge: [How To Improve Your Observational Drawing Skills  – Journey Art Stuff](https://journeyartstuff.com/blogs/journey-art-supplies-blog/5-tips-to-improve-your-observational-drawing-skills); recorded access `unknown`.
+- prior-knowledge: [Mastering Scale & Proportion | BLICK Art Materials](https://www.dickblick.com/learning-resources/how-to/scale-and-proportion/); recorded access `unknown`.
+- prior-knowledge: [Mastering Observational Drawing: 2 Simple Tips for Accurate Proportions](https://www.jamesottoallen.com/post/mastering-observational-drawing-2-simple-tips-for-accurate-proportions); recorded access `unknown`.
+- prior-knowledge: [Exercise 9: Observing shadow and light formations on a surface – mags phelan](https://magsphelan.wordpress.com/2012/11/13/exercise-observing-shadow-and-light-formations-on-a-surface/); recorded access `unknown`.
+- prior-knowledge: [1 – Observing Light and Shadow Formations on a Surface – My Drawing Course](https://mydrawingcourse.com/category/coursework/pt-1-mark-making-and-tone/3-tone-and-form/1-observing-light-and-shadow-formations-on-a-surface/); recorded access `unknown`.
+- prior-knowledge: [Seeing Light. Artist’s eye training while out and about | Love life drawing](https://www.lovelifedrawing.com/seeing-light-eye-training-while-out-and-about/); recorded access `unknown`.
+
+Final AI source audit: 18 distinct recommended URLs checked on 8 October 2026;
+14 publisher pages re-inspected, four unavailable. Search-grounded video evidence
+remains distinct from HTML inspection: a YouTube shell does not establish a reviewed
+video transcript. The two further-learning overview references are orientation,
+not claimed full advanced instruction. Official/free preference is not a guarantee;
+unknown access labels remain visible.
+
+- [LazyLLM RAG principles tutorial](https://docs.lazyllm.ai/en/stable/Tutorial/1/)
+- [LLM and RAG hands-on guide](https://github.com/zahaby/intro-llm-rag)
+- [RAG step-by-step tutorial](https://superml.org/tutorials/rag-beginner)
+- [RAG evaluation metrics guidance](https://www.patronus.ai/llm-testing/rag-evaluation-metrics)
+- [Retrieval-augmented generation evaluation metrics](https://www.geeksforgeeks.org/nlp/evaluation-metrics-for-retrieval-augmented-generation-rag-systems/)
+
+Additional browser proof: `roadmap-ai-final-workspace.png`; completed native
+workspace opened with 18 core hours, 0/11 completion, weekly milestones, further
+learning and the saved programming assumptions.
