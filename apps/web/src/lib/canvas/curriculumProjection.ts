@@ -60,11 +60,20 @@ export function selectedCoreTopics(view: CurriculumView): CurriculumItemData[] {
 export function projectCurriculum(
   view: CurriculumView,
   expandedIds: Set<string>,
+  showAlternatives = false,
 ): CanvasGraph {
   const graph: CanvasGraph = { items: [], links: [] };
   const visited = new Set<string>();
   let order = 0;
-  function visit(item: CurriculumItemData, parentId: string | null) {
+  const choices = new Map(
+    view.candidate.choices.map((choice) => [choice.choiceId, choice]),
+  );
+  const selectedIds = new Set(view.candidate.choices.map((choice) => choice.selectedId));
+  function visit(
+    item: CurriculumItemData,
+    parentId: string | null,
+    alternative = false,
+  ) {
     if (visited.has(item.id) || item.participation !== "active") return;
     visited.add(item.id);
     const spine = item.kind === "root" || item.kind === "phase";
@@ -72,7 +81,18 @@ export function projectCurriculum(
       id: item.id,
       kind: spine ? "milestone" : item.kind === "topic" ? "topic" : "group",
       title: item.title,
-      summary: item.brief,
+      summary: choices.get(item.id)?.rationale ?? item.brief,
+      metaLabel: alternative
+        ? "Alternative"
+        : item.path === "further"
+          ? "Further learning"
+          : selectedIds.has(item.id)
+            ? "Selected path"
+            : item.kind === "choice"
+              ? "Recommended route"
+              : item.kind === "topic"
+                ? "Core"
+                : undefined,
       itemIds: [item.id],
       selectionId: item.id,
       lane: spine ? "spine" : "side",
@@ -81,9 +101,13 @@ export function projectCurriculum(
       order: order++,
     });
     if (expandedIds.has(item.id))
-      curriculumChildren(view, item.id).forEach((child) =>
-        visit(child, item.id),
-      );
+      curriculumChildren(view, item.id).forEach((child) => {
+        const optional =
+          alternative ||
+          (item.kind === "choice" &&
+            choices.get(item.id)?.selectedId !== child.id);
+        if (showAlternatives || !optional) visit(child, item.id, optional);
+      });
   }
   view.candidate.items
     .filter((i) => i.kind === "root")

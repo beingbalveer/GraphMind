@@ -2,7 +2,7 @@
 
 Branch: `codex/roadmap-generator`. Implementation through task 13: `772c31b`.
 Release regression fixes: `ea96039`, `1ce4bcb` and `97e4fe5`. Verification performed 8 October 2026.
-Status: implementation and five native evaluations verified; independent branch review in progress.
+Status: all fourteen tasks and five native evaluations verified; independent branch review completed and all four Important findings fixed.
 
 ## Verified behavior
 
@@ -25,13 +25,13 @@ conversations or progress. Stale structural writes fail with conflict.
 | Gate | Observed result |
 | --- | --- |
 | Full Python suite before obsolete scaffold removal | 415 passed; one Starlette 422 deprecation warning |
-| Full Python suite after source/context/provider fixes | 420 passed; one deprecation warning |
+| Full Python suite after independent-review fixes | 430 passed; one deprecation warning |
 | Legacy endpoint after scaffold removal | 2 passed |
-| Full frontend suite | 331 passed across 67 files |
+| Full frontend suite | 333 passed across 68 files |
 | Shared contracts | 16 passed |
 | Frontend TypeScript | passed |
 | Ruff API/tests/ai-core | passed |
-| Scoped roadmap/canvas/main strict mypy | 22 files passed |
+| Scoped strict roadmap mypy after review | 23 files passed |
 | Canonical whole backend mypy | 41 errors in 11 files; **failed**, baseline 85 errors in 23 files |
 | Isolated Next production build | passed; `/tmp/graphmind-roadmap-build/task-14-build.log` |
 | Dedicated migration database | upgrade/downgrade/upgrade through all three new revisions passed |
@@ -274,3 +274,31 @@ unknown access labels remain visible.
 Additional browser proof: `roadmap-ai-final-workspace.png`; completed native
 workspace opened with 18 core hours, 0/11 completion, weekly milestones, further
 learning and the saved programming assumptions.
+
+## Independent branch review and final fix pass
+
+A fresh GPT-6 Astra reviewer inspected `b0600ad..ff79312` read-only. It identified
+four Important findings and no Critical or Minor findings. All four were reproduced
+and fixed in one pass, followed by the full 430 Python / 333 frontend / 16 shared
+suites, TypeScript, Ruff, strict scoped mypy and isolated Next production build.
+No re-review or further paid research run was needed.
+
+- Assessment persistence expires the pre-model ORM snapshot and rechecks current
+  write permission and active account status. Cross-session ownership/access removal
+  and account-deactivation tests prevent stale-owner writes.
+- Outbound fetch paths/queries are repeatedly percent-decoded before the same
+  private-context and identifier checks used by search. Query-bearing destinations
+  must match a recorded source or explicit user reference. Rejected requests cause
+  no transport or fetch charge. Public ISO publication dates remain usable.
+- Saved sessions and archived history allow readers who own those lessons; lesson
+  creation/claim/finish and assessments still independently require write access.
+- Canvas cards retain selected-route and further-learning semantics. Choice rationale
+  identifies the recommendation; unselected routes appear only after Show alternatives
+  for visible expanded choices. Topic IDs, workload and saved progress remain unchanged.
+
+The reviewer did not independently repeat external research, mutating suites,
+migrations, builds or Docker deployment. The executor's measured verification is
+reported above. Existing mypy failures and live migration-history reconciliation
+remain explicit limitations. Learning-profile/time-budget editing through refinement
+and semantic/paraphrased DLP remain outside this release's approved scope. Every
+set-aside behavior and its cost is preserved in the decision audit.

@@ -6,7 +6,7 @@ import structlog
 from ai_core import ChatMessage, ModelConfig
 from ai_core.base import BaseLLMProvider
 from config import get_settings
-from dependencies import require_workspace_write
+from dependencies import require_workspace_read, require_workspace_write
 from errors import RoadmapHTTPError
 from fastapi import HTTPException
 from models.roadmap import KnowledgeCheck, Roadmap, TopicProgress, utc_now
@@ -39,11 +39,14 @@ class ProgressService:
     def repository(self, owner_id: str) -> CurriculumRepository:
         return CurriculumRepository(self.session, owner_id)
 
-    async def authorize(self, workspace_id: str, owner_id: str) -> None:
-        user = await self.session.get(User, owner_id)
+    async def authorize(self, workspace_id: str, owner_id: str, *, write: bool = True) -> None:
+        user = await self.session.get(User, owner_id, populate_existing=True)
         if user is None:
             raise HTTPException(404, "Learner not found")
-        await require_workspace_write(workspace_id, user, self.session)
+        if not user.is_active:
+            raise HTTPException(401, "Learner account is inactive")
+        authorize = require_workspace_write if write else require_workspace_read
+        await authorize(workspace_id, user, self.session)
 
     async def set_status(
         self,
@@ -100,7 +103,7 @@ class ProgressService:
         from services.roadmap.tutor import TutorService
 
         tutor = TutorService(self.session)
-        row, roadmap = await tutor.read_session(session_id, owner_id)
+        row, roadmap = await tutor.read_session(session_id, owner_id, write=True)
         if roadmap.workspace_id != workspace_id or row.topic_id != topic_id:
             raise HTTPException(404, "Topic session not found")
         snapshot = await WorkspaceService.get_graph_snapshot(
@@ -189,7 +192,11 @@ class ProgressService:
                         await client.close()
         if not assessment.ready:
             raise self.check_not_ready()
-        topic_session, roadmap = await TutorService(self.session).read_session(session_id, owner_id)
+        # External inference outlives the authorization snapshot held by the route.
+        self.session.expire_all()
+        topic_session, roadmap = await TutorService(self.session).read_session(
+            session_id, owner_id, write=True
+        )
         if topic_session.topic_id != topic_id or roadmap.workspace_id != workspace_id:
             raise HTTPException(404, "Topic session not found")
         row = KnowledgeCheck(

@@ -24,9 +24,10 @@ export function RoadmapCanvas({
   );
   const [selected, setSelected] = useState<string>();
   const [minimap, setMinimap] = useState(false);
+  const [showAlternatives, setShowAlternatives] = useState(false);
   const graph = useMemo(
-    () => projectCurriculum(view, expanded),
-    [view, expanded],
+    () => projectCurriculum(view, expanded, showAlternatives),
+    [view, expanded, showAlternatives],
   );
   const generated = useMemo(() => layoutSpine(graph, {}), [graph]);
   const stored = useCanvasLayout(
@@ -88,6 +89,21 @@ export function RoadmapCanvas({
         showMinimap={minimap}
         onToggleMinimap={() => setMinimap((old) => !old)}
       />
+      {view.candidate.choices.some(
+        (choice) =>
+          expanded.has(choice.choiceId) &&
+          graph.items.some((item) => item.id === choice.choiceId),
+      ) && (
+        <Button
+          variant="ghost"
+          size="sm"
+          aria-pressed={showAlternatives}
+          className="absolute right-3 top-3 border border-border bg-surface"
+          onClick={() => setShowAlternatives((value) => !value)}
+        >
+          {showAlternatives ? "Hide alternatives" : "Show alternatives"}
+        </Button>
+      )}
       {(stored.loadError || stored.saveState === "error") && (
         <div
           role="alert"

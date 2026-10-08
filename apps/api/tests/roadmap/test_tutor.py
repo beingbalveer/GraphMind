@@ -319,3 +319,60 @@ async def test_real_tutor_does_not_silently_use_mock_provider(
         )
         assert response.status_code == 503
         assert response.json()["error"]["code"] == "MODEL_NOT_CONFIGURED"
+
+
+async def test_demoted_viewer_can_read_saved_and_archived_lesson_but_cannot_write(
+    curriculum_workspace, curriculum_session, worker_job
+):
+    from fastapi import HTTPException
+    from httpx import ASGITransport, AsyncClient
+    from main import app
+    from models.user import WorkspaceMember
+    from services.auth_service import create_access_token
+    from services.roadmap.curriculum_repository import CurriculumRepository
+    from services.roadmap.validation import validate_curriculum
+
+    view = curriculum_workspace.view
+    learner = worker_job.owner_id
+    member = WorkspaceMember(workspace_id=view.workspace_id, user_id=learner, role="editor")
+    curriculum_session.add(member)
+    await curriculum_session.flush()
+    tutor = TutorService(curriculum_session)
+    lesson = await tutor.open_session(view.workspace_id, "t1", learner, "viewer-history")
+    candidate = view.candidate.model_copy(deep=True)
+    candidate.items = [i for i in candidate.items if i.id != "t1"]
+    candidate.relations = [
+        r for r in candidate.relations if r.source_id != "t1" and r.target_id != "t1"
+    ]
+    candidate.resources = [r for r in candidate.resources if r.topic_id != "t1"]
+    candidate.sessions = [s for s in candidate.sessions if s.topic_id != "t1"]
+    await CurriculumRepository(curriculum_session, curriculum_workspace.owner_id).save_revision(
+        view.roadmap_id,
+        view.revision_id,
+        candidate,
+        view.sources,
+        validate_curriculum(candidate, view.profile, view.sources),
+        "active",
+    )
+    member.role = "viewer"
+    await curriculum_session.commit()
+    base = f"/api/v1/workspaces/{view.workspace_id}/roadmap"
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+        headers={"Authorization": "Bearer " + create_access_token(learner)},
+    ) as client:
+        saved = await client.get(base + "/sessions/" + lesson.id)
+        assert saved.status_code == 200 and saved.json()["archived"]
+        archived = await client.get(base + "/archived-topics")
+        assert archived.status_code == 200 and lesson.id in archived.text
+        assert (
+            await client.patch(base + "/topics/t2/progress", json={"status": "completed"})
+        ).status_code == 403
+    for operation in [
+        tutor.claim_lesson(lesson.id, learner),
+        tutor.finish_lesson(lesson.id, learner, "token", "new", completed=True),
+    ]:
+        with pytest.raises(HTTPException) as raised:
+            await operation
+        assert raised.value.status_code == 403

@@ -78,3 +78,16 @@ it("initial canvas expansion keeps future phases collapsed", () => {
   expect(graph.items.map((i) => i.id)).toContain("phase2");
   expect(graph.items.map((i) => i.id)).not.toContain("topic2");
 });
+
+it("preserves selected choices and further semantics without exposing optional routes by default", () => {
+  const view = curriculumFixture();
+  const expanded = new Set(view.candidate.items.map((i) => i.id));
+  const graph = projectCurriculum(view, expanded);
+  expect(graph.items.find((i) => i.id === "chosen")?.metaLabel).toBe("Selected path");
+  expect(graph.items.find((i) => i.id === "choice")?.summary).toBe("Fits your goal");
+  expect(graph.items.some((i) => i.id === "other")).toBe(false);
+  expect(graph.items.find((i) => i.id === "extra")?.metaLabel).toBe("Further learning");
+  const alternatives = projectCurriculum(view, expanded, true);
+  expect(alternatives.items.find((i) => i.id === "other")?.metaLabel).toBe("Alternative");
+  expect(selectedCoreTopics(view).map((i) => i.id)).toEqual(["topic1", "chosen", "topic2"]);
+});

@@ -115,14 +115,16 @@ class TutorService:
         logger.info("topic_session_opened", session_id=row.id, topic_id=topic_id, fresh=fresh)
         return self.data(row, True)
 
-    async def read_session(self, session_id: str, owner_id: str) -> tuple[TopicChat, Roadmap]:
+    async def read_session(
+        self, session_id: str, owner_id: str, *, write: bool = False
+    ) -> tuple[TopicChat, Roadmap]:
         row = await self.session.get(TopicChat, session_id)
         if row is None or row.owner_id != owner_id:
             raise HTTPException(404, "Topic session not found")
         roadmap = await self.session.get(Roadmap, row.roadmap_id)
         if roadmap is None:
             raise HTTPException(404, "Roadmap not found")
-        await ProgressService(self.session).authorize(roadmap.workspace_id, owner_id)
+        await ProgressService(self.session).authorize(roadmap.workspace_id, owner_id, write=write)
         return row, roadmap
 
     async def build_context(self, session_id: str, owner_id: str) -> list[ChatMessage]:
@@ -189,7 +191,7 @@ class TutorService:
         ]
 
     async def claim_lesson(self, session_id: str, owner_id: str) -> str:
-        row, roadmap = await self.read_session(session_id, owner_id)
+        row, roadmap = await self.read_session(session_id, owner_id, write=True)
         locked = await self.session.scalar(
             select(TopicChat)
             .where(TopicChat.id == session_id)
@@ -236,7 +238,7 @@ class TutorService:
         provider: str | None = None,
         model: str | None = None,
     ) -> bool:
-        row, roadmap = await self.read_session(session_id, owner_id)
+        row, roadmap = await self.read_session(session_id, owner_id, write=True)
         locked = await self.session.scalar(
             select(TopicChat)
             .where(TopicChat.id == session_id)

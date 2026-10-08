@@ -6,6 +6,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
+from urllib.parse import unquote_plus, urlsplit
 
 from ai_core.base import BaseTool
 from models.roadmap_job import RoadmapJobReference, RoadmapToolReceipt
@@ -114,13 +115,18 @@ class RoadmapTool(BaseTool):
         ).hexdigest()
         return f"tool:{self.name}:{digest}"
 
-    async def _private_query(self, query: str) -> None:
+    async def _private_query(
+        self, query: str, *, code: str = "PRIVATE_SEARCH_QUERY", public_dates: bool = False
+    ) -> set[str]:
+        identifiers = (
+            re.sub(r"(?<!\d)\d{4}-\d{2}-\d{2}(?!\d)", "", query) if public_dates else query
+        )
         if re.search(
             r"[\w.+-]+@[\w.-]+\.\w+|(?:sk-|ghp_|AIza|AKIA)[A-Za-z0-9_-]{12,}|\b(?:usr_|job_|ref_)[a-f0-9]{8,}|(?:\+?\d[\d ()-]{7,}\d)",
-            query,
+            identifiers,
         ):
             raise JobStateError(
-                "PRIVATE_SEARCH_QUERY", "Search using subject keywords without private identifiers"
+                code, "Use public subject keywords or source URLs without private identifiers"
             )
         private_text = [self.context.profile.background or ""] if self.context.profile else []
         private_text.extend(self.context.checkpoint.clarification_answers)
@@ -133,6 +139,11 @@ class RoadmapTool(BaseTool):
                     )
                 )
             ).all()
+            reference_urls = {
+                reference.url
+                for reference in references
+                if reference.kind == "link" and reference.url
+            }
             for reference in references:
                 private_text.extend(
                     ReferenceSection.model_validate(section).text for section in reference.sections
@@ -144,8 +155,33 @@ class RoadmapTool(BaseTool):
             normalized = " ".join(re.findall(r"\w+", value.lower()))
             if any(phrase in normalized for phrase in phrases):
                 raise JobStateError(
-                    "PRIVATE_SEARCH_QUERY",
-                    "Search using subject keywords without copying private background or reference text",
+                    code,
+                    "Do not copy private background or reference text into external requests",
+                )
+
+        return reference_urls
+
+    async def _private_source_url(self, url: str) -> None:
+        decoded = url
+        for _ in range(len(url) + 1):
+            value = unquote_plus(decoded)
+            if value == decoded:
+                break
+            decoded = value
+        # Exclude ISO publication dates only from identifier detection, not private-copy checks.
+        reference_urls = await self._private_query(
+            decoded, code="PRIVATE_SOURCE_URL", public_dates=True
+        )
+        if urlsplit(url).query:
+            registered = reference_urls | {
+                source.url for source in self.context.checkpoint.sources if source.url
+            }
+            if canonical_source_url(url) not in {
+                canonical_source_url(value) for value in registered
+            }:
+                raise JobStateError(
+                    "SOURCE_URL_NOT_REGISTERED",
+                    "Search for this exact source URL first, or use a user-provided reference link.",
                 )
 
     async def _reserve(self, key: str, arguments: dict[str, Any]) -> JsonValue | None:
@@ -409,6 +445,8 @@ class RoadmapTool(BaseTool):
         try:
             if self.name == "search_web":
                 await self._private_query(arguments["query"])
+            elif self.name == "fetch_source":
+                await self._private_source_url(arguments["url"])
             replay = await self._reserve(key, arguments)
             if replay is not None:
                 self._observe(replay)

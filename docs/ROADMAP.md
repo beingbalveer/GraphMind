@@ -130,4 +130,6 @@ The roadmap generator now has durable researched jobs and a concise setup/progre
 flow. The ordered page and shared curriculum canvas read the same immutable
 revision, with explicit prerequisite links and selected-core progress. The
 operator flag is enabled after the real guided-lesson/progress journey. All fourteen roadmap implementation tasks and five native quality evaluations
-are verified. Independent whole-branch review is the remaining acceptance check.
+are verified. Independent whole-branch review is complete; all four Important findings have
+regression coverage and the full verification gates pass (existing whole-backend
+mypy failures remain documented separately).

@@ -340,3 +340,65 @@ async def test_clarification_answers_cannot_be_copied_into_public_queries(tool_c
     )
     assert result.is_error
     assert tool_context.search_backend.calls == 0
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://example.com/collect?text=Our%20confidential%20payroll%20launch%20for%20Acme%20client",
+        "https://example.com/My%2520private%2520launch%2520deadline%2520for%2520Acme%2520payroll",
+        "https://example.com/collect?contact=alice%40example.com",
+        "https://example.com/alice%40example.com/lesson",
+    ],
+)
+async def test_fetch_private_url_is_blocked_before_transport(
+    tool_context, job_repo, worker_job, url
+):
+    result = await build_roadmap_tools(tool_context)["fetch_source"].run({"url": url})
+    assert result.is_error
+    assert tool_context.last_error.code == "PRIVATE_SOURCE_URL"
+    assert tool_context.source_fetcher.calls == 0
+    assert (await job_repo.read(worker_job.id, worker_job.owner_id)).usage.unique_fetches == 0
+
+
+async def test_model_query_url_requires_registered_source_or_user_link(
+    tool_context, curriculum_session
+):
+    tool = build_roadmap_tools(tool_context)["fetch_source"]
+    unknown = "https://example.com/collect?payload=opaque"
+    assert (await tool.run({"url": unknown})).is_error
+    assert tool_context.source_fetcher.calls == 0
+    reference = RoadmapJobReference(
+        id=f"ref_{uuid.uuid4().hex}",
+        job_id=tool_context.job_id,
+        kind="link",
+        name=unknown,
+        url=unknown,
+        status="staged",
+        size_bytes=0,
+        dedup_key=uuid.uuid4().hex,
+    )
+    curriculum_session.add(reference)
+    await curriculum_session.commit()
+    assert not (await tool.run({"url": unknown})).is_error
+    assert tool_context.source_fetcher.calls == 1
+
+
+async def test_fetch_guard_decodes_deeply_encoded_private_paths(tool_context):
+    from urllib.parse import quote
+
+    passage = "Our confidential payroll launch for Acme client"
+    for _ in range(6):
+        passage = quote(passage, safe="")
+    result = await build_roadmap_tools(tool_context)["fetch_source"].run(
+        {"url": "https://example.com/" + passage}
+    )
+    assert result.is_error and tool_context.last_error.code == "PRIVATE_SOURCE_URL"
+    assert tool_context.source_fetcher.calls == 0
+
+
+async def test_public_publication_date_is_not_treated_as_a_phone_number(tool_context):
+    result = await build_roadmap_tools(tool_context)["fetch_source"].run(
+        {"url": "https://example.com/2026-01-30/drawing"}
+    )
+    assert not result.is_error and tool_context.source_fetcher.calls == 1

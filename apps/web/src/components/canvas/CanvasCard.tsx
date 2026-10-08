@@ -23,7 +23,7 @@ export function CanvasCard({ item, selected, streaming, onSelect }: CanvasCardPr
       <span className="line-clamp-2 w-full break-words text-sm font-medium leading-5 text-foreground">{item.title}</span>
       {item.summary && <span className="canvas-card-summary line-clamp-2 w-full break-words text-xs font-normal leading-4 text-foreground-muted">{item.summary}</span>}
       <span className="canvas-card-meta mt-auto flex w-full items-center justify-between text-2xs font-normal text-foreground-muted">
-        <span>{item.kind === "conversation" ? `${item.itemIds.length} ${item.itemIds.length === 1 ? "message" : "messages"}` : item.kind}</span>
+        <span>{item.kind === "conversation" ? `${item.itemIds.length} ${item.itemIds.length === 1 ? "message" : "messages"}` : (item.metaLabel ?? item.kind)}</span>
         {streaming && <span role="status">Writing…</span>}
       </span>
     </Button>

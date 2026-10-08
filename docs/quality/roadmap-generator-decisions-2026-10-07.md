@@ -1,6 +1,6 @@
 # Roadmap generator — implementation decision audit
 
-Every recorded ruling is preserved below in execution order, including its cost if wrong. Final review findings will be appended after the independent review.
+Every recorded ruling is preserved below in execution order, including its cost if wrong.
 
 - Ruling: Continue both linked plans on the requested branch with one implementation task at a time; primary checkout is the only sandbox-writable project checkout — cost if wrong: running dev server reflects branch changes.
 
@@ -169,3 +169,62 @@ Every recorded ruling is preserved below in execution order, including its cost 
 - Task 14: Ruling: Keep full source grounding/attribution in audit receipts while omitting duplicated rendering metadata from model tool context — real1M-input-token/minute quota failed under saved call ceilings — cost if wrong: model cannot inspect raw citation/rendering metadata through that result, while supported evidence/IDs remain and complete provenance stays persisted.
 
 - Task 14: Ruling: Bound Gemini2.5 roadmap reasoning guidance and make truncated-output schema failure retryable — finish_reason diagnostics prove output-limit responses with empty JSON, and Google documents output allowance includes thinking — cost if wrong: complex tasks receive less reasoning guidance; provider may overflow the requested thinking budget, saved total ceilings still fence retries. Ordinary chat and other providers retain existing defaults. Primary documentation: https://ai.google.dev/gemini-api/docs/generate-content/thinking
+
+- Final: Ruling: Guard decoded outbound fetch components using existing private-context/identifier checks and require query-bearing URLs to match a recorded source or user-provided link — direct fetch was an unguarded disclosure channel; canonical public paths remain usable for independently discovered instruction — cost if wrong: agents must search/register exact query URLs first, and lexical/identifier protection remains narrower than semantic DLP.
+
+- Final: Ruling: Treat ISO publication dates as public numeric metadata only for URL identifier detection, retaining their tokens in private-copy comparison — phone regex otherwise blocks legitimate dated publisher paths — cost if wrong: an isolated date is allowed externally; private multiword passages and other identifiers are still checked.
+
+- Final: Ruling: Use adapter-owned metaLabel on the shared canvas card, selected-route rationale and one contextual Show alternatives control only for expanded visible choices — preserves domain-neutral renderer and clean approved presentation while making workload selection visible — cost if wrong: revealing alternatives is global for expanded choices rather than per-choice, with stable IDs/layout/progress unchanged.
+
+- Final: Ruling: Reviewer did not repeat live research — executor already performed five bounded native evaluations with source/usage/browser evidence, so no extra paid calls are needed — cost if wrong: educational judgments have author rather than independently reproduced native evidence.
+
+- Final: Ruling: Reviewer did not repeat full suites/migrations/build — read-only review checks code, executor owns fresh complete gates after its fix pass — cost if wrong: environmental behavior is established by executor verification rather than reviewer replay.
+
+- Final: Ruling: Existing canonical mypy failures remain explicit baseline — 41 errors/11files versus85/23 baseline, approved new roadmap scope is checked independently — cost if wrong: older provider/semantic/router modules need separate type cleanup.
+
+- Final: Ruling: Docker runtime deployment remains unverified — user requested local Native implementation, migrations are verified in isolatedPostgreSQL and startup documented, no container deployment requested — cost if wrong: container-specific integration requires deployment verification later.
+
+- Final: Ruling: Keep existing learning profile/time-budget refinement deferral — this approved slice refines curriculum structure/resources/effort within saved profile rather than silently mutating scheduling inputs — cost if wrong: changing duration/hours/level requires a new roadmap or future explicit profile editing.
+
+- Final: Ruling: Semantic/paraphrased DLP remains outside the direct-copy guard guarantee — prompts/private data go to the configured model, tool boundary blocks identifiers/verbatim private contexts and constrained query URLs — cost if wrong: paraphrased or novel encodings cannot be treated as fully prevented disclosure.
+
+- Final: Ruling: Keep bounded deleted-card coordinate retention — retaining positions proves collapse/expand/reload stability, no ordinary-use failure found — cost if wrong: long structural churn may reach the saved coordinate cap and require future pruning.
+
+## Independent review
+
+# Independent whole-branch review
+
+Reviewer: fresh gpt-6-astra, read-only, b0600ad..ff79312. No child agents or Git/file changes. Verdict: With fixes. No Critical or Minor findings.
+
+Strengths: database-time leases and fencing, atomic publication, saved bounded usage, selected actionable workload/prerequisites, immutable curriculum with independent history, DNS-pinned public source fetching and redirect checks.
+
+Four Important findings:
+1. ProgressService.record_check retains ORM identities across inference; stale ownership and inactive accounts can pass post-call authorization. Recheck fresh authority before persisting a knowledge check.
+2. fetch_source has no equivalent to search_web's private-copy boundary. Decode/check URL components before transport, constrain model-derived destinations using source/user-reference provenance where practical.
+3. TutorService.read_session requires write permission although GET/session/archived-history routes allow readers. Separate reads from mutation authorization and preserve learner ownership.
+4. Curriculum canvas projects chosen and unselected alternatives identically. Preserve recommendation/rationale and reveal other routes separately.
+
+Declined to judge:
+- Fresh live provider research: inspected recorded evidence, no new external calls.
+- Full suites/migrations/build: inspected recorded evidence, did not rerun mutating gates during read-only review.
+- Existing canonical mypy failures: documented baseline, not new findings.
+- Docker runtime deployment: documented unverified and not exercised.
+- Learning profile/time-budget refinement: explicitly deferred by existing ledger; limits schedule refinement.
+- Semantic/paraphrased DLP: outside direct-copy guard guarantee; private-fetch finding concerns its missing direct-copy channel.
+- Deleted-card coordinate accumulation: documented bounded-retention tradeoff; no ordinary-use failure established.
+
+The executor's reproducers, fixes and final gates are recorded in progress.md and the durable decision/quality audits. No second review is requested; meaningful RED→GREEN regressions and complete verification close this one fix pass.
+
+## Fix verification
+
+- Final: fixed stale assessment authority — test_assessment_rechecks_changed_authority_after_provider_await ownership/deactivation RED→GREEN; identities expire before post-inference write authorization and activeUserrefresh. FullPython430/430, UI333/333, shared16/16.
+
+- Final: fixed private fetch channel — test_fetch_private_url_is_blocked_before_transport (4cases), test_fetch_guard_decodes_deeply_encoded_private_paths and test_model_query_url_requires_registered_source_or_user_link RED→GREEN; zero transport/fetchcharges on rejection, publicdatedURL allowed. FullPython430/430.
+
+- Final: fixed viewer saved/archived history read — test_demoted_viewer_can_read_saved_and_archived_lesson_but_cannot_write RED403→GREEN200; mutationsremain403 and learnerownership preserved. FullPython430/430.
+
+- Final: fixed selected-alternative canvas semantics — projection/renderingRED2→GREEN7, recommendedrationale/Selectedpath distinct, optionalroutes disclosedonlyonrequest, originaltopicIDs/selectedCore unchanged. FullUI333/333, shared16/16.
+
+## Deferred minors
+
+None. Existing global mypy failures, Docker verification and live migration-history reconciliation are documented operational limits; future profile-budget editing and broader DLP are explicit scope rulings above.

@@ -4,6 +4,8 @@ export interface CanvasItem {
   kind: "milestone" | "group" | "topic" | "conversation";
   title: string;
   summary?: string;
+  /** Adapter-owned presentation text; does not change selection or layout. */
+  metaLabel?: string;
   itemIds: string[];
   selectionId: string;
   lane: "spine" | "side";
