@@ -1,4 +1,5 @@
 import asyncio
+import json
 import uuid
 from collections.abc import Awaitable, Callable
 from contextlib import AbstractAsyncContextManager
@@ -14,14 +15,14 @@ from ai_core.base import (
     ToolResult,
 )
 from models.roadmap_job import RoadmapJobReference, RoadmapToolReceipt
-from pydantic import ValidationError
+from pydantic import JsonValue, ValidationError
 from schemas.curriculum import (
     CurriculumCandidate,
     CurriculumSchema,
     LearningProfile,
     RoadmapRequest,
 )
-from schemas.roadmap_job import Claim, JobSnapshot, StageName, StageResult
+from schemas.roadmap_job import Claim, JobError, JobSnapshot, StageName, StageResult
 from services.roadmap.job_repository import JobRepository, JobStateError
 from services.roadmap.prompts import QualityReview, ResearchReview, Understanding, stage_messages
 from services.roadmap.revision_service import identity_review_issues
@@ -36,6 +37,30 @@ RepositoryFactory = Callable[[], AbstractAsyncContextManager[JobRepository]]
 ToolsFactory = Callable[[JobSnapshot, Claim], dict[str, BaseTool]]
 MODEL_RESPONSE_TIMEOUT_SECONDS = 180
 logger = get_logger()
+
+
+def model_tool_content(result: ToolResult) -> str:
+    if result.is_error or result.name not in {"search_web", "fetch_source", "read_reference"}:
+        return result.content
+    try:
+        data = json.loads(result.content)
+    except json.JSONDecodeError:
+        return result.content
+
+    def compact(value: JsonValue) -> JsonValue:
+        if isinstance(value, dict):
+            return {
+                key: compact(child)
+                for key, child in value.items()
+                if key not in {"grounding", "attributionHtml", "attribution_html"}
+            }
+        if isinstance(value, list):
+            return [compact(child) for child in value]
+        return value
+
+    # Full grounding and publisher attribution stay in the immutable tool receipt.
+    # The agent needs source identities/evidence, not repeated rendering metadata.
+    return json.dumps(compact(data), ensure_ascii=False)
 
 
 async def run_tool_cycle(
@@ -76,7 +101,7 @@ async def run_tool_cycle(
                 )
             )
             await save_receipt(call, tool_result)
-            messages.append(ChatMessage.tool(tool_result.content, call.id, call.name))
+            messages.append(ChatMessage.tool(model_tool_content(tool_result), call.id, call.name))
     raise JobStateError("BUDGET_EXHAUSTED", "This run reached its research limit. Start a new run.")
 
 
@@ -178,11 +203,13 @@ class RoadmapStageExecutor:
                 ):
                     raise JobStateError(error.code, error.message, error=error)
 
+        token_limited = False
         for attempt in range(3):
             result = await run_tool_cycle(
                 self.provider, self.config, messages, tools, before_call=before, save_receipt=save
             )
             await self._check(claim)
+            token_limited = token_limited or result.finish_reason == "MAX_TOKENS"
             try:
                 content = result.content.strip()
                 if content.startswith("```json") and content.endswith("```"):
@@ -202,6 +229,16 @@ class RoadmapStageExecutor:
                     issues=errors,
                 )
                 if attempt == 2:
+                    if token_limited:
+                        raise JobStateError(
+                            "MODEL_OUTPUT_LIMIT",
+                            error=JobError(
+                                code="MODEL_OUTPUT_LIMIT",
+                                message="The model response reached its output limit. Retry to continue saved research.",
+                                recoverable=True,
+                                next_action="retry",
+                            ),
+                        ) from None
                     raise JobStateError(
                         "STAGE_OUTPUT_INVALID",
                         "The agent could not produce a valid roadmap. Try a more specific goal.",

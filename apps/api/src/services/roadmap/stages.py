@@ -102,6 +102,10 @@ class RoadmapStageExecutor:
                 temperature=0.2,
                 max_tokens=32768,
                 max_retries=0,
+                metadata={"thinking_budget": 2048}
+                if isinstance(provider, GeminiProvider)
+                and self.settings.DEFAULT_MODEL.startswith("gemini-2.5")
+                else {},
             ),
             self.tools,
             self.repository,

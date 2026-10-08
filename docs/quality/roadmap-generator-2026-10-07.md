@@ -1,7 +1,7 @@
 # Researched roadmap generator — quality verification
 
 Branch: `codex/roadmap-generator`. Implementation through task 13: `772c31b`.
-Release regression fixes: `ea96039`. Verification performed 8 October 2026.
+Release regression fixes: `ea96039`, `1ce4bcb` and the final provider-budget regression commit. Verification performed 8 October 2026.
 Status: final native reruns and independent branch review in progress.
 
 ## Verified behavior
@@ -25,7 +25,7 @@ conversations or progress. Stale structural writes fail with conflict.
 | Gate | Observed result |
 | --- | --- |
 | Full Python suite before obsolete scaffold removal | 415 passed; one Starlette 422 deprecation warning |
-| Full Python suite after all source-quality fixes | 417 passed; one deprecation warning |
+| Full Python suite after source/context/provider fixes | 420 passed; one deprecation warning |
 | Legacy endpoint after scaffold removal | 2 passed |
 | Full frontend suite | 331 passed across 67 files |
 | Shared contracts | 16 passed |
@@ -100,7 +100,11 @@ bounded separately. All learning requests are disposable public QA examples.
   then found overview-only links for Python/embeddings/evaluation: this counts as
   structural success, **not full instructional quality acceptance**. Stronger
   source guidance and article/main extraction are being checked in final fresh
-  run `job_21a2622fd182459ab490b773cd346561`. The earlier outcome is a
+  run `job_b8649ed9dddb4242856ca46c03218fc7`. The preceding run
+  `job_21a2622fd182459ab490b773cd346561` hit an input-token quota, preserved its
+  research on Retry, then encountered empty/truncated model responses and was
+  canceled by the evaluation timer without publication. Observed total usage:
+  48 model calls, 14 searches, 12 fetches, three repairs, 1,131.62 active seconds. The earlier outcome is a
   small RAG assistant with practical experience, not advanced production mastery.
 - Experienced backend developer learning AI: `job_7303c9c46a68432488f06f77d69bc889`
   preserved completed research but a validation repair exceeded the original
@@ -109,7 +113,8 @@ bounded separately. All learning requests are disposable public QA examples.
   completed on the saved job but exhausted its preserved three-repair budget.
   Fresh run `job_ad155bd602124e12a5b666488322362c` completed in 351.1 seconds,
   publishing `ws_9f0c0f3f5cd4`, revision `rev_bbf1e5c590cf43a297c81182b7f43067`.
-  Core minutes 720 within 720 capacity; Python foundations are skipped. Actual
+  25 model calls, five searches, eight fetches, two repairs and 344.09 active
+  seconds. Core minutes 720 within 720 capacity; Python foundations are skipped. Actual
   freeCodeCamp/RAG implementation and Ragas/Evidently evaluation tutorials replace
   overview-only subject lists.
 - Drawing with explicit prior skills: first attempt
@@ -119,6 +124,7 @@ bounded separately. All learning requests are disposable public QA examples.
   Composition now explicitly requires topic prerequisites; schema retries identify
   invalid paths/types without echoing input values. Fresh run `job_711703f1f1c8437f8423932bd3c15307` completed in 196 seconds,
   publishing `ws_fc8cd0334459`, revision `rev_fc734d54b79e44159979b1bea255e12d`.
+  11 model calls, one search, two fetches, no repairs and 190.88 active seconds.
   Nine selected core topics total 480 minutes within 480 capacity; known pencil
   control/shapes/ellipses are skipped, beginning with proportions and measuring.
   The browser displays the same weekly totals and practical still-life outcome.
@@ -206,3 +212,14 @@ not logged.
 
 See the [exhaustive implementation decision audit](roadmap-generator-decisions-2026-10-07.md)
 for every recorded ruling and its trade-off.
+
+Model messages retain source identities and evidence, while full grounding and
+attribution remain in immutable audit receipts. Duplicate rendering metadata is
+omitted from model context after the native quota failure. Gemini 2.5 roadmap
+stages request a 2,048-token thinking budget; the existing 32,768 output allowance
+and saved job ceilings remain unchanged. This is provider guidance, not a hard
+reasoning-token guarantee: [Google documents](https://ai.google.dev/gemini-api/docs/generate-content/thinking)
+that output allowance includes thinking and that thinking budget can vary.
+Ordinary chat and other providers retain their defaults. Exhausted schema retries
+with `MAX_TOKENS` now offer Retry with saved research, rather than forcing a new
+job. Both changes have behavioral regression coverage.

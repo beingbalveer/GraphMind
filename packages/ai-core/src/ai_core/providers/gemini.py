@@ -149,6 +149,9 @@ class GeminiProvider(BaseLLMProvider):
             temperature=cfg.temperature,
             max_output_tokens=cfg.max_tokens,
             tools=gemini_tools,
+            thinking_config=types.ThinkingConfig(thinking_budget=cfg.metadata["thinking_budget"])
+            if "thinking_budget" in cfg.metadata
+            else None,
             http_options=types.HttpOptions(retry_options=types.HttpRetryOptions(attempts=1))
             if cfg.max_retries is not None
             else None,

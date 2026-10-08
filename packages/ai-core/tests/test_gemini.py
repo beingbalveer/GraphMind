@@ -7,6 +7,17 @@ from ai_core.providers.gemini import GeminiProvider
 from google.genai import types
 
 
+def test_explicit_thinking_budget_reserves_response_capacity():
+    provider = GeminiProvider(api_key="fake-gemini-key")
+    limited = provider._build_genai_config(
+        "Return curriculum JSON", ModelConfig(max_tokens=32768, metadata={"thinking_budget": 2048})
+    )
+    assert limited.thinking_config is not None
+    assert limited.thinking_config.thinking_budget == 2048
+    assert limited.max_output_tokens == 32768
+    assert provider._build_genai_config("Ordinary chat", ModelConfig()).thinking_config is None
+
+
 @pytest.mark.asyncio
 async def test_generate_preserves_empty_response_finish_reason():
     provider = GeminiProvider(api_key="fake-gemini-key")

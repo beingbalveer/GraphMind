@@ -75,6 +75,59 @@ async def test_tool_cycle_records_actual_tool_result():
     assert "Practice line drawing" in save.await_args.args[1].content
 
 
+async def test_model_tool_context_omits_duplicate_provider_markup_but_receipt_keeps_it():
+    class GroundedSearch(BaseTool):
+        name, description = "search_web", "Search teaching sources"
+
+        async def execute(self, **kwargs):
+            return {
+                "results": [
+                    {
+                        "title": "Actual lesson",
+                        "url": "https://example.com/lesson",
+                        "snippet": "Measure width and height before drawing.",
+                        "provenance": {
+                            "sourceId": "src_actual",
+                            "supported": True,
+                            "grounding": {"providerMetadata": "x" * 100000},
+                        },
+                    }
+                ],
+                "attributionHtml": "<style>" + "x" * 100000 + "</style>",
+            }
+
+    provider = AsyncMock()
+
+    async def respond(messages, *args, **kwargs):
+        if provider.generate.await_count == 1:
+            return GenerationResult(
+                model_name="test",
+                content="",
+                tool_calls=[ToolCall(id="search-1", name="search_web", arguments={})],
+            )
+        content = messages[-1].content
+        assert len(content) < 1000
+        result = json.loads(content)["results"][0]
+        assert result["provenance"] == {"sourceId": "src_actual", "supported": True}
+        assert "Measure width and height" in result["snippet"]
+        return GenerationResult(model_name="test", content="complete")
+
+    provider.generate.side_effect = respond
+    receipt = AsyncMock()
+    result = await run_tool_cycle(
+        provider,
+        ModelConfig(),
+        [],
+        {"search_web": GroundedSearch()},
+        before_call=AsyncMock(),
+        save_receipt=receipt,
+    )
+    assert result.content == "complete"
+    saved = json.loads(receipt.await_args.args[1].content)
+    assert len(saved["results"][0]["provenance"]["grounding"]["providerMetadata"]) == 100000
+    assert "<style>" in saved["attributionHtml"]
+
+
 async def test_unknown_tool_cannot_execute_graph_mutation():
     provider = AsyncMock()
     provider.generate.side_effect = [
@@ -150,6 +203,21 @@ async def test_question_three_ceiling_returns_actionable_error(executor_setup):
     with pytest.raises(JobStateError) as error:
         await executor.run("understand", job, claim)
     assert error.value.code == "CLARIFICATION_LIMIT"
+
+
+async def test_token_limited_output_can_retry_saved_stage_without_resetting_usage(executor_setup):
+    executor, provider, claim, job, repos = executor_setup
+    provider.generate.return_value = GenerationResult(
+        model_name="test", content="", finish_reason="MAX_TOKENS"
+    )
+    with pytest.raises(JobStateError) as raised:
+        await executor.run("understand", job, claim)
+    assert raised.value.code == "MODEL_OUTPUT_LIMIT"
+    assert raised.value.error.recoverable and raised.value.error.next_action == "retry"
+    async with repos() as repo:
+        snapshot = await repo.read(job.id, job.owner_id)
+    assert snapshot.usage.model_calls == 3
+    assert snapshot.stage == "understand"
 
 
 async def test_model_budget_checked_before_provider(executor_setup):
