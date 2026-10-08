@@ -8,6 +8,7 @@ from schemas.curriculum import (
     LearningProfile,
     RoadmapRequest,
     SourceData,
+    TopicProgressData,
     ValidationReport,
 )
 
@@ -38,6 +39,10 @@ class JobLimits(CurriculumSchema):
 
 
 class JobCheckpoint(CurriculumSchema):
+    workspace_id: str | None = None
+    original_candidate: CurriculumCandidate | None = None
+    study_progress: dict[str, TopicProgressData] = Field(default_factory=dict, max_length=1200)
+    identity_continuity: dict[str, str] = Field(default_factory=dict, max_length=200)
     profile: LearningProfile | None = None
     sources: list[SourceData] = Field(default_factory=list, max_length=600)
     coverage_notes: list[str] = Field(default_factory=list, max_length=100)
@@ -61,6 +66,7 @@ class StageResult(CurriculumSchema):
 
 
 class JobResult(CurriculumSchema):
+    proposal_state: Literal["candidate", "applied", "rejected"] | None = None
     workspace_id: str
     roadmap_id: str
     revision_id: str
@@ -98,6 +104,7 @@ class JobSnapshot(CurriculumSchema):
 
 
 class PublicJobSnapshot(CurriculumSchema):
+    target_workspace_id: str | None = None
     id: str
     operation: JobOperation
     title: str | None

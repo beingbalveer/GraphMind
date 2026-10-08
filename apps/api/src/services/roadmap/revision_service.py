@@ -12,6 +12,7 @@ from models.roadmap import (
     TopicChat,
     TopicProgress,
 )
+from models.roadmap_job import RoadmapJob
 from models.user import User
 from pydantic import ValidationError
 from schemas.curriculum import (
@@ -22,7 +23,14 @@ from schemas.curriculum import (
     TopicProgressData,
     ValidationReport,
 )
-from schemas.roadmap_edit import ArchivedTopic, EditRequest, RevisionSummary
+from schemas.roadmap_edit import (
+    ArchivedTopic,
+    EditRequest,
+    RevisionDiff,
+    RevisionProposalData,
+    RevisionSummary,
+)
+from schemas.roadmap_job import JobCheckpoint, JobSnapshot
 from services.roadmap.curriculum_repository import CurriculumRepository
 from services.roadmap.progress import ProgressService
 from services.roadmap.tutor import TutorService
@@ -243,26 +251,71 @@ class RevisionService:
         history_removal_ack: bool = False,
     ) -> CurriculumView:
         view = await self._view(workspace_id, owner_id)
-        revision = await self.session.get(CurriculumRevision, revision_id)
-        if (
-            revision is None
-            or revision.roadmap_id != view.roadmap_id
-            or revision.status != "candidate"
-        ):
+        roadmap = await self.session.scalar(
+            select(Roadmap)
+            .where(Roadmap.id == view.roadmap_id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+        revision = await self.session.get(CurriculumRevision, revision_id, populate_existing=True)
+        if roadmap is None or revision is None or revision.roadmap_id != view.roadmap_id:
             raise HTTPException(404, "Proposal not found")
-        if revision.base_revision_id != base_revision_id:
-            raise RevisionConflictError("This proposal is based on an older revision")
+        if roadmap.current_revision_id == revision_id:
+            result = await CurriculumRepository(self.session, owner_id).read(workspace_id)
+            assert result is not None
+            return result
+        if revision.status == "archived":
+            # An applied proposal is subsequently archived by a newer change.
+            # Retrying that successful request never overwrites the newer plan.
+            result = await CurriculumRepository(self.session, owner_id).read(workspace_id)
+            assert result is not None
+            return result
+        if revision.status != "candidate":
+            raise HTTPException(404, "Proposal not found")
+        if (
+            revision.base_revision_id != base_revision_id
+            or roadmap.current_revision_id != base_revision_id
+        ):
+            raise RevisionConflictError(
+                "This proposal is based on an older revision; reload and regenerate"
+            )
         proposed = await CurriculumRepository(self.session, owner_id).read_revision(
             view.roadmap_id, revision_id
         )
-        return await self._save(
-            view,
-            owner_id,
-            proposed.candidate,
-            proposed.sources,
-            base_revision_id,
-            history_removal_ack,
+        report = validate_curriculum(proposed.candidate, view.profile, proposed.sources)
+        if not report.valid:
+            raise RevisionValidationError(report)
+        removed = {i.id for i in view.candidate.items if i.participation == "active"} - {
+            i.id for i in proposed.candidate.items if i.participation == "active"
+        }
+        if not history_removal_ack and await self._has_history(view.roadmap_id, removed):
+            raise HistoryRemovalRequiredError(
+                "These changes archive topics with saved learning history"
+            )
+        await ProgressService(self.session).authorize(workspace_id, owner_id)
+        previous = await self.session.get(CurriculumRevision, base_revision_id)
+        assert previous is not None
+        previous.status = "archived"
+        revision.status = "active"
+        roadmap.current_revision_id = revision.id
+        proposal_job = await self.session.scalar(
+            select(RoadmapJob).where(
+                RoadmapJob.operation == "refine",
+                RoadmapJob.result["revision_id"].as_string() == revision.id,
+            )
         )
+        if proposal_job is not None and proposal_job.result is not None:
+            from services.roadmap.publication import PublicationService
+
+            await PublicationService(self.session)._associate_references(
+                proposal_job.id, workspace_id
+            )
+            proposal_job.result = {**proposal_job.result, "proposal_state": "applied"}
+        await self.session.flush()
+        result = await CurriculumRepository(self.session, owner_id).read(workspace_id)
+        assert result is not None
+        logger.info("curriculum_proposal_applied", roadmap_id=roadmap.id, revision_id=revision.id)
+        return result
 
     async def restore(
         self,
@@ -409,3 +462,155 @@ class RevisionService:
         )
         await self.session.flush()
         return source
+
+    async def request_refinement(
+        self, workspace_id: str, owner_id: str, instruction: str, base_revision_id: str, key: str
+    ) -> JobSnapshot:
+        from schemas.curriculum import RoadmapRequest
+        from services.roadmap.job_repository import JobRepository
+
+        view = await self._view(workspace_id, owner_id)
+        try:
+            base = await CurriculumRepository(self.session, owner_id).read_revision(
+                view.roadmap_id, base_revision_id
+            )
+        except ValueError:
+            raise HTTPException(404, "Base revision not found") from None
+        request = RoadmapRequest(
+            title=base.candidate.title,
+            prompt=instruction,
+            level=base.profile.level,
+            background=base.profile.background,
+            duration=base.profile.duration,
+            hours_per_week=base.profile.hours_per_week,
+        )
+        jobs = JobRepository(self.session)
+        job = await jobs.create(
+            owner_id, request, key, operation="refine", base_revision_id=base_revision_id
+        )
+        if job.startup_ready:
+            return job
+        if view.revision_id != base_revision_id:
+            raise RevisionConflictError("Roadmap changed; reload before requesting refinement")
+        row = await self.session.get(RoadmapJob, job.id)
+        assert row is not None
+        row.checkpoint = JobCheckpoint(
+            workspace_id=workspace_id,
+            profile=base.profile,
+            candidate=base.candidate,
+            original_candidate=base.candidate,
+            sources=base.sources,
+            study_progress=base.progress,
+        ).model_dump(mode="json")
+        await self.session.flush()
+        return await jobs.start(job.id, owner_id)
+
+    async def proposal(
+        self, workspace_id: str, owner_id: str, revision_id: str
+    ) -> RevisionProposalData:
+        from schemas.roadmap_edit import RevisionProposalData
+
+        current = await self._view(workspace_id, owner_id, write=False)
+        row = await self.session.get(CurriculumRevision, revision_id)
+        if row is None or row.roadmap_id != current.roadmap_id or row.base_revision_id is None:
+            raise HTTPException(404, "Proposal not found")
+        proposed = await CurriculumRepository(self.session, owner_id).read_revision(
+            current.roadmap_id, revision_id
+        )
+        original = await CurriculumRepository(self.session, owner_id).read_revision(
+            current.roadmap_id, row.base_revision_id
+        )
+        diff = compare_revisions(original.candidate, proposed.candidate)
+        completed = [
+            key
+            for key in diff.changed + diff.removed
+            if current.progress.get(key) and current.progress[key].status == "completed"
+        ]
+        own_job = await self.session.scalar(
+            select(RoadmapJob).where(
+                RoadmapJob.owner_id == owner_id,
+                RoadmapJob.operation == "refine",
+                RoadmapJob.result["revision_id"].as_string() == revision_id,
+            )
+        )
+        instruction = str(own_job.request["prompt"]) if own_job is not None else None
+        return RevisionProposalData(
+            instruction=instruction,
+            original=original.candidate,
+            view=proposed,
+            base_revision_id=row.base_revision_id,
+            diff=diff,
+            affected_completed_topics=completed,
+            status=row.status,
+            outdated=row.status == "candidate" and current.revision_id != row.base_revision_id,
+        )
+
+    async def reject_proposal(self, workspace_id: str, owner_id: str, revision_id: str) -> None:
+        view = await self._view(workspace_id, owner_id)
+        roadmap = await self.session.scalar(
+            select(Roadmap).where(Roadmap.id == view.roadmap_id).with_for_update()
+        )
+        row = await self.session.get(CurriculumRevision, revision_id, populate_existing=True)
+        if roadmap is None or row is None or row.roadmap_id != view.roadmap_id:
+            raise HTTPException(404, "Proposal not found")
+        if row.status == "candidate":
+            row.status = "rejected"
+            proposal_job = await self.session.scalar(
+                select(RoadmapJob).where(
+                    RoadmapJob.operation == "refine",
+                    RoadmapJob.result["revision_id"].as_string() == revision_id,
+                )
+            )
+            if proposal_job is not None and proposal_job.result is not None:
+                proposal_job.result = {**proposal_job.result, "proposal_state": "rejected"}
+            await self.session.flush()
+
+
+def compare_revisions(before: CurriculumCandidate, after: CurriculumCandidate) -> RevisionDiff:
+
+    old = {i.id: i for i in before.items if i.participation == "active"}
+    new = {i.id: i for i in after.items if i.participation == "active"}
+    changed = {key for key in old.keys() & new.keys() if old[key] != new[key]}
+    for key in old.keys() & new.keys():
+        if any(
+            [r for r in getattr(before, field) if getattr(r, identity) == key]
+            != [r for r in getattr(after, field) if getattr(r, identity) == key]
+            for field, identity in (
+                ("resources", "topic_id"),
+                ("sessions", "topic_id"),
+                ("choices", "choice_id"),
+            )
+        ):
+            changed.add(key)
+        if [r for r in before.relations if r.target_id == key] != [
+            r for r in after.relations if r.target_id == key
+        ]:
+            changed.add(key)
+    added = sorted(new.keys() - old.keys())
+    removed = sorted(old.keys() - new.keys())
+    return RevisionDiff(
+        added=added,
+        removed=removed,
+        changed=sorted(changed),
+        summary=f"{len(added)} added, {len(changed)} changed, {len(removed)} removed",
+    )
+
+
+def identity_review_issues(
+    before: CurriculumCandidate, after: CurriculumCandidate, continuity: dict[str, str]
+) -> list[str]:
+    original = {i.id: i for i in before.items if i.kind == "topic"}
+    issues = []
+    for item in after.items:
+        old = original.get(item.id)
+        if old is None or item.kind != "topic" or item.participation != "active":
+            continue
+        fields = ("title", "brief", "objectives", "exercise", "format")
+        if (
+            any(getattr(old, field) != getattr(item, field) for field in fields)
+            and len(continuity.get(item.id, "").strip()) < 20
+        ):
+            issues.append(
+                f"Verify concept continuity for reused topic {item.id}; otherwise use a new ID and archive the previous concept."
+            )
+    return issues

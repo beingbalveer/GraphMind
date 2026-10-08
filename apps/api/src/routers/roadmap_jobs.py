@@ -47,6 +47,7 @@ def public_job(job: JobSnapshot) -> PublicJobSnapshot:
         **job.model_dump(
             exclude={"request", "owner_id", "checkpoint", "usage", "limits", "base_revision_id"}
         ),
+        target_workspace_id=job.checkpoint.workspace_id if job.operation == "refine" else None,
         title=job.request.title,
         summary=summaries[job.status],
     )

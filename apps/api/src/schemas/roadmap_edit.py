@@ -1,10 +1,12 @@
 from datetime import datetime
 from typing import Annotated, Literal
 
-from pydantic import Field, model_validator
+from pydantic import Field, field_validator, model_validator
 from schemas.curriculum import (
+    CurriculumCandidate,
     CurriculumItemData,
     CurriculumSchema,
+    CurriculumView,
     ResourceData,
     TopicProgressData,
     TopicSessionData,
@@ -108,3 +110,41 @@ class ArchivedTopic(CurriculumSchema):
 
 class InspectSourceRequest(CurriculumSchema):
     url: str = Field(min_length=1, max_length=2048)
+
+
+class IdentityChange(CurriculumSchema):
+    old_item_id: str
+    new_item_id: str
+    reason: str
+
+
+class RevisionDiff(CurriculumSchema):
+    added: list[str]
+    changed: list[str]
+    removed: list[str]
+    summary: str
+    identity_changes: list[IdentityChange] = Field(default_factory=list)
+
+
+class RefinementRequest(CurriculumSchema):
+    base_revision_id: str
+    instruction: str = Field(min_length=10, max_length=8000)
+
+    @field_validator("instruction")
+    @classmethod
+    def useful_instruction(cls, value: str) -> str:
+        value = value.strip()
+        if len(value) < 10:
+            raise ValueError("Describe the change in at least ten characters")
+        return value
+
+
+class RevisionProposalData(CurriculumSchema):
+    instruction: str | None = Field(default=None, max_length=8000)
+    original: CurriculumCandidate
+    view: "CurriculumView"
+    base_revision_id: str
+    diff: RevisionDiff
+    affected_completed_topics: list[str]
+    status: str
+    outdated: bool

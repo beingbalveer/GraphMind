@@ -74,6 +74,53 @@ def generation_identities(
     ]
 
 
+def refinement_identities(
+    job_id: str, original: CurriculumCandidate, candidate: CurriculumCandidate
+) -> CurriculumCandidate:
+    existing = {item.id for item in original.items}
+    identities = {
+        item.id: item.id
+        if item.id in existing
+        else f"item_{uuid.uuid5(uuid.NAMESPACE_URL, f'graphmind:refine:{job_id}:{item.id}').hex}"
+        for item in candidate.items
+    }
+
+    def mapped(value: str) -> str:
+        return identities.get(value, value)
+
+    return candidate.model_copy(
+        update={
+            "items": [item.model_copy(update={"id": mapped(item.id)}) for item in candidate.items],
+            "relations": [
+                relation.model_copy(
+                    update={
+                        "source_id": mapped(relation.source_id),
+                        "target_id": mapped(relation.target_id),
+                    }
+                )
+                for relation in candidate.relations
+            ],
+            "choices": [
+                choice.model_copy(
+                    update={
+                        "choice_id": mapped(choice.choice_id),
+                        "selected_id": mapped(choice.selected_id),
+                    }
+                )
+                for choice in candidate.choices
+            ],
+            "sessions": [
+                session.model_copy(update={"topic_id": mapped(session.topic_id)})
+                for session in candidate.sessions
+            ],
+            "resources": [
+                resource.model_copy(update={"topic_id": mapped(resource.topic_id)})
+                for resource in candidate.resources
+            ],
+        }
+    )
+
+
 class PublicationService:
     """Owns no commit; result and all workspace rows share the caller's transaction."""
 
@@ -132,6 +179,16 @@ class PublicationService:
                 raise JobStateError(
                     "WORKSPACE_FORBIDDEN", "You no longer have permission to refine this roadmap"
                 )
+            from services.roadmap.revision_service import identity_review_issues
+
+            original = await repository.read_revision(roadmap.id, base.id)
+            if checkpoint.original_candidate != original.candidate or identity_review_issues(
+                original.candidate, candidate, checkpoint.identity_continuity
+            ):
+                raise JobStateError(
+                    "IDENTITY_REVIEW_REQUIRED",
+                    "Verify learning concept identities before publishing this proposal",
+                )
             profile = LearningProfile.model_validate(roadmap.profile)
             old_sources = set(
                 (
@@ -143,6 +200,12 @@ class PublicationService:
             actual = validate_curriculum(candidate, profile, sources)
             if not actual.valid or actual != checkpoint.validation:
                 raise ValueError("UNVALIDATED_PUBLICATION")
+            candidate = refinement_identities(job.id, original.candidate, candidate)
+            actual = validate_curriculum(candidate, profile, sources)
+            if not actual.valid:
+                raise ValueError("UNVALIDATED_PUBLICATION")
+            checkpoint.candidate = candidate
+            checkpoint.validation = actual
             revision_id = await repository.save_revision(
                 roadmap.id, base.id, candidate, sources, actual, "candidate"
             )
@@ -151,6 +214,7 @@ class PublicationService:
                 roadmap_id=roadmap.id,
                 revision_id=revision_id,
                 kind="proposal",
+                proposal_state="candidate",
             )
         else:
             actual = validate_curriculum(candidate, profile, sources)

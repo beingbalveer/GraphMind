@@ -54,12 +54,17 @@ export function JobStatus({
           )}
           <h3 className="font-roadmap-display text-xl">
             {snapshot.status === "completed"
-              ? "Your roadmap is ready"
+              ? snapshot.operation === "refine"
+                ? "Your changes are ready to review"
+                : "Your roadmap is ready"
               : snapshot.status === "failed"
                 ? "Generation needs attention"
                 : snapshot.status === "canceled"
                   ? "Generation canceled"
-                  : stages[snapshot.stage]}
+                  : snapshot.operation === "refine" &&
+                      snapshot.stage === "publish"
+                    ? "Preparing your proposal"
+                    : stages[snapshot.stage]}
           </h3>
         </div>
         <p className="text-sm text-foreground-muted">
@@ -88,12 +93,16 @@ export function JobStatus({
             disabled={busy || snapshot.status === "cancel_requested"}
             onClick={() => void action(onCancel)}
           >
-            Cancel generation
+            {snapshot.operation === "refine"
+              ? "Cancel refinement"
+              : "Cancel generation"}
           </Button>
         )}
         {(snapshot.error?.recoverable || snapshot.status === "canceled") && (
           <Button disabled={busy} onClick={() => void action(onRetry)}>
-            Retry generation
+            {snapshot.operation === "refine"
+              ? "Retry refinement"
+              : "Retry generation"}
           </Button>
         )}
       </div>

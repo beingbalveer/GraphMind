@@ -34,13 +34,16 @@ import {
   attachRoadmapLink,
   createRoadmapJob,
   startRoadmapJob,
+  readRoadmapJob,
 } from "@/lib/roadmapApi";
 import type {
   JobReferenceData,
+  JobSnapshot,
   LearningLevel,
   RoadmapRequest,
 } from "@/lib/roadmapTypes";
 import { buildWorkspaceUrl } from "@/lib/urls";
+import { ResumeRefinement } from "@/components/roadmap/ResumeRefinement";
 import { LegacyRoadmapModal } from "./LegacyRoadmapModal";
 
 interface Props {
@@ -51,11 +54,48 @@ interface Props {
   onJobAccepted?: (id: string) => void;
 }
 export function RoadmapModal(props: Props) {
-  return process.env.NEXT_PUBLIC_ROADMAP_GENERATOR_ENABLED === "true" ? (
-    <RoadmapSetup {...props} />
-  ) : (
-    <LegacyRoadmapModal {...props} />
-  );
+  const [resumed, setResumed] = useState<{
+    id: string;
+    job: JobSnapshot;
+  } | null>(null);
+  useEffect(() => {
+    if (
+      process.env.NEXT_PUBLIC_ROADMAP_GENERATOR_ENABLED !== "true" ||
+      !props.isOpen ||
+      !props.resumeJobId
+    )
+      return;
+    const controller = new AbortController();
+    void (async () => {
+      try {
+        const job = await readRoadmapJob(props.resumeJobId!, controller.signal);
+        if (!controller.signal.aborted && job) setResumed({ id: job.id, job });
+      } catch {
+        /* Saved progress hook provides recovery if this initial read fails. */
+      }
+    })();
+    return () => controller.abort();
+  }, [props.isOpen, props.resumeJobId]);
+
+  if (process.env.NEXT_PUBLIC_ROADMAP_GENERATOR_ENABLED !== "true")
+    return <LegacyRoadmapModal {...props} />;
+  if (
+    props.isOpen &&
+    resumed &&
+    resumed.id === props.resumeJobId &&
+    resumed.job.operation === "refine" &&
+    (resumed.job.targetWorkspaceId || resumed.job.result?.workspaceId)
+  )
+    return (
+      <ResumeRefinement
+        workspaceId={
+          (resumed.job.targetWorkspaceId || resumed.job.result?.workspaceId)!
+        }
+        jobId={resumed.job.id}
+        onClose={props.onClose}
+      />
+    );
+  return <RoadmapSetup {...props} />;
 }
 
 function RoadmapSetup({
@@ -110,6 +150,7 @@ function RoadmapSetup({
   }, [isOpen, resumeJobId]);
   useEffect(() => {
     if (
+      job?.operation === "refine" ||
       job?.status !== "completed" ||
       !job.result ||
       openedResult.current === job.id
@@ -244,6 +285,18 @@ function RoadmapSetup({
     }
   }
   const locked = busy || !!acceptedId;
+  if (
+    isOpen &&
+    job?.operation === "refine" &&
+    (job.targetWorkspaceId || job.result?.workspaceId)
+  )
+    return (
+      <ResumeRefinement
+        workspaceId={(job.targetWorkspaceId || job.result?.workspaceId)!}
+        jobId={job.id}
+        onClose={onClose}
+      />
+    );
   return (
     <Modal
       isOpen={isOpen}

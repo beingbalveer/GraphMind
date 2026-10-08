@@ -174,6 +174,8 @@ async def test_refinement_publishes_proposal_without_replacing_current(
     )
     await curriculum_session.flush()
     await job_repo.start(job.id, job_owner)
+    for result in scripted_executor.results.values():
+        result.checkpoint.original_candidate = view.candidate
     for stage in ["understand", "research", "compose", "personalize", "validate"]:
         claim = await job_repo.claim("worker", clock.now())
         await job_repo.checkpoint(claim, stage, scripted_executor.results[stage])

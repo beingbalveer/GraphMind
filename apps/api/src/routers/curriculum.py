@@ -7,6 +7,7 @@ from errors import RoadmapHTTPError
 from fastapi import APIRouter, Depends, Header, HTTPException
 from models.user import User
 from models.workspace import Workspace
+from routers.roadmap_jobs import http_error, public_job
 from schemas.curriculum import (
     CurriculumSchema,
     CurriculumView,
@@ -20,11 +21,14 @@ from schemas.roadmap_edit import (
     ArchivedTopic,
     EditRequest,
     InspectSourceRequest,
+    RefinementRequest,
+    RevisionProposalData,
     RevisionRequest,
     RevisionSummary,
 )
-from schemas.roadmap_job import JobError
+from schemas.roadmap_job import JobError, PublicJobSnapshot
 from services.roadmap.curriculum_repository import CurriculumRepository
+from services.roadmap.job_repository import JobStateError
 from services.roadmap.progress import ProgressService
 from services.roadmap.revision_service import (
     HistoryRemovalRequiredError,
@@ -146,11 +150,11 @@ def revision_error(error: ValueError) -> RoadmapHTTPError:
         code, status_code = "HISTORY_REMOVAL_ACK_REQUIRED", 409
     else:
         code, status_code = "REVISION_INVALID", 422
-    message = str(error)
+    message = str(error)[:500]
     if isinstance(error, RevisionValidationError) and error.report:
         message = "; ".join(
             issue.message for issue in error.report.issues if issue.severity == "error"
-        )[:2000]
+        )[:500]
     return RoadmapHTTPError(
         status_code, JobError(code=code, message=message, recoverable=True, next_action=action)
     )
@@ -231,3 +235,58 @@ async def inspect_source(
         raise revision_error(error) from None
     await db.commit()
     return result
+
+
+@router.post("/refinements", response_model=PublicJobSnapshot, status_code=202)
+async def request_refinement(
+    workspace_id: str,
+    body: RefinementRequest,
+    db: DB,
+    user: Actor,
+    access: WriteAccess,
+    idempotency_key: Annotated[UUID, Header()],
+) -> PublicJobSnapshot:
+    try:
+        result = await RevisionService(db).request_refinement(
+            workspace_id, user.id, body.instruction, body.base_revision_id, str(idempotency_key)
+        )
+        await db.commit()
+        return public_job(result)
+    except RevisionConflictError as error:
+        raise revision_error(error) from None
+    except JobStateError as error:
+        raise http_error(error) from None
+
+
+@router.get("/revisions/{revision_id}/proposal", response_model=RevisionProposalData)
+async def read_proposal(
+    workspace_id: str, revision_id: str, db: DB, user: Actor, access: Access
+) -> RevisionProposalData:
+    return await RevisionService(db).proposal(workspace_id, user.id, revision_id)
+
+
+@router.post("/revisions/{revision_id}/apply", response_model=CurriculumView)
+async def apply_proposal(
+    workspace_id: str,
+    revision_id: str,
+    body: RevisionRequest,
+    db: DB,
+    user: Actor,
+    access: WriteAccess,
+) -> CurriculumView:
+    try:
+        result = await RevisionService(db).apply(
+            workspace_id, user.id, revision_id, body.base_revision_id, body.history_removal_ack
+        )
+        await db.commit()
+        return result
+    except (RevisionConflictError, HistoryRemovalRequiredError, RevisionValidationError) as error:
+        raise revision_error(error) from None
+
+
+@router.post("/revisions/{revision_id}/reject", status_code=204)
+async def reject_proposal(
+    workspace_id: str, revision_id: str, db: DB, user: Actor, access: WriteAccess
+) -> None:
+    await RevisionService(db).reject_proposal(workspace_id, user.id, revision_id)
+    await db.commit()

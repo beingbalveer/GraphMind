@@ -20,6 +20,8 @@ vi.mock("@/lib/roadmapApi", () => ({
   attachRoadmapLink: vi.fn(),
   startRoadmapJob: vi.fn(),
   generateRoadmap: vi.fn(),
+  readRoadmap: vi.fn(),
+  readRoadmapJob: vi.fn(),
 }));
 vi.mock("@/hooks/useRoadmapJob", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/hooks/useRoadmapJob")>();
@@ -179,4 +181,11 @@ it("opens the completed roadmap workspace while progress is being watched", asyn
   };
   render(<RoadmapModal isOpen resumeJobId="job" onClose={vi.fn()} />);
   await waitFor(() => expect(mock.push).toHaveBeenCalledWith("/w/ws_drawing"));
+});
+
+it("a completed refinement never uses generation's automatic workspace navigation",async()=>{
+ vi.mocked(api.readRoadmap).mockRejectedValue(new Error("Temporary unavailability"));
+ mock.job={...queued,id:"refine",operation:"refine",status:"completed",result:{workspaceId:"existing",revisionId:"proposal",roadmapId:"roadmap",kind:"proposal",proposalState:"candidate"}};
+ render(<RoadmapModal isOpen onClose={vi.fn()} resumeJobId="refine"/>);
+ await waitFor(()=>expect(mock.push).not.toHaveBeenCalled());
 });

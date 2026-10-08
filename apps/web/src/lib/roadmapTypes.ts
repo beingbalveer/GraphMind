@@ -168,12 +168,14 @@ export interface JobError {
   nextAction: "retry" | "new_run" | "answer" | "configure_search";
 }
 export interface JobResult {
+  proposalState?: "candidate" | "applied" | "rejected" | null;
   workspaceId: string;
   roadmapId: string;
   revisionId: string;
   kind: "published" | "proposal";
 }
 export interface JobSnapshot {
+  targetWorkspaceId?: string | null;
   id: string;
   operation: "generate" | "refine";
   title: string | null;
@@ -256,4 +258,26 @@ export interface ArchivedTopic {
   item: CurriculumItemData;
   progress: TopicProgressData;
   sessions: TopicSessionData[];
+}
+
+export interface RevisionDiff {
+  added: string[];
+  changed: string[];
+  removed: string[];
+  summary: string;
+  identityChanges: { oldItemId: string; newItemId: string; reason: string }[];
+}
+export interface RevisionProposalData {
+  instruction?: string | null;
+  original: CurriculumCandidate;
+  view: CurriculumView;
+  baseRevisionId: string;
+  diff: RevisionDiff;
+  affectedCompletedTopics: string[];
+  status: string;
+  outdated: boolean;
+}
+export interface RefinementRequest {
+  baseRevisionId: string;
+  instruction: string;
 }

@@ -1,12 +1,11 @@
 import json
-from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock
 
 import pytest
 from ai_core.base import BaseTool, ChatMessage, GenerationResult, ModelConfig, ToolCall
 from database import get_session_factory
-from services.roadmap.job_repository import JobRepository, JobStateError
-from services.roadmap.orchestrator import RoadmapStageExecutor, run_tool_cycle
+from services.roadmap.job_repository import JobStateError
+from services.roadmap.orchestrator import run_tool_cycle
 
 
 class ReadOnlyTool(BaseTool):
@@ -61,24 +60,6 @@ async def test_unknown_tool_cannot_execute_graph_mutation():
         save_receipt=save,
     )
     assert save.await_args.args[1].is_error
-
-
-@pytest.fixture
-async def executor_setup(worker_job, clock):
-    @asynccontextmanager
-    async def repos():
-        async with get_session_factory()() as session:
-            yield JobRepository(session, clock=clock.now)
-            await session.commit()
-
-    provider = AsyncMock()
-    executor = RoadmapStageExecutor(
-        provider, ModelConfig(model_name="test"), lambda job, claim: {}, repos
-    )
-    async with repos() as repo:
-        claim = await repo.claim("stage-test", clock.now())
-        job = await repo.read(worker_job.id, worker_job.owner_id)
-    return executor, provider, claim, job, repos
 
 
 def answer(value):

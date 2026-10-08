@@ -266,3 +266,29 @@ async def auth_client(worker_job):
         cookies={"access_token": create_access_token(worker_job.owner_id)},
     ) as client:
         yield client
+
+
+@pytest.fixture
+async def executor_setup(worker_job, clock):
+    from contextlib import asynccontextmanager
+    from unittest.mock import AsyncMock
+
+    from ai_core.base import ModelConfig
+    from database import get_session_factory
+    from services.roadmap.job_repository import JobRepository
+    from services.roadmap.orchestrator import RoadmapStageExecutor
+
+    @asynccontextmanager
+    async def repos():
+        async with get_session_factory()() as session:
+            yield JobRepository(session, clock=clock.now)
+            await session.commit()
+
+    provider = AsyncMock()
+    executor = RoadmapStageExecutor(
+        provider, ModelConfig(model_name="test"), lambda job, claim: {}, repos
+    )
+    async with repos() as repo:
+        claim = await repo.claim("stage-test", clock.now())
+        job = await repo.read(worker_job.id, worker_job.owner_id)
+    return executor, provider, claim, job, repos

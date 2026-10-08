@@ -173,3 +173,45 @@ export const inspectRoadmapSource = (workspaceId: string, url: string) =>
     method: "POST",
     body: JSON.stringify({ url }),
   });
+
+import type { RefinementRequest, RevisionProposalData } from "./roadmapTypes";
+export const requestRoadmapRefinement = (
+  workspaceId: string,
+  request: RefinementRequest,
+  key: string,
+) =>
+  apiFetch<JobSnapshot>(`${curriculumPath(workspaceId)}/refinements`, {
+    method: "POST",
+    headers: { "Idempotency-Key": key },
+    body: JSON.stringify(request),
+  });
+export const readRoadmapProposal = (
+  workspaceId: string,
+  revisionId: string,
+  signal?: AbortSignal,
+) =>
+  apiFetch<RevisionProposalData>(
+    `${curriculumPath(workspaceId)}/revisions/${encodeURIComponent(revisionId)}/proposal`,
+    { signal },
+  );
+export const applyRoadmapRevision = (
+  workspaceId: string,
+  revisionId: string,
+  baseRevisionId: string,
+  historyRemovalAck = false,
+) =>
+  apiFetch<CurriculumView>(
+    `${curriculumPath(workspaceId)}/revisions/${encodeURIComponent(revisionId)}/apply`,
+    {
+      method: "POST",
+      body: JSON.stringify({ baseRevisionId, historyRemovalAck }),
+    },
+  );
+export const rejectRoadmapProposal = (
+  workspaceId: string,
+  revisionId: string,
+) =>
+  apiFetch<void>(
+    `${curriculumPath(workspaceId)}/revisions/${encodeURIComponent(revisionId)}/reject`,
+    { method: "POST" },
+  );

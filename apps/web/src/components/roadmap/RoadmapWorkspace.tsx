@@ -6,6 +6,7 @@ import {
   curriculumChildren,
   selectedCoreTopics,
 } from "@/lib/canvas/curriculumProjection";
+import { RefinementModal } from "./RefinementModal";
 import { CapacityWarning } from "./CapacityWarning";
 import { RoadmapActions } from "./RoadmapActions";
 import { RoadmapCanvas } from "./RoadmapCanvas";
@@ -34,6 +35,7 @@ export function RoadmapWorkspace({
 }) {
   const topics = selectedCoreTopics(view);
   const next = topics.find((i) => view.progress[i.id]?.status !== "completed");
+  const [refineOpen, setRefineOpen] = useState(false);
   const [expanded, setExpanded] = useState(() => {
     const ids = new Set<string>();
     let id = next?.id;
@@ -195,6 +197,7 @@ export function RoadmapWorkspace({
         <RoadmapCanvas view={view} onOpenTopic={onOpenTopic} />
         <div className="absolute bottom-4 left-4 max-w-sm">
           <CapacityWarning
+            onRefine={onSaved ? () => setRefineOpen(true) : undefined}
             validation={view.validation}
             onReview={
               onOpenTopic && topics[0]
@@ -207,6 +210,13 @@ export function RoadmapWorkspace({
           <div className="absolute right-4 top-4">
             <RoadmapActions view={view} onSaved={onSaved} onReload={onReload} />
           </div>
+        )}
+        {refineOpen && onSaved && (
+          <RefinementModal
+            view={view}
+            onClose={() => setRefineOpen(false)}
+            onSaved={onSaved}
+          />
         )}
       </div>
     );
@@ -262,6 +272,7 @@ export function RoadmapWorkspace({
         </div>
         <CapacityWarning
           validation={view.validation}
+          onRefine={onSaved ? () => setRefineOpen(true) : undefined}
           onReview={
             onOpenTopic && topics[0]
               ? () => onOpenTopic(topics[0].id)
@@ -319,6 +330,13 @@ export function RoadmapWorkspace({
           </div>
         </CurriculumGroup>
       </div>
+      {refineOpen && onSaved && (
+        <RefinementModal
+          view={view}
+          onClose={() => setRefineOpen(false)}
+          onSaved={onSaved}
+        />
+      )}
     </main>
   );
 }

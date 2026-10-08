@@ -43,7 +43,12 @@ export function RoadmapJobsNotice({
   }, []);
   if (process.env.NEXT_PUBLIC_ROADMAP_GENERATOR_ENABLED !== "true") return null;
   const visible = jobs
-    .filter((job) => job.startupReady && job.status !== "canceled")
+    .filter(
+      (job) =>
+        job.startupReady &&
+        job.status !== "canceled" &&
+        !["applied", "rejected"].includes(job.result?.proposalState ?? ""),
+    )
     .slice(0, 3);
   if (!visible.length && !unavailable) return null;
   return (
@@ -70,7 +75,9 @@ export function RoadmapJobsNotice({
             </p>
             <p className="text-xs text-foreground-muted">
               {job.status === "completed"
-                ? "Ready to learn"
+                ? job.operation === "refine"
+                  ? "Changes ready to review"
+                  : "Ready to learn"
                 : job.status === "awaiting_input"
                   ? "Needs your answer"
                   : job.status === "failed"
@@ -82,12 +89,18 @@ export function RoadmapJobsNotice({
             variant="ghost"
             size="sm"
             onClick={() =>
-              job.status === "completed" && job.result
+              job.status === "completed" &&
+              job.result &&
+              job.operation !== "refine"
                 ? router.push(buildWorkspaceUrl(job.result.workspaceId))
                 : onOpenJob(job.id)
             }
           >
-            {job.status === "completed" ? "Open roadmap" : "View progress"}
+            {job.operation === "refine" && job.status === "completed"
+              ? "Review changes"
+              : job.status === "completed"
+                ? "Open roadmap"
+                : "View progress"}
           </Button>
         </div>
       ))}

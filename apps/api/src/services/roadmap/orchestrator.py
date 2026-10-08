@@ -24,6 +24,7 @@ from schemas.curriculum import (
 from schemas.roadmap_job import Claim, JobSnapshot, StageName, StageResult
 from services.roadmap.job_repository import JobRepository, JobStateError
 from services.roadmap.prompts import QualityReview, ResearchReview, Understanding, stage_messages
+from services.roadmap.revision_service import identity_review_issues
 from services.roadmap.tools import RoadmapTool
 from services.roadmap.validation import validate_curriculum
 from services.roadmap.workload import WorkloadError, normalize_profile, schedule_core
@@ -230,6 +231,17 @@ class RoadmapStageExecutor:
                 )
             assert understood.profile is not None
             inferred = understood.profile
+            if job.operation == "refine":
+                if job.checkpoint.profile is None:
+                    raise JobStateError(
+                        "PROFILE_MISSING", "Refinement needs the original learning profile"
+                    )
+                # The refinement instruction is separate from the original learning goal.
+                # Keep the established time budget; candidate pacing is recomputed below.
+                return StageResult(
+                    checkpoint=job.checkpoint,
+                    summary="Refinement understood within your existing learning goal and study budget",
+                )
             # Optional pacing stays unknown unless the learner supplied it in a clarification.
             values = job.request.model_dump()
             for field in ("duration", "hours_per_week"):
@@ -311,7 +323,21 @@ class RoadmapStageExecutor:
             if report.valid:
                 review = await self._typed(stage, QualityReview, job, claim, tools)
                 issues.extend(review.issues)
-                if review.approved:
+                if job.operation == "refine":
+                    if job.checkpoint.original_candidate is None:
+                        issues.append(
+                            "Refinement must include its original curriculum for identity review"
+                        )
+                    else:
+                        issues.extend(
+                            identity_review_issues(
+                                job.checkpoint.original_candidate,
+                                job.checkpoint.candidate,
+                                review.identity_continuity,
+                            )
+                        )
+                if review.approved and not issues:
+                    job.checkpoint.identity_continuity = review.identity_continuity
                     job.checkpoint.validation = report
                     return StageResult(
                         checkpoint=job.checkpoint,
