@@ -4,7 +4,7 @@ import { createConversationTree } from "@graphmind/shared";
 import { useChatStream } from "../useChatStream";
 afterEach(() => {
   vi.unstubAllGlobals();
-  localStorage.clear();
+  globalThis.localStorage?.clear();
 });
 it("reuses the stored root prompt and the server-owned initial assistant identity", async () => {
   const root = createConversationTree({
