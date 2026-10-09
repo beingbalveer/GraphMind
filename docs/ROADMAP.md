@@ -21,6 +21,11 @@
 
 ### Current delivery: Shared Canvas and Roadmap Generator
 
+- **In verification:** Comprehensive researched topic coverage independent of pacing,
+  resumable lesson batches, and a balanced compact curriculum canvas. Live comparisons
+  against AI engineering, Python and backend references are tracked in
+  [coverage verification](quality/roadmap-coverage-2026-10-08.md).
+
 Approved [design specification](superpowers/specs/2026-10-07-roadmap-generator-design.md)
 and linked [canvas](superpowers/plans/2026-10-07-canvas-redesign.md) /
 [roadmap](superpowers/plans/2026-10-07-roadmap-generator.md) implementation plans.

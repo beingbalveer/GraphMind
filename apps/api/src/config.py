@@ -73,11 +73,11 @@ class Settings(BaseSettings):
     )
     REDIS_URL: Optional[str] = Field(default=None, description="Redis connection string")
 
-    ROADMAP_MAX_MODEL_CALLS: int = Field(default=48, ge=1)
+    ROADMAP_MAX_MODEL_CALLS: int = Field(default=120, ge=1)
     ROADMAP_MAX_SEARCHES: int = Field(default=20, ge=1)
     ROADMAP_MAX_FETCHES: int = Field(default=40, ge=1)
     ROADMAP_MAX_REPAIRS: int = Field(default=3, ge=1)
-    ROADMAP_MAX_ACTIVE_SECONDS: int = Field(default=1200, ge=1)
+    ROADMAP_MAX_ACTIVE_SECONDS: int = Field(default=3600, ge=1)
     ROADMAP_LEASE_SECONDS: int = Field(default=60, ge=2)
     ROADMAP_HEARTBEAT_SECONDS: int = Field(default=15, ge=1)
     ROADMAP_WORKER_SLOTS: int = Field(default=2, ge=1)

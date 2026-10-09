@@ -120,6 +120,8 @@ class ResourceData(CurriculumSchema):
     source_id: str
     order: int = Field(ge=0)
     rationale: str = Field(max_length=2000)
+    evidence_excerpt: str | None = Field(default=None, min_length=80, max_length=500)
+    objective_index: int | None = Field(default=None, ge=0, le=11)
 
 
 class CurriculumCandidate(CurriculumSchema):
@@ -130,7 +132,9 @@ class CurriculumCandidate(CurriculumSchema):
     relations: list[CurriculumRelationData] = Field(default_factory=list, max_length=5000)
     choices: list[ChoiceData] = Field(default_factory=list, max_length=200)
     sessions: list[WeeklySession] = Field(default_factory=list, max_length=10000)
-    resources: list[ResourceData] = Field(default_factory=list, max_length=600)
+    # Active recommendations remain limited to three per topic by validation.
+    # Retained archived lessons also keep their references within the 1200-item bound.
+    resources: list[ResourceData] = Field(default_factory=list, max_length=3600)
 
 
 class ValidationIssue(CurriculumSchema):

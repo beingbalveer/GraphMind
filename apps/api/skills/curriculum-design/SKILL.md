@@ -35,3 +35,10 @@ and evaluation guidance. Prefer a small curated set of strong instructional page
 that can serve several related topics. If coverage is absent, research a suitable
 replacement; do not justify a recommendation by saying that coverage is implied.
 Keep overview-only material as comparison evidence rather than recommended lessons.
+
+Subject coverage is independent of the learning budget. Preserve the complete researched
+coverage inventory as individual actionable topics; budget-limited lessons move to
+further learning with their full briefs and resources. Broad role roadmaps must expose
+concrete subtopics and alternatives comparable to comprehensive public curricula, not
+just a few umbrella headings. Draft hierarchy first, then complete topic lessons in
+saved batches. Never discard a coverage topic during composition or personalization.

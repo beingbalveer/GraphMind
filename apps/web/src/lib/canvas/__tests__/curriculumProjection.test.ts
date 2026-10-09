@@ -13,7 +13,7 @@ it("keeps ordered milestones, topic identity and explicit prerequisites", () => 
   );
   expect(
     graph.items.filter((i) => i.lane === "spine").map((i) => i.id),
-  ).toEqual(["root", "phase1", "phase2"]);
+  ).toEqual(["root", "phase1", "group", "choice", "phase2", "further"]);
   expect(graph.links).toContainEqual(
     expect.objectContaining({
       source: "topic1",
@@ -83,11 +83,23 @@ it("preserves selected choices and further semantics without exposing optional r
   const view = curriculumFixture();
   const expanded = new Set(view.candidate.items.map((i) => i.id));
   const graph = projectCurriculum(view, expanded);
-  expect(graph.items.find((i) => i.id === "chosen")?.metaLabel).toBe("Selected path");
-  expect(graph.items.find((i) => i.id === "choice")?.summary).toBe("Fits your goal");
+  expect(graph.items.find((i) => i.id === "chosen")?.metaLabel).toBe(
+    "Selected path",
+  );
+  expect(graph.items.find((i) => i.id === "choice")?.summary).toBe(
+    "Fits your goal",
+  );
   expect(graph.items.some((i) => i.id === "other")).toBe(false);
-  expect(graph.items.find((i) => i.id === "extra")?.metaLabel).toBe("Further learning");
+  expect(graph.items.find((i) => i.id === "extra")?.metaLabel).toBe(
+    "Further learning",
+  );
   const alternatives = projectCurriculum(view, expanded, true);
-  expect(alternatives.items.find((i) => i.id === "other")?.metaLabel).toBe("Alternative");
-  expect(selectedCoreTopics(view).map((i) => i.id)).toEqual(["topic1", "chosen", "topic2"]);
+  expect(alternatives.items.find((i) => i.id === "other")?.metaLabel).toBe(
+    "Alternative",
+  );
+  expect(selectedCoreTopics(view).map((i) => i.id)).toEqual([
+    "topic1",
+    "chosen",
+    "topic2",
+  ]);
 });

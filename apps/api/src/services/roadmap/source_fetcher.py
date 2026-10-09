@@ -2,6 +2,7 @@
 
 import asyncio
 import ipaddress
+import json
 import re
 import socket
 import zlib
@@ -186,6 +187,8 @@ class EvidenceHTMLParser(HTMLParser):
         self.preformatted = 0
         self.main_depth = 0
         self.article_depth = 0
+        self.script_depth = 0
+        self.script_parts: list[str] = []
 
     def append_text(self, text: str) -> None:
         self.parts.append(text)
@@ -195,8 +198,10 @@ class EvidenceHTMLParser(HTMLParser):
             self.article_parts.append(text)
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
-        if tag in {"script", "style", "noscript", "template", "svg", "iframe"}:
+        if tag in {"script", "style", "noscript", "template", "iframe"}:
             self.hidden += 1
+        if tag == "script":
+            self.script_depth += 1
         if tag == "title":
             self.in_title = True
         if tag == "pre":
@@ -216,14 +221,17 @@ class EvidenceHTMLParser(HTMLParser):
             "br",
             "tr",
             "pre",
+            "text",
         }:
             self.append_text(
                 "\n" + ("#" * int(tag[1]) + " " if tag in {"h1", "h2", "h3", "h4"} else "")
             )
 
     def handle_endtag(self, tag: str) -> None:
-        if tag in {"script", "style", "noscript", "template", "svg", "iframe"}:
+        if tag in {"script", "style", "noscript", "template", "iframe"}:
             self.hidden = max(0, self.hidden - 1)
+        if tag == "script":
+            self.script_depth = max(0, self.script_depth - 1)
         if tag == "title":
             self.in_title = False
         if tag == "pre":
@@ -234,10 +242,43 @@ class EvidenceHTMLParser(HTMLParser):
             self.article_depth = max(0, self.article_depth - 1)
 
     def handle_data(self, data: str) -> None:
+        if self.script_depth:
+            self.script_parts.append(data)
         if self.hidden == 0:
             self.append_text(data if self.preformatted else re.sub(r"\s+", " ", data))
             if self.in_title:
                 self.title_parts.append(data)
+
+    def diagram_labels(self) -> list[str]:
+        """Decode public serialized diagram labels as JSON data; never execute scripts."""
+        labels: dict[str, None] = {}
+        for match in re.finditer(r'\.enqueue\(("(?:[^"\\]|\\.)*")\)', "".join(self.script_parts)):
+            try:
+                pool = json.loads(json.loads(match[1]))
+            except (ValueError, TypeError, RecursionError):
+                continue
+            if not isinstance(pool, list):
+                continue
+            for node in pool:
+                if not isinstance(node, dict):
+                    continue
+                fields = {}
+                for key, value in node.items():
+                    if (
+                        isinstance(key, str)
+                        and key.startswith("_")
+                        and key[1:].isdigit()
+                        and 0 <= int(key[1:]) < len(pool)
+                        and isinstance(value, int)
+                        and 0 <= value < len(pool)
+                    ):
+                        name = pool[int(key[1:])]
+                        if name in ("label", "style"):
+                            fields[name] = pool[value]
+                label = fields.get("label")
+                if "style" in fields and isinstance(label, str) and label.strip():
+                    labels[label.strip()] = None
+        return list(labels)[:2000]
 
 
 class SourceFetcher:
@@ -370,6 +411,7 @@ class SourceFetcher:
         title = urlsplit(final).hostname or "Public source"
         locators: list[str] = []
         limited = False
+        labels: list[str] = []
         if mime == "text/html":
             parser = EvidenceHTMLParser()
             parser.feed(data.decode(encoding or "utf-8", errors="replace"))
@@ -386,6 +428,14 @@ class SourceFetcher:
             evidence = "\n".join(
                 line.rstrip() for line in "".join(parts).splitlines() if line.strip()
             )
+            labels = parser.diagram_labels()
+            if labels:
+                evidence = (
+                    "[Diagram labels — untrusted reference data]\n"
+                    + "\n".join(labels)
+                    + "\n\n"
+                    + evidence
+                )
             title = "".join(parser.title_parts).strip() or title
         else:
             extracted = extract_reference_text(data, mime)
@@ -414,5 +464,6 @@ class SourceFetcher:
                 "locators": [locator for locator in locators],
                 "extractionLimited": limited or evidence_limited,
                 "trust": "untrusted_evidence",
+                "diagramLabels": [label for label in labels],
             },
         )

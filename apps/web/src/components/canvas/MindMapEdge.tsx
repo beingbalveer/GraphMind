@@ -5,6 +5,7 @@ import {
   BaseEdge,
   EdgeProps,
   getBezierPath,
+  getSmoothStepPath,
 } from "@xyflow/react";
 
 export interface MindMapEdgeData {
@@ -12,6 +13,7 @@ export interface MindMapEdgeData {
   highlightedContext?: string;
   isStreaming?: boolean;
   relationKind?: string;
+  simple?: boolean;
 }
 
 export const MindMapEdge = memo(function MindMapEdge({
@@ -30,15 +32,25 @@ export const MindMapEdge = memo(function MindMapEdge({
   const isActive = edgeData.isActiveLineage;
   const isStreaming = edgeData.isStreaming;
 
-  const [edgePath] = getBezierPath({
-    sourceX,
-    sourceY,
-    sourcePosition,
-    targetX,
-    targetY,
-    targetPosition,
-    curvature: 0.25,
-  });
+  const [edgePath] = edgeData.simple
+    ? getSmoothStepPath({
+        sourceX,
+        sourceY,
+        sourcePosition,
+        targetX,
+        targetY,
+        targetPosition,
+        borderRadius: 0,
+      })
+    : getBezierPath({
+        sourceX,
+        sourceY,
+        sourcePosition,
+        targetX,
+        targetY,
+        targetPosition,
+        curvature: 0.25,
+      });
 
   return (
     <>
@@ -52,7 +64,12 @@ export const MindMapEdge = memo(function MindMapEdge({
             ? "var(--border-strong, currentColor)"
             : "var(--canvas-connector, currentColor)",
           strokeWidth: isActive ? 2 : 1.5,
-          strokeDasharray: edgeData.relationKind === "prerequisite" || edgeData.relationKind === "alternative" ? "4,4" : undefined,
+          strokeDasharray:
+            edgeData.relationKind === "prerequisite" ||
+            edgeData.relationKind === "alternative" ||
+            (edgeData.simple && edgeData.relationKind === "containment")
+              ? "4,4"
+              : undefined,
           transition: "stroke 0.2s, stroke-width 0.2s",
         }}
       />

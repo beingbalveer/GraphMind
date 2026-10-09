@@ -75,6 +75,51 @@ async def test_tool_cycle_records_actual_tool_result():
     assert "Practice line drawing" in save.await_args.args[1].content
 
 
+async def test_tool_cycle_applies_updated_research_tool_policy():
+    class SearchTool(BaseTool):
+        name, description = "search_web", "Find sources"
+
+        async def execute(self, **kwargs):
+            return {"results": []}
+
+    class FetchTool(BaseTool):
+        name, description = "fetch_source", "Inspect a source"
+
+        async def execute(self, **kwargs):
+            return {"title": "Instructional guide"}
+
+    provider = AsyncMock()
+    provider.generate.side_effect = [
+        GenerationResult(
+            model_name="test",
+            content="",
+            tool_calls=[ToolCall(id="search", name="search_web", arguments={})],
+        ),
+        GenerationResult(
+            model_name="test",
+            content="",
+            tool_calls=[ToolCall(id="fetch", name="fetch_source", arguments={})],
+        ),
+        GenerationResult(model_name="test", content="complete"),
+    ]
+    policy = AsyncMock(side_effect=[None, {"fetch_source"}, {"fetch_source"}])
+    receipts = AsyncMock()
+    result = await run_tool_cycle(
+        provider,
+        ModelConfig(),
+        [],
+        {"search_web": SearchTool(), "fetch_source": FetchTool()},
+        before_call=AsyncMock(),
+        save_receipt=receipts,
+        tool_policy=policy,
+    )
+    assert result.content == "complete"
+    assert [tool.name for tool in provider.generate.await_args_list[1].kwargs["tools"]] == [
+        "fetch_source"
+    ]
+    assert receipts.await_count == 2
+
+
 async def test_model_tool_context_omits_duplicate_provider_markup_but_receipt_keeps_it():
     class GroundedSearch(BaseTool):
         name, description = "search_web", "Search teaching sources"
@@ -305,11 +350,74 @@ async def test_failed_search_attempt_cannot_masquerade_as_research(
     async with repos() as repo:
         await repo.charge(claim, "search", "failed-search")
     provider.generate.return_value = answer(
-        {"sourceIds": [s.id for s in sources], "coverageNotes": ["Compared curricula"]}
+        {
+            "sourceIds": [s.id for s in sources],
+            "coverageNotes": ["Compared curricula"],
+            "areas": [{"title": "Drawing", "scope": "Core drawing concepts"}],
+        }
     )
     with pytest.raises(JobStateError) as error:
         await executor.run("research", job, claim)
-    assert error.value.code == "RESEARCH_INCOMPLETE"
+    assert error.value.code == "STAGE_OUTPUT_INVALID"
+    assert provider.generate.await_count == 3
+    assert "search_web" in provider.generate.call_args.args[0][-1].content
+
+
+async def test_incomplete_research_gets_actionable_feedback_and_can_research_again(
+    executor_setup, clock, small_profile, sources
+):
+    from models.roadmap_job import RoadmapToolReceipt
+
+    executor, provider, _, _, repos = executor_setup
+    claim, job = await move_to_stage(
+        executor_setup, "research", clock, small_profile, sources=sources
+    )
+    async with repos() as repo:
+        repo.session.add(
+            RoadmapToolReceipt(
+                job_id=job.id,
+                stage="research",
+                operation_key="tool:search_web:successful",
+                result={"data": {}},
+                reservations={},
+            )
+        )
+
+    def review(ids):
+        return answer(
+            {
+                "sourceIds": ids,
+                "coverageNotes": ["Compared actual instructional material"],
+                "areas": [{"title": "Drawing", "scope": "Line control and observation"}],
+            }
+        )
+
+    def respond(messages, *args, **kwargs):
+        if provider.generate.await_count == 1:
+            return review(["s1", "s1"])
+        if provider.generate.await_count == 2:
+            assert "TWO different public instructional URLs" in messages[-1].content
+            return review(["s1", "s2"])
+        else:
+            from services.roadmap.prompts import CoverageTopicBatch
+
+            return answer(
+                CoverageTopicBatch(
+                    coverage_topics=[
+                        {
+                            "id": "t1",
+                            "title": "Line control",
+                            "area": "Drawing",
+                            "sourceIds": ["s1"],
+                        }
+                    ]
+                ).model_dump(mode="json", by_alias=True)
+            )
+
+    provider.generate.side_effect = respond
+    result = await executor.run("research", job, claim)
+    assert result.checkpoint.coverage_topics[0].id == "t1"
+    assert provider.generate.await_count == 3
 
 
 async def test_one_invalid_prerequisite_is_repaired_then_reviewed(
@@ -399,6 +507,7 @@ async def test_drawing_pipeline_with_real_tools_resumes_saved_research(
     from services.skill_service import SkillRegistry
 
     executor, provider, claim, job, repos = executor_setup
+    job.checkpoint.sources = sources
     search = AsyncMock(
         return_value=SearchResponse(
             results=[
@@ -455,25 +564,73 @@ async def test_drawing_pipeline_with_real_tools_resumes_saved_research(
         ToolCall(id=f"fetch-{i}", name="fetch_source", arguments={"url": s.url})
         for i, s in enumerate(sources)
     ]
-    turn = 0
+    tools_returned = False
+    area_calls = []
 
     async def research_response(*args, **kwargs):
-        nonlocal turn
-        turn += 1
-        if turn % 2:
+        nonlocal tools_returned
+        payload = None
+        for message in reversed(args[0]):
+            if getattr(message.role, "value", message.role) != "user":
+                continue
+            try:
+                payload = json.loads(message.content.split("\n", 1)[1])
+                break
+            except (json.JSONDecodeError, IndexError):
+                continue
+        mode = (payload or {}).get("task", {}).get("mode")
+        if mode == "inventory_plan" and not tools_returned:
+            tools_returned = True
             return GenerationResult(model_name="test", content="", tool_calls=calls)
+        if mode == "inventory_plan":
+            from services.roadmap.prompts import ResearchPlan
+
+            return answer(
+                ResearchPlan(
+                    source_ids=[
+                        s.id
+                        for s in holder["context"].checkpoint.sources
+                        if s.url and s.status == "inspected"
+                    ],
+                    coverage_notes=["Compared line control, forms and observation sequences"],
+                    areas=[
+                        {"title": "Foundations", "scope": "Line control"},
+                        {"title": "Observation", "scope": "Forms and observation"},
+                    ],
+                ).model_dump(mode="json", by_alias=True)
+            )
+        assert mode == "inventory_area"
+        index = payload["task"]["areaIndex"]
+        area_calls.append(index)
+        if index == 1 and area_calls.count(1) == 1:
+            raise RuntimeError("Area provider outage")
+        items = [item for item in small_candidate.items if item.kind == "topic"]
+        batch_items = items[:1] if index == 0 else items[1:]
         return answer(
             {
-                "sourceIds": [s.id for s in holder["context"].checkpoint.sources],
-                "coverageNotes": ["Compared line control, forms and observation sequences"],
+                "coverageTopics": [
+                    {
+                        "id": item.id,
+                        "title": item.title,
+                        "area": payload["task"]["area"],
+                        "sourceIds": [holder["context"].checkpoint.sources[0].id],
+                    }
+                    for item in batch_items
+                ],
             }
         )
 
     provider.generate.side_effect = research_response
-    await executor.run("research", job, claim)
+    with pytest.raises(RuntimeError, match="Area provider outage"):
+        await executor.run("research", job, claim)
+    async with repos() as repo:
+        job = await repo.read(job.id, job.owner_id)
+    assert job.checkpoint.coverage_inventory_next_area == 1
+    assert len(job.checkpoint.coverage_topics) == 1
     result = await executor.run(
         "research", job, claim
     )  # Crash before checkpoint: replay durable tool receipts.
+    assert area_calls == [0, 1, 1]
     assert search.await_count == 1 and fetching.await_count == 2
     assert "source-review" in result.checkpoint.loaded_skills
     async with repos() as repo:
@@ -487,11 +644,68 @@ async def test_drawing_pipeline_with_real_tools_resumes_saved_research(
             claim = await repo.claim("stage-test", clock.now())
             job = await repo.read(job.id, job.owner_id)
         provider.generate.side_effect = None
-        provider.generate.return_value = answer(
-            {"approved": True, "issues": []}
-            if stage == "validate"
-            else candidate.model_dump(mode="json", by_alias=True)
-        )
+
+        def respond(messages, *args, **kwargs):
+            data = json.loads(messages[-1].content.split("\n", 1)[1])
+            mode = (data.get("task") or {}).get("mode")
+            if mode == "evidence_review":
+                return answer(
+                    {
+                        "verdicts": [
+                            {
+                                "checkId": c["checkId"],
+                                "approved": True,
+                                "reason": "The instructional passage supports the stated drawing objective and exercise.",
+                            }
+                            for c in data["task"]["checks"]
+                        ]
+                    }
+                )
+            if mode == "outline":
+                return answer(
+                    {
+                        "title": candidate.title,
+                        "outcome": candidate.outcome,
+                        "relations": [
+                            r.model_dump(mode="json", by_alias=True)
+                            for r in candidate.relations
+                            if r.kind == "prerequisite"
+                        ],
+                    }
+                )
+            if mode == "topic_details":
+                return answer(
+                    {
+                        "topics": [
+                            item.model_dump(
+                                mode="json",
+                                by_alias=True,
+                                include={
+                                    "id",
+                                    "brief",
+                                    "objectives",
+                                    "exercise",
+                                    "format",
+                                    "estimate_minutes",
+                                },
+                            )
+                            for item in candidate.items
+                            if item.kind == "topic"
+                        ],
+                        "resources": [
+                            r.model_dump(mode="json", by_alias=True) for r in candidate.resources
+                        ],
+                    }
+                )
+            if mode == "core_selection":
+                return answer({"coreTopicIds": ["t1", "t2", "t3"], "outcome": candidate.outcome})
+            return answer(
+                {"approved": True, "issues": []}
+                if stage == "validate"
+                else candidate.model_dump(mode="json", by_alias=True)
+            )
+
+        provider.generate.side_effect = respond
         result = await executor.run(stage, job, claim)
         async with repos() as repo:
             await repo.checkpoint(claim, stage, result)
@@ -506,6 +720,100 @@ async def test_drawing_pipeline_with_real_tools_resumes_saved_research(
         "machine learning" not in item.title.lower() for item in final.checkpoint.candidate.items
     )
     assert any(event.type == "tool_completed" for event in events)
+
+
+async def test_large_compose_resumes_saved_batches_without_repeating_completed_lessons(
+    executor_setup, clock, small_profile, small_candidate, sources
+):
+    from schemas.curriculum import CurriculumItemData, CurriculumRelationData
+    from schemas.roadmap_job import CoverageTopic
+
+    executor, provider, _, _, repos = executor_setup
+    outline = small_candidate.model_copy(deep=True)
+    for index in range(4, 26):
+        outline.items.append(
+            CurriculumItemData(
+                id=f"t{index}", kind="topic", title=f"Drawing technique {index}", order=index
+            )
+        )
+        outline.relations.append(
+            CurriculumRelationData(source_id="phase", target_id=f"t{index}", kind="contains")
+        )
+    inventory = [
+        CoverageTopic(id=i.id, title=i.title, area="Drawing", source_ids=["s1"])
+        for i in outline.items
+        if i.kind == "topic"
+    ]
+    claim, job = await move_to_stage(
+        executor_setup, "compose", clock, small_profile, sources=sources
+    )
+    job.checkpoint.coverage_topics = inventory
+    batches = []
+
+    def respond(messages, *args, **kwargs):
+        task = json.loads(messages[-1].content.split("\n", 1)[1]).get("task") or {}
+        if task.get("mode") == "evidence_review":
+            return answer(
+                {
+                    "verdicts": [
+                        {
+                            "checkId": c["checkId"],
+                            "approved": True,
+                            "reason": "The instructional passage supports the stated drawing objective and exercise.",
+                        }
+                        for c in task["checks"]
+                    ]
+                }
+            )
+        if task.get("mode") == "topic_details":
+            ids = task["topicIds"]
+            batches.append(ids)
+            if len(batches) == 2:
+                raise RuntimeError("Temporary provider outage")
+            return answer(
+                {
+                    "topics": [
+                        {
+                            "id": key,
+                            "brief": "Practice observation",
+                            "objectives": ["Compare proportions"],
+                            "exercise": "Draw and compare two shapes",
+                            "format": "practice",
+                            "estimateMinutes": 30,
+                        }
+                        for key in ids
+                    ],
+                    "resources": [
+                        {
+                            "topicId": key,
+                            "sourceId": "s1",
+                            "order": 0,
+                            "rationale": "Provides sufficient observation exercises for this focused practice",
+                            "evidenceExcerpt": sources[0].evidence,
+                            "objectiveIndex": 0,
+                        }
+                        for key in ids
+                    ],
+                }
+            )
+        return answer({"title": outline.title, "outcome": outline.outcome})
+
+    provider.generate.side_effect = respond
+    with pytest.raises(RuntimeError, match="outage"):
+        await executor.run("compose", job, claim)
+    async with repos() as repo:
+        saved = await repo.read(job.id, job.owner_id)
+    assert len(saved.checkpoint.detailed_topic_ids) == 20
+    result = await executor.run("compose", saved, claim)
+    assert len(batches) == 3
+    assert batches[1] == batches[2]
+    assert not set(batches[0]) & set(batches[2])
+    assert len(result.checkpoint.detailed_topic_ids) == 25
+    assert all(
+        i.brief and i.estimate_minutes
+        for i in result.checkpoint.candidate.items
+        if i.kind == "topic"
+    )
 
 
 async def test_unsure_pacing_stays_flexible_without_invented_deadline(
@@ -564,3 +872,729 @@ async def test_repair_feedback_identifies_topic_and_missing_schema_field(
         "t1" in issue and "brief" in issue and "TOPIC_INCOMPLETE" in issue
         for issue in data["repairIssues"]
     )
+
+
+async def test_semantic_repair_expands_inventory_without_repeating_completed_lessons(
+    executor_setup, clock, small_profile, small_candidate, sources, monkeypatch
+):
+    from schemas.roadmap_job import CoverageTopic
+    from services.roadmap.prompts import CoverageRepair, OutlinePlan, TopicBatch
+
+    executor, _, _, _, _ = executor_setup
+    claim, job = await move_to_stage(
+        executor_setup, "compose", clock, small_profile, sources=sources
+    )
+    job.checkpoint.candidate = small_candidate
+    job.checkpoint.composition_started = True
+    job.checkpoint.coverage_topics = [
+        CoverageTopic(id=i.id, title=i.title, area="Drawing", source_ids=["s1"])
+        for i in small_candidate.items
+        if i.kind == "topic"
+    ]
+    job.checkpoint.detailed_topic_ids = ["t1", "t2", "t3"]
+    calls = []
+
+    async def typed(stage, schema, *args, **kwargs):
+        calls.append(kwargs["task"])
+        if schema is CoverageRepair:
+            return CoverageRepair(
+                coverage_topics=[
+                    *job.checkpoint.coverage_topics,
+                    CoverageTopic(id="t4", title="Perspective", area="Drawing", source_ids=["s1"]),
+                ]
+            )
+        if schema is OutlinePlan:
+            return OutlinePlan(title=small_candidate.title, outcome=small_candidate.outcome)
+        assert schema is TopicBatch
+        assert kwargs["task"]["topicIds"] == ["t4"]
+        return TopicBatch(
+            topics=[
+                {
+                    "id": "t4",
+                    "brief": "Practice perspective",
+                    "objectives": ["Draw a vanishing point"],
+                    "exercise": "Draw a street",
+                    "format": "practice",
+                    "estimateMinutes": 30,
+                }
+            ],
+            resources=[
+                {
+                    "topicId": "t4",
+                    "sourceId": "s1",
+                    "order": 0,
+                    "rationale": "Useful practice exercises on drawing perspective.",
+                    "evidenceExcerpt": sources[0].evidence,
+                    "objectiveIndex": 0,
+                }
+            ],
+        )
+
+    monkeypatch.setattr(executor, "_typed", typed)
+    result = await executor._compose(job, claim, {}, repair=["Missing perspective lesson"])
+    assert calls[0]["mode"] == "inventory_repair"
+    assert next(i for i in result.items if i.id == "t1").brief == small_candidate.items[2].brief
+    assert {i.id for i in result.items if i.kind == "topic"} == {"t1", "t2", "t3", "t4"}
+    assert set(job.checkpoint.detailed_topic_ids) == {"t1", "t2", "t3", "t4"}
+
+
+async def test_interrupted_validation_repair_outline_keeps_completed_topic_ids(
+    executor_setup, clock, small_profile, small_candidate, sources, monkeypatch
+):
+    from schemas.roadmap_job import CoverageTopic
+    from services.roadmap.prompts import OutlinePlan
+
+    executor, _, _, _, _ = executor_setup
+    claim, job = await move_to_stage(
+        executor_setup, "compose", clock, small_profile, sources=sources
+    )
+    job.checkpoint.candidate = small_candidate
+    job.checkpoint.coverage_topics = [
+        CoverageTopic(id=item.id, title=item.title, area="Drawing", source_ids=["s1"])
+        for item in small_candidate.items
+        if item.kind == "topic"
+    ]
+    job.checkpoint.detailed_topic_ids = ["t1", "t2"]
+    job.checkpoint.validation_repair_active = True
+    job.checkpoint.validation_repair_phase = "compose"
+
+    async def typed(stage, schema, *args, **kwargs):
+        assert schema is OutlinePlan
+        raise RuntimeError("Outline provider outage")
+
+    monkeypatch.setattr(executor, "_typed", typed)
+    with pytest.raises(RuntimeError, match="Outline provider outage"):
+        await executor._compose(job, claim, {})
+    assert job.checkpoint.detailed_topic_ids == ["t1", "t2"]
+
+
+async def test_tool_proposal_topic_handles_are_resolved_and_returned_consistently():
+    class ProposalTool(BaseTool):
+        name, description = "calculate_workload", "Calculate proposed effort"
+
+        async def execute(self, **kwargs):
+            assert kwargs["coreTopicIds"] == ["canonical_topic"]
+            return {"selectedTopicIds": kwargs["coreTopicIds"], "coreMinutes": 90}
+
+    provider = AsyncMock()
+    provider.generate.side_effect = [
+        GenerationResult(
+            model_name="test",
+            content="",
+            tool_calls=[
+                ToolCall(
+                    id="proposal",
+                    name="calculate_workload",
+                    arguments={"coreTopicIds": ["topic_1"]},
+                )
+            ],
+        ),
+        GenerationResult(model_name="test", content="{}"),
+    ]
+    messages = []
+    await run_tool_cycle(
+        provider,
+        ModelConfig(),
+        messages,
+        {"calculate_workload": ProposalTool()},
+        before_call=AsyncMock(),
+        save_receipt=AsyncMock(),
+        topic_catalog=lambda: {"canonical_topic": "topic_1"},
+    )
+    assert json.loads(messages[-1].content)["selectedTopicIds"] == ["topic_1"]
+
+
+async def test_refinement_research_uses_handles_for_existing_topics_before_new_inventory(
+    executor_setup, small_candidate
+):
+    from services.roadmap.prompts import ResearchReview, stage_messages
+
+    _, _, _, job, _ = executor_setup
+    job.checkpoint.original_candidate = small_candidate
+    job.checkpoint.coverage_topics = []
+    messages = stage_messages("research", job, ResearchReview, [])
+    data = json.loads(messages[-1].content.split("\n", 1)[1])
+    assert [i["id"] for i in data["originalCandidate"]["items"] if i["kind"] == "topic"] == [
+        "topic_1",
+        "topic_2",
+        "topic_3",
+    ]
+    assert [i.id for i in job.checkpoint.original_candidate.items if i.kind == "topic"] == [
+        "t1",
+        "t2",
+        "t3",
+    ]
+
+
+async def test_negative_evidence_verdict_is_returned_for_repair_without_reviewer_pressure(
+    executor_setup,
+):
+    executor, provider, claim, job, _ = executor_setup
+    provider.generate.return_value = answer(
+        {
+            "verdicts": [
+                {
+                    "checkId": "lesson_0",
+                    "approved": False,
+                    "reason": "The career FAQ does not teach vector indexing or support the implementation exercise.",
+                }
+            ]
+        }
+    )
+    issues = await executor._review_evidence(
+        job,
+        claim,
+        {},
+        [
+            {
+                "checkId": "lesson_0",
+                "kind": "lesson",
+                "topicId": "vector-indexing",
+                "objective": "Build a vector index",
+                "exercise": "Implement and test vector retrieval",
+                "evidenceExcerpt": "AI engineering is a great career choice.",
+            }
+        ],
+        "compose",
+    )
+    assert "career FAQ" in " ".join(issues)
+    assert provider.generate.await_count == 1
+    payload = json.loads(provider.generate.call_args.args[0][-1].content.split("\n", 1)[1])
+    assert set(payload) == {"authorizedRequest", "task", "repairIssues"}
+
+
+async def test_understanding_does_not_start_research_tools(executor_setup, small_profile, sources):
+    executor, provider, claim, job, _ = executor_setup
+    provider.generate.return_value = answer({"profile": small_profile.model_dump(mode="json")})
+    job.checkpoint.sources = sources
+    job.checkpoint.original_candidate = None
+    executor.tools_factory = lambda *_: {"search_web": AsyncMock(spec=BaseTool)}
+    await executor.run("understand", job, claim)
+    assert provider.generate.call_args.kwargs["tools"] is None
+
+
+async def test_research_planning_omits_duplicate_lesson_payloads(executor_setup, small_candidate):
+    from services.roadmap.prompts import ResearchReview, stage_messages
+
+    _, _, _, job, _ = executor_setup
+    job.checkpoint.candidate = small_candidate
+    job.checkpoint.original_candidate = small_candidate.model_copy(deep=True)
+    payload = json.loads(
+        stage_messages("research", job, ResearchReview, [])[-1].content.split("\n", 1)[1]
+    )
+    assert payload["candidate"] is None
+    assert "resources" not in payload["originalCandidate"]
+    assert "exercise" not in payload["originalCandidate"]["items"][2]
+    assert payload["originalCandidate"]["items"][2]["title"] == small_candidate.items[2].title
+
+
+async def test_reference_mapping_batches_cover_each_actual_label_once(
+    executor_setup, sources, monkeypatch
+):
+    from schemas.roadmap_job import CoverageTopic
+    from services.roadmap.prompts import ReferenceBatch, ResearchReview
+
+    executor, _, claim, job, _ = executor_setup
+    job.checkpoint.sources = sources
+    sources[0].provenance["diagramLabels"] = [f"Concept {i}" for i in range(130)]
+    inventory = [
+        CoverageTopic(id=f"concept_{i}", title=f"Concept {i}", area="Area", source_ids=["s1"])
+        for i in range(130)
+    ]
+    review = ResearchReview(
+        source_ids=["s1", "s2"], coverage_notes=["Compared references"], coverage_topics=inventory
+    )
+    batches = []
+
+    async def typed(stage, schema, *args, **kwargs):
+        assert schema is ReferenceBatch
+        labels = kwargs["task"]["labels"]
+        batches.append(labels)
+        output = ReferenceBatch(
+            reference_dispositions=[
+                {
+                    "sourceId": label["sourceId"],
+                    "labelIndex": label["labelIndex"],
+                    "kind": "concept",
+                    "topicIds": [f"concept_{label['labelIndex']}"],
+                    "reason": "Separate actionable competency",
+                }
+                for label in labels
+            ]
+        )
+        assert not kwargs["check_output"](output)
+        return output
+
+    monkeypatch.setattr(executor, "_typed", typed)
+    await executor._complete_reference_map(review, job, claim, {})
+    assert [len(b) for b in batches] == [64, 64, 2]
+    assert {d.label_index for d in review.reference_dispositions} == set(range(130))
+
+
+async def test_unmapped_reference_concept_reaches_inventory_repair(
+    executor_setup, sources, monkeypatch
+):
+    from schemas.roadmap_job import CoverageTopic
+    from services.roadmap.coverage import reference_coverage_issues
+    from services.roadmap.prompts import ReferenceBatch, ResearchReview
+
+    executor, _, claim, job, _ = executor_setup
+    job.checkpoint.sources = sources
+    sources[0].provenance["diagramLabels"] = ["Context Compaction"]
+    review = ResearchReview(
+        source_ids=["s1", "s2"],
+        coverage_notes=["Compared references"],
+        coverage_topics=[CoverageTopic(id="rag", title="RAG", area="AI", source_ids=["s1"])],
+    )
+
+    async def typed(stage, schema, *args, **kwargs):
+        output = ReferenceBatch(
+            reference_dispositions=[
+                {
+                    "sourceId": "s1",
+                    "labelIndex": 0,
+                    "kind": "concept",
+                    "topicIds": [],
+                    "reason": "Missing competency; add Context Compaction",
+                }
+            ]
+        )
+        assert not kwargs["check_output"](output)
+        return output
+
+    monkeypatch.setattr(executor, "_typed", typed)
+    await executor._complete_reference_map(review, job, claim, {})
+    issues = reference_coverage_issues(review, sources)
+    assert any("Context Compaction" in issue for issue in issues)
+
+
+async def test_reference_mapping_can_replace_only_selected_missing_dispositions(
+    executor_setup, sources, monkeypatch
+):
+    from schemas.roadmap_job import CoverageTopic
+    from services.roadmap.prompts import ReferenceBatch, ResearchReview
+
+    executor, _, claim, job, _ = executor_setup
+    job.checkpoint.sources = sources
+    sources[0].provenance["diagramLabels"] = ["Existing Concept", "Missing Concept"]
+    review = ResearchReview(
+        source_ids=["s1", "s2"],
+        coverage_notes=["Compared references"],
+        coverage_topics=[
+            CoverageTopic(id="existing", title="Existing Concept", area="AI", source_ids=["s1"]),
+            CoverageTopic(id="missing", title="Missing Concept", area="AI", source_ids=["s1"]),
+        ],
+        reference_dispositions=[
+            {
+                "sourceId": "s1",
+                "labelIndex": 0,
+                "kind": "concept",
+                "topicIds": ["existing"],
+                "reason": "Covered",
+            },
+            {
+                "sourceId": "s1",
+                "labelIndex": 1,
+                "kind": "concept",
+                "topicIds": [],
+                "reason": "Needs its own lesson",
+            },
+        ],
+    )
+    requested = []
+
+    async def typed(stage, schema, *args, **kwargs):
+        assert schema is ReferenceBatch
+        labels = kwargs["task"]["labels"]
+        requested.extend(label["labelIndex"] for label in labels)
+        return ReferenceBatch(
+            reference_dispositions=[
+                {
+                    "sourceId": label["sourceId"],
+                    "labelIndex": label["labelIndex"],
+                    "kind": "concept",
+                    "topicIds": ["missing"],
+                    "reason": "Covered by the added lesson",
+                }
+                for label in labels
+            ]
+        )
+
+    monkeypatch.setattr(executor, "_typed", typed)
+    await executor._complete_reference_map(review, job, claim, {}, only_labels={("s1", 1)})
+    assert requested == [1]
+    assert [(item.label_index, item.topic_ids) for item in review.reference_dispositions] == [
+        (0, ["existing"]),
+        (1, ["missing"]),
+    ]
+
+
+async def test_full_reference_remap_replaces_and_deduplicates_saved_dispositions(
+    executor_setup, sources, monkeypatch
+):
+    from schemas.roadmap_job import CoverageTopic
+    from services.roadmap.prompts import ReferenceBatch, ResearchReview
+
+    executor, _, claim, job, _ = executor_setup
+    job.checkpoint.sources = sources
+    sources[0].provenance["diagramLabels"] = ["Concept A", "Concept B"]
+    review = ResearchReview(
+        source_ids=["s1", "s2"],
+        coverage_notes=["Compared references"],
+        coverage_topics=[
+            CoverageTopic(id="a", title="Concept A", area="AI", source_ids=["s1"]),
+            CoverageTopic(id="b", title="Concept B", area="AI", source_ids=["s1"]),
+        ],
+        reference_dispositions=[
+            {
+                "sourceId": "s1",
+                "labelIndex": 0,
+                "kind": "concept",
+                "topicIds": ["a"],
+                "reason": "Old mapping",
+            },
+            {
+                "sourceId": "s1",
+                "labelIndex": 0,
+                "kind": "concept",
+                "topicIds": ["a"],
+                "reason": "Duplicated old mapping",
+            },
+        ],
+    )
+
+    async def typed(stage, schema, *args, **kwargs):
+        assert schema is ReferenceBatch
+        return ReferenceBatch(
+            reference_dispositions=[
+                {
+                    "sourceId": label["sourceId"],
+                    "labelIndex": label["labelIndex"],
+                    "kind": "concept",
+                    "topicIds": ["a" if label["labelIndex"] == 0 else "b"],
+                    "reason": "Reviewed mapping",
+                }
+                for label in kwargs["task"]["labels"]
+            ]
+        )
+
+    monkeypatch.setattr(executor, "_typed", typed)
+    await executor._complete_reference_map(review, job, claim, {}, force=True)
+    assert len(review.reference_dispositions) == 2
+    assert [item.topic_ids for item in review.reference_dispositions] == [["a"], ["b"]]
+
+
+async def test_oversized_tool_proposal_gets_bounded_feedback_without_execution():
+    before = AsyncMock()
+    save = AsyncMock()
+    provider = AsyncMock()
+    provider.generate.side_effect = [
+        GenerationResult(
+            model_name="test",
+            content="",
+            tool_calls=[
+                ToolCall(
+                    id=str(i), name="search_web", arguments={"query": "public Python tutorial"}
+                )
+                for i in range(41)
+            ],
+        ),
+        GenerationResult(model_name="test", content='{"done":true}'),
+    ]
+    tool = AsyncMock(spec=BaseTool)
+    messages = [ChatMessage.system("Research public Python instruction")]
+    result = await run_tool_cycle(
+        provider,
+        ModelConfig(model_name="test"),
+        messages,
+        {"search_web": tool},
+        before_call=before,
+        save_receipt=save,
+    )
+    assert result.content == '{"done":true}'
+    tool.run.assert_not_awaited()
+    assert before.await_count == 2
+    assert "at most 8" in messages[-1].content
+
+
+async def test_reference_mapping_resumes_saved_batches_after_provider_outage(
+    executor_setup, sources, monkeypatch
+):
+    from schemas.roadmap_job import CoverageTopic
+    from services.roadmap.prompts import ReferenceBatch, ResearchReview
+
+    executor, _, claim, job, repos = executor_setup
+    job.checkpoint.sources = sources
+    sources[0].provenance["diagramLabels"] = [f"Concept {i}" for i in range(130)]
+    review = ResearchReview(
+        source_ids=["s1", "s2"],
+        coverage_notes=["Compared references"],
+        coverage_topics=[
+            CoverageTopic(id=f"concept_{i}", title=f"Concept {i}", area="Area", source_ids=["s1"])
+            for i in range(130)
+        ],
+    )
+    calls = []
+
+    async def typed(stage, schema, *args, **kwargs):
+        labels = kwargs["task"]["labels"]
+        calls.append([label["labelIndex"] for label in labels])
+        if len(calls) == 3:
+            raise RuntimeError("Temporary provider outage")
+        return ReferenceBatch(
+            reference_dispositions=[
+                {
+                    "sourceId": label["sourceId"],
+                    "labelIndex": label["labelIndex"],
+                    "kind": "concept",
+                    "topicIds": [f"concept_{label['labelIndex']}"],
+                    "reason": "Separate actionable competency",
+                }
+                for label in labels
+            ]
+        )
+
+    monkeypatch.setattr(executor, "_typed", typed)
+    with pytest.raises(RuntimeError, match="provider outage"):
+        await executor._complete_reference_map(review, job, claim, {})
+    async with repos() as repo:
+        saved = await repo.read(job.id, job.owner_id)
+    resumed = ResearchReview.model_validate(saved.checkpoint.pending_inventory_review)
+    assert len(resumed.reference_dispositions) == 128
+    await executor._complete_reference_map(resumed, saved, claim, {})
+    assert calls[-1] == [128, 129]
+    assert len(resumed.reference_dispositions) == 130
+
+
+async def test_validation_repair_resumes_mapping_without_spending_another_repair(
+    executor_setup, clock, small_profile, small_candidate, sources, monkeypatch
+):
+    import inspect
+
+    from schemas.roadmap_job import CoverageTopic
+    from services.roadmap.prompts import (
+        CoverageRepair,
+        EvidenceReview,
+        OutlinePlan,
+        QualityReview,
+        ReferenceBatch,
+    )
+
+    executor, _, _, _, repos = executor_setup
+    claim, job = await move_to_stage(
+        executor_setup, "validate", clock, small_profile, sources=sources
+    )
+    job.checkpoint.candidate = small_candidate
+    sources[0].provenance["diagramLabels"] = [f"Concept {i}" for i in range(130)]
+    job.checkpoint.sources = sources
+    job.checkpoint.coverage_topics = [
+        CoverageTopic(id=i.id, title=i.title, area="Drawing", source_ids=["s1"])
+        for i in small_candidate.items
+        if i.kind == "topic"
+    ]
+    calls = []
+
+    async def typed(stage, schema, *args, **kwargs):
+        if schema is QualityReview:
+            return QualityReview(approved=True)
+        if schema is CoverageRepair:
+            output = CoverageRepair(
+                coverage_topics=[
+                    CoverageTopic(
+                        id=f"concept_{i}", title=f"Concept {i}", area="Drawing", source_ids=["s1"]
+                    )
+                    for i in range(130)
+                ]
+            )
+            issues = kwargs["check_output"](output)
+            if inspect.isawaitable(issues):
+                issues = await issues
+            assert not issues
+            return output
+        if schema is ReferenceBatch:
+            labels = kwargs["task"]["labels"]
+            calls.append([label["labelIndex"] for label in labels])
+            if len(calls) == 3:
+                raise RuntimeError("Mapping provider outage")
+            return ReferenceBatch(
+                reference_dispositions=[
+                    {
+                        "sourceId": label["sourceId"],
+                        "labelIndex": label["labelIndex"],
+                        "kind": "concept",
+                        "topicIds": [f"concept_{label['labelIndex']}"],
+                        "reason": "Separate actionable competency",
+                    }
+                    for label in labels
+                ]
+            )
+        if schema is EvidenceReview:
+            return EvidenceReview(
+                verdicts=[
+                    {
+                        "checkId": c["checkId"],
+                        "approved": True,
+                        "reason": "Distinct concept mapped to its separate lesson.",
+                    }
+                    for c in kwargs["task"]["checks"]
+                ]
+            )
+        assert schema is OutlinePlan
+        raise RuntimeError("Reached outline after resumed mapping")
+
+    monkeypatch.setattr(executor, "_typed", typed)
+    with pytest.raises(RuntimeError, match="Mapping provider outage"):
+        await executor.run("validate", job, claim)
+    async with repos() as repo:
+        saved = await repo.read(job.id, job.owner_id)
+    assert saved.usage.repair_attempts == 1
+    assert saved.checkpoint.pending_inventory_stage == "validate"
+    with pytest.raises(RuntimeError, match="Reached outline"):
+        await executor.run("validate", saved, claim)
+    async with repos() as repo:
+        resumed = await repo.read(job.id, job.owner_id)
+    assert resumed.usage.repair_attempts == 1
+    assert len(calls) == 4 and calls[-1] == [128, 129]
+
+
+async def test_repaired_lessons_resume_without_repeating_inventory_outline_or_first_batch(
+    executor_setup, clock, small_profile, small_candidate, sources, monkeypatch
+):
+    from schemas.curriculum import ResourceData
+    from schemas.roadmap_job import CoverageTopic
+    from services.roadmap.prompts import CoverageRepair, EvidenceReview, OutlinePlan, TopicBatch
+
+    executor, _, _, _, repos = executor_setup
+    claim, job = await move_to_stage(
+        executor_setup, "validate", clock, small_profile, sources=sources
+    )
+    template = next(i for i in small_candidate.items if i.kind == "topic")
+    candidate = small_candidate.model_copy(deep=True)
+    candidate.items = [i for i in candidate.items if i.kind != "topic"] + [
+        template.model_copy(update={"id": f"t{i}", "title": f"Drawing {i}", "brief": ""}, deep=True)
+        for i in range(40)
+    ]
+    candidate.resources = [
+        ResourceData(
+            topic_id=f"t{i}",
+            source_id="s1",
+            order=0,
+            rationale="Teaches drawing proportions",
+            evidence_excerpt=sources[0].evidence,
+            objective_index=0,
+        )
+        for i in range(40)
+    ]
+    candidate.relations = []
+    job.checkpoint.candidate = candidate
+    job.checkpoint.composition_started = True
+    job.checkpoint.coverage_topics = [
+        CoverageTopic(id=f"t{i}", title=f"Drawing {i}", area="Drawing", source_ids=["s1"])
+        for i in range(40)
+    ]
+    job.checkpoint.detailed_topic_ids = [f"t{i}" for i in range(40)]
+    counts = {"inventory": 0, "outline": 0}
+    batches = []
+
+    async def typed(stage, schema, *args, **kwargs):
+        if schema is CoverageRepair:
+            counts["inventory"] += 1
+            return CoverageRepair(
+                coverage_topics=job.checkpoint.coverage_topics,
+                redetail_topic_ids=[f"t{i}" for i in range(40)],
+            )
+        if schema is OutlinePlan:
+            counts["outline"] += 1
+            return OutlinePlan(title=candidate.title, outcome=candidate.outcome)
+        if schema is EvidenceReview:
+            return EvidenceReview(
+                verdicts=[
+                    {
+                        "checkId": c["checkId"],
+                        "approved": True,
+                        "reason": "Teaching passage supports drawing practice.",
+                    }
+                    for c in kwargs["task"]["checks"]
+                ]
+            )
+        assert schema is TopicBatch
+        ids = kwargs["task"]["topicIds"]
+        batches.append(ids)
+        if len(batches) == 2:
+            raise RuntimeError("Lesson provider outage")
+        return TopicBatch(
+            topics=[
+                {
+                    "id": key,
+                    "brief": "Practise careful observation",
+                    "objectives": ["Compare proportions"],
+                    "exercise": "Draw and compare two shapes",
+                    "format": "practice",
+                    "estimateMinutes": 30,
+                }
+                for key in ids
+            ],
+            resources=[
+                {
+                    "topicId": key,
+                    "sourceId": "s1",
+                    "order": 0,
+                    "rationale": "Teaches careful observation and proportion practice",
+                    "evidenceExcerpt": sources[0].evidence,
+                    "objectiveIndex": 0,
+                }
+                for key in ids
+            ],
+        )
+
+    async def personalize(*args):
+        raise RuntimeError("Reached personalization")
+
+    monkeypatch.setattr(executor, "_typed", typed)
+    monkeypatch.setattr(executor, "_personalize", personalize)
+    with pytest.raises(RuntimeError, match="Lesson provider outage"):
+        await executor.run("validate", job, claim)
+    async with repos() as repo:
+        saved = await repo.read(job.id, job.owner_id)
+    assert len(saved.checkpoint.detailed_topic_ids) == 20
+    with pytest.raises(RuntimeError, match="Reached personalization"):
+        await executor.run("validate", saved, claim)
+    assert counts == {"inventory": 1, "outline": 1}
+    assert batches[1] == batches[2] and not set(batches[0]) & set(batches[2])
+
+
+async def test_repair_reservation_and_resume_marker_roll_back_together(executor_setup, monkeypatch):
+    from services.roadmap.job_repository import JobRepository
+
+    executor, _, claim, job, repos = executor_setup
+    checkpoint = job.checkpoint
+    monkeypatch.setattr(
+        JobRepository, "append_event", AsyncMock(side_effect=RuntimeError("Event interruption"))
+    )
+    with pytest.raises(RuntimeError, match="Event interruption"):
+        await executor._begin_validation_repair(job, claim, ["Missing a required competency"])
+    async with repos() as repo:
+        saved = await repo.read(job.id, job.owner_id)
+    assert saved.usage.repair_attempts == 0
+    assert saved.checkpoint.validation_repair_active is False
+    assert job.checkpoint.validation_repair_active is False
+    assert job.checkpoint is checkpoint
+
+
+async def test_validation_repair_marker_keeps_tool_checkpoint_reference(executor_setup):
+    from services.roadmap.tools import RoadmapTool
+
+    executor, _, claim, job, repos = executor_setup
+    checkpoint = job.checkpoint
+    tool = RoadmapTool.__new__(RoadmapTool)
+    tool.context = type("ToolContext", (), {"checkpoint": checkpoint})()
+
+    await executor._begin_validation_repair(job, claim, ["Add missing coverage"])
+    # This is the same assignment performed by the tool-receipt save callback.
+    job.checkpoint = tool.context.checkpoint
+    assert job.checkpoint is checkpoint
+    assert job.checkpoint.validation_repair_active is True
+    assert job.checkpoint.validation_repair_phase == "inventory"
+    async with repos() as repo:
+        saved = await repo.read(job.id, job.owner_id)
+    assert saved.checkpoint.validation_repair_active is True

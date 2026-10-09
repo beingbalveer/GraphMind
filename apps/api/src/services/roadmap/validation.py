@@ -8,6 +8,7 @@ from schemas.curriculum import (
     ValidationIssue,
     ValidationReport,
 )
+from schemas.roadmap_job import MAX_COVERAGE_TOPICS
 from services.roadmap.workload import WorkloadError, selected_core_topics
 
 
@@ -58,8 +59,11 @@ def validate_curriculum(
     roots = [item.id for item in candidate.items if item.kind == "root"]
     if len(roots) != 1:
         issue("ROOT_COUNT", "Use exactly one curriculum root.")
-    if len([i for i in candidate.items if i.kind == "topic" and i.participation == "active"]) > 200:
-        issue("TOPIC_LIMIT", "Keep the curriculum within 200 actionable topics.")
+    if (
+        len([i for i in candidate.items if i.kind == "topic" and i.participation == "active"])
+        > MAX_COVERAGE_TOPICS
+    ):
+        issue("TOPIC_LIMIT", f"Keep the curriculum within {MAX_COVERAGE_TOPICS} actionable topics.")
     if profile.title and candidate.title != profile.title:
         issue("TITLE_CHANGED", "Preserve the learner’s supplied title.")
     children: dict[str, list[str]] = defaultdict(list)

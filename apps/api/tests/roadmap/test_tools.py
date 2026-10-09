@@ -402,3 +402,18 @@ async def test_public_publication_date_is_not_treated_as_a_phone_number(tool_con
         {"url": "https://example.com/2026-01-30/drawing"}
     )
     assert not result.is_error and tool_context.source_fetcher.calls == 1
+
+
+async def test_workload_evaluates_proposed_core_without_mutating_saved_map(tool_context):
+    tools = build_roadmap_tools(tool_context)
+    original = tool_context.checkpoint.candidate.model_dump_json()
+    proposed = await tools["calculate_workload"].run({"coreTopicIds": ["t1"]})
+    assert not proposed.is_error
+    data = json.loads(proposed.content)
+    assert data["coreMinutes"] == 90
+    assert data["selectedTopicIds"] == ["t1"]
+    assert sum(s["minutes"] for s in data["sessions"]) == 90
+    assert tool_context.checkpoint.candidate.model_dump_json() == original
+    assert (await tools["calculate_workload"].run({"coreTopicIds": ["t2"]})).is_error
+    assert (await tools["calculate_workload"].run({"coreTopicIds": ["invented"]})).is_error
+    assert json.loads((await tools["calculate_workload"].run({})).content)["coreMinutes"] == 270

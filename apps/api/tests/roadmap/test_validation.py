@@ -164,7 +164,7 @@ def test_hierarchy_depth_boundary(
         assert "HIERARCHY_DEPTH" in {i.code for i in report.issues}
 
 
-@pytest.mark.parametrize(("count", "valid"), [(200, True), (201, False)])
+@pytest.mark.parametrize(("count", "valid"), [(240, True), (241, False)])
 def test_actionable_topic_limit(
     count: int,
     valid: bool,

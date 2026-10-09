@@ -80,6 +80,43 @@ async def test_preformatted_code_keeps_semantic_indentation():
     assert "def draw():\n    return 'outline'" in source.evidence
 
 
+async def test_svg_diagram_labels_are_readable_evidence_without_script_execution():
+    body = "<main><h1>Curriculum</h1><svg><text>Context engineering</text><text>MCP servers</text><script>secret()</script></svg></main>"
+    source = await fetcher(
+        lambda request: httpx.Response(200, headers={"Content-Type": "text/html"}, text=body)
+    ).fetch("https://example.com/roadmap")
+    assert "Context engineering" in source.evidence
+    assert "MCP servers" in source.evidence
+    assert "secret()" not in source.evidence
+
+
+async def test_public_serialized_diagram_labels_are_extracted_as_untrusted_data():
+    import json
+
+    pool = [
+        "label",
+        "style",
+        "Context engineering",
+        "MCP servers",
+        {"_0": 2, "_1": 6},
+        {"_0": 3, "_1": 6},
+        {},
+    ]
+    payload = json.dumps(json.dumps(pool) + "\n")
+    body = (
+        "<main><h1>Curriculum</h1></main><script>window.stream.enqueue("
+        + payload
+        + ");secret()</script>"
+    )
+    source = await fetcher(
+        lambda request: httpx.Response(200, headers={"Content-Type": "text/html"}, text=body)
+    ).fetch("https://example.com/roadmap")
+    assert "Context engineering" in source.evidence
+    assert "MCP servers" in source.evidence
+    assert "secret()" not in source.evidence
+    assert source.provenance["trust"] == "untrusted_evidence"
+
+
 @pytest.mark.parametrize("tag", ["main", "article"])
 async def test_instructional_content_takes_priority_over_large_navigation(tag):
     body = (

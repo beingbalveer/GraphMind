@@ -119,7 +119,7 @@ async def test_researched_http_journey_survives_restart_and_preserves_learning(
             lambda request: httpx.Response(
                 200,
                 headers={"Content-Type": "text/html"},
-                text=f"<title>{request.url.path}</title><h1>Practice drawing</h1><p>Observe shapes, practice line control and review a still life.</p>",
+                text=f"<title>{request.url.path}</title><h1>Practice drawing</h1><p>Observe shapes, practice line control and review a still life. Compare the proportions of the drawn forms with the observed object, then repeat the exercise with a new object.</p>",
             )
         ),
     )
@@ -146,6 +146,31 @@ async def test_researched_http_journey_survives_restart_and_preserves_learning(
     async def generate(*args, **kwargs):
         nonlocal researched, asked
         stage = context.claim.stage
+        data = {}
+        for message in reversed(args[0]):
+            if getattr(message.role, "value", message.role) != "user":
+                continue
+            try:
+                data = json.loads(message.content.split("\n", 1)[1])
+                break
+            except (json.JSONDecodeError, IndexError):
+                continue
+        if (data.get("task") or {}).get("mode") == "evidence_review":
+            return GenerationResult(
+                model_name="scripted",
+                content=json.dumps(
+                    {
+                        "verdicts": [
+                            {
+                                "checkId": c["checkId"],
+                                "approved": True,
+                                "reason": "The instructional passage supports the stated drawing objective and exercise.",
+                            }
+                            for c in data["task"]["checks"]
+                        ]
+                    }
+                ),
+            )
         if stage == "understand" and not asked:
             asked = True
             output = {
@@ -157,7 +182,7 @@ async def test_researched_http_journey_survives_restart_and_preserves_learning(
             }
         elif stage == "understand":
             output = {"profile": small_profile.model_dump(mode="json", by_alias=True)}
-        elif stage == "research" and not researched:
+        elif stage == "research" and (data.get("task") or {}).get("mode") == "inventory_plan" and not researched:
             researched = True
             return GenerationResult(
                 model_name="scripted",
@@ -180,10 +205,24 @@ async def test_researched_http_journey_survives_restart_and_preserves_learning(
                     ),
                 ],
             )
-        elif stage == "research":
+        elif stage == "research" and (data.get("task") or {}).get("mode") == "inventory_plan":
             output = {
                 "sourceIds": [source.id for source in context.checkpoint.sources if source.url],
                 "coverageNotes": ["Compared observed drawing and deliberate practice."],
+                "areas": [{"title": "Drawing", "scope": "Foundations, observation and practice"}],
+            }
+        elif stage == "research":
+            output = {
+                "coverageTopics": [
+                    {
+                        "id": item.id,
+                        "title": item.title,
+                        "area": "Drawing",
+                        "sourceIds": [context.checkpoint.sources[0].id],
+                    }
+                    for item in small_candidate.items
+                    if item.kind == "topic"
+                ],
             }
         elif stage in ("compose", "personalize"):
             candidate = small_candidate.model_copy(deep=True)
@@ -195,7 +234,46 @@ async def test_researched_http_journey_survives_restart_and_preserves_learning(
             mapping = dict(zip(("s1", "s2"), inspected, strict=True))
             for resource in candidate.resources:
                 resource.source_id = mapping[resource.source_id]
+                resource.evidence_excerpt = next(
+                    s.evidence for s in context.checkpoint.sources if s.id == resource.source_id
+                )
+                resource.objective_index = 0
             output = candidate.model_dump(mode="json", by_alias=True)
+            mode = (data.get("task") or {}).get("mode")
+            if mode == "outline":
+                output = {
+                    "title": candidate.title,
+                    "outcome": candidate.outcome,
+                    "relations": [
+                        r.model_dump(mode="json", by_alias=True)
+                        for r in candidate.relations
+                        if r.kind == "prerequisite"
+                    ],
+                }
+            elif mode == "topic_details":
+                output = {
+                    "topics": [
+                        item.model_dump(
+                            mode="json",
+                            by_alias=True,
+                            include={
+                                "id",
+                                "brief",
+                                "objectives",
+                                "exercise",
+                                "format",
+                                "estimate_minutes",
+                            },
+                        )
+                        for item in candidate.items
+                        if item.kind == "topic"
+                    ],
+                    "resources": [
+                        r.model_dump(mode="json", by_alias=True) for r in candidate.resources
+                    ],
+                }
+            elif mode == "core_selection":
+                output = {"coreTopicIds": ["t1", "t2", "t3"], "outcome": candidate.outcome}
         else:
             output = {"approved": True, "issues": []}
         return GenerationResult(model_name="scripted", content=json.dumps(output))

@@ -68,7 +68,9 @@ export function projectCurriculum(
   const choices = new Map(
     view.candidate.choices.map((choice) => [choice.choiceId, choice]),
   );
-  const selectedIds = new Set(view.candidate.choices.map((choice) => choice.selectedId));
+  const selectedIds = new Set(
+    view.candidate.choices.map((choice) => choice.selectedId),
+  );
   function visit(
     item: CurriculumItemData,
     parentId: string | null,
@@ -76,10 +78,15 @@ export function projectCurriculum(
   ) {
     if (visited.has(item.id) || item.participation !== "active") return;
     visited.add(item.id);
-    const spine = item.kind === "root" || item.kind === "phase";
+    const spine = item.kind !== "topic";
     graph.items.push({
       id: item.id,
-      kind: spine ? "milestone" : item.kind === "topic" ? "topic" : "group",
+      kind:
+        item.kind === "root" || item.kind === "phase"
+          ? "milestone"
+          : item.kind === "topic"
+            ? "topic"
+            : "group",
       title: item.title,
       summary: choices.get(item.id)?.rationale ?? item.brief,
       metaLabel: alternative

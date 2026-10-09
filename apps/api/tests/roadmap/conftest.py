@@ -5,12 +5,18 @@ import pytest
 from schemas.curriculum import CurriculumCandidate, LearningProfile, RoadmapRequest, SourceData
 from services.roadmap.workload import normalize_profile
 
+INSTRUCTIONAL_DRAWING_EVIDENCE = "Practise contour lines by observing the boundary of an object, then compare proportions and draw simple forms from direct observation."
+
 
 @pytest.fixture
 def small_candidate() -> CurriculumCandidate:
-    return CurriculumCandidate.model_validate_json(
+    candidate = CurriculumCandidate.model_validate_json(
         (Path(__file__).parent / "fixtures/intro-curriculum.json").read_text()
     )
+    for resource in candidate.resources:
+        resource.evidence_excerpt = INSTRUCTIONAL_DRAWING_EVIDENCE
+        resource.objective_index = 0
+    return candidate
 
 
 @pytest.fixture
@@ -26,7 +32,7 @@ def sources() -> list[SourceData]:
             status="inspected",
             access="free",
             kind="article",
-            evidence="Practical exercises covering line control, forms and observation.",
+            evidence=INSTRUCTIONAL_DRAWING_EVIDENCE,
             provenance={"testFixture": True},
         )
         for i in (1, 2)

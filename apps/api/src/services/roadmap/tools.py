@@ -5,15 +5,22 @@ import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, cast
 from urllib.parse import unquote_plus, urlsplit
 
 from ai_core.base import BaseTool
 from models.roadmap_job import RoadmapJobReference, RoadmapToolReceipt
 from pydantic import Field, JsonValue
 from schemas.curriculum import CurriculumSchema, LearningProfile, SourceData
-from schemas.roadmap_job import Claim, JobCheckpoint, JobError, ReferenceSection
+from schemas.roadmap_job import (
+    MAX_COVERAGE_TOPICS,
+    Claim,
+    JobCheckpoint,
+    JobError,
+    ReferenceSection,
+)
 from services.file_service import bounded_utf8
+from services.roadmap.coverage import select_core
 from services.roadmap.job_repository import JobRepository, JobStateError
 from services.roadmap.references import ReferenceError, ReferenceService
 from services.roadmap.search import SearchBackend, SearchResponse
@@ -38,6 +45,12 @@ SessionFactory = Callable[[], AsyncSession]
 
 class EmptyArgs(CurriculumSchema):
     pass
+
+
+class WorkloadArgs(CurriculumSchema):
+    core_topic_ids: list[str] | None = Field(
+        default=None, min_length=1, max_length=MAX_COVERAGE_TOPICS
+    )
 
 
 class SearchArgs(CurriculumSchema):
@@ -191,7 +204,7 @@ class RoadmapTool(BaseTool):
             receipt = await repo.get_receipt(self.context.claim, key)
             if receipt is not None:
                 await session.commit()
-                return receipt["data"]
+                return cast(JsonValue, receipt["data"])
             if self.name == "search_web":
                 self.context.search_backend.require_configured()
                 await repo.charge(self.context.claim, "model", key)
@@ -290,7 +303,7 @@ class RoadmapTool(BaseTool):
                         **result.provenance,
                         "sourceId": self._source_id(result.url),
                     }
-            return response.model_dump(mode="json", by_alias=True)
+            return cast(JsonValue, response.model_dump(mode="json", by_alias=True))
         if self.name == "fetch_source":
             existing = self._known_source(arguments["url"])
             source = existing or await self.context.source_fetcher.fetch(arguments["url"])
@@ -317,7 +330,7 @@ class RoadmapTool(BaseTool):
                         },
                     }
                 )
-            return source.model_dump(mode="json", by_alias=True)
+            return cast(JsonValue, source.model_dump(mode="json", by_alias=True))
         if self.name == "read_reference":
             async with self.context.session_factory() as session:
                 await self._authorize(self._repo(session))
@@ -385,9 +398,17 @@ class RoadmapTool(BaseTool):
             raise JobStateError(
                 "CURRICULUM_NOT_READY", "Compose a curriculum before checking its workload"
             )
+        if arguments.get("core_topic_ids") is not None:
+            try:
+                candidate = select_core(
+                    candidate, arguments["core_topic_ids"], candidate.outcome, candidate.assumptions
+                )
+                candidate.sessions = schedule_core(candidate, profile)
+            except ValueError as error:
+                raise JobStateError("INVALID_CORE_PROPOSAL", str(error)) from None
         report = validate_curriculum(candidate, profile, self.context.checkpoint.sources)
         if self.name == "validate_curriculum":
-            return report.model_dump(mode="json", by_alias=True)
+            return cast(JsonValue, report.model_dump(mode="json", by_alias=True))
         return {
             "coreMinutes": report.core_minutes,
             "capacityMinutes": report.capacity_minutes,
@@ -550,12 +571,12 @@ def build_roadmap_tools(context: RoadmapToolContext) -> dict[str, BaseTool]:
             SkillArgs,
         ),
         "validate_curriculum": (
-            "Validate the current server checkpoint, with generated workload strictness",
-            EmptyArgs,
+            "Validate the saved map or a proposed coreTopicIds selection without changing the map",
+            WorkloadArgs,
         ),
         "calculate_workload": (
-            "Calculate selected core effort and weekly sessions from the current checkpoint",
-            EmptyArgs,
+            "Calculate effort and sessions for proposed coreTopicIds without changing the saved map; omit IDs to check the current core",
+            WorkloadArgs,
         ),
     }
     return {

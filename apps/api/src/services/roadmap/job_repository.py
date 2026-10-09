@@ -11,7 +11,7 @@ import structlog
 from config import Settings, get_settings
 from models.roadmap_job import RoadmapJob, RoadmapJobEvent, RoadmapToolReceipt
 from models.user import User
-from pydantic import JsonValue
+from pydantic import JsonValue, ValidationError
 from schemas.curriculum import RoadmapRequest
 from schemas.roadmap_job import (
     Claim,
@@ -483,7 +483,40 @@ class JobRepository:
             return self._snapshot(row)
         if row.status not in ("failed", "canceled"):
             raise JobStateError("INVALID_STATE")
-        if row.status == "failed" and (row.error is None or not row.error.get("recoverable")):
+        resumable_inventory = False
+        if row.error and row.error.get("code") in {
+            "STAGE_OUTPUT_INVALID",
+            "REFERENCE_COVERAGE_INCOMPLETE",
+        }:
+            from services.roadmap.prompts import CoverageRepair, ResearchReview
+
+            checkpoint = JobCheckpoint.model_validate(row.checkpoint)
+            if (
+                row.stage == "research"
+                and checkpoint.coverage_inventory_plan is not None
+                and checkpoint.coverage_inventory_next_area > 0
+            ):
+                resumable_inventory = True
+            pending = checkpoint.pending_inventory_review
+            if (
+                pending
+                and checkpoint.pending_inventory_stage == row.stage
+                and row.stage in {"research", "compose", "validate"}
+            ):
+                try:
+                    if row.stage == "research":
+                        ResearchReview.model_validate(pending)
+                    else:
+                        CoverageRepair.model_validate(pending)
+                except ValidationError:
+                    pass
+                else:
+                    resumable_inventory = True
+        if (
+            row.status == "failed"
+            and (row.error is None or not row.error.get("recoverable"))
+            and not resumable_inventory
+        ):
             raise JobStateError("NOT_RECOVERABLE")
         limits = JobLimits.model_validate(row.limits) if row.limits else saved_limits(self.settings)
         if not self._budget(JobUsage.model_validate(row.usage), limits):

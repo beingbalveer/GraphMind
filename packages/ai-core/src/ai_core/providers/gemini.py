@@ -208,6 +208,18 @@ class GeminiProvider(BaseLLMProvider):
                 finish_reason = (
                     getattr(reason, "value", reason) if isinstance(reason, str) else None
                 )
+                if finish_reason == "MAX_TOKENS":
+                    usage = getattr(response, "usage_metadata", None)
+                    logger.warning(
+                        "Gemini response reached output ceiling",
+                        model=cfg.model_name,
+                        max_output_tokens=cfg.max_tokens,
+                        thinking_budget=cfg.metadata.get("thinking_budget"),
+                        prompt_tokens=getattr(usage, "prompt_token_count", None),
+                        response_tokens=getattr(usage, "candidates_token_count", None),
+                        thought_tokens=getattr(usage, "thoughts_token_count", None),
+                        returned_characters=len(content_text),
+                    )
                 return GenerationResult(
                     content=content_text,
                     role=ChatRole.ASSISTANT,

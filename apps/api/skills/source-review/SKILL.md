@@ -33,8 +33,16 @@ evidence is not research. Return a distinct coverage review before publication.
 Distinguish curriculum research from instructional recommendations. A curriculum
 that lists Python, embeddings or drawing proportions can inform sequencing, but
 that mention does not teach the topic. Find and inspect actual teaching sections
-for the selected core: explanations, exercises, tutorials, implementation examples
+for the entire inventory, including further learning: explanations, exercises, tutorials, implementation examples
 and evaluation guidance. Prefer a small curated set of strong instructional pages
 that can serve several related topics. If coverage is absent, research a suitable
 replacement; do not justify a recommendation by saying that coverage is implied.
 Keep overview-only material as comparison evidence rather than recommended lessons.
+
+Compare actual topic trees from multiple comprehensive curricula before selecting the
+core. Diagram labels and PDFs may contain the curriculum omitted by an HTML FAQ.
+Inventory each concrete concept with supporting recorded sources, distinguish tools
+and alternatives from required competencies, and include the advanced landscape.
+Use the full requested subject, not only the steps needed for a short capstone.
+
+Request at most eight tools in one model response and reuse strong instruction across related topics. Every diagram label is accounted for in bounded comparison batches. Diagram/roadmap sources remain coverage-only even when they contain career FAQ prose; lesson recommendations need exact recorded teaching passages linked to objectives and exercises. Missing competencies must reach inventory repair rather than be matched to unrelated lessons.

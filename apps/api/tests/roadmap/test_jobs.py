@@ -52,13 +52,13 @@ async def test_active_execution_ceiling_stops_heartbeat(
 ) -> None:
     claim = await job_repo.claim("worker", clock.now())
     assert claim
-    for _ in range(79):
+    for _ in range(ready_job.limits.active_seconds // 15 - 1):
         clock.advance(seconds=15)
         assert await job_repo.heartbeat(claim, clock.now())
     clock.advance(seconds=15)
     assert await job_repo.heartbeat(claim, clock.now()) is False
     job = await job_repo.read(ready_job.id, job_owner)
-    assert job.usage.active_seconds == 1200
+    assert job.usage.active_seconds == ready_job.limits.active_seconds
     assert job.status == "failed" and job.error.next_action == "new_run"
 
 
@@ -381,3 +381,154 @@ async def test_claim_announces_actual_started_stage(job_repo, ready_job, job_own
     assert events[-1].type == "stage_started"
     assert events[-1].stage == "understand"
     assert events[-1].summary == "Understanding your goal"
+
+
+async def test_thorough_defaults_allow_reviews_but_stop_at_saved_model_ceiling(
+    job_repo, ready_job, clock
+):
+    claim = await job_repo.claim("review-worker", clock.now())
+    assert claim
+    assert ready_job.limits.model_calls == 120
+    for i in range(120):
+        await job_repo.charge(claim, "model", f"review-call-{i}")
+    with pytest.raises(JobStateError) as error:
+        await job_repo.charge(claim, "model", "over-limit-review")
+    assert error.value.code == "BUDGET_EXHAUSTED"
+
+
+async def test_saved_valid_inventory_can_resume_schema_failure_without_resetting_usage(
+    job_repo, ready_job, job_owner, clock, small_profile, sources
+):
+    from schemas.roadmap_job import CoverageTopic
+    from services.roadmap.prompts import ResearchReview
+
+    claim = await job_repo.claim("research-worker", clock.now())
+    await job_repo.checkpoint(
+        claim,
+        "understand",
+        StageResult(checkpoint=JobCheckpoint(profile=small_profile), summary="Goal understood"),
+    )
+    claim = await job_repo.claim("research-worker", clock.now())
+    row, _ = await job_repo._claimed(claim)
+    checkpoint = JobCheckpoint(
+        profile=small_profile,
+        sources=sources,
+        pending_inventory_stage="research",
+        pending_inventory_review=ResearchReview(
+            source_ids=["s1", "s2"],
+            coverage_notes=["Compared actual sources"],
+            coverage_topics=[CoverageTopic(id="rag", title="RAG", area="AI", source_ids=["s1"])],
+        ).model_dump(mode="json", by_alias=True),
+    )
+    row.checkpoint = checkpoint.model_dump(mode="json")
+    await job_repo.session.flush()
+    await job_repo.charge(claim, "model", "prior-inventory-call")
+    await job_repo.fail(
+        claim,
+        JobError(
+            code="STAGE_OUTPUT_INVALID",
+            message="Legacy saved comparison needs inventory repair",
+            recoverable=False,
+            next_action="new_run",
+        ),
+    )
+    resumed = await job_repo.retry(ready_job.id, job_owner)
+    assert resumed.status == "queued"
+    assert resumed.usage.model_calls == 1
+    assert resumed.limits == ready_job.limits
+
+
+async def test_completed_inventory_areas_make_schema_failure_resumable(
+    job_repo, ready_job, job_owner, clock, small_profile, sources
+):
+    from schemas.roadmap_job import CoverageTopic
+
+    claim = await job_repo.claim("research-worker", clock.now())
+    await job_repo.checkpoint(
+        claim,
+        "understand",
+        StageResult(checkpoint=JobCheckpoint(profile=small_profile), summary="Goal understood"),
+    )
+    claim = await job_repo.claim("research-worker", clock.now())
+    checkpoint = JobCheckpoint(
+        profile=small_profile,
+        sources=sources,
+        coverage_inventory_plan={
+            "sourceIds": ["s1", "s2"],
+            "coverageNotes": ["Compared actual sources"],
+            "areas": [{"title": "RAG", "scope": "Retrieval augmented generation"}],
+        },
+        coverage_inventory_next_area=1,
+        coverage_topics=[
+            CoverageTopic(id="rag", title="RAG foundations", area="RAG", source_ids=["s1"])
+        ],
+    )
+    row, _ = await job_repo._claimed(claim)
+    row.stage = "research"
+    row.checkpoint = checkpoint.model_dump(mode="json", by_alias=True)
+    await job_repo.session.flush()
+    await job_repo.charge(claim, "model", "prior-area-call")
+    await job_repo.fail(
+        claim,
+        JobError(
+            code="STAGE_OUTPUT_INVALID",
+            message="An area needs another correction",
+            recoverable=True,
+            next_action="retry",
+        ),
+    )
+    resumed = await job_repo.retry(ready_job.id, job_owner)
+    assert resumed.status == "queued"
+    assert resumed.usage.model_calls == 1
+    assert resumed.checkpoint.coverage_inventory_next_area == 1
+
+
+async def test_saved_reference_coverage_review_can_resume_legacy_failure(
+    job_repo, ready_job, job_owner, clock, small_profile, sources
+):
+    from schemas.roadmap_job import CoverageTopic
+    from services.roadmap.prompts import ResearchReview
+
+    claim = await job_repo.claim("research-worker", clock.now())
+    await job_repo.checkpoint(
+        claim,
+        "understand",
+        StageResult(checkpoint=JobCheckpoint(profile=small_profile), summary="Goal understood"),
+    )
+    claim = await job_repo.claim("research-worker", clock.now())
+    checkpoint = JobCheckpoint(
+        profile=small_profile,
+        sources=sources,
+        coverage_inventory_plan={
+            "sourceIds": ["s1", "s2"],
+            "coverageNotes": ["Compared actual sources"],
+            "areas": [{"title": "RAG", "scope": "Retrieval augmented generation"}],
+        },
+        coverage_inventory_next_area=1,
+        pending_inventory_stage="research",
+        pending_inventory_review=ResearchReview(
+            source_ids=["s1", "s2"],
+            coverage_notes=["Compared actual sources"],
+            coverage_topics=[CoverageTopic(id="rag", title="RAG", area="RAG", source_ids=["s1"])],
+        ).model_dump(mode="json", by_alias=True),
+    )
+    row, _ = await job_repo._claimed(claim)
+    row.stage = "research"
+    row.checkpoint = checkpoint.model_dump(mode="json", by_alias=True)
+    await job_repo.session.flush()
+    await job_repo.fail(
+        claim,
+        JobError(
+            code="REFERENCE_COVERAGE_INCOMPLETE",
+            message="Saved review needs missing competency repair",
+            recoverable=False,
+            next_action="new_run",
+        ),
+    )
+    restored = JobCheckpoint.model_validate(row.checkpoint)
+    assert row.stage == "research"
+    assert row.error["code"] == "REFERENCE_COVERAGE_INCOMPLETE"
+    assert restored.pending_inventory_stage == "research"
+    resumed = await job_repo.retry(ready_job.id, job_owner)
+    assert resumed.status == "queued"
+    assert resumed.checkpoint.pending_inventory_stage == "research"

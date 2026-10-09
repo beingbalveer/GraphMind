@@ -25,3 +25,12 @@ When weekly hours are missing, provide an ordered curriculum and honest effort e
 without inventing a weekly commitment. With hours but no duration, derive recommended
 flexible study weeks from core effort. Keep session totals equal to topic estimates.
 Recalculate effort, capacity, sequence, and milestones after structural changes.
+
+Select the realistic core from the complete researched subject map. Pacing must not
+delete, merge, archive or replace researched lessons. Keep out-of-budget and known
+topics in detailed further-learning branches; preserve identities and resources.
+
+When selecting a new core, pass the proposed coreTopicIds to calculate_workload.
+The tool evaluates that proposal without changing the saved map. Reduce the proposal
+until its effort fits the known capacity, preserving required prerequisites. Calling
+without IDs checks the current saved core and does not evaluate an imagined change.

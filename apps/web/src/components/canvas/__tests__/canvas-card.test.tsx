@@ -6,11 +6,24 @@ import { CanvasCard } from "../CanvasCard";
 import type { CanvasItem } from "@/lib/canvas/types";
 
 it("keeps a long title accessible and selects the real message using Enter", async () => {
-  const title = "An existing conversation with a long title\nand meaningful context";
-  const item: CanvasItem = { id: "segment:r", kind: "conversation", title, summary: "Preview",
-    itemIds: ["r", "a"], selectionId: "a", lane: "spine", parentId: null, originId: null, order: 0 };
+  const title =
+    "An existing conversation with a long title\nand meaningful context";
+  const item: CanvasItem = {
+    id: "segment:r",
+    kind: "conversation",
+    title,
+    summary: "Preview",
+    itemIds: ["r", "a"],
+    selectionId: "a",
+    lane: "spine",
+    parentId: null,
+    originId: null,
+    order: 0,
+  };
   const onSelect = vi.fn();
-  render(<CanvasCard item={item} selected streaming={false} onSelect={onSelect} />);
+  render(
+    <CanvasCard item={item} selected streaming={false} onSelect={onSelect} />,
+  );
   const card = screen.getByRole("button", { name: title.replace(/\s+/g, " ") });
   expect(card).toHaveAttribute("aria-pressed", "true");
   // React Flow excludes every descendant of .nodrag from its drag gesture.
@@ -18,4 +31,34 @@ it("keeps a long title accessible and selects the real message using Enter", asy
   card.focus();
   await userEvent.keyboard("{Enter}");
   expect(onSelect).toHaveBeenCalledWith("a");
+});
+
+it("keeps compact roadmap boxes readable and exposes detail without filling the canvas with prose", () => {
+  const item: CanvasItem = {
+    id: "topic",
+    kind: "topic",
+    title: "Context engineering",
+    summary: "Manage the context window and memory",
+    metaLabel: "Further learning",
+    itemIds: ["topic"],
+    selectionId: "topic",
+    lane: "side",
+    parentId: "phase",
+    originId: "phase",
+    order: 1,
+  };
+  render(
+    <CanvasCard
+      item={item}
+      compact
+      selected={false}
+      streaming={false}
+      onSelect={vi.fn()}
+    />,
+  );
+  const card = screen.getByRole("button", { name: "Context engineering" });
+  expect(card).toHaveAttribute("aria-description", item.summary);
+  expect(card).toHaveClass("h-16");
+  expect(card).toHaveTextContent("Further learning");
+  expect(screen.queryByText(item.summary!)).not.toBeInTheDocument();
 });
