@@ -497,6 +497,15 @@ class JobRepository:
                 and checkpoint.coverage_inventory_next_area > 0
             ):
                 resumable_inventory = True
+            if (
+                row.stage == "compose"
+                and "research" in checkpoint.completed_stages
+                and bool(checkpoint.coverage_topics)
+            ):
+                # Composition is checkpointed independently from research. Even if
+                # the outline response itself was invalid, retry can resume from the
+                # saved inventory without paying for research again.
+                resumable_inventory = True
             pending = checkpoint.pending_inventory_review
             if (
                 pending

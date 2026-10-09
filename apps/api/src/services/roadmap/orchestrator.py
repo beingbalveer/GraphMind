@@ -43,6 +43,7 @@ from services.roadmap.coverage import (
     outline_issues,
     reference_coverage_issues,
     resource_grounding_issues,
+    sanitize_outline_relations,
     select_core,
 )
 from services.roadmap.job_repository import JobRepository, JobStateError
@@ -617,6 +618,14 @@ class RoadmapStageExecutor:
                 )
         if repair or not checkpoint.composition_started or checkpoint.candidate is None:
             topic_ids = {topic.id for topic in checkpoint.coverage_topics}
+
+            def validate_outline(plan: OutlinePlan) -> list[str]:
+                # Topic identity and hierarchy come from the saved research inventory.
+                # Model-suggested links are optional, so discard unknown, duplicate,
+                # self-referential, and cyclic links instead of failing the roadmap.
+                plan.relations = sanitize_outline_relations(plan.relations, topic_ids)
+                return cast(list[str], outline_issues(plan.relations, topic_ids))
+
             plan = await self._typed(
                 "compose",
                 OutlinePlan,
@@ -625,7 +634,7 @@ class RoadmapStageExecutor:
                 tools,
                 repair=repair,
                 task={"mode": "outline"},
-                check_output=lambda plan: outline_issues(plan.relations, topic_ids),
+                check_output=validate_outline,
             )
             outline = inventory_candidate(
                 job.request.title or plan.title,

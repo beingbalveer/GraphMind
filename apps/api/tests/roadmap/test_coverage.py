@@ -78,6 +78,25 @@ def test_outline_keeps_every_researched_concept_without_asking_model_to_rewrite_
     }
 
 
+def test_outline_relationships_drop_unknown_duplicate_and_cyclic_edges():
+    from schemas.curriculum import CurriculumRelationData
+    from services.roadmap.coverage import sanitize_outline_relations
+
+    relations = [
+        CurriculumRelationData(source_id="a", target_id="b", kind="prerequisite"),
+        CurriculumRelationData(source_id="b", target_id="a", kind="recommended_next"),
+        CurriculumRelationData(source_id="b", target_id="b", kind="prerequisite"),
+        CurriculumRelationData(source_id="a", target_id="missing", kind="prerequisite"),
+        CurriculumRelationData(source_id="a", target_id="b", kind="prerequisite"),
+    ]
+
+    result = sanitize_outline_relations(relations, {"a", "b"})
+
+    assert [(r.source_id, r.target_id, r.kind) for r in result] == [
+        ("a", "b", "prerequisite")
+    ]
+
+
 def test_outline_rejects_order_that_reverses_required_prerequisites():
     from schemas.curriculum import CurriculumRelationData
     from services.roadmap.coverage import outline_issues

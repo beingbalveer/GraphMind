@@ -160,6 +160,29 @@ def outline_issues(relations: list[CurriculumRelationData], topic_ids: set[str])
     return []
 
 
+def sanitize_outline_relations(
+    relations: list[CurriculumRelationData], topic_ids: set[str]
+) -> list[CurriculumRelationData]:
+    """Keep only useful, safe optional links between researched topic handles."""
+    accepted: list[CurriculumRelationData] = []
+    edges: set[tuple[str, str]] = set()
+    for relation in relations:
+        edge = (relation.source_id, relation.target_id)
+        if (
+            relation.kind not in {"prerequisite", "recommended_next"}
+            or relation.source_id not in topic_ids
+            or relation.target_id not in topic_ids
+            or relation.source_id == relation.target_id
+            or edge in edges
+        ):
+            continue
+        if has_cycle(topic_ids, [*edges, edge]):
+            continue
+        accepted.append(relation)
+        edges.add(edge)
+    return accepted
+
+
 def inventory_candidate(
     title: str,
     outcome: str,

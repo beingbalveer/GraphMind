@@ -483,6 +483,48 @@ async def test_completed_inventory_areas_make_schema_failure_resumable(
     assert resumed.checkpoint.coverage_inventory_next_area == 1
 
 
+async def test_researched_inventory_can_resume_outline_schema_failure(
+    job_repo, ready_job, job_owner, clock, small_profile, sources
+):
+    from schemas.roadmap_job import CoverageTopic
+
+    claim = await job_repo.claim("research-worker", clock.now())
+    await job_repo.checkpoint(
+        claim,
+        "understand",
+        StageResult(checkpoint=JobCheckpoint(profile=small_profile), summary="Goal understood"),
+    )
+    claim = await job_repo.claim("research-worker", clock.now())
+    checkpoint = JobCheckpoint(
+        profile=small_profile,
+        sources=sources,
+        coverage_topics=[
+            CoverageTopic(id="retrieval", title="Retrieval", area="RAG", source_ids=["s1"])
+        ],
+        completed_stages=["understand", "research"],
+    )
+    await job_repo.checkpoint(
+        claim, "research", StageResult(checkpoint=checkpoint, summary="Inventory researched")
+    )
+    claim = await job_repo.claim("research-worker", clock.now())
+    await job_repo.charge(claim, "model", "outline-call")
+    await job_repo.fail(
+        claim,
+        JobError(
+            code="STAGE_OUTPUT_INVALID",
+            message="Outline relationships used unrecognized topic handles",
+            recoverable=False,
+            next_action="new_run",
+        ),
+    )
+
+    resumed = await job_repo.retry(ready_job.id, job_owner)
+
+    assert resumed.status == "queued"
+    assert resumed.usage.model_calls == 1
+    assert resumed.checkpoint.coverage_topics == checkpoint.coverage_topics
+
+
 async def test_saved_reference_coverage_review_can_resume_legacy_failure(
     job_repo, ready_job, job_owner, clock, small_profile, sources
 ):
