@@ -109,9 +109,7 @@ async def test_generate_captures_thought_signature_on_first_parallel_call():
             models=SimpleNamespace(generate_content=AsyncMock(return_value=response))
         )
     )
-    result = await provider.generate(
-        "Call the weather tool", ModelConfig(max_retries=0), tools=[]
-    )
+    result = await provider.generate("Call the weather tool", ModelConfig(max_retries=0), tools=[])
     assert result.tool_calls is not None and len(result.tool_calls) == 2
     assert result.tool_calls[0].thought_signature == sig
     assert result.tool_calls[1].thought_signature is None
@@ -149,9 +147,7 @@ def test_to_contents_omits_signature_when_absent() -> None:
     messages = [
         ChatMessage.assistant(
             "",
-            tool_calls=[
-                ToolCall(id="c1", name="get_weather", arguments={"city": "Paris"})
-            ],
+            tool_calls=[ToolCall(id="c1", name="get_weather", arguments={"city": "Paris"})],
         )
     ]
     _, contents = provider._to_genai_contents(messages, system_prompt=None)
