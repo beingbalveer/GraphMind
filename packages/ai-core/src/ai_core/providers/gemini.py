@@ -1,7 +1,7 @@
 import asyncio
 import base64
 import os
-from typing import AsyncIterator, List, Optional, Tuple
+from typing import AsyncIterator, List, Optional, Tuple, cast
 
 import structlog
 from google import genai
@@ -22,6 +22,22 @@ logger = structlog.get_logger()
 
 MAX_RETRIES = 3
 INITIAL_BACKOFF_SECONDS = 1.0
+
+
+def _function_call_parts(
+    response: "types.GenerateContentResponse",
+) -> list["types.Part"]:
+    """Return the ordered model function-call parts from the first candidate.
+
+    ``response.function_calls`` lists calls but loses their ``thought_signature`` (G11).
+    Reading the raw parts lets us recover the signature that Gemini 3 attaches only to the
+    first function call of a parallel batch, so it can be replayed on the next turn.
+    """
+    candidates = getattr(response, "candidates", None)
+    if not candidates:
+        return []
+    parts = getattr(candidates[0].content, "parts", None) or []
+    return [part for part in parts if getattr(part, "function_call", None) is not None]
 
 
 def _is_transient_error(exc: Exception) -> bool:
@@ -85,12 +101,24 @@ class GeminiProvider(BaseLLMProvider):
 
                 if msg.tool_calls and msg.role == ChatRole.ASSISTANT:
                     for tc in msg.tool_calls:
-                        parts.append(
-                            types.Part.from_function_call(
-                                name=tc.name,
-                                args=tc.arguments,
+                        if tc.thought_signature:
+                            # Gemini 3 rejects a replayed assistant function call that
+                            # omits the thought_signature it was originally returned with.
+                            parts.append(
+                                types.Part(
+                                    function_call=types.FunctionCall(
+                                        name=tc.name, args=tc.arguments
+                                    ),
+                                    thought_signature=tc.thought_signature,
+                                )
                             )
-                        )
+                        else:
+                            parts.append(
+                                types.Part.from_function_call(
+                                    name=tc.name,
+                                    args=tc.arguments,
+                                )
+                            )
 
                 if msg.attachments:
                     for att in msg.attachments:
@@ -138,7 +166,7 @@ class GeminiProvider(BaseLLMProvider):
                 types.FunctionDeclaration(
                     name=t.name,
                     description=t.description,
-                    parameters=t.to_json_schema(),
+                    parameters=cast(types.Schema, t.to_json_schema()),
                 )
                 for t in tools
             ]
@@ -148,7 +176,7 @@ class GeminiProvider(BaseLLMProvider):
             system_instruction=system_instruction,
             temperature=cfg.temperature,
             max_output_tokens=cfg.max_tokens,
-            tools=gemini_tools,
+            tools=cast(types.GenerateContentConfigTools, gemini_tools) if gemini_tools else None,
             thinking_config=types.ThinkingConfig(thinking_budget=cfg.metadata["thinking_budget"])
             if "thinking_budget" in cfg.metadata
             else None,
@@ -192,6 +220,15 @@ class GeminiProvider(BaseLLMProvider):
 
                 parsed_tool_calls: Optional[List[ToolCall]] = None
                 if response.function_calls:
+                    # Gemini 3 requires assistant function-call parts to be returned with
+                    # their conversation-trace ``thought_signature`` when the same call
+                    # appears in history on the next turn. The signature is attached only
+                    # to the first function-call part of a parallel batch, so recover it
+                    # from the ordered raw parts and attach it to the matching ToolCall.
+                    signatures = [
+                        getattr(part, "thought_signature", None)
+                        for part in _function_call_parts(response)
+                    ]
                     parsed_tool_calls = []
                     for idx, fc in enumerate(response.function_calls):
                         args = dict(fc.args) if fc.args else {}
@@ -200,6 +237,9 @@ class GeminiProvider(BaseLLMProvider):
                                 id=f"gemini_call_{idx + 1}",
                                 name=fc.name or "",
                                 arguments=args,
+                                thought_signature=(
+                                    signatures[idx] if idx < len(signatures) else None
+                                ),
                             )
                         )
 

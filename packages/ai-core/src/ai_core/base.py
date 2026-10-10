@@ -30,6 +30,10 @@ class ToolCall(BaseModel):
     arguments: Dict[str, Any] = Field(
         default_factory=dict, description="Parsed keyword arguments for the tool"
     )
+    thought_signature: Optional[bytes] = Field(
+        default=None,
+        description="Provider conversation-trace signature (Gemini 3, opaque bytes) required to\n        round-trip a function call in the next turn without a validation error.",
+    )
 
 
 class ToolResult(BaseModel):
