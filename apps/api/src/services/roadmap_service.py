@@ -135,7 +135,29 @@ Requirements:
         resolved_model = request.model or settings.DEFAULT_MODEL
         plan: Optional[RoadmapPlan] = None
 
-        # 1. Attempt LLM generation
+        # 1. Resolve the provider key. Never silently fall through to the
+        #    MockProvider that get_provider() returns when no key is configured
+        #    (mirrors services/roadmap/stages.py configured_provider()).
+        resolved_provider_key = {
+            "gemini": settings.GEMINI_API_KEY or settings.GOOGLE_API_KEY,
+            "google": settings.GEMINI_API_KEY or settings.GOOGLE_API_KEY,
+            "openai": settings.OPENAI_API_KEY,
+            "anthropic": settings.ANTHROPIC_API_KEY,
+            "claude": settings.ANTHROPIC_API_KEY,
+            "deepseek": settings.DEEPSEEK_API_KEY,
+        }.get(resolved_provider)
+        if resolved_provider != "ollama" and not resolved_provider_key:
+            raise RoadmapHTTPError(
+                502,
+                JobError(
+                    code="MODEL_NOT_CONFIGURED",
+                    message="Configure the selected roadmap generation provider and retry.",
+                    recoverable=True,
+                    next_action="retry",
+                ),
+            )
+
+        # 2. Attempt LLM generation
         try:
             api_key = None
             if resolved_provider == "gemini":

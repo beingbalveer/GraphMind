@@ -119,6 +119,12 @@ async def test_legacy_generation_failure_never_returns_generic_fallback(auth_cli
     from types import SimpleNamespace
     from unittest.mock import AsyncMock
 
+    from config import get_settings
+
+    # Configure a key so the provider path is reached; only then should the
+    # mocked provider's runtime failure become GENERATION_UNAVAILABLE (instead
+    # of an unconfigured-provider MODEL_NOT_CONFIGURED detection error).
+    monkeypatch.setattr(get_settings(), "GEMINI_API_KEY", "test-key")
     monkeypatch.setattr(
         "services.roadmap_service.get_provider",
         lambda *args, **kwargs: SimpleNamespace(

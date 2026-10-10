@@ -48,7 +48,6 @@ def test_roadmap_prompt_and_json_parsing() -> None:
     assert plan.topics[1].prerequisites == ["t1"]
 
 
-
 @pytest.mark.asyncio
 async def test_roadmap_generate_endpoint_and_graph_materialization(monkeypatch) -> None:
     import json
@@ -95,6 +94,10 @@ async def test_roadmap_generate_endpoint_and_graph_materialization(monkeypatch) 
     monkeypatch.setattr(
         "services.semantic_service.SemanticService.compute_and_save_node_embedding", AsyncMock()
     )
+    # Provide a configured key so the authenticated generation path is reached.
+    from config import get_settings
+
+    monkeypatch.setattr(get_settings(), "GEMINI_API_KEY", "test-key")
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         # 1. Call generate roadmap endpoint
         resp = await client.post(
@@ -142,3 +145,50 @@ async def test_roadmap_generate_endpoint_and_graph_materialization(monkeypatch) 
         assert concepts_resp.status_code == 200
         concepts_data = concepts_resp.json()
         assert len(concepts_data) >= 5
+
+
+@pytest.mark.asyncio
+async def test_generate_raises_model_not_configured_when_no_provider_key(monkeypatch) -> None:
+    # Force a resolved provider with no API key so generation must not silently
+    # fall through to the MockProvider.
+    from config import get_settings
+
+    monkeypatch.setattr(get_settings(), "DEFAULT_PROVIDER", "gemini")
+    monkeypatch.setattr(get_settings(), "GEMINI_API_KEY", None)
+    monkeypatch.setattr(get_settings(), "GOOGLE_API_KEY", None)
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await client.post(
+            "/api/v1/roadmap/generate",
+            json={"goal": "Learn Rust", "level": "beginner", "focus": "concepts"},
+        )
+    assert resp.status_code == 502
+    error = resp.json()["error"]
+    assert error["code"] == "MODEL_NOT_CONFIGURED"
+    assert error["recoverable"] is True
+    assert error["nextAction"] == "retry"
+
+
+@pytest.mark.asyncio
+async def test_generate_requires_authentication(monkeypatch) -> None:
+    # Outside test-mode the mandatory get_current_user dependency rejects
+    # unauthenticated callers. Simulate that for this endpoint so we prove it no
+    # longer silently treats anonymous access as the default admin.
+    from config import get_settings
+    from dependencies import get_current_user
+    from fastapi import HTTPException
+
+    def _require_auth() -> None:
+        raise HTTPException(status_code=401, detail="Authentication required.")
+
+    app.dependency_overrides[get_current_user] = _require_auth
+    monkeypatch.setattr(get_settings(), "GEMINI_API_KEY", "test-key")
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            resp = await client.post(
+                "/api/v1/roadmap/generate",
+                json={"goal": "Learn Rust", "level": "beginner", "focus": "concepts"},
+            )
+        assert resp.status_code in (401, 403)
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
