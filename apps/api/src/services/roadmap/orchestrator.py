@@ -17,6 +17,7 @@ from ai_core.base import (
     ToolCall,
     ToolResult,
 )
+from config import Settings, get_settings
 from models.roadmap_job import RoadmapJobReference, RoadmapToolReceipt
 from pydantic import JsonValue, ValidationError
 from schemas.curriculum import (
@@ -232,12 +233,14 @@ class RoadmapStageExecutor:
         repository_factory: RepositoryFactory,
         *,
         compose_batch_size: int = 20,
+        settings: Settings | None = None,
     ) -> None:
         self.provider = provider
         self.config = config.model_copy(update={"max_retries": 0})
         self.tools_factory = tools_factory
         self.repositories = repository_factory
         self.compose_batch_size = compose_batch_size
+        self.settings = settings or get_settings()
 
     async def _check(self, claim: Claim) -> None:
         async with self.repositories() as repo:
@@ -591,6 +594,36 @@ class RoadmapStageExecutor:
             await repo.append_event(claim.job_id, "phase", summary, {})
             await repo.session.flush()
 
+    async def _phase_dev(self, claim: Claim, summary: str, *, stage: StageName) -> None:
+        """Emits a granular per-operation 'step' event to the live feed.
+
+        Only active when ``settings.ROADMAP_DEV_STEPS`` is enabled, so
+        production keeps the coarse phase/composition_progress feed unchanged
+        and development gets a detailed trace of the agent's next action. These
+        events are appended *before* the corresponding model call so the user
+        sees what the agent is about to do while it runs.
+        """
+        if not self.settings.ROADMAP_DEV_STEPS:
+            return
+        async with self.repositories() as repo:
+            await repo._claimed(claim)
+            await repo.append_event(claim.job_id, "step", summary, {"stage": stage})
+            await repo.session.flush()
+
+    async def _progress(self, claim: Claim, summary: str) -> None:
+        """Appends a coarse progress line without touching the durable checkpoint.
+
+        Parallel research branches must not persist partial checkpoints mid-flight
+        (a crash would leave a subset of topics merged with the cursor still at
+        the start of the pending set, causing duplicates on retry). The user-facing
+        progress stays honest via the event alone; the authoritative checkpoint is
+        written once after the whole batch succeeds.
+        """
+        async with self.repositories() as repo:
+            await repo._claimed(claim)
+            await repo.append_event(claim.job_id, "composition_progress", summary, {})
+            await repo.session.flush()
+
     async def _compose(
         self,
         job: JobSnapshot,
@@ -640,6 +673,9 @@ class RoadmapStageExecutor:
                 amendment = CoverageRepair.model_validate(pending)
                 pending_issues = await amendment_issues(amendment)
                 if pending_issues:
+                    await self._phase_dev(
+                        claim, "Repairing the subject inventory and grounded sources", stage=claim.stage
+                    )
                     amendment = await self._typed(
                         "compose",
                         CoverageRepair,
@@ -651,6 +687,9 @@ class RoadmapStageExecutor:
                         check_output=amendment_issues,
                     )
             else:
+                await self._phase_dev(
+                    claim, "Repairing the subject inventory and grounded sources", stage=claim.stage
+                )
                 amendment = await self._typed(
                     "compose",
                     CoverageRepair,
@@ -693,6 +732,7 @@ class RoadmapStageExecutor:
                 plan.relations = sanitize_outline_relations(plan.relations, topic_ids)
                 return cast(list[str], outline_issues(plan.relations, topic_ids))
 
+            await self._phase_dev(claim, "Drafting the subject outline", stage=claim.stage)
             plan = await self._typed(
                 "compose",
                 OutlinePlan,
@@ -800,6 +840,7 @@ class RoadmapStageExecutor:
                     "Return exactly the requested topicIds once each, with 1–3 actual recorded instructional resources per topic; no extra or invented IDs."
                 ]
 
+            await self._phase_dev(claim, f"Detailing {len(ids)} topic lessons", stage=claim.stage)
             batch = await self._typed(
                 "compose",
                 TopicBatch,
@@ -835,31 +876,49 @@ class RoadmapStageExecutor:
         stage: StageName,
         context: dict[str, Any] | None = None,
     ) -> list[str]:
+        batches = [checks[start : start + 100] for start in range(0, len(checks), 100)]
         issues: list[str] = []
-        for start in range(0, len(checks), 100):
-            batch = checks[start : start + 100]
+        if not batches:
+            return issues
+        evidence_slots = asyncio.Semaphore(self.settings.ROADMAP_AREA_CONCURRENCY)
 
-            def shape_issues(review: EvidenceReview) -> list[str]:
-                returned = [v.check_id for v in review.verdicts]
-                expected = {c["checkId"] for c in batch}
-                return (
-                    []
-                    if len(returned) == len(expected) and set(returned) == expected
-                    else [
-                        "Return exactly one verdict for every requested checkId without duplicates."
-                    ]
+        async def review_batch(batch: list[dict[str, Any]]) -> EvidenceReview:
+            async with evidence_slots:
+                await self._phase_dev(
+                    claim, f"Reviewing {len(batch)} source-evidence checks", stage=stage
                 )
 
-            reviewed = await self._typed(
-                stage,
-                EvidenceReview,
-                job,
-                claim,
-                tools,
-                task={"mode": "evidence_review", "checks": batch, **(context or {})},
-                check_output=shape_issues,
-            )
-            issues.extend(evidence_review_issues(reviewed, batch))
+                def shape_issues(review: EvidenceReview) -> list[str]:
+                    returned = [v.check_id for v in review.verdicts]
+                    expected = {c["checkId"] for c in batch}
+                    return (
+                        []
+                        if len(returned) == len(expected) and set(returned) == expected
+                        else [
+                            "Return exactly one verdict for every requested checkId without duplicates."
+                        ]
+                    )
+
+                return await self._typed(
+                    stage,
+                    EvidenceReview,
+                    job,
+                    claim,
+                    tools,
+                    task={"mode": "evidence_review", "checks": batch, **(context or {})},
+                    check_output=shape_issues,
+                )
+
+        review_tasks = [asyncio.create_task(review_batch(batch)) for batch in batches]
+        try:
+            reviewed = await asyncio.gather(*review_tasks)
+        except BaseException:
+            for review_task in review_tasks:
+                review_task.cancel()
+            await asyncio.gather(*review_tasks, return_exceptions=True)
+            raise
+        for batch, result in zip(batches, reviewed, strict=True):
+            issues.extend(evidence_review_issues(result, batch))
         return issues
 
     async def _complete_reference_map(
@@ -910,6 +969,9 @@ class RoadmapStageExecutor:
                     ]
                 return []
 
+            await self._phase_dev(
+                claim, f"Mapping {len(requested)} reference diagram labels", stage=claim.stage
+            )
             batch = await self._typed(
                 "research",
                 ReferenceBatch,
@@ -1158,6 +1220,9 @@ class RoadmapStageExecutor:
             if job.checkpoint.coverage_inventory_plan:
                 plan = ResearchPlan.model_validate(job.checkpoint.coverage_inventory_plan)
             else:
+                await self._phase_dev(
+                    claim, "Planning the research areas and their sources", stage=stage
+                )
                 plan = await self._typed(
                     stage,
                     ResearchPlan,
@@ -1188,61 +1253,114 @@ class RoadmapStageExecutor:
                 raise JobStateError(
                     "RESEARCH_CHECKPOINT_INVALID", "The saved inventory cursor is invalid"
                 )
-            for index in range(job.checkpoint.coverage_inventory_next_area, len(area_items)):
-                area = area_items[index]
+            start_area = job.checkpoint.coverage_inventory_next_area
+            pending_areas = area_items[start_area:]
+            if pending_areas:
+                semaphore = asyncio.Semaphore(self.settings.ROADMAP_AREA_CONCURRENCY)
 
-                def area_issues(batch: CoverageTopicBatch) -> list[str]:
-                    actual = {
-                        source.id
-                        for source in job.checkpoint.sources
-                        if source.status in {"grounded", "inspected"}
-                    }
-                    topics = batch.coverage_topics
-                    known_ids = {topic.id for topic in job.checkpoint.coverage_topics}
-                    ids = [topic.id for topic in topics]
-                    if len(job.checkpoint.coverage_topics) + len(topics) > MAX_COVERAGE_TOPICS:
-                        return [
-                            f"Keep the complete actionable subject inventory within {MAX_COVERAGE_TOPICS} topics."
-                        ]
-                    if len(ids) != len(set(ids)) or known_ids.intersection(ids):
-                        repeated = sorted(
-                            known_ids.intersection(ids) | {key for key in ids if ids.count(key) > 1}
-                        )
-                        return [
-                            "Use unique area-prefixed topic IDs and do not repeat IDs from earlier areas. "
-                            f"Conflicting IDs: {', '.join(repeated[:20]) or 'duplicate IDs in this batch'}."
-                        ]
-                    if any(topic.area != area["title"] for topic in topics):
-                        return [
-                            "Set every topic area to the exact area title supplied in task.area."
-                        ]
-                    if any(not set(topic.source_ids).issubset(actual) for topic in topics):
-                        return ["Every topic sourceIds value must be an exact recorded source ID."]
-                    return []
+                async def research_one(branch: JobSnapshot, area: dict[str, Any], index: int) -> CoverageTopicBatch:
 
-                batch = await self._typed(
-                    stage,
-                    CoverageTopicBatch,
-                    job,
-                    claim,
-                    tools,
-                    task={
-                        "mode": "inventory_area",
-                        "area": area["title"],
-                        "scope": area["scope"],
-                        "areaIndex": index,
-                        "areaCount": len(area_items),
-                    },
-                    check_output=area_issues,
-                )
-                job.checkpoint.coverage_topics.extend(batch.coverage_topics)
-                job.checkpoint.coverage_inventory_next_area = index + 1
+                    def area_issues(batch: CoverageTopicBatch) -> list[str]:
+                        actual = {
+                            source.id
+                            for source in branch.checkpoint.sources
+                            if source.status in {"grounded", "inspected"}
+                        }
+                        topics = batch.coverage_topics
+                        known_ids = {topic.id for topic in branch.checkpoint.coverage_topics}
+                        ids = [topic.id for topic in topics]
+                        if len(branch.checkpoint.coverage_topics) + len(topics) > MAX_COVERAGE_TOPICS:
+                            return [
+                                f"Keep the complete actionable subject inventory within {MAX_COVERAGE_TOPICS} topics."
+                            ]
+                        if len(ids) != len(set(ids)) or known_ids.intersection(ids):
+                            repeated = sorted(
+                                known_ids.intersection(ids) | {key for key in ids if ids.count(key) > 1}
+                            )
+                            return [
+                                "Use unique area-prefixed topic IDs and do not repeat IDs from earlier areas. "
+                                f"Conflicting IDs: {', '.join(repeated[:20]) or 'duplicate IDs in this batch'}."
+                            ]
+                        if any(topic.area != area["title"] for topic in topics):
+                            return [
+                                "Set every topic area to the exact area title supplied in task.area."
+                            ]
+                        if any(not set(topic.source_ids).issubset(actual) for topic in topics):
+                            return ["Every topic sourceIds value must be an exact recorded source ID."]
+                        return []
+
+                    await self._phase_dev(
+                        claim,
+                        f"Researching area {index + 1} of {len(area_items)}: {area['title']}",
+                        stage=stage,
+                    )
+                    batch = await self._typed(
+                        stage,
+                        CoverageTopicBatch,
+                        branch,
+                        claim,
+                        tools,
+                        task={
+                            "mode": "inventory_area",
+                            "area": area["title"],
+                            "scope": area["scope"],
+                            "areaIndex": index,
+                            "areaCount": len(area_items),
+                        },
+                        check_output=area_issues,
+                    )
+                    # Prod keeps a coarse per-area progress line so the feed
+                    # moves while the agent works; dev additionally gets the
+                    # granular 'step' events emitted by _phase_dev above.
+                    # Event-only: the checkpoint advances once after the whole
+                    # batch succeeds (each branch runs on its own JobSnapshot).
+                    await self._progress(
+                        claim,
+                        f"Researched area {index + 1} of {len(area_items)}; saved topics from {area['title']}",
+                    )
+                    return batch
+
+                async def bounded_area(area: dict[str, Any], index: int) -> CoverageTopicBatch:
+                    async with semaphore:
+                        return await research_one(job.model_copy(deep=True), area, index)
+
+                area_tasks = [
+                    asyncio.create_task(bounded_area(area, index))
+                    for index, area in enumerate(pending_areas, start=start_area)
+                ]
+                try:
+                    batches = await asyncio.gather(*area_tasks)
+                except BaseException:
+                    for area_task in area_tasks:
+                        area_task.cancel()
+                    await asyncio.gather(*area_tasks, return_exceptions=True)
+                    raise
+                merged_ids = [topic.id for batch in batches for topic in batch.coverage_topics]
+                if len(set(merged_ids)) != len(merged_ids) or (
+                    len(job.checkpoint.coverage_topics) + len(merged_ids) > MAX_COVERAGE_TOPICS
+                ):
+                    raise JobStateError(
+                        "STAGE_OUTPUT_INVALID",
+                        error=JobError(
+                            code="STAGE_OUTPUT_INVALID",
+                            message="The researched areas produced overlapping or oversized topic inventories. Retry to continue saved research.",
+                            recoverable=True,
+                            next_action="retry",
+                        ),
+                    )
+                # Each area call ran on its own JobSnapshot copy because _typed
+                # mutates job.checkpoint through tool receipts; merge only after
+                # every area of this transaction succeeded, in area order, so a
+                # crash resumes from a consistent coverage_inventory_next_area.
+                for batch in batches:
+                    job.checkpoint.coverage_topics.extend(batch.coverage_topics)
+                job.checkpoint.coverage_inventory_next_area = len(area_items)
                 job.checkpoint.pending_inventory_review = None
                 job.checkpoint.pending_inventory_stage = None
                 await self._save_partial(
                     job,
                     claim,
-                    f"Detailed area {index + 1} of {len(area_items)}; saved {len(job.checkpoint.coverage_topics)} concepts",
+                    f"Researched {len(area_items)} subject areas; saved {len(job.checkpoint.coverage_topics)} concepts",
                 )
 
             actual = {
@@ -1381,6 +1499,11 @@ class RoadmapStageExecutor:
                             return ["Use only actual recorded source IDs."]
                         return []
 
+                    await self._phase_dev(
+                        claim,
+                        "Adding missing reference competencies to the inventory",
+                        stage=stage,
+                    )
                     added = await self._typed(
                         stage,
                         CoverageTopicBatch,
@@ -1501,6 +1624,9 @@ class RoadmapStageExecutor:
                             ]
                         return []
 
+                    await self._phase_dev(
+                        claim, "Separating merged reference concepts in the inventory", stage=stage
+                    )
                     added = await self._typed(
                         stage,
                         CoverageTopicBatch,

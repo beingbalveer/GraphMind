@@ -35,6 +35,7 @@ import {
   createRoadmapJob,
   startRoadmapJob,
   readRoadmapJob,
+  removeRoadmapJob,
 } from "@/lib/roadmapApi";
 import type {
   JobReferenceData,
@@ -45,6 +46,7 @@ import type {
 import { buildWorkspaceUrl } from "@/lib/urls";
 import { ResumeRefinement } from "@/components/roadmap/ResumeRefinement";
 import { LegacyRoadmapModal } from "./LegacyRoadmapModal";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface Props {
   isOpen: boolean;
@@ -123,6 +125,8 @@ function RoadmapSetup({
   const [watchingId, setWatchingId] = useState<string | null>(
     resumeJobId || null,
   );
+  const [confirmRemove, setConfirmRemove] = useState(false);
+  const [removing, setRemoving] = useState(false);
   const key = useRef<string | null>(null);
   const fingerprint = useRef<string | null>(null);
   const accepted = useRef<string | null>(null);
@@ -181,6 +185,23 @@ function RoadmapSetup({
     setAcceptedId(null);
     setWatchingId(null);
     setError(null);
+  }
+  async function removeCurrent() {
+    if (!watchingId) return;
+    setRemoving(true);
+    try {
+      await removeRoadmapJob(watchingId);
+      startOver();
+    } catch (failure) {
+      setError(
+        failure instanceof Error
+          ? failure.message
+          : "Could not remove this roadmap.",
+      );
+    } finally {
+      setRemoving(false);
+      setConfirmRemove(false);
+    }
   }
   function addLink() {
     if (!link.trim()) return;
@@ -344,11 +365,23 @@ function RoadmapSetup({
             events={events}
             active={Boolean(job && ["queued", "running", "cancel_requested"].includes(job.status))}
           />
-          {job && ["failed", "canceled", "completed"].includes(job.status) && (
-            <Button variant="ghost" onClick={startOver}>
-              Create another roadmap
-            </Button>
-          )}
+          <div className="flex flex-wrap items-center gap-2">
+            {job && ["failed", "canceled", "completed"].includes(job.status) && (
+              <Button variant="ghost" onClick={startOver}>
+                Create another roadmap
+              </Button>
+            )}
+            {job && (
+              <Button
+                variant="ghost"
+                className="text-destructive"
+                disabled={removing}
+                onClick={() => setConfirmRemove(true)}
+              >
+                {removing ? "Removing…" : "Remove roadmap"}
+              </Button>
+            )}
+          </div>
         </ModalBody>
       ) : (
         <form onSubmit={generate} className="flex min-h-0 flex-col">
@@ -614,6 +647,15 @@ function RoadmapSetup({
           </ModalFooter>
         </form>
       )}
+      <ConfirmDialog
+        isOpen={confirmRemove}
+        onClose={() => setConfirmRemove(false)}
+        onConfirm={() => void removeCurrent()}
+        title="Remove this roadmap?"
+        description="This deletes the generated roadmap. Your workspace and its conversations stay intact."
+        confirmText="Remove roadmap"
+        isLoading={removing}
+      />
     </Modal>
   );
 }

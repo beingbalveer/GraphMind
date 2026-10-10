@@ -9,6 +9,7 @@ from typing import Literal
 
 import structlog
 from config import Settings, get_settings
+from models.roadmap import Roadmap
 from models.roadmap_job import RoadmapJob, RoadmapJobEvent, RoadmapToolReceipt
 from models.user import User
 from pydantic import JsonValue, ValidationError
@@ -473,6 +474,45 @@ class JobRepository:
             "Stopping roadmap generation",
             {},
         )
+        await self.session.flush()
+        return self._snapshot(row)
+
+    async def delete(self, job_id: str, owner_id: str) -> JobSnapshot:
+        """Stops a generation job and removes the roadmap it produced.
+
+        Only the roadmap (curriculum revisions/items/sources/progress/topic
+        chats/knowledge checks) is deleted; the owning workspace and its nodes
+        are left intact per product contract. The job row is retained as a
+        canceled tombstone so history and events survive. Refinement jobs never
+        own a roadmap, so only the job itself is stopped.
+        """
+        await self._owner_lock(owner_id)
+        row = await self._row(job_id, owner_id)
+        provided_roadmap_id = (row.result or {}).get("roadmap_id")
+        # Any state becomes a canceled tombstone; the result is cleared so the
+        # job no longer advertises a roadmap that is about to be deleted.
+        row.status = "canceled"
+        row.question = None
+        row.result = None
+        self._release(row)
+        await self._event(
+            row, "canceled", "Roadmap generation removed", {"code": "REMOVED"}
+        )
+        if row.operation == "generate":
+            roadmap = (
+                await self.session.get(Roadmap, provided_roadmap_id)
+                if provided_roadmap_id
+                else None
+            )
+            if roadmap is None:
+                roadmap = await self.session.scalar(
+                    select(Roadmap).where(Roadmap.origin_job_id == job_id)
+                )
+            # Ownership: a job may only delete a roadmap it published.
+            if roadmap is not None and roadmap.owner_id != row.owner_id:
+                roadmap = None
+            if roadmap is not None:
+                await self.session.delete(roadmap)
         await self.session.flush()
         return self._snapshot(row)
 

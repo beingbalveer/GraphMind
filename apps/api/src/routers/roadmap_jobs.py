@@ -118,6 +118,17 @@ async def cancel_job(job_id: str, db: DB, user: Actor) -> PublicJobSnapshot:
     return public_job(await JobRepository(db).cancel(job_id, user.id))
 
 
+@router.delete("/{job_id}", response_model=PublicJobSnapshot)
+async def delete_job(job_id: str, db: DB, user: Actor) -> PublicJobSnapshot:
+    """Stops a generation/refinement job and removes its produced roadmap.
+
+    Owner-only. A generation job's roadmap (curriculum) is deleted; the owning
+    workspace and its nodes are preserved. The job row remains as a canceled
+    tombstone so history survives.
+    """
+    return public_job(await JobRepository(db).delete(job_id, user.id))
+
+
 @router.post("/{job_id}/retry", response_model=PublicJobSnapshot)
 async def retry_job(job_id: str, db: DB, user: Actor) -> PublicJobSnapshot:
     return public_job(await JobRepository(db).retry(job_id, user.id))

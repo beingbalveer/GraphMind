@@ -84,7 +84,7 @@ it("shows agent steps immediately without expanding", async () => {
     screen.queryByRole("button", { name: "View activity" }),
   ).not.toBeInTheDocument();
 });
-it("keeps per-search tool lines out of the visible feed", () => {
+it("shows per-search tool lines with friendly labels", () => {
   render(
     <JobActivity
       events={[
@@ -108,11 +108,42 @@ it("keeps per-search tool lines out of the visible feed", () => {
     />,
   );
   expect(
-    screen.queryByText("Searched public learning resources"),
-  ).not.toBeInTheDocument();
+    screen.getByText("Searched public learning resources"),
+  ).toBeVisible();
+  expect(screen.getByText("web search")).toBeVisible();
   expect(
     screen.getByText("Detailed area 2 of 5; saved 34 concepts"),
   ).toBeVisible();
+});
+it("renders newest step first with the working spinner on top", () => {
+  render(
+    <JobActivity
+      active
+      events={[
+        {
+          sequence: 1,
+          stage: "research",
+          type: "composition_progress",
+          summary: "First step",
+          metadata: {},
+          createdAt: "now",
+        },
+        {
+          sequence: 2,
+          stage: "compose",
+          type: "phase",
+          summary: "Latest step",
+          metadata: {},
+          createdAt: "now",
+        },
+      ]}
+    />,
+  );
+  const items = screen.getAllByRole("listitem");
+  // Newest (sequence 2) renders before the older (sequence 1) line.
+  expect(items[0]).toHaveTextContent("Latest step");
+  expect(items[1]).toHaveTextContent("First step");
+  expect(screen.getByLabelText("Working")).toBeVisible();
 });
 it("shows the latest step with a working indicator while the job runs", () => {
   render(

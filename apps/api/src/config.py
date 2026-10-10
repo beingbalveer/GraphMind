@@ -89,6 +89,17 @@ class Settings(BaseSettings):
     ROADMAP_WORKER_SLOTS: int = Field(default=2, ge=1)
     ROADMAP_REFERENCE_DIR: str = Field(default="data/storage/roadmap")
     ROADMAP_SEARCH_MODEL: str = Field(default="gemini-2.5-flash")
+    ROADMAP_DEV_STEPS: bool = Field(
+        default=False,
+        description="Emit granular per-operation 'step' events during roadmap generation "
+        "for a detailed dev trace; production stays coarse when disabled.",
+    )
+    ROADMAP_AREA_CONCURRENCY: int = Field(
+        default=2,
+        ge=1,
+        description="Max research-area model calls and evidence-review batches processed "
+        "concurrently within a single stage run.",
+    )
 
 
 @lru_cache(maxsize=1)

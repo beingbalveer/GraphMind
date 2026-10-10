@@ -74,6 +74,8 @@ export const cancelRoadmapJob = (jobId: string) =>
   apiFetch<JobSnapshot>(`${jobPath(jobId)}/cancel`, { method: "POST" });
 export const retryRoadmapJob = (jobId: string) =>
   apiFetch<JobSnapshot>(`${jobPath(jobId)}/retry`, { method: "POST" });
+export const removeRoadmapJob = (jobId: string) =>
+  apiFetch<JobSnapshot>(`${jobPath(jobId)}`, { method: "DELETE" });
 export const readRoadmap = (workspaceId: string, signal?: AbortSignal) =>
   apiFetch<CurriculumView>(curriculumPath(workspaceId), { signal });
 export const readTopicBrief = (

@@ -362,6 +362,142 @@ async def test_job_owner_cannot_be_spoofed(job_repo, ready_job) -> None:
         await job_repo.read(ready_job.id, "another-owner")
 
 
+async def test_delete_job_endpoint_cancels_tombstone(auth_client, worker_job, curriculum_session) -> None:
+    response = await auth_client.delete(f"/api/v1/roadmap/jobs/{worker_job.id}")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "canceled"
+    # The job row survives as a tombstone; result is cleared.
+    assert payload["result"] is None
+    await curriculum_session.commit()
+
+
+async def test_delete_generate_job_removes_roadmap_keeps_workspace(
+    publication, publish_claim, ready_job, job_repo, curriculum_session
+) -> None:
+    from models.roadmap import Roadmap
+    from models.workspace import Workspace
+
+    result = await publication.publish(publish_claim)
+    assert result.kind == "published"
+    roadmap_id, workspace_id = result.roadmap_id, result.workspace_id
+    assert await curriculum_session.get(Roadmap, roadmap_id) is not None
+
+    deleted = await job_repo.delete(ready_job.id, ready_job.owner_id)
+    await curriculum_session.commit()
+
+    assert deleted.status == "canceled"
+    assert deleted.result is None  # no longer advertises the removed roadmap
+    assert await curriculum_session.get(Roadmap, roadmap_id) is None
+    # Workspace and its nodes survive (product contract: remove roadmap only).
+    assert await curriculum_session.get(Workspace, workspace_id) is not None
+    job = await job_repo.read(ready_job.id, ready_job.owner_id)
+    assert job.status == "canceled"
+
+
+async def test_delete_refine_job_keeps_roadmap(
+    publication,
+    curriculum_workspace,
+    job_repo,
+    job_owner,
+    clock,
+    scripted_executor,
+    curriculum_session,
+) -> None:
+    from models.roadmap import Roadmap
+    from models.user import WorkspaceMember
+
+    view = curriculum_workspace.view
+    curriculum_session.add(
+        WorkspaceMember(workspace_id=view.workspace_id, user_id=job_owner, role="editor")
+    )
+    await curriculum_session.flush()
+    job = await job_repo.create(
+        job_owner,
+        RoadmapRequest(prompt="Add a practical project option"),
+        str(uuid.uuid4()),
+        operation="refine",
+        base_revision_id=view.revision_id,
+    )
+    await job_repo.start(job.id, job_owner)
+    for result in scripted_executor.results.values():
+        result.checkpoint.original_candidate = view.candidate
+    for stage in ["understand", "research", "compose", "personalize", "validate"]:
+        claim = await job_repo.claim("worker", clock.now())
+        await job_repo.checkpoint(claim, stage, scripted_executor.results[stage])
+    claim = await job_repo.claim("worker", clock.now())
+    proposal = await publication.publish(claim)
+    assert proposal.kind == "proposal" and proposal.workspace_id == view.workspace_id
+
+    await job_repo.delete(job.id, job_owner)
+    await curriculum_session.commit()
+
+    # The base roadmap survives; only the refinement job is stopped.
+    assert await curriculum_session.get(Roadmap, view.roadmap_id) is not None
+    removed = await job_repo.read(job.id, job_owner)
+    assert removed.status == "canceled" and removed.result is None
+
+
+async def test_delete_job_non_owner_raises_not_found(
+    publication, publish_claim, ready_job, job_repo, curriculum_session
+) -> None:
+    await publication.publish(publish_claim)
+    with pytest.raises(JobStateError):
+        await job_repo.delete(ready_job.id, "some-other-owner")
+
+
+async def test_delete_running_job_cancels_and_removes_roadmap(
+    job_repo, ready_job, job_owner, clock, small_profile, curriculum_session
+) -> None:
+    from models.roadmap import Roadmap
+    from models.workspace import NodeModel, Workspace
+    from sqlalchemy import select
+
+    # The job is claimed once, so it is "running" with a live worker lease.
+    claim = await job_repo.claim("worker", clock.now())
+    assert claim is not None
+    job = await job_repo.read(ready_job.id, job_owner)
+    assert job.status == "running"
+
+    ws = Workspace(id="ws_running", name="Running curriculum", owner_id=job_owner)
+    curriculum_session.add(ws)
+    await curriculum_session.flush()
+    anchor = NodeModel(
+        id="node_running",
+        workspace_id=ws.id,
+        role="system",
+        content=job.request.title or "title",
+        parent_id=None,
+    )
+    curriculum_session.add(anchor)
+    await curriculum_session.flush()
+    roadmap = Roadmap(
+        id="roadmap_running",
+        owner_id=job_owner,
+        workspace_id=ws.id,
+        canvas_anchor_chat_id=anchor.id,
+        profile=small_profile.model_dump(mode="json"),
+        origin_job_id=ready_job.id,
+    )
+    curriculum_session.add(roadmap)
+    await curriculum_session.flush()
+    await curriculum_session.commit()
+
+    deleted = await job_repo.delete(ready_job.id, job_owner)
+    await curriculum_session.commit()
+
+    assert deleted.status == "canceled"
+    assert await curriculum_session.get(Roadmap, "roadmap_running") is None
+    # Workspace survives.
+    assert await curriculum_session.get(Workspace, "ws_running") is not None
+    assert (
+        await curriculum_session.scalar(
+            select(Roadmap).where(Roadmap.origin_job_id == ready_job.id)
+        )
+        is None
+    )
+
+
 async def test_completed_stage_event_identifies_stage_that_finished(
     job_repo, ready_job, job_owner, clock
 ) -> None:

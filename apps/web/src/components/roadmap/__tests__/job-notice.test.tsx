@@ -2,10 +2,13 @@ import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, afterEach, expect, it, vi } from "vitest";
 import { RoadmapJobsNotice } from "../RoadmapJobsNotice";
-import { listRoadmapJobs } from "@/lib/roadmapApi";
+import { listRoadmapJobs, removeRoadmapJob } from "@/lib/roadmapApi";
 const mock = vi.hoisted(() => ({ push: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: mock.push }) }));
-vi.mock("@/lib/roadmapApi", () => ({ listRoadmapJobs: vi.fn() }));
+vi.mock("@/lib/roadmapApi", () => ({
+  listRoadmapJobs: vi.fn(),
+  removeRoadmapJob: vi.fn(),
+}));
 beforeEach(() => {
   vi.stubEnv("NEXT_PUBLIC_ROADMAP_GENERATOR_ENABLED", "true");
   vi.clearAllMocks();
@@ -70,4 +73,31 @@ it("shows an actionable status error instead of silently hiding saved jobs", asy
   expect(
     await screen.findByRole("button", { name: "View progress" }),
   ).toBeVisible();
+});
+it("removes a roadmap after confirmation and refreshes the list", async () => {
+  vi.mocked(listRoadmapJobs).mockResolvedValue([
+    {
+      id: "job",
+      title: "Drawing",
+      status: "completed",
+      startupReady: true,
+      result: { workspaceId: "ws_drawing" },
+    } as never,
+  ]);
+  vi.mocked(removeRoadmapJob).mockResolvedValue({
+    id: "job",
+    status: "canceled",
+  } as never);
+  render(<RoadmapJobsNotice onOpenJob={vi.fn()} />);
+  await userEvent.click(
+    await screen.findByRole("button", { name: "Remove" }),
+  );
+  expect(
+    await screen.findByText(/deletes the generated roadmap/i),
+  ).toBeVisible();
+  await userEvent.click(
+    await screen.findByRole("button", { name: "Remove roadmap" }),
+  );
+  await waitFor(() => expect(removeRoadmapJob).toHaveBeenCalledWith("job"));
+  await waitFor(() => expect(listRoadmapJobs).toHaveBeenCalled());
 });

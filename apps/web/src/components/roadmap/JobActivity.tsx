@@ -11,8 +11,14 @@ const STAGE_LABELS: Record<string, string> = {
   publish: "Publish",
 };
 
-/** Per-search noise stays in the persisted stream but not in the visible feed. */
-const NOISY_TOOLS = new Set(["search_web", "read_reference", "list_skills", "load_skill"]);
+/** Readable labels for the per-tool lines that stay in the feed. */
+const TOOL_LABELS: Record<string, string> = {
+  search_web: "web search",
+  fetch_source: "source",
+  read_reference: "reference",
+  list_skills: "skill",
+  load_skill: "skill",
+};
 
 export function JobActivity({
   events,
@@ -22,13 +28,10 @@ export function JobActivity({
   /** When the job is still running, the latest step shows a spinner. */
   active?: boolean;
 }) {
-  const visible = events.filter(
-    (event) =>
-      event.type !== "tool_completed" ||
-      typeof event.metadata.tool !== "string" ||
-      !NOISY_TOOLS.has(event.metadata.tool),
-  );
-  const current = active ? visible[visible.length - 1] : undefined;
+  // Newest first. Events arrive in ascending `sequence` order; reverse for a
+  // console-style feed where the latest step sits on top.
+  const rows = [...events].sort((a, b) => b.sequence - a.sequence);
+  const current = active ? rows[0] : undefined; // eslint-disable-line @typescript-eslint/no-unnecessary-condition
 
   return (
     <div className="border-t border-border-subtle pt-4">
@@ -42,9 +45,13 @@ export function JobActivity({
         )}
       </div>
       <ol className="space-y-2.5 py-3 text-sm">
-        {visible.map((event) => {
+        {rows.map((event) => {
           const isCurrent = current === event;
           const stage = STAGE_LABELS[event.stage] ?? event.stage;
+          const tool =
+            typeof event.metadata.tool === "string"
+              ? (TOOL_LABELS[event.metadata.tool] ?? event.metadata.tool)
+              : null;
           return (
             <li key={event.sequence} className="flex items-start gap-2.5">
               {isCurrent ? (
@@ -63,6 +70,11 @@ export function JobActivity({
                   <span className="font-mono text-2xs uppercase tracking-wide text-foreground-subtle">
                     {stage}
                   </span>
+                  {tool && (
+                    <span className="font-mono text-2xs text-foreground-muted">
+                      {tool}
+                    </span>
+                  )}
                   <span>{event.summary}</span>
                 </p>
                 {typeof event.metadata.sourceUrl === "string" && (
@@ -82,7 +94,7 @@ export function JobActivity({
           );
         })}
       </ol>
-      {visible.length === 0 && (
+      {rows.length === 0 && (
         <p className="py-3 text-sm text-foreground-muted">
           The agent&rsquo;s next step will appear here while your roadmap is built.
         </p>

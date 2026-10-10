@@ -2,7 +2,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { listRoadmapJobs } from "@/lib/roadmapApi";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import {
+  listRoadmapJobs,
+  removeRoadmapJob,
+} from "@/lib/roadmapApi";
 import type { JobSnapshot } from "@/lib/roadmapTypes";
 import { buildWorkspaceUrl } from "@/lib/urls";
 
@@ -15,6 +19,8 @@ export function RoadmapJobsNotice({
   const [jobs, setJobs] = useState<JobSnapshot[]>([]);
   const [unavailable, setUnavailable] = useState(false);
   const load = useRef<() => Promise<void>>(async () => {});
+  const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [removingId, setRemovingId] = useState<string | null>(null);
   useEffect(() => {
     if (process.env.NEXT_PUBLIC_ROADMAP_GENERATOR_ENABLED !== "true") return;
     let disposed = false;
@@ -41,7 +47,18 @@ export function RoadmapJobsNotice({
       window.removeEventListener("focus", refresh);
     };
   }, []);
-  if (process.env.NEXT_PUBLIC_ROADMAP_GENERATOR_ENABLED !== "true") return null;
+  async function remove(jobId: string) {
+    setRemovingId(jobId);
+    try {
+      await removeRoadmapJob(jobId);
+      await load.current();
+    } finally {
+      setRemovingId(null);
+      setConfirmId(null);
+    }
+  }
+  const showFeature = process.env.NEXT_PUBLIC_ROADMAP_GENERATOR_ENABLED === "true";
+  if (!showFeature) return null;
   const visible = jobs
     .filter(
       (job) =>
@@ -85,25 +102,45 @@ export function RoadmapJobsNotice({
                     : "Research in progress"}
             </p>
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() =>
-              job.status === "completed" &&
-              job.result &&
-              job.operation !== "refine"
-                ? router.push(buildWorkspaceUrl(job.result.workspaceId))
-                : onOpenJob(job.id)
-            }
-          >
-            {job.operation === "refine" && job.status === "completed"
-              ? "Review changes"
-              : job.status === "completed"
-                ? "Open roadmap"
-                : "View progress"}
-          </Button>
+          <div className="flex shrink-0 items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() =>
+                job.status === "completed" &&
+                job.result &&
+                job.operation !== "refine"
+                  ? router.push(buildWorkspaceUrl(job.result.workspaceId))
+                  : onOpenJob(job.id)
+              }
+            >
+              {job.operation === "refine" && job.status === "completed"
+                ? "Review changes"
+                : job.status === "completed"
+                  ? "Open roadmap"
+                  : "View progress"}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-destructive"
+              disabled={removingId === job.id}
+              onClick={() => setConfirmId(job.id)}
+            >
+              {removingId === job.id ? "Removing…" : "Remove"}
+            </Button>
+          </div>
         </div>
       ))}
+      <ConfirmDialog
+        isOpen={confirmId !== null}
+        onClose={() => setConfirmId(null)}
+        onConfirm={() => (confirmId ? remove(confirmId) : undefined)}
+        title="Remove this roadmap?"
+        description="This deletes the generated roadmap. Your workspace and its conversations stay intact."
+        confirmText="Remove roadmap"
+        isLoading={removingId !== null}
+      />
     </section>
   );
 }

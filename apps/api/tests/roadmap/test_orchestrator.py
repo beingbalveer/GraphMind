@@ -625,12 +625,21 @@ async def test_drawing_pipeline_with_real_tools_resumes_saved_research(
         await executor.run("research", job, claim)
     async with repos() as repo:
         job = await repo.read(job.id, job.owner_id)
-    assert job.checkpoint.coverage_inventory_next_area == 1
-    assert len(job.checkpoint.coverage_topics) == 1
+    # Areas run concurrently; when any area fails nothing is merged and the
+    # inventory cursor stays at the start of the pending transaction, so a
+    # retry replays the whole remaining set from a consistent cursor.
+    assert job.checkpoint.coverage_inventory_next_area == 0
+    assert not job.checkpoint.coverage_topics
     result = await executor.run(
         "research", job, claim
     )  # Crash before checkpoint: replay durable tool receipts.
-    assert area_calls == [0, 1, 1]
+    # Every pending area is called again on retry; each area appears once per
+    # round it entered, so the failing area is retried exactly once while the
+    # other area may or may not have started before the failure cancelled it.
+    assert area_calls.count(1) == 2  # the failing area is retried exactly once
+    assert 1 <= area_calls.count(0) <= 2
+    expected_topic_ids = [item.id for item in small_candidate.items if item.kind == "topic"]
+    assert [topic.id for topic in result.checkpoint.coverage_topics] == expected_topic_ids
     assert search.await_count == 1 and fetching.await_count == 2
     assert "source-review" in result.checkpoint.loaded_skills
     async with repos() as repo:
