@@ -98,10 +98,12 @@ class TestExtractRecordingExcerpt:
 
 class TestErrorClassification:
     def test_recognizes_excerpt_length_error(self) -> None:
-        assert is_excerpt_length_error({"loc": ("resources", 0, "evidenceExcerpt"),
-                                        "type": "string_too_short"})
-        assert is_excerpt_length_error({"loc": ("resources", 0, "evidence_excerpt"),
-                                        "type": "string_too_long"})
+        assert is_excerpt_length_error(
+            {"loc": ("resources", 0, "evidenceExcerpt"), "type": "string_too_short"}
+        )
+        assert is_excerpt_length_error(
+            {"loc": ("resources", 0, "evidence_excerpt"), "type": "string_too_long"}
+        )
 
     def test_rejects_non_excerpt_or_non_length_error(self) -> None:
         assert not is_excerpt_length_error(
@@ -185,9 +187,9 @@ class TestRepairPayload:
 class TestAttemptRepair:
     def test_long_excerpt_round_trip(self) -> None:
         payload = {"resources": [_resource("s1", _excerpt(700))]}
-        should_retry, repaired = attempt_excerpt_repair(payload, {}, [
-            {"loc": ("resources", 0, "evidenceExcerpt"), "type": "string_too_long"}
-        ])
+        should_retry, repaired = attempt_excerpt_repair(
+            payload, {}, [{"loc": ("resources", 0, "evidenceExcerpt"), "type": "string_too_long"}]
+        )
         assert should_retry is True
         assert repaired == 1
         assert len(payload["resources"][0]["evidenceExcerpt"]) == MAX
@@ -195,9 +197,11 @@ class TestAttemptRepair:
     def test_short_excerpt_round_trip_from_evidence(self) -> None:
         evidence = _excerpt(300, "a")
         payload = {"resources": [_resource("s1", _excerpt(10, "b"))]}
-        should_retry, repaired = attempt_excerpt_repair(payload, {"s1": evidence}, [
-            {"loc": ("resources", 0, "evidenceExcerpt"), "type": "string_too_short"}
-        ])
+        should_retry, repaired = attempt_excerpt_repair(
+            payload,
+            {"s1": evidence},
+            [{"loc": ("resources", 0, "evidenceExcerpt"), "type": "string_too_short"}],
+        )
         assert should_retry is True
         assert repaired == 1
         assert payload["resources"][0]["evidenceExcerpt"] == evidence
@@ -219,9 +223,7 @@ class TestAttemptRepair:
             {"loc": ("resources", 0, "rationale"), "type": "string_too_short"},
         ]
         payload = {"resources": [_resource("s1", _excerpt(10, "b"))]}
-        should_retry, repaired = attempt_excerpt_repair(
-            payload, {"s1": _excerpt(100, "a")}, errors
-        )
+        should_retry, repaired = attempt_excerpt_repair(payload, {"s1": _excerpt(100, "a")}, errors)
         assert should_retry is False
         assert repaired == 0
 
@@ -249,9 +251,7 @@ class TestSchemaRevalidation:
                     "estimateMinutes": 30,
                 }
             ],
-            "resources": [
-                _resource("s1", excerpt) for excerpt in excerpts
-            ],
+            "resources": [_resource("s1", excerpt) for excerpt in excerpts],
         }
 
     def test_overlong_excerpt_repairs_and_revalidates(self) -> None:
@@ -266,14 +266,14 @@ class TestSchemaRevalidation:
         sources = {"s1": evidence}
         should_retry, _ = attempt_excerpt_repair(payload, sources, errors)
         assert should_retry is True
-        candidate = CurriculumCandidate.model_validate(
-            json.loads(json.dumps(payload))
-        )
+        candidate = CurriculumCandidate.model_validate(json.loads(json.dumps(payload)))
         assert {len(r.evidence_excerpt) for r in candidate.resources} == {MAX}
 
     def test_short_excerpt_repairs_from_recorded_evidence_and_revalidates(self) -> None:
-        evidence = ("The quick brown fox jumps over the lazy dog with great ease and "
-                    "precision every single day. " * 8)  # length well over 80
+        evidence = (
+            "The quick brown fox jumps over the lazy dog with great ease and "
+            "precision every single day. " * 8
+        )  # length well over 80
         assert len(evidence) >= MIN
         payload = self._candidate_payload([_excerpt(5, "z")])
         with pytest.raises(ValidationError) as exc:
