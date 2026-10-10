@@ -47,6 +47,7 @@ from services.roadmap.coverage import (
     select_core,
 )
 from services.roadmap.excerpt_repair import attempt_excerpt_repair
+from services.roadmap.grounding_repair import is_batch_grounded, repair_topic_batch_grounding
 from services.roadmap.job_repository import JobRepository, JobStateError
 from services.roadmap.prompts import (
     CoreSelection,
@@ -490,6 +491,7 @@ class RoadmapStageExecutor:
                         else "The agent could not produce a valid roadmap. Try a more specific goal.",
                         recoverable=pending,
                         next_action="retry" if pending else "new_run",
+                        detail=errors[:100],
                     ),
                 ) from None
             fresh = stage_messages(
@@ -732,6 +734,23 @@ class RoadmapStageExecutor:
                 actual_sources = {
                     s.id for s in checkpoint.sources if s.status in {"grounded", "inspected"}
                 }
+                # Deterministically drop mechanical grounding violations (invented
+                # topic ids, resources on off-batch topics, unrecorded source ids,
+                # over-limit duplicates) before deciding whether a regeneration is
+                # actually needed. Never invents; topics left with zero grounded
+                # resources still fall through to the model regeneration below.
+                dropped = 0
+                if not is_batch_grounded(batch, ids):
+                    dropped, _repaired_ok = repair_topic_batch_grounding(
+                        batch, ids, actual_sources
+                    )
+                    if dropped:
+                        logger.warning(
+                            "roadmap_topic_batch_repaired",
+                            job_id=job.id,
+                            dropped=dropped,
+                            requested=len(ids),
+                        )
                 returned = [detail.id for detail in batch.topics]
                 resource_ids = {r.topic_id for r in batch.resources}
                 if (

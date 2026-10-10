@@ -133,6 +133,7 @@ class JobError(CurriculumSchema):
     message: str = Field(min_length=1, max_length=500)
     recoverable: bool
     next_action: Literal["retry", "new_run", "answer", "configure_search"]
+    detail: list[str] = Field(default_factory=list, max_length=100)
 
 
 class JobSnapshot(CurriculumSchema):
