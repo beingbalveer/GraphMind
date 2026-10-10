@@ -196,6 +196,9 @@ Run both frontend and backend concurrently with hot-reloading:
 pnpm dev
 ```
 - **Web UI**: [http://localhost:3300](http://localhost:3300)
+
+> Also copy `apps/web/.env.example` → `apps/web/.env.local`: Next.js reads
+> `NEXT_PUBLIC_*` flags only from `apps/web`, never from the repo-root `.env`.
 - **FastAPI Docs (Swagger)**: [http://localhost:8300/docs](http://localhost:8300/docs)
 - **API Base**: [http://localhost:8300/api/v1](http://localhost:8300/api/v1)
 
