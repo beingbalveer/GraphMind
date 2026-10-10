@@ -1,0 +1,8 @@
+{
+  "include": ["apps/api", "packages/ai-core"],
+  "extraPaths": ["apps/api/src", "packages/ai-core/src"],
+  "venvPath": ".",
+  "venv": ".venv",
+  "typeCheckingMode": "basic",
+  "exclude": ["**/__pycache__", "**/*.pyc", ".venv", "node_modules", "**/build", "**/dist"]
+}

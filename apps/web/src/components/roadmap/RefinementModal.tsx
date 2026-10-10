@@ -174,7 +174,15 @@ export function RefinementModal({
               onAnswer={watching.answer}
               onRetry={watching.retry}
             />
-            <JobActivity events={watching.events} />
+            <JobActivity
+              events={watching.events}
+              active={Boolean(
+                watching.job &&
+                  ["queued", "running", "cancel_requested"].includes(
+                    watching.job.status,
+                  ),
+              )}
+            />
             {watching.error && (
               <p role="alert" className="text-sm text-destructive">
                 {watching.error.message}

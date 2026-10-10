@@ -57,7 +57,7 @@ it("asks one question and accepts a suggested answer", async () => {
   await userEvent.click(screen.getByRole("button", { name: "Sketching" }));
   expect(answer).toHaveBeenCalledWith("q", "Sketching");
 });
-it("keeps actual activity collapsed until expanded", async () => {
+it("shows agent steps immediately without expanding", async () => {
   render(
     <JobActivity
       events={[
@@ -67,6 +67,7 @@ it("keeps actual activity collapsed until expanded", async () => {
           type: "tool_completed",
           summary: "Inspected a drawing syllabus",
           metadata: {
+            tool: "fetch_source",
             sourceUrl: "https://example.com/drawing",
             sourceTitle: "Drawing syllabus",
           },
@@ -75,12 +76,63 @@ it("keeps actual activity collapsed until expanded", async () => {
       ]}
     />,
   );
-  expect(
-    screen.queryByText("Inspected a drawing syllabus"),
-  ).not.toBeInTheDocument();
-  await userEvent.click(screen.getByRole("button", { name: "View activity" }));
   expect(screen.getByText("Inspected a drawing syllabus")).toBeVisible();
   expect(
     screen.getByRole("link", { name: "Drawing syllabus" }),
   ).toHaveAttribute("href", "https://example.com/drawing");
+  expect(
+    screen.queryByRole("button", { name: "View activity" }),
+  ).not.toBeInTheDocument();
+});
+it("keeps per-search tool lines out of the visible feed", () => {
+  render(
+    <JobActivity
+      events={[
+        {
+          sequence: 1,
+          stage: "research",
+          type: "tool_completed",
+          summary: "Searched public learning resources",
+          metadata: { tool: "search_web" },
+          createdAt: "now",
+        },
+        {
+          sequence: 2,
+          stage: "research",
+          type: "composition_progress",
+          summary: "Detailed area 2 of 5; saved 34 concepts",
+          metadata: {},
+          createdAt: "now",
+        },
+      ]}
+    />,
+  );
+  expect(
+    screen.queryByText("Searched public learning resources"),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.getByText("Detailed area 2 of 5; saved 34 concepts"),
+  ).toBeVisible();
+});
+it("shows the latest step with a working indicator while the job runs", () => {
+  render(
+    <JobActivity
+      active
+      events={[
+        {
+          sequence: 1,
+          stage: "compose",
+          type: "phase",
+          summary: "Drafting the subject outline and topic lessons",
+          metadata: {},
+          createdAt: "now",
+        },
+      ]}
+    />,
+  );
+  expect(screen.getByText("Agent steps")).toBeVisible();
+  expect(
+    screen.getByText("Drafting the subject outline and topic lessons"),
+  ).toBeVisible();
+  expect(screen.getByLabelText("Working")).toBeVisible();
 });

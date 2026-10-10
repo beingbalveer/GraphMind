@@ -340,7 +340,10 @@ function RoadmapSetup({
               Connection interrupted. Your generation stays saved.
             </p>
           )}
-          <JobActivity events={events} />
+          <JobActivity
+            events={events}
+            active={Boolean(job && ["queued", "running", "cancel_requested"].includes(job.status))}
+          />
           {job && ["failed", "canceled", "completed"].includes(job.status) && (
             <Button variant="ghost" onClick={startOver}>
               Create another roadmap

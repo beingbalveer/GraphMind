@@ -579,6 +579,18 @@ class RoadmapStageExecutor:
             await repo.append_event(job.id, "composition_progress", summary, {})
             await repo.session.flush()
 
+    async def _phase(self, claim: Claim, summary: str) -> None:
+        """Emits a coarse 'what the agent is doing now' line to the live feed.
+
+        Unlike tool-level receipts (which can be noisy), phase events mark the
+        start of a distinct model-call workload so users see the agent move
+        through the pipeline instead of a frozen stage title.
+        """
+        async with self.repositories() as repo:
+            await repo._claimed(claim)
+            await repo.append_event(claim.job_id, "phase", summary, {})
+            await repo.session.flush()
+
     async def _compose(
         self,
         job: JobSnapshot,
@@ -741,9 +753,7 @@ class RoadmapStageExecutor:
                 # resources still fall through to the model regeneration below.
                 dropped = 0
                 if not is_batch_grounded(batch, ids):
-                    dropped, _repaired_ok = repair_topic_batch_grounding(
-                        batch, ids, actual_sources
-                    )
+                    dropped, _repaired_ok = repair_topic_batch_grounding(batch, ids, actual_sources)
                     if dropped:
                         logger.warning(
                             "roadmap_topic_batch_repaired",
@@ -1572,12 +1582,12 @@ class RoadmapStageExecutor:
                 raise JobStateError(
                     "RESEARCH_INCOMPLETE", "Complete researched evidence before composition"
                 )
-            job.checkpoint.candidate = self._candidate(
-                await self._compose(job, claim, tools)
-                if stage == "compose"
-                else await self._personalize(job, claim, tools),
-                job,
-            )
+            if stage == "compose":
+                await self._phase(claim, "Drafting the subject outline and topic lessons")
+                job.checkpoint.candidate = self._candidate(await self._compose(job, claim, tools), job)
+            else:
+                await self._phase(claim, "Planning your weekly milestones and core path")
+                job.checkpoint.candidate = self._candidate(await self._personalize(job, claim, tools), job)
             return StageResult(
                 checkpoint=job.checkpoint,
                 summary="Curriculum composed"
@@ -1588,6 +1598,7 @@ class RoadmapStageExecutor:
         assert job.checkpoint.profile is not None
         if job.checkpoint.candidate is None:
             raise JobStateError("CURRICULUM_NOT_READY", "Compose a curriculum before validation")
+        await self._phase(claim, "Reviewing roadmap structure, workload and source evidence")
         while True:
             if job.checkpoint.validation_repair_active:
                 issues = job.checkpoint.validation_repair_issues
