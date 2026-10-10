@@ -52,7 +52,7 @@ function useIsDesktop(): boolean {
 export function ContextRail({
   isOpen,
   onToggle,
-  title = "Context & Mastery",
+  title = "Context",
   children,
   className,
   forceDrawer = false,

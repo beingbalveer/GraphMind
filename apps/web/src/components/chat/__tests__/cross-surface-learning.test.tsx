@@ -3,17 +3,12 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
-import { MasteryPanel } from "../MasteryPanel";
 import { QuizCard } from "../QuizCard";
 import { ThreadGraphNode, ThreadNodeData } from "../../canvas/ThreadGraphNode";
 import * as workspaceApi from "@/lib/workspaceApi";
 import { Node, ReactFlowProvider } from "@xyflow/react";
 
 vi.mock("@/lib/workspaceApi", () => ({
-  getWorkspaceMastery: vi.fn(),
-  getWorkspaceKnowledgeGaps: vi.fn(),
-  getNextTopicRecommendations: vi.fn(),
-  adoptKnowledgeGap: vi.fn(),
   createWorkspaceConcept: vi.fn(),
   updateWorkspaceConcept: vi.fn(),
 }));
@@ -21,123 +16,6 @@ vi.mock("@/lib/workspaceApi", () => ({
 describe("Cross-Surface Learning Consistency", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-  });
-
-  it("renders MasteryPanel with consistent mastery distribution and recommendations", async () => {
-    vi.mocked(workspaceApi.getWorkspaceMastery).mockResolvedValue({
-      workspaceId: "ws-1",
-      totalConcepts: 1,
-      overallScore: 0.75,
-      topMastered: [],
-      distribution: {
-        mastered: 4,
-        quizzed: 3,
-        explored: 2,
-        stale: 1,
-        unexplored: 0,
-      },
-      concepts: [
-        {
-          id: "c-1",
-          workspaceId: "ws-1",
-          name: "Attention Mechanism",
-          confidenceScore: 0.9,
-          masteryLevel: "mastered",
-          timesQuizzed: 5,
-          timesCorrect: 5,
-          lastReviewedAt: "2026-09-10T00:00:00.000Z",
-          createdAt: "2026-09-10T00:00:00.000Z",
-          updatedAt: "2026-09-10T00:00:00.000Z",
-        },
-      ],
-      needingReview: [
-        {
-          id: "c-2",
-          workspaceId: "ws-1",
-          name: "Positional Encoding",
-          confidenceScore: 0.4,
-          masteryLevel: "stale",
-          timesQuizzed: 2,
-          timesCorrect: 1,
-          lastReviewedAt: "2026-09-01T00:00:00.000Z",
-          createdAt: "2026-09-01T00:00:00.000Z",
-          updatedAt: "2026-09-01T00:00:00.000Z",
-        },
-      ],
-    });
-
-    vi.mocked(workspaceApi.getWorkspaceKnowledgeGaps).mockResolvedValue({
-      workspaceId: "ws-1",
-      analyzedAt: "2026-09-10T00:00:00.000Z",
-      exploredDomains: ["Transformers"],
-      totalGaps: 1,
-      highSeverityCount: 0,
-      mediumSeverityCount: 1,
-      gaps: [
-        {
-          id: "gap-1",
-          conceptName: "Linear Projections",
-          domain: "Linear Algebra",
-          status: "unexplored",
-          severity: "medium",
-          rationale: "Fundamental for computing QKV queries.",
-          dependentConcepts: ["Self-Attention"],
-          suggestedAction: "Explore linear projections",
-          foundationalImportance: "High",
-        },
-      ],
-    });
-
-    vi.mocked(workspaceApi.getNextTopicRecommendations).mockResolvedValue({
-      workspaceId: "ws-1",
-      activeFrontierDomains: ["Deep Learning"],
-      generatedAt: "2026-09-10T00:00:00.000Z",
-      recommendations: [
-        {
-          id: "rec-1",
-          topicName: "Multi-Head Attention",
-          domain: "Deep Learning",
-          readiness: "ready_to_unlock",
-          readinessScore: 0.8,
-          rationale: "Natural follow-up to self-attention.",
-          unlockedBy: ["Attention Mechanism"],
-          futureUnlocks: ["Transformer Encoder"],
-          suggestedPrompt: "Explain Multi-Head Attention",
-          importance: "high",
-        },
-      ],
-    });
-
-    const handleStartTopic = vi.fn();
-    const handleExploreGap = vi.fn();
-
-    render(
-      <MasteryPanel
-        workspaceId="ws-1"
-        onStartTopic={handleStartTopic}
-        onExploreGap={handleExploreGap}
-      />
-    );
-
-    // Wait for data load
-    await waitFor(() => {
-      expect(screen.getByText("Mastery Score")).toBeInTheDocument();
-    });
-
-    expect(screen.getByText("75%")).toBeInTheDocument();
-    expect(screen.getByText("Mastered")).toBeInTheDocument();
-    expect(screen.getByText("4")).toBeInTheDocument();
-    expect(screen.getByText("Quizzed")).toBeInTheDocument();
-    expect(screen.getByText("3")).toBeInTheDocument();
-
-    // Next Best Topics
-    expect(screen.getByText("Next Best Topics")).toBeInTheDocument();
-    expect(screen.getByText("Multi-Head Attention")).toBeInTheDocument();
-    expect(screen.getByText("ready to unlock")).toBeInTheDocument();
-
-    // Knowledge Gaps
-    expect(screen.getByText("Knowledge Gaps")).toBeInTheDocument();
-    expect(screen.getByText("Linear Projections")).toBeInTheDocument();
   });
 
   it("renders consistent concept mastery levels in ThreadGraphNode across zoom modes", () => {

@@ -28,7 +28,6 @@ import { BranchBreadcrumbs, BreadcrumbStep } from "./BranchBreadcrumbs";
 
 import { ChatSidebar } from "./ChatSidebar";
 import { RightSidebar } from "./RightSidebar";
-import { MasteryPanel } from "./MasteryPanel";
 import { useTopicSession } from "@/hooks/useTopicSession";
 import { TopicBriefDrawer } from "@/components/roadmap/TopicBriefDrawer";
 import { TutorLearningBar } from "@/components/roadmap/TutorLearningBar";
@@ -1564,29 +1563,7 @@ export function ChatContainer({
             <RightSidebar
               isOpen={isRightSidebarOpen}
               onToggle={handleToggleRightSidebar}
-            >
-              {currentWorkspace?.id && (
-                <MasteryPanel
-                  workspaceId={currentWorkspace.id}
-                  onQuizConcept={(conceptName) => {
-                    handleSendMessage(
-                      `Quiz me on ${conceptName} with a short conceptual check.`,
-                    );
-                  }}
-                  onExploreGap={(gap) => {
-                    handleSendMessage(
-                      `Explain the knowledge gap regarding ${gap.conceptName}: ${gap.rationale}`,
-                    );
-                  }}
-                  onStartTopic={(topic) => {
-                    handleSendMessage(
-                      topic.suggestedPrompt ||
-                        `Let's explore ${topic.topicName}: ${topic.rationale}`,
-                    );
-                  }}
-                />
-              )}
-            </RightSidebar>
+            />
           )
         }
       >

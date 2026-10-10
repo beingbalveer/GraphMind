@@ -30,7 +30,6 @@ describe("Scope 4 Product Surfaces - Master Verification Gate", () => {
     "chat/BranchChatPane.tsx",
     "chat/QuizCard.tsx",
     "chat/SidePeekBranchSheet.tsx",
-    "chat/MasteryPanel.tsx",
     "tree/TreeSidebar.tsx",
   ];
 

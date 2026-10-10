@@ -54,9 +54,6 @@ vi.mock("@/lib/workspaceApi", async (importOriginal) => {
       workspace: { id: "ws_test", name: "Test workspace" },
     })),
     fetchWorkspaceChats: vi.fn(async () => []),
-    getWorkspaceMastery: vi.fn(async () => ({ concepts: [] })),
-    getWorkspaceKnowledgeGaps: vi.fn(async () => ({ gaps: [] })),
-    getNextTopicRecommendations: vi.fn(async () => ({ recommendations: [] })),
   };
 });
 
