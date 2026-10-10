@@ -46,6 +46,7 @@ from services.roadmap.coverage import (
     sanitize_outline_relations,
     select_core,
 )
+from services.roadmap.excerpt_repair import attempt_excerpt_repair
 from services.roadmap.job_repository import JobRepository, JobStateError
 from services.roadmap.prompts import (
     CoreSelection,
@@ -413,14 +414,19 @@ class RoadmapStageExecutor:
                 content = result.content.strip()
                 if content.startswith("```json") and content.endswith("```"):
                     content = content[7:-3].strip()
-                output = schema.model_validate_json(
-                    resolve_source_handles(
-                        content,
-                        job.checkpoint.sources,
-                        job.checkpoint.coverage_topics,
-                        additional_ids,
-                    )
+                resolved = resolve_source_handles(
+                    content,
+                    job.checkpoint.sources,
+                    job.checkpoint.coverage_topics,
+                    additional_ids,
                 )
+                try:
+                    output = schema.model_validate_json(resolved)
+                except ValidationError as error:
+                    repaired = self._repair_excerpt_lengths(resolved, schema, job, error, stage)
+                    if repaired is None:
+                        raise
+                    output = repaired
             except ValidationError as error:
                 errors = [
                     f"{'.'.join(str(part) for part in detail['loc']) or '$'} "
@@ -500,6 +506,50 @@ class RoadmapStageExecutor:
                 ]
             )
         raise AssertionError("Bounded output loop did not return")
+
+    def _repair_excerpt_lengths(
+        self,
+        resolved: str,
+        schema: type[T],
+        job: JobSnapshot,
+        error: ValidationError,
+        stage: StageName,
+    ) -> T | None:
+        """Deterministically repair evidenceExcerpt length violations before an \
+        LLM regeneration.
+
+        When schema validation fails only on ``string_too_short``/``string_too_long``
+        for ``evidenceExcerpt`` fields, truncate over-long excerpts and substitute
+        exact substrings of the matching recorded source evidence for over-short
+        ones, then re-validate. Returns the validated output, or None to fall through
+        to the existing regenerate/retry flow unchanged.
+        """
+        try:
+            payload = json.loads(resolved)
+        except ValueError:
+            return None
+        if not isinstance(payload, dict):
+            return None
+        sources = {s.id: s.evidence for s in job.checkpoint.sources}
+        should_retry, repaired = attempt_excerpt_repair(
+            payload,
+            sources,
+            error.errors(include_input=False, include_context=False)[:30],
+        )
+        if not should_retry:
+            return None
+        logger.warning(
+            "roadmap_excerpt_auto_repaired",
+            job_id=job.id,
+            stage=stage,
+            repaired=repaired,
+        )
+        try:
+            return cast(T, schema.model_validate(payload))
+        except ValidationError:
+            # Repair only fixed the excerpt lengths; anything else still failing is
+            # left for the normal regeneration path.
+            return None
 
     def _candidate(self, candidate: CurriculumCandidate, job: JobSnapshot) -> CurriculumCandidate:
         if job.request.title:
@@ -1244,10 +1294,10 @@ class RoadmapStageExecutor:
                 if disposition.kind == "concept" and not disposition.topic_ids
             ]
             if missing_concepts:
-                labels_by_source = {
-                    source.id: source.provenance.get("diagramLabels", [])
+                labels_by_source: dict[str, list[JsonValue]] = {
+                    source.id: labels
                     for source in job.checkpoint.sources
-                    if isinstance(source.provenance.get("diagramLabels"), list)
+                    if isinstance(labels := source.provenance.get("diagramLabels"), list)
                 }
                 already_repaired = set(job.checkpoint.coverage_reference_repaired_labels)
                 repairable = [
@@ -1341,9 +1391,9 @@ class RoadmapStageExecutor:
             }
             if merged_topic_ids:
                 labels_by_source = {
-                    source.id: source.provenance.get("diagramLabels", [])
+                    source.id: labels
                     for source in job.checkpoint.sources
-                    if isinstance(source.provenance.get("diagramLabels"), list)
+                    if isinstance(labels := source.provenance.get("diagramLabels"), list)
                 }
                 topic_by_id = {topic.id: topic for topic in reviewed.coverage_topics}
                 by_topic: dict[str, dict[str, list[ReferenceDisposition]]] = {}
