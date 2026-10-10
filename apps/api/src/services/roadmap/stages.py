@@ -2,7 +2,7 @@
 
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import AsyncIterator
+from typing import AsyncIterator, cast
 
 from ai_core.base import BaseLLMProvider, BaseTool, ModelConfig
 from ai_core.providers import (
@@ -72,24 +72,27 @@ class RoadmapStageExecutor:
             await session.commit()
 
     def tools(self, job: JobSnapshot, claim: Claim) -> dict[str, BaseTool]:
-        return build_roadmap_tools(
-            RoadmapToolContext(
-                job.id,
-                job.owner_id,
-                claim,
-                job.checkpoint.profile or normalize_profile(job.request),
-                job.checkpoint,
-                self.sessions,
-                lambda session: ReferenceService(
-                    session, Path(self.settings.ROADMAP_REFERENCE_DIR)
-                ),
-                SourceFetcher(),
-                GeminiSearchBackend(
-                    self.settings.GEMINI_API_KEY or self.settings.GOOGLE_API_KEY or "",
-                    self.settings.ROADMAP_SEARCH_MODEL,
-                ),
-                self.skills,
-            )
+        return cast(
+            dict[str, BaseTool],
+            build_roadmap_tools(
+                RoadmapToolContext(
+                    job.id,
+                    job.owner_id,
+                    claim,
+                    job.checkpoint.profile or normalize_profile(job.request),
+                    job.checkpoint,
+                    self.sessions,
+                    lambda session: ReferenceService(
+                        session, Path(self.settings.ROADMAP_REFERENCE_DIR)
+                    ),
+                    SourceFetcher(),
+                    GeminiSearchBackend(
+                        self.settings.GEMINI_API_KEY or self.settings.GOOGLE_API_KEY or "",
+                        self.settings.ROADMAP_SEARCH_MODEL,
+                    ),
+                    self.skills,
+                )
+            ),
         )
 
     async def run(self, stage: StageName, job: JobSnapshot, claim: Claim) -> StageResult:
@@ -109,6 +112,7 @@ class RoadmapStageExecutor:
             ),
             self.tools,
             self.repository,
+            compose_batch_size=self.settings.ROADMAP_COMPOSE_BATCH_SIZE,
         )
         try:
             return await executor.run(stage, job, claim)

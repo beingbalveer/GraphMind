@@ -77,6 +77,12 @@ class Settings(BaseSettings):
     ROADMAP_MAX_SEARCHES: int = Field(default=20, ge=1)
     ROADMAP_MAX_FETCHES: int = Field(default=40, ge=1)
     ROADMAP_MAX_REPAIRS: int = Field(default=3, ge=1)
+    ROADMAP_COMPOSE_BATCH_SIZE: int = Field(
+        default=6,
+        ge=1,
+        le=20,
+        description="Max topics composed per topic-details call; smaller batches reduce exact-ID\n        grounding failures and are cheaper to retry than one large ~40KB response.",
+    )
     ROADMAP_MAX_ACTIVE_SECONDS: int = Field(default=3600, ge=1)
     ROADMAP_LEASE_SECONDS: int = Field(default=60, ge=2)
     ROADMAP_HEARTBEAT_SECONDS: int = Field(default=15, ge=1)

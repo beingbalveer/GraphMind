@@ -816,6 +816,105 @@ async def test_large_compose_resumes_saved_batches_without_repeating_completed_l
     )
 
 
+async def test_compose_batch_size_produces_smaller_grounded_batches(
+    executor_setup, clock, small_profile, small_candidate, sources
+):
+    """A smaller ROADMAP_COMPOSE_BATCH_SIZE splits the topic-details call into more,
+    smaller batches (the dogfood-recommended fix for compose ID-garbling at 20 topics),
+    and still merges every batch into one complete candidate without redoing any lesson.
+    """
+    from schemas.curriculum import CurriculumItemData, CurriculumRelationData
+    from schemas.roadmap_job import CoverageTopic
+
+    executor, provider, _, _, _ = executor_setup
+    executor.compose_batch_size = 6
+
+    outline = small_candidate.model_copy(deep=True)
+    # 3 base topics (t1..t3) + 10 added = 13 total, which the six-at-a-time compose
+    # splits into three batches (6, 6, 1) with no remainder.
+    for index in range(4, 14):
+        outline.items.append(
+            CurriculumItemData(
+                id=f"t{index}", kind="topic", title=f"Drawing technique {index}", order=index
+            )
+        )
+        outline.relations.append(
+            CurriculumRelationData(source_id="phase", target_id=f"t{index}", kind="contains")
+        )
+    inventory = [
+        CoverageTopic(id=i.id, title=i.title, area="Drawing", source_ids=["s1"])
+        for i in outline.items
+        if i.kind == "topic"
+    ]
+
+    claim, job = await move_to_stage(
+        executor_setup, "compose", clock, small_profile, sources=sources
+    )
+    job.checkpoint.coverage_topics = inventory
+    batches: list[list[str]] = []
+
+    def respond(messages, *args, **kwargs):
+        task = json.loads(messages[-1].content.split("\n", 1)[1]).get("task") or {}
+        if task.get("mode") == "evidence_review":
+            return answer(
+                {
+                    "verdicts": [
+                        {
+                            "checkId": c["checkId"],
+                            "approved": True,
+                            "reason": "The instructional passage supports the stated drawing objective and exercise.",
+                        }
+                        for c in task["checks"]
+                    ]
+                }
+            )
+        if task.get("mode") == "topic_details":
+            ids = task["topicIds"]
+            batches.append(ids)
+            assert len(ids) <= 6  # the smaller batch cap is honored per call
+            return answer(
+                {
+                    "topics": [
+                        {
+                            "id": key,
+                            "brief": "Practice observation",
+                            "objectives": ["Compare proportions"],
+                            "exercise": "Draw and compare two shapes",
+                            "format": "practice",
+                            "estimateMinutes": 30,
+                        }
+                        for key in ids
+                    ],
+                    "resources": [
+                        {
+                            "topicId": key,
+                            "sourceId": "s1",
+                            "order": 0,
+                            "rationale": "Provides sufficient observation exercises for this focused practice",
+                            "evidenceExcerpt": sources[0].evidence,
+                            "objectiveIndex": 0,
+                        }
+                        for key in ids
+                    ],
+                }
+            )
+        return answer({"title": outline.title, "outcome": outline.outcome})
+
+    provider.generate.side_effect = respond
+    result = await executor.run("compose", job, claim)
+    # 13 topics in batches of six => 3 separate grounded topic-details calls.
+    assert len(batches) == 3
+    assert all(len(batch) <= 6 for batch in batches)
+    merged = [key for batch in batches for key in batch]
+    assert len(set(merged)) == len(merged)  # no topic detailed twice
+    assert len(result.checkpoint.detailed_topic_ids) == 13
+    assert all(
+        i.brief and i.estimate_minutes
+        for i in result.checkpoint.candidate.items
+        if i.kind == "topic"
+    )
+
+
 async def test_unsure_pacing_stays_flexible_without_invented_deadline(
     executor_setup, small_profile
 ):

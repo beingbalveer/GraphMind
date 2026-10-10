@@ -229,11 +229,14 @@ class RoadmapStageExecutor:
         config: ModelConfig,
         tools_factory: ToolsFactory,
         repository_factory: RepositoryFactory,
+        *,
+        compose_batch_size: int = 20,
     ) -> None:
         self.provider = provider
         self.config = config.model_copy(update={"max_retries": 0})
         self.tools_factory = tools_factory
         self.repositories = repository_factory
+        self.compose_batch_size = compose_batch_size
 
     async def _check(self, claim: Claim) -> None:
         async with self.repositories() as repo:
@@ -721,8 +724,9 @@ class RoadmapStageExecutor:
                 f"Keep the subject map within {MAX_COVERAGE_TOPICS} actionable topics",
             )
         remaining = [i for i in topics if i.id not in checkpoint.detailed_topic_ids]
-        for start in range(0, len(remaining), 20):
-            ids = [i.id for i in remaining[start : start + 20]]
+        compose_batch = self.compose_batch_size
+        for start in range(0, len(remaining), compose_batch):
+            ids = [i.id for i in remaining[start : start + compose_batch]]
 
             async def batch_issues(batch: TopicBatch) -> list[str]:
                 actual_sources = {
