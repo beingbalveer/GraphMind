@@ -167,6 +167,21 @@ export async function fetchWorkspaces(): Promise<WorkspaceItem[]> {
   }
 }
 
+/**
+ * Lightweight workspace metadata fetch — no nodes/edges, so the shell can
+ * render instantly on deep links. Falls back to null on failure.
+ */
+export async function fetchWorkspace(
+  workspaceId: string,
+): Promise<WorkspaceItem | null> {
+  try {
+    return await apiFetch<WorkspaceItem>(`/workspaces/${workspaceId}`);
+  } catch (err) {
+    console.warn("Could not fetch workspace metadata:", err);
+    return null;
+  }
+}
+
 export async function createWorkspace(
   name: string,
   description?: string

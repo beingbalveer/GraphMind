@@ -46,6 +46,10 @@ vi.mock("@/lib/workspaceApi", async (importOriginal) => {
 
   return {
     ...actual,
+    fetchWorkspace: vi.fn(async () => ({
+      id: "ws_test",
+      name: "Test workspace",
+    })),
     fetchGraphSnapshot: vi.fn(async () => ({
       workspace: { id: "ws_test", name: "Test workspace" },
     })),

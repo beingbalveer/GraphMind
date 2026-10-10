@@ -44,6 +44,7 @@ import { FileLibraryView } from "../library/FileLibraryView";
 import { SidePeekBranchSheet, SidePeekEntry } from "./SidePeekBranchSheet";
 import { Button } from "@/components/ui/button";
 import { InlineFeedback } from "@/components/ui/feedback";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Toast } from "@/components/ui/toast";
 import { LogoBadge } from "@/components/ui/Logo";
 import { useChatStream } from "@/hooks/useChatStream";
@@ -72,6 +73,7 @@ import {
   WorkspaceItem,
   ChatItem,
   fetchWorkspaces,
+  fetchWorkspace,
   createWorkspace,
   fetchWorkspaceChats,
   deleteWorkspaceChat,
@@ -174,6 +176,13 @@ export function ChatContainer({
   const [activeChatId, setActiveChatId] = useState<string | null>(
     initialChatId || null,
   );
+  // While a chat tree is being fetched (deep link, sidebar click, history
+  // navigation) the main pane shows a skeleton instead of stale/empty content.
+  const [loadingChatId, setLoadingChatId] = useState<string | null>(
+    initialChatId || null,
+  );
+  const isLoadingChat =
+    loadingChatId !== null && loadingChatId === activeChatId;
 
   const [syncStatus, setSyncStatus] = useState<"saved" | "syncing" | "offline">(
     "saved",
@@ -262,9 +271,10 @@ export function ChatContainer({
     }
     try {
       const lesson = await openTopicSession(workspaceId, topicId, key, false);
-      await refreshChats(workspaceId);
       if (routeRef.current === startPath)
         router.push(buildChatUrl(workspaceId, lesson.chatId));
+      // Refresh the sidebar list in the background — never block navigation.
+      void refreshChats(workspaceId);
     } catch (error) {
       setLearningError(
         error instanceof Error
@@ -316,6 +326,30 @@ export function ChatContainer({
     }
   }, []);
 
+  // Load a chat tree in the background. `loadingChatId` drives the skeleton
+  // in the main pane so navigation feels instant even before data arrives.
+  // A monotonic request id makes sure a slower earlier response never
+  // overwrites the chat the user most recently clicked.
+  const latestChatRequestRef = useRef(0);
+  const loadChatTree = useCallback(
+    async (workspaceId: string, chatId: string) => {
+      const requestId = ++latestChatRequestRef.current;
+      setLoadingChatId(chatId);
+      try {
+        const snapshot = await fetchGraphSnapshot(workspaceId, chatId);
+        if (requestId !== latestChatRequestRef.current) return; // superseded
+        if (snapshot) {
+          const loadedTree = snapshotToTree(snapshot);
+          if (loadedTree) loadTree(loadedTree);
+        }
+      } finally {
+        if (requestId === latestChatRequestRef.current)
+          setLoadingChatId((prev) => (prev === chatId ? null : prev));
+      }
+    },
+    [loadTree],
+  );
+
   // Initialize workspace & load initial chat — runs EXACTLY ONCE on mount.
   useEffect(() => {
     if (initializedWorkspaceIdRef.current) return; // already ran
@@ -326,13 +360,27 @@ export function ChatContainer({
       const branchId = initialBranchIdRef.current;
       const nodeId = initialNodeIdRef.current;
       const viewMode = initialViewModeRef.current;
+      // Tree loaded for the deep-linked chat (if any) so side-peek wiring
+      // below can inspect its nodes without a second fetch.
+      let loadedTree: ReturnType<typeof snapshotToTree> = null;
 
       try {
         let ws: WorkspaceItem | null = null;
         if (wsId) {
-          const snapshot = await fetchGraphSnapshot(wsId);
-          if (snapshot) {
-            ws = snapshot.workspace;
+          if (chatId) {
+            // Deep link: fetch the target chat tree FIRST so the conversation
+            // paints immediately; only metadata is loaded for the workspace.
+            setLoadingChatId(chatId);
+            ws = await fetchWorkspace(wsId);
+            if (ws) {
+              const snapshot = await fetchGraphSnapshot(wsId, chatId);
+              if (snapshot) {
+                loadedTree = snapshotToTree(snapshot);
+                if (loadedTree) loadTree(loadedTree);
+              }
+            }
+          } else {
+            ws = await fetchWorkspace(wsId);
           }
         }
 
@@ -376,32 +424,28 @@ export function ChatContainer({
 
         if (ws) {
           initializedWorkspaceIdRef.current = ws.id;
+          setLoadingChatId(null);
           await refreshChats(ws.id);
 
           const targetChatId = chatId || null;
           loadedChatIdRef.current = targetChatId;
           setActiveChatId(targetChatId);
 
-          if (targetChatId) {
-            const snapshot = await fetchGraphSnapshot(ws.id, targetChatId);
-            if (snapshot) {
-              const loadedTree = snapshotToTree(snapshot);
-              if (loadedTree) {
-                loadTree(loadedTree);
-                if (branchId && loadedTree.nodes[branchId]) {
-                  const node = loadedTree.nodes[branchId];
-                  lastProcessedBranchRef.current = branchId;
-                  setSidePeekState({
-                    stack: [
-                      {
-                        nodeId: branchId,
-                        excerpt: node.highlightedContext || undefined,
-                      },
-                    ],
-                    index: 0,
-                  });
-                }
-              }
+          // The target chat tree was loaded above in the deep-link branch;
+          // here we only wire up side-peek state for ?branch= / ?node= params.
+          if (targetChatId && loadedTree) {
+            if (branchId && loadedTree.nodes[branchId]) {
+              const node = loadedTree.nodes[branchId];
+              lastProcessedBranchRef.current = branchId;
+              setSidePeekState({
+                stack: [
+                  {
+                    nodeId: branchId,
+                    excerpt: node.highlightedContext || undefined,
+                  },
+                ],
+                index: 0,
+              });
             }
           }
 
@@ -473,14 +517,11 @@ export function ChatContainer({
     if (targetChatId && targetChatId !== loadedChatIdRef.current) {
       loadedChatIdRef.current = targetChatId;
       setActiveChatId(targetChatId);
-      fetchGraphSnapshot(currentWorkspace.id, targetChatId).then((snapshot) => {
-        if (snapshot) {
-          const loadedTree = snapshotToTree(snapshot);
-          if (loadedTree) {
-            loadTree(loadedTree);
-          }
-        }
-      });
+      lastProcessedBranchRef.current = null;
+      lastProcessedNodeRef.current = null;
+      // Skeleton shows in the pane while the tree loads, so back/forward
+      // navigation feels instant rather than blocked on the fetch.
+      void loadChatTree(currentWorkspace.id, targetChatId);
     } else if (
       !targetChatId &&
       loadedChatIdRef.current &&
@@ -488,6 +529,7 @@ export function ChatContainer({
     ) {
       loadedChatIdRef.current = null;
       setActiveChatId(null);
+      setLoadingChatId(null);
       clearMessages();
       lastProcessedBranchRef.current = null;
       lastProcessedNodeRef.current = null;
@@ -531,6 +573,7 @@ export function ChatContainer({
     searchParams,
     currentWorkspace,
     loadTree,
+    loadChatTree,
     clearMessages,
     handleJumpToMessage,
   ]);
@@ -539,6 +582,7 @@ export function ChatContainer({
   const handleNewChat = useCallback(() => {
     clearMessages();
     setActiveChatId(null);
+    setLoadingChatId(null);
     loadedChatIdRef.current = null;
     lastProcessedBranchRef.current = null;
     lastProcessedNodeRef.current = null;
@@ -556,6 +600,7 @@ export function ChatContainer({
 
       // Update active state immediately so sidebar reflects selection
       setActiveChatId(chat.id);
+      setLoadingChatId(chat.id);
       loadedChatIdRef.current = chat.id;
       lastProcessedBranchRef.current = null;
       lastProcessedNodeRef.current = null;
@@ -567,16 +612,11 @@ export function ChatContainer({
         scroll: false,
       });
 
-      // Fetch snapshot in background — tree swaps without clearing visible messages
-      const snapshot = await fetchGraphSnapshot(currentWorkspace.id, chat.id);
-      if (snapshot) {
-        const loadedTree = snapshotToTree(snapshot);
-        if (loadedTree) {
-          loadTree(loadedTree);
-        }
-      }
+      // Fetch snapshot in background — the pane shows a skeleton while the
+      // tree loads instead of keeping the previous chat's messages visible.
+      await loadChatTree(currentWorkspace.id, chat.id);
     },
-    [currentWorkspace, activeChatId, loadTree, router],
+    [currentWorkspace, activeChatId, loadChatTree, router],
   );
 
   // Delete a chat from the workspace
@@ -1621,6 +1661,7 @@ export function ChatContainer({
               tree={tree}
               workspaceId={currentWorkspace?.id}
               chatId={activeChatId ?? undefined}
+              loading={isLoadingChat}
               isStreaming={isStreaming}
               onSelectNode={handleSelectTreeNode}
               onDeleteBranch={(nodeId) =>
@@ -1666,7 +1707,48 @@ export function ChatContainer({
                 data-testid="chat-content-column"
                 className="w-full flex-1 flex flex-col max-w-[var(--chat-content-max)] mx-auto px-4"
               >
-                {activeMessages.length === 0 ? (
+                {isLoadingChat ? (
+                  /* Loading Skeleton — shows instantly while the chat tree is fetched */
+                  <div
+                    role="status"
+                    aria-label="Loading conversation"
+                    className="w-full max-w-2xl mx-auto py-8 space-y-6"
+                  >
+                    {[0, 1, 2].map((i) => (
+                      <div
+                        key={i}
+                        className={
+                          i % 2 === 1
+                            ? "flex flex-row-reverse gap-3"
+                            : "flex gap-3"
+                        }
+                      >
+                        <Skeleton
+                          label=""
+                          aria-hidden="true"
+                          className="size-8 shrink-0 rounded-full"
+                        />
+                        <div className="flex-1 space-y-2 pt-1">
+                          <Skeleton
+                            label=""
+                            aria-hidden="true"
+                            className="h-3.5 w-2/5 rounded-lg"
+                          />
+                          <Skeleton
+                            label=""
+                            aria-hidden="true"
+                            className="h-3.5 w-full rounded-lg"
+                          />
+                          <Skeleton
+                            label=""
+                            aria-hidden="true"
+                            className="h-3.5 w-4/5 rounded-lg"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : activeMessages.length === 0 ? (
                   /* Clean Empty State */
                   <div className="flex-1 flex flex-col items-center justify-center max-w-2xl mx-auto px-4 py-8 text-center space-y-8 my-auto">
                     <div className="space-y-3">

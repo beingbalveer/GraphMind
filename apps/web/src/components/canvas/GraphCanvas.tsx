@@ -11,10 +11,13 @@ import { CanvasSurface } from "./CanvasSurface";
 import { ConversationCanvasCard, type ThreadMasteryInfo } from "./ThreadGraphNode";
 import { TimelineReplayBar } from "./TimelineReplayBar";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useCanvasLayout } from "@/hooks/useCanvasLayout";
 
 export interface GraphCanvasProps {
   tree: ConversationTree | null; workspaceId?: string; chatId?: string; isStreaming?: boolean;
+  /** When true, the canvas viewport shows a loading skeleton instead of the empty state. */
+  loading?: boolean;
   onSelectNode: (nodeId: string) => void;
   onExploreBranch?: (nodeId: string, contextText?: string) => void;
   onSwitchToChat?: (nodeId: string) => void;
@@ -26,7 +29,7 @@ export interface GraphCanvasProps {
   onPaneClick?: () => void; isSidePeekOpen?: boolean;
 }
 
-export function GraphCanvas({ tree, workspaceId, chatId, isStreaming = false, onSelectNode, onDeleteBranch,
+export function GraphCanvas({ tree, workspaceId, chatId, isStreaming = false, loading = false, onSelectNode, onDeleteBranch,
   onFitViewRef, onCenterActiveRef, onAutoLayoutRef, onPaneClick, isSidePeekOpen = false }: GraphCanvasProps) {
   const [showMinimap, setShowMinimap] = useState(false);
   const [showMastery, setShowMastery] = useState(false);
@@ -94,6 +97,38 @@ export function GraphCanvas({ tree, workspaceId, chatId, isStreaming = false, on
       streaming={isStreaming && item.itemIds.includes(tree?.activeNodeId ?? "")} onSelect={onSelectNode}
       onDelete={replay ? undefined : onDeleteBranch} mastery={evidence} />;
   }, [showMastery, mastery, activeItems, isStreaming, tree?.activeNodeId, onSelectNode, onDeleteBranch, replay]);
+  if (loading && !graphReady)
+    return (
+      <div
+        role="status"
+        aria-label="Loading canvas"
+        className="flex h-full w-full items-center justify-center bg-canvas-background p-6"
+      >
+        <div className="flex w-full max-w-xl flex-col items-center gap-5">
+          <div className="flex items-center gap-3">
+            <Skeleton
+              label=""
+              aria-hidden="true"
+              className="size-12 shrink-0 rounded-2xl"
+            />
+            <div className="space-y-2">
+              <Skeleton label="" aria-hidden="true" className="h-3.5 w-36 rounded-lg" />
+              <Skeleton label="" aria-hidden="true" className="h-3.5 w-24 rounded-lg" />
+            </div>
+          </div>
+          <div className="flex items-end gap-4">
+            {[0, 1, 2].map((i) => (
+              <Skeleton
+                key={i}
+                label=""
+                aria-hidden="true"
+                className={i === 1 ? "mb-8 h-20 w-24 rounded-xl" : "h-16 w-24 rounded-xl"}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
   if (!graph.items.length) return <div className="flex h-full items-center justify-center bg-canvas-background p-6 text-sm text-foreground-muted">
     {replay ? "No conversation at this point in the timeline." : "Your conversation will appear here."}
   </div>;
