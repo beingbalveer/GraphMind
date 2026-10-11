@@ -44,7 +44,7 @@ export function UserMenu({ collapsed = false, placement = "bottom", className, o
     } else {
       setCoords({
         top: rect.bottom + 8,
-        left: Math.max(8, rect.right - 224),
+        left: Math.max(8, rect.right - 272),
       });
     }
   }, [placement, collapsed]);
@@ -130,11 +130,11 @@ export function UserMenu({ collapsed = false, placement = "bottom", className, o
         <div
           ref={menuRef}
           style={{ position: "fixed", top: coords.top, left: coords.left }}
-          className={`z-50 w-52 rounded-xl border border-border bg-surface py-2 shadow-none animate-in fade-in zoom-in-95 ${
+          className={`z-50 w-64 rounded-xl border border-border bg-surface py-2 shadow-none animate-in fade-in zoom-in-95 ${
             placement === "top" && !collapsed ? "-translate-y-full" : ""
           }`}
         >
-          <div className="flex items-center gap-2.5 border-b border-border-subtle px-4 py-3">
+          <div className="flex items-center gap-2.5 border-b border-border-subtle px-4 py-2">
             <UserIcon className="size-4 shrink-0 text-foreground-muted" />
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-foreground">
@@ -149,7 +149,7 @@ export function UserMenu({ collapsed = false, placement = "bottom", className, o
               setIsOpen(false);
               onOpenSettings?.();
             }}
-            className="h-10 w-full justify-start items-center gap-2 px-4 text-sm font-normal text-foreground hover:bg-surface-hover transition cursor-pointer shadow-none"
+            className="h-8 w-full justify-start items-center gap-2 px-4 text-xs font-normal text-foreground hover:bg-surface-hover transition cursor-pointer shadow-none"
           >
             <Settings className="w-3.5 h-3.5" />
             <span>Settings</span>
@@ -160,7 +160,7 @@ export function UserMenu({ collapsed = false, placement = "bottom", className, o
               setIsOpen(false);
               await logout();
             }}
-            className="h-10 w-full justify-start items-center gap-2 px-4 text-sm font-normal text-destructive hover:bg-destructive-bg hover:text-destructive transition cursor-pointer shadow-none"
+            className="h-8 w-full justify-start items-center gap-2 px-4 text-xs font-normal text-destructive hover:bg-destructive-bg hover:text-destructive transition cursor-pointer shadow-none"
           >
             <LogOut className="w-3.5 h-3.5" />
             <span>Sign Out</span>
