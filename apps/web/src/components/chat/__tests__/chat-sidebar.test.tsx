@@ -176,6 +176,46 @@ describe("ChatSidebar & UserMenu Contract (Scope 3, Task 2)", () => {
     expect(chatEl).not.toHaveAttribute("aria-current");
   });
 
+  it("renders Learning Roadmap action and marks it active when the roadmap screen is open", () => {
+    const handleOpenRoadmap = vi.fn();
+    render(
+      <ChatSidebar
+        isOpen={true}
+        onToggle={vi.fn()}
+        chats={mockChats}
+        activeChatId="chat-1"
+        onSelectChat={vi.fn()}
+        onDeleteChat={vi.fn()}
+        onRenameChat={vi.fn().mockResolvedValue(undefined)}
+        onOpenRoadmap={handleOpenRoadmap}
+        isRoadmapActive={false}
+      />
+    );
+
+    const roadmapBtn = screen.getByRole("button", { name: /learning roadmap/i });
+    expect(roadmapBtn).toBeInTheDocument();
+    expect(roadmapBtn).not.toHaveAttribute("aria-current");
+  });
+
+  it("marks Learning Roadmap as active when the roadmap screen is open", () => {
+    render(
+      <ChatSidebar
+        isOpen={true}
+        onToggle={vi.fn()}
+        chats={mockChats}
+        activeChatId="chat-1"
+        isRoadmapActive={true}
+        onOpenRoadmap={vi.fn()}
+        onSelectChat={vi.fn()}
+        onDeleteChat={vi.fn()}
+        onRenameChat={vi.fn().mockResolvedValue(undefined)}
+      />
+    );
+
+    const roadmapBtn = screen.getByRole("button", { name: /learning roadmap/i });
+    expect(roadmapBtn).toHaveAttribute("aria-current", "page");
+  });
+
   it("renders a single Conversations section with pinned chat on top and pin icon", () => {
     render(
       <ChatSidebar

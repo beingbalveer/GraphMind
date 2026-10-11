@@ -11,6 +11,7 @@ import {
   PanelLeft,
   FolderOpen,
   MessageSquare,
+  Map,
 } from "lucide-react";
 import { ChatItem } from "@/lib/workspaceApi";
 import { Button } from "@/components/ui/button";
@@ -38,6 +39,8 @@ interface ChatSidebarProps {
   onOpenSettings?: () => void;
   onNewChat?: () => void;
   onOpenFileLibrary?: () => void;
+  onOpenRoadmap?: () => void;
+  isRoadmapActive?: boolean;
 }
 
 const DEFAULT_WIDTH = 300;
@@ -60,7 +63,9 @@ export function ChatSidebar({
   onOpenSettings,
   onNewChat,
   onOpenFileLibrary,
+  onOpenRoadmap,
   isLibraryActive = false,
+  isRoadmapActive = false,
 }: ChatSidebarProps) {
   const [deletingChatId, setDeletingChatId] = useState<string | null>(null);
   const [renamingChatId, setRenamingChatId] = useState<string | null>(null);
@@ -287,6 +292,19 @@ export function ChatSidebar({
               aria-label="Workspace File Library"
             >
               File Library
+            </NavigationItem>
+          )}
+
+          {onOpenRoadmap && (
+            <NavigationItem
+              onClick={onOpenRoadmap}
+              icon={<Map />}
+              collapsed={!isOpen}
+              active={isRoadmapActive}
+              title="Learning Roadmap"
+              aria-label="Learning Roadmap"
+            >
+              Learning Roadmap
             </NavigationItem>
           )}
         </div>

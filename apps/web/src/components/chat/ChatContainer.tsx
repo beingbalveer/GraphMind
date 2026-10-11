@@ -194,6 +194,12 @@ export function ChatContainer({
     }
   }, [currentWorkspace, router]);
 
+  const handleOpenRoadmap = useCallback(() => {
+    if (currentWorkspace) {
+      router.push(buildWorkspaceUrl(currentWorkspace.id));
+    }
+  }, [currentWorkspace, router]);
+
   // Notion-Style Side-Peek History Stack State
   const [sidePeekState, setSidePeekState] = useState<{
     stack: SidePeekEntry[];
@@ -1466,6 +1472,8 @@ export function ChatContainer({
             onTogglePinChat={handleTogglePinChat}
             onOpenSettings={handleOpenSettings}
             onNewChat={roadmap.view ? undefined : handleNewChat}
+            onOpenRoadmap={roadmap.view ? handleOpenRoadmap : undefined}
+            isRoadmapActive={roadmapMode === "page"}
             onOpenFileLibrary={() => {
               if (currentWorkspace) {
                 router.push(buildLibraryUrl(currentWorkspace.id));
