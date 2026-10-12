@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useRef } from "react";
 import {
   ReactFlow,
   ReactFlowProvider,
+  PanOnScrollMode,
   Handle,
   Position,
   MiniMap,
@@ -333,6 +334,11 @@ function Surface({
         nodesConnectable={false}
         nodesDraggable={!readOnly}
         selectNodesOnDrag={false}
+        panOnScroll
+        panOnScrollMode={PanOnScrollMode.Vertical}
+        zoomOnScroll={false}
+        zoomOnPinch={false}
+        zoomOnDoubleClick={false}
         minZoom={0.15}
         maxZoom={1.8}
         onNodeDragStop={(_, node) => {

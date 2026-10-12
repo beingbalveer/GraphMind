@@ -33,11 +33,14 @@ vi.mock("@xyflow/react", async () => {
     Background: () => null,
     Controls: () => null,
     MiniMap: () => <div data-testid="minimap" />,
-    ReactFlow: ({nodes, nodeTypes, edges, children, onNodeDragStop}: {nodes: Array<{id: string; data: unknown; position:{x:number;y:number};type:string}>;
+    ReactFlow: ({nodes, nodeTypes, edges, children, onNodeDragStop, panOnScroll, panOnScrollMode, zoomOnScroll, zoomOnPinch, zoomOnDoubleClick}: {nodes: Array<{id: string; data: unknown; position:{x:number;y:number};type:string}>;
       edges:Array<{id:string;sourceHandle?:string;targetHandle?:string}>;
       nodeTypes: Record<string, React.ComponentType<{data: unknown}>>; children: React.ReactNode;
-      onNodeDragStop?: (event:null,node:unknown) => void}) => (
-      <div>{nodes.map(node => { const Component = nodeTypes[node.type]; return (
+      onNodeDragStop?: (event:null,node:unknown) => void; panOnScroll?: boolean; panOnScrollMode?: string;
+      zoomOnScroll?: boolean; zoomOnPinch?: boolean; zoomOnDoubleClick?: boolean}) => (
+      <div data-testid="react-flow" data-pan-on-scroll={panOnScroll} data-pan-on-scroll-mode={panOnScrollMode}
+        data-zoom-on-scroll={zoomOnScroll} data-zoom-on-pinch={zoomOnPinch} data-zoom-on-double-click={zoomOnDoubleClick}>
+        {nodes.map(node => { const Component = nodeTypes[node.type]; return (
         <div key={node.id} data-testid={node.id} data-position={JSON.stringify(node.position)}><Component data={node.data} /></div>
       ); })}{edges.map(edge => <span key={edge.id} data-testid={`edge:${edge.id}`} data-source-handle={edge.sourceHandle ?? ""} data-target-handle={edge.targetHandle ?? ""} />)}
       <Button aria-label="Move first card" onClick={() => onNodeDragStop?.(null,{...nodes[0],position:{x:600,y:900}})}>Move</Button>
@@ -64,6 +67,17 @@ describe("shared conversation canvas", () => {
     expect(screen.getByRole("button", {name:"Canvas options"})).toBeVisible();
     expect(screen.getByTestId("edge:segment:r->segment:x")).toHaveAttribute("data-source-handle", "branch");
     expect(screen.getByTestId("edge:segment:r->segment:x")).toHaveAttribute("data-target-handle", "branch");
+  });
+
+  it("pans with vertical wheel scrolling and only zooms through the controls", () => {
+    render(<GraphCanvas tree={tree} onSelectNode={vi.fn()} />);
+    const flow = screen.getByTestId("react-flow");
+    expect(flow).toHaveAttribute("data-pan-on-scroll", "true");
+    expect(flow).toHaveAttribute("data-pan-on-scroll-mode", "vertical");
+    expect(flow).toHaveAttribute("data-zoom-on-scroll", "false");
+    expect(flow).toHaveAttribute("data-zoom-on-pinch", "false");
+    expect(flow).toHaveAttribute("data-zoom-on-double-click", "false");
+    expect(screen.getByRole("button", {name:"Zoom in"})).toBeVisible();
   });
 
   it("does not move segments when selecting a branch or streaming content", () => {
