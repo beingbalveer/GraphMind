@@ -55,6 +55,19 @@ Implementation uses `codex/roadmap-generator`, one verified task and commit at a
 
 No unfinished future actions are exposed in the application during this delivery.
 
+### Planned follow-on: Unified Roadmap Workspace
+
+The agreed product direction keeps topic conversations and general conversations
+inside the workspace created by roadmap generation. Topic branches retain lesson
+context, and useful exploration can become a reviewed roadmap addition.
+
+The [implementation plan](superpowers/plans/2026-10-13-unified-roadmap-workspace.md)
+defines seven sequential tasks with acceptance checks. **Planning complete;
+application implementation has not started.** The current research-quality and
+whole-branch verification task above remains active. The first follow-on task is
+reliable general-chat creation in roadmap workspaces; explain its concrete design
+and obtain implementation approval before coding.
+
 ### Phase 1: Production Core & Streamed Chat Engine
 - **AI Core (`packages/ai-core`)**: Provider-agnostic abstractions (`BaseProvider`, `BaseEmbeddingProvider`, `BaseTool`) decoupling business logic from OpenAI, Gemini, Anthropic, DeepSeek, and local Ollama.
 - **FastAPI SSE Streaming**: Async Server-Sent Events endpoint (`/api/v1/chat/stream`) with structured event payloads (`token`, `message_start`, `message_end`, `error`).
