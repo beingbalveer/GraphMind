@@ -167,7 +167,7 @@ The original delivery sequence and ownership boundaries are retained below as th
 
 ### Task 7 — Verify the connected journey and update contracts
 
-**Status: Core verification complete.** Full frontend/shared/API/ai-core suites, typechecks, production build, Ruff, matching mypy comparison, and migration round trip passed; mypy diagnostics match the main baseline. The local browser journey reached proposal Apply, followed its origin to the actual nested branch, and started/reloaded/resumed the new topic lesson using a clearly labeled scripted worker fixture. The broader manual browser matrix and live-provider/research checks remain unverified; no live development database was migrated.
+**Status: Core verification complete.** Full frontend/shared/API/ai-core suites, typechecks, production build, Ruff, matching mypy comparison, and migration round trip passed; mypy diagnostics match the main baseline. The local browser journey reached proposal Apply, followed its origin to the actual nested branch, and started/reloaded/resumed the new topic lesson using a clearly labeled scripted worker fixture. The broader manual browser matrix and live-provider/research checks remain unverified. Initial verification used isolated databases; the later development schema repair is recorded in the quality report.
 
 **Primary files:** existing backend/frontend integration suites; `docs/URL_DESIGN.md`, `docs/ROADMAP.md`; create `docs/quality/unified-roadmap-workspace-2026-10-13.md` with actual results and limitations.
 

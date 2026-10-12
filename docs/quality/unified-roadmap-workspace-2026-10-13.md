@@ -59,12 +59,31 @@ responsive breakpoints, back/forward navigation, canvas switching, or every
 permission/failure scenario. Live-provider generation and the existing delivery's
 research-quality evaluation were not exercised here.
 
-The isolated UI database had a pre-existing schema and was brought to the final
-model shape with an additive `source_private` column and ORM table creation because
-the repository's clean-empty-database migration baseline is not established for
-this test setup. This was not a clean migration round-trip test. Migration 0005's
-upgrade/downgrade/upgrade round trip passed separately on `graphmind_migration_test`.
-No live development database was migrated.
+The isolated UI database had a pre-existing schema and was initially brought to the
+then-current model shape with an additive `source_private` column and ORM table
+creation. After the post-commit development failure, inspection found that the
+development database also had an older, empty `curriculum_topic_origins` table.
+`create_all()` did not add columns to that existing table, and migration 0005 had
+returned early whenever the table existed. The migration now converges compatible
+partial tables, recovers owners from surviving `TopicChat` rows, and marks legacy
+origins private when their visibility is unknown. An unavailable source remains
+private with no inferred owner.
+
+The additive 0005 upgrade was applied directly to the development database after
+the column mismatch was confirmed. It added `source_owner_id`, `source_private`,
+the owner foreign key, and the missing uniqueness constraint; the existing
+revision index was retained. The table had zero origin rows before and after, and
+the database had no Alembic version table, which was left unchanged. A read-only
+`CurriculumRepository.read` then returned the existing workspace roadmap for its
+owner (309 topics, current revision present), and the browser rendered the Cyber
+Security roadmap without the prior server error.
+
+Four migration regression tests pass on `graphmind_codex_roadmap_test` using
+temporary schemas rolled back after each test. They cover fresh creation and
+idempotency, legacy-table privacy backfill including a deleted source, preserving
+explicit general/private/unavailable visibility, constraints, and downgrade with
+an equivalent legacy index name. Migration 0005's separate
+upgrade/downgrade/upgrade round trip also passed on `graphmind_migration_test`.
 
 ## Implementation coverage
 
