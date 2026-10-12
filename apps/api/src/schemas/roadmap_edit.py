@@ -6,6 +6,7 @@ from schemas.curriculum import (
     CurriculumCandidate,
     CurriculumItemData,
     CurriculumSchema,
+    CurriculumTopicOriginData,
     CurriculumView,
     ResourceData,
     TopicProgressData,
@@ -139,6 +140,14 @@ class RefinementRequest(CurriculumSchema):
         return value
 
 
+class PromotionRequest(CurriculumSchema):
+    source_chat_id: str = Field(min_length=1, max_length=64)
+    source_node_id: str = Field(min_length=1, max_length=64)
+    target_container_id: str = Field(min_length=1, max_length=64)
+    base_revision_id: str = Field(min_length=1, max_length=64)
+    instruction: str | None = Field(default=None, max_length=2000)
+
+
 class RevisionProposalData(CurriculumSchema):
     instruction: str | None = Field(default=None, max_length=8000)
     original: CurriculumCandidate
@@ -148,3 +157,4 @@ class RevisionProposalData(CurriculumSchema):
     affected_completed_topics: list[str]
     status: str
     outdated: bool
+    origins: list[CurriculumTopicOriginData] = Field(default_factory=list)

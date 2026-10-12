@@ -123,6 +123,13 @@ class GraphDeltaUpdateRequest(BaseSchema):
     moved_nodes: Optional[List[NodePositionUpdate]] = None
 
 
+class ChatTopicAssociation(BaseSchema):
+    session_id: str
+    topic_id: str
+    title: str
+    archived: bool = False
+
+
 class ChatSummary(BaseSchema):
     id: str = Field(description="Root node ID of the conversation tree")
     workspace_id: str
@@ -132,6 +139,7 @@ class ChatSummary(BaseSchema):
     updated_at: datetime
     active_node_id: Optional[str] = None
     pinned: bool = Field(default=False, description="Whether this chat is pinned to top")
+    topic_association: Optional[ChatTopicAssociation] = None
 
 
 class ChatListResponse(BaseSchema):

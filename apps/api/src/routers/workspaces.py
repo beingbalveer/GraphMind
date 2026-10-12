@@ -2,6 +2,7 @@ from typing import Any, Dict, Optional
 
 from database import get_db
 from dependencies import (
+    get_current_user,
     get_optional_user,
     require_workspace_read,
     require_workspace_write,
@@ -132,12 +133,15 @@ async def delete_workspace(
 async def list_workspace_chats(
     workspace_id: str,
     _auth_ws: Workspace = Depends(require_workspace_read),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> ChatListResponse:
     """
     List all distinct conversation trees (chats) belonging to a workspace (read permission required).
     """
-    chats = await WorkspaceService.list_workspace_chats(db, workspace_id)
+    chats = await WorkspaceService.list_workspace_chats(
+        db, workspace_id, current_user.id if current_user else None
+    )
     return ChatListResponse(
         workspace_id=workspace_id,
         chats=chats,

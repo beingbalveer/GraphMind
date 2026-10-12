@@ -6,6 +6,7 @@ from fastapi import HTTPException
 from models.roadmap import (
     CurriculumItem,
     CurriculumRevision,
+    CurriculumTopicOrigin,
     KnowledgeCheck,
     ResearchSource,
     Roadmap,
@@ -18,6 +19,7 @@ from pydantic import ValidationError
 from schemas.curriculum import (
     CurriculumCandidate,
     CurriculumRelationData,
+    CurriculumTopicOriginData,
     CurriculumView,
     SourceData,
     TopicProgressData,
@@ -30,7 +32,7 @@ from schemas.roadmap_edit import (
     RevisionProposalData,
     RevisionSummary,
 )
-from schemas.roadmap_job import JobCheckpoint, JobSnapshot
+from schemas.roadmap_job import JobCheckpoint, JobSnapshot, PromotionSourceSnapshot
 from services.roadmap.curriculum_repository import CurriculumRepository
 from services.roadmap.progress import ProgressService
 from services.roadmap.tutor import TutorService
@@ -464,7 +466,13 @@ class RevisionService:
         return source
 
     async def request_refinement(
-        self, workspace_id: str, owner_id: str, instruction: str, base_revision_id: str, key: str
+        self,
+        workspace_id: str,
+        owner_id: str,
+        instruction: str,
+        base_revision_id: str,
+        key: str,
+        promotion_source: PromotionSourceSnapshot | None = None,
     ) -> JobSnapshot:
         from schemas.curriculum import RoadmapRequest
         from services.roadmap.job_repository import JobRepository
@@ -501,6 +509,7 @@ class RevisionService:
             original_candidate=base.candidate,
             sources=base.sources,
             study_progress=base.progress,
+            promotion_source=promotion_source,
         ).model_dump(mode="json")
         await self.session.flush()
         return await jobs.start(job.id, owner_id)
@@ -534,6 +543,26 @@ class RevisionService:
             )
         )
         instruction = str(own_job.request["prompt"]) if own_job is not None else None
+        if own_job is not None and own_job.operation == "refine":
+            checkpoint_data = own_job.checkpoint or {}
+            promotion_data = checkpoint_data.get("promotion_source")
+            if isinstance(promotion_data, dict):
+                promotion = PromotionSourceSnapshot.model_validate(promotion_data)
+                instruction = promotion.user_instruction or (
+                    f"Promote the concept from {promotion.source_title}"
+                )
+        origins = (
+            await self.session.scalars(
+                select(CurriculumTopicOrigin).where(
+                    CurriculumTopicOrigin.roadmap_id == current.roadmap_id,
+                    CurriculumTopicOrigin.creation_revision_id == revision_id,
+                    (
+                        ~CurriculumTopicOrigin.source_private
+                        | (CurriculumTopicOrigin.source_owner_id == owner_id)
+                    ),
+                )
+            )
+        ).all()
         return RevisionProposalData(
             instruction=instruction,
             original=original.candidate,
@@ -543,6 +572,19 @@ class RevisionService:
             affected_completed_topics=completed,
             status=row.status,
             outdated=row.status == "candidate" and current.revision_id != row.base_revision_id,
+            origins=[
+                CurriculumTopicOriginData(
+                    topic_id=origin.topic_id,
+                    creation_revision_id=origin.creation_revision_id,
+                    source_workspace_id=origin.source_workspace_id,
+                    source_chat_id=origin.source_chat_id,
+                    source_node_id=origin.source_node_id,
+                    source_title=origin.source_title,
+                    source_excerpt=origin.source_excerpt,
+                    unavailable=origin.source_chat_id is None or origin.source_node_id is None,
+                )
+                for origin in origins
+            ],
         )
 
     async def reject_proposal(self, workspace_id: str, owner_id: str, revision_id: str) -> None:

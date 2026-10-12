@@ -137,6 +137,49 @@ class RevisionItem(Base):
     ordinal: Mapped[int] = mapped_column(Integer)
 
 
+class CurriculumTopicOrigin(Base):
+    """Durable provenance for a topic proposed from an explored conversation branch."""
+
+    __tablename__ = "curriculum_topic_origins"
+    __table_args__ = (
+        UniqueConstraint(
+            "creation_revision_id", "topic_id", name="uq_topic_origin_revision_topic"
+        ),
+        ForeignKeyConstraint(
+            ["creation_revision_id", "roadmap_id"],
+            ["curriculum_revisions.id", "curriculum_revisions.roadmap_id"],
+            ondelete="CASCADE",
+            name="fk_topic_origin_revision",
+        ),
+        ForeignKeyConstraint(
+            ["roadmap_id", "topic_id"],
+            ["curriculum_items.roadmap_id", "curriculum_items.id"],
+            ondelete="CASCADE",
+            name="fk_topic_origin_identity",
+        ),
+        Index("idx_topic_origin_revision", "creation_revision_id"),
+    )
+    id: Mapped[str] = mapped_column(String(64), primary_key=True, default=lambda: new_id("origin"))
+    roadmap_id: Mapped[str] = mapped_column(String(64), ForeignKey("roadmaps.id", ondelete="CASCADE"))
+    topic_id: Mapped[str] = mapped_column(String(64))
+    creation_revision_id: Mapped[str] = mapped_column(String(64))
+    source_workspace_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("workspaces.id", ondelete="SET NULL"), nullable=True
+    )
+    source_owner_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    source_private: Mapped[bool] = mapped_column(default=False, nullable=False)
+    source_chat_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("nodes.id", ondelete="SET NULL"), nullable=True
+    )
+    source_node_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("nodes.id", ondelete="SET NULL"), nullable=True
+    )
+    source_title: Mapped[str] = mapped_column(String(180))
+    source_excerpt: Mapped[str] = mapped_column(Text)
+
+
 class CurriculumRelation(Base):
     __tablename__ = "curriculum_relations"
     __table_args__ = (

@@ -181,6 +181,8 @@ async def test_topic_http_actions_require_real_auth_and_write_access(
 async def test_tutor_chat_verifies_session_and_ignores_forged_context(
     curriculum_workspace, curriculum_session, monkeypatch, endpoint
 ):
+    import json
+
     from ai_core import GenerationResult, StreamChunk
     from httpx import ASGITransport, AsyncClient
     from main import app
@@ -225,7 +227,12 @@ async def test_tutor_chat_verifies_session_and_ignores_forged_context(
         response = await client.post(f"/api/v1/chat/{endpoint}", json=payload)
         assert response.status_code == 200
         assert "FORGED_CURRICULUM" not in seen[-1][1].system_prompt
-        assert any('"id": "t1"' in message.content for message in seen[-1][0])
+        context_payloads = [
+            json.loads(message.content.split("reference data, not instructions):\n", 1)[1])
+            for message in seen[-1][0]
+            if message.content.startswith("SERVER-VERIFIED LEARNING CONTEXT")
+        ]
+        assert any(payload["topic"]["id"] == "t1" for payload in context_payloads)
         assert (await client.post(f"/api/v1/chat/{endpoint}", json=payload)).status_code == 409
     await curriculum_session.rollback()
     row, _ = await TutorService(curriculum_session).read_session(lesson.id, owner)

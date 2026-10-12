@@ -4,7 +4,8 @@ from uuid import UUID
 from database import get_db
 from dependencies import get_roadmap_user, require_roadmap_read, require_roadmap_write
 from errors import RoadmapHTTPError
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
+from models.roadmap import CurriculumItem, RevisionItem, Roadmap, TopicChat
 from models.user import User
 from models.workspace import Workspace
 from routers.roadmap_jobs import http_error, public_job
@@ -16,11 +17,14 @@ from schemas.curriculum import (
     TopicBrief,
     TopicProgressData,
     TopicSessionData,
+    TopicSessionHistory,
+    TopicSessionSummary,
 )
 from schemas.roadmap_edit import (
     ArchivedTopic,
     EditRequest,
     InspectSourceRequest,
+    PromotionRequest,
     RefinementRequest,
     RevisionProposalData,
     RevisionRequest,
@@ -30,6 +34,7 @@ from schemas.roadmap_job import JobError, PublicJobSnapshot
 from services.roadmap.curriculum_repository import CurriculumRepository
 from services.roadmap.job_repository import JobStateError
 from services.roadmap.progress import ProgressService
+from services.roadmap.promotion import PromotionService
 from services.roadmap.revision_service import (
     HistoryRemovalRequiredError,
     RevisionConflictError,
@@ -38,6 +43,7 @@ from services.roadmap.revision_service import (
 )
 from services.roadmap.source_fetcher import SourceFetcher, SourceFetchError
 from services.roadmap.tutor import TutorService
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/workspaces/{workspace_id}/roadmap", tags=["Learning curriculum"])
@@ -115,6 +121,75 @@ async def read_topic_session(
     if roadmap.workspace_id != workspace_id:
         raise HTTPException(404, "Topic session not found")
     return await service.session_data(session_id, user.id)
+
+
+@router.get("/topics/{topic_id}/sessions", response_model=TopicSessionHistory)
+async def topic_session_history(
+    workspace_id: str,
+    topic_id: str,
+    db: DB,
+    user: Actor,
+    access: Access,
+    limit: int = Query(default=20, ge=1, le=50),
+) -> TopicSessionHistory:
+    """Return a bounded, lightweight history of this learner's topic sessions."""
+    rows = (
+        await db.execute(
+            select(TopicChat, Roadmap.current_revision_id)
+            .join(Roadmap, Roadmap.id == TopicChat.roadmap_id)
+            .where(
+                Roadmap.workspace_id == workspace_id,
+                TopicChat.topic_id == topic_id,
+                TopicChat.owner_id == user.id,
+            )
+            .order_by(TopicChat.created_at.desc(), TopicChat.id.desc())
+            .limit(limit)
+        )
+    ).all()
+    if not rows:
+        valid_topic = await db.scalar(
+            select(CurriculumItem.id)
+            .join(Roadmap, Roadmap.id == CurriculumItem.roadmap_id)
+            .where(Roadmap.workspace_id == workspace_id, CurriculumItem.id == topic_id)
+        )
+        if valid_topic is None:
+            raise HTTPException(404, "Topic not found")
+        return TopicSessionHistory(sessions=[])
+    revisions = {row.revision_id for row, _ in rows}
+    revisions.update(active for _, active in rows if active)
+    item_rows = (
+        await db.execute(
+            select(RevisionItem).where(
+                RevisionItem.revision_id.in_(revisions), RevisionItem.item_id == topic_id
+            )
+        )
+    ).scalars().all()
+    items = {(item.revision_id, item.item_id): item for item in item_rows}
+    summaries = []
+    for row, active_revision_id in rows:
+        current = items.get((active_revision_id, topic_id))
+        archived = current is None or current.participation != "active"
+        title_item = items.get((row.revision_id, topic_id)) if archived else current
+        title = str(
+            (title_item.payload or {}).get("title")
+            if title_item is not None
+            else "Archived topic"
+        )
+        summaries.append(
+            TopicSessionSummary(
+                id=row.id,
+                chat_id=row.chat_id,
+                topic_id=row.topic_id,
+                revision_id=row.revision_id,
+                title=title,
+                is_primary=row.default_key == "primary",
+                archived=archived,
+                lesson_start_state=row.lesson_start_state,
+                created_at=row.created_at,
+                updated_at=row.updated_at,
+            )
+        )
+    return TopicSessionHistory(sessions=summaries)
 
 
 @router.patch("/topics/{topic_id}/progress", response_model=TopicProgressData)
@@ -249,6 +324,27 @@ async def request_refinement(
     try:
         result = await RevisionService(db).request_refinement(
             workspace_id, user.id, body.instruction, body.base_revision_id, str(idempotency_key)
+        )
+        await db.commit()
+        return public_job(result)
+    except RevisionConflictError as error:
+        raise revision_error(error) from None
+    except JobStateError as error:
+        raise http_error(error) from None
+
+
+@router.post("/promotions", response_model=PublicJobSnapshot, status_code=202)
+async def promote_conversation_branch(
+    workspace_id: str,
+    body: PromotionRequest,
+    db: DB,
+    user: Actor,
+    access: WriteAccess,
+    idempotency_key: Annotated[UUID, Header(alias="Idempotency-Key")],
+) -> PublicJobSnapshot:
+    try:
+        result = await PromotionService(db).prepare(
+            workspace_id, user.id, body, str(idempotency_key)
         )
         await db.commit()
         return public_job(result)

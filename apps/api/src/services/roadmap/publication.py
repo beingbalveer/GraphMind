@@ -3,7 +3,13 @@ import uuid
 from collections.abc import Callable
 from datetime import datetime
 
-from models.roadmap import CurriculumRevision, ResearchSource, Roadmap, new_id
+from models.roadmap import (
+    CurriculumRevision,
+    CurriculumTopicOrigin,
+    ResearchSource,
+    Roadmap,
+    new_id,
+)
 from models.roadmap_job import RoadmapJobReference
 from models.user import WorkspaceMember
 from models.workspace import NodeModel, Workspace, WorkspaceFile, WorkspaceFileChunk
@@ -206,9 +212,98 @@ class PublicationService:
                 raise ValueError("UNVALIDATED_PUBLICATION")
             checkpoint.candidate = candidate
             checkpoint.validation = actual
+            promotion = checkpoint.promotion_source
+            if promotion is not None:
+                old_items = {item.id: item for item in original.candidate.items if item.participation == "active"}
+                new_items = {item.id: item for item in candidate.items if item.participation == "active"}
+                added = [item for key, item in new_items.items() if key not in old_items]
+                removed = set(old_items) - set(new_items)
+                existing_changed = any(
+                    old_items[item_id] != new_items[item_id]
+                    for item_id in old_items.keys() & new_items.keys()
+                )
+                relation_loss = any(
+                    relation not in candidate.relations for relation in original.candidate.relations
+                )
+                resource_loss = any(
+                    resource not in candidate.resources for resource in original.candidate.resources
+                )
+                added_topic_id = added[0].id if added else None
+                relation_expansion = any(
+                    relation not in original.candidate.relations
+                    and relation.source_id != added_topic_id
+                    and relation.target_id != added_topic_id
+                    for relation in candidate.relations
+                )
+                old_topic_ids = set(old_items)
+                old_resources_changed = [
+                    resource
+                    for resource in candidate.resources
+                    if resource.topic_id in old_topic_ids
+                ] != [
+                    resource
+                    for resource in original.candidate.resources
+                    if resource.topic_id in old_topic_ids
+                ]
+                old_sessions_changed = [
+                    assignment
+                    for assignment in candidate.sessions
+                    if assignment.topic_id in old_topic_ids
+                ] != [
+                    assignment
+                    for assignment in original.candidate.sessions
+                    if assignment.topic_id in old_topic_ids
+                ]
+                if (
+                    len(added) != 1
+                    or added[0].kind != "topic"
+                    or removed
+                    or existing_changed
+                    or candidate.title != original.candidate.title
+                    or candidate.outcome != original.candidate.outcome
+                    or relation_loss
+                    or relation_expansion
+                    or resource_loss
+                    or old_resources_changed
+                    or candidate.choices != original.candidate.choices
+                    or old_sessions_changed
+                    or not any(
+                        relation.kind == "contains"
+                        and relation.source_id == promotion.target_container_id
+                        and relation.target_id == added[0].id
+                        for relation in candidate.relations
+                    )
+                ):
+                    raise JobStateError(
+                        "PROMOTION_NOT_ADDITIVE",
+                        "The generated proposal must add one topic while preserving existing roadmap identities and content",
+                    )
             revision_id = await repository.save_revision(
                 roadmap.id, base.id, candidate, sources, actual, "candidate"
             )
+            if promotion is not None:
+                self.session.add(
+                    CurriculumTopicOrigin(
+                        roadmap_id=roadmap.id,
+                        topic_id=added[0].id,
+                        creation_revision_id=revision_id,
+                        source_workspace_id=promotion.workspace_id,
+                        source_owner_id=promotion.owner_id,
+                        source_chat_id=(
+                            promotion.chat_id
+                            if await self.session.get(NodeModel, promotion.chat_id)
+                            else None
+                        ),
+                        source_node_id=(
+                            promotion.node_id
+                            if await self.session.get(NodeModel, promotion.node_id)
+                            else None
+                        ),
+                        source_title=promotion.source_title,
+                        source_excerpt=promotion.excerpt,
+                        source_private=promotion.private,
+                    )
+                )
             result = JobResult(
                 workspace_id=roadmap.workspace_id,
                 roadmap_id=roadmap.id,

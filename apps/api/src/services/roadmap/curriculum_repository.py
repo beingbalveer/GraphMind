@@ -6,6 +6,7 @@ from models.roadmap import (
     CurriculumItem,
     CurriculumRelation,
     CurriculumRevision,
+    CurriculumTopicOrigin,
     KnowledgeCheck,
     ResearchSource,
     RevisionItem,
@@ -17,12 +18,14 @@ from models.roadmap import (
     WeeklyAssignment,
     new_id,
 )
+from models.user import WorkspaceMember
 from models.workspace import NodeModel, Workspace
 from schemas.curriculum import (
     ChoiceData,
     CurriculumCandidate,
     CurriculumItemData,
     CurriculumRelationData,
+    CurriculumTopicOriginData,
     CurriculumView,
     KnowledgeCheckData,
     LearningProfile,
@@ -393,9 +396,60 @@ class CurriculumRepository:
                 for r in resources
             ],
         )
+        active_topic_ids = {
+            item.id
+            for item in candidate.items
+            if item.kind == "topic" and item.participation == "active"
+        }
+        origins = (
+            await self.session.scalars(
+                select(CurriculumTopicOrigin).where(
+                    CurriculumTopicOrigin.roadmap_id == roadmap.id,
+                    CurriculumTopicOrigin.creation_revision_id.in_(
+                        select(CurriculumRevision.id).where(
+                            CurriculumRevision.roadmap_id == roadmap.id,
+                            CurriculumRevision.status.in_(("active", "archived")),
+                        )
+                    ),
+                    CurriculumTopicOrigin.topic_id.in_(active_topic_ids),
+                    (
+                        ~CurriculumTopicOrigin.source_private
+                        | (CurriculumTopicOrigin.source_owner_id == self.reader_id)
+                    ),
+                )
+            )
+        ).all() if active_topic_ids else []
+        origin_data = [
+            CurriculumTopicOriginData(
+                topic_id=origin.topic_id,
+                creation_revision_id=origin.creation_revision_id,
+                source_workspace_id=origin.source_workspace_id,
+                source_chat_id=origin.source_chat_id,
+                source_node_id=origin.source_node_id,
+                source_title=origin.source_title,
+                source_excerpt=origin.source_excerpt,
+                unavailable=origin.source_chat_id is None or origin.source_node_id is None,
+            )
+            for origin in origins
+        ]
+        can_write = False
+        if self.reader_id is not None:
+            workspace = await self.session.get(Workspace, roadmap.workspace_id)
+            can_write = workspace is not None and workspace.owner_id == self.reader_id
+            if not can_write:
+                can_write = (
+                    await self.session.scalar(
+                        select(WorkspaceMember.id).where(
+                            WorkspaceMember.workspace_id == roadmap.workspace_id,
+                            WorkspaceMember.user_id == self.reader_id,
+                            WorkspaceMember.role.in_(("owner", "editor")),
+                        )
+                    )
+                ) is not None
         return CurriculumView(
             roadmap_id=roadmap.id,
             workspace_id=roadmap.workspace_id,
+            can_write=can_write,
             canvas_anchor_chat_id=roadmap.canvas_anchor_chat_id,
             revision_id=revision_id,
             profile=LearningProfile.model_validate(roadmap.profile),
@@ -403,6 +457,7 @@ class CurriculumRepository:
             sources=[SourceData.model_validate(s.payload) for s in sources],
             progress=progress_map,
             validation=ValidationReport.model_validate(revision.validation),
+            origins=origin_data,
         )
 
     async def read_brief(self, workspace_id: str, topic_id: str) -> TopicBrief:

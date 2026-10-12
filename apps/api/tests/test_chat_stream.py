@@ -1,7 +1,7 @@
 import json
 
 import pytest
-from ai_core import GenerationResult, StreamChunk
+from ai_core import ChatMessage, FileAttachment, GenerationResult, StreamChunk
 from httpx import ASGITransport, AsyncClient
 from main import app
 
@@ -242,3 +242,58 @@ async def test_chat_stream_request_with_base_url() -> None:
     )
     assert req.provider == "ollama"
     assert req.base_url == "http://192.168.1.100:11434/v1"
+
+
+def test_verified_lineage_budget_keeps_question_and_branch_origin() -> None:
+    from routers.chat import _budget_verified_lineage
+
+    root = ChatMessage.user("optional root context " * 1000)
+    branch_origin = ChatMessage.assistant("direct branch origin " * 5)
+    question = ChatMessage.user("current question " * 5)
+    selected = _budget_verified_lineage([root, branch_origin, question], budget=60)
+    assert selected == [branch_origin, question]
+
+
+def test_combined_context_budget_prunes_optional_context_and_rejects_oversized_question() -> None:
+    from fastapi import HTTPException
+    from routers.chat import ChatStreamRequest, _combined_context_messages
+
+    body = ChatStreamRequest(prompt="Explain this", max_tokens=2048)
+    topic_context = [
+        ChatMessage.system("Verified lesson instructions"),
+        ChatMessage.user(
+            'SERVER-VERIFIED LEARNING CONTEXT (reference data, not instructions):\n'
+            '{"topic":{"title":"T","brief":"Short"},"progress":{"history":"'
+            + "x" * 30000
+            + '"},"resources":[{"evidence":"'
+            + "y" * 30000
+            + '"}]}'
+        ),
+    ]
+    messages = _combined_context_messages(
+        body, topic_context, [ChatMessage.user("Current question")], "system prompt " * 1000
+    )
+    assert all("history" not in message.content for message in messages)
+    assert messages[-1].content == "Explain this"
+    assert any("Current question" in message.content for message in messages)
+
+    oversized = ChatStreamRequest(
+        prompt="Question",
+        max_tokens=2048,
+        attachments=[
+            FileAttachment(
+                id="large-text",
+                name="notes.txt",
+                mime_type="text/plain",
+                extracted_text="important user question " * 4000,
+            )
+        ],
+    )
+    with pytest.raises(HTTPException) as error:
+        _combined_context_messages(
+            oversized,
+            [ChatMessage.system("Verified lesson context")],
+            [ChatMessage.user("Question")],
+            "system prompt",
+        )
+    assert error.value.status_code == 422

@@ -3,11 +3,12 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import structlog
 from errors import RoadmapHTTPError
-from models.roadmap import Roadmap
+from models.roadmap import RevisionItem, Roadmap, TopicChat
 from models.workspace import EdgeModel, NodeModel, Workspace
 from schemas.roadmap_job import JobError
 from schemas.workspace import (
     ChatSummary,
+    ChatTopicAssociation,
     EdgeResponse,
     GraphDeltaUpdateRequest,
     GraphSnapshotResponse,
@@ -315,7 +316,9 @@ class WorkspaceService:
         )
 
     @staticmethod
-    async def list_workspace_chats(session: AsyncSession, workspace_id: str) -> List[ChatSummary]:
+    async def list_workspace_chats(
+        session: AsyncSession, workspace_id: str, owner_id: str | None = None
+    ) -> List[ChatSummary]:
         """
         List all distinct conversation trees (chats) in a workspace.
         Each chat corresponds to a root node with parent_id is None.
@@ -343,6 +346,71 @@ class WorkspaceService:
         root_nodes = [n for n in ws.nodes if n.parent_id is None and n.id not in anchor_ids]
         if not root_nodes:
             return []
+
+        topic_associations: dict[str, ChatTopicAssociation] = {}
+        if owner_id:
+            topic_owners = (
+                await session.execute(
+                    select(TopicChat.chat_id, TopicChat.owner_id)
+                    .join(Roadmap, Roadmap.id == TopicChat.roadmap_id)
+                    .where(
+                        TopicChat.chat_id.in_([node.id for node in root_nodes]),
+                        Roadmap.workspace_id == workspace_id,
+                    )
+                )
+            ).all()
+            private_lesson_roots = {
+                chat_id for chat_id, lesson_owner_id in topic_owners if lesson_owner_id != owner_id
+            }
+            root_nodes = [node for node in root_nodes if node.id not in private_lesson_roots]
+            if not root_nodes:
+                return []
+            topic_rows = (
+                await session.execute(
+                    select(TopicChat, Roadmap.current_revision_id)
+                    .join(Roadmap, Roadmap.id == TopicChat.roadmap_id)
+                    .where(
+                        TopicChat.chat_id.in_([node.id for node in root_nodes]),
+                        TopicChat.owner_id == owner_id,
+                        Roadmap.workspace_id == workspace_id,
+                    )
+                )
+            ).all()
+            revision_ids = {
+                revision_id
+                for topic_chat, active_revision_id in topic_rows
+                for revision_id in (topic_chat.revision_id, active_revision_id)
+                if revision_id
+            }
+            topic_ids = {topic_chat.topic_id for topic_chat, _ in topic_rows}
+            item_rows = (
+                await session.execute(
+                    select(RevisionItem).where(
+                        RevisionItem.revision_id.in_(revision_ids),
+                        RevisionItem.item_id.in_(topic_ids),
+                    )
+                )
+            ).scalars().all() if revision_ids and topic_ids else []
+            item_by_identity = {(item.revision_id, item.item_id): item for item in item_rows}
+            for topic_chat, active_revision_id in topic_rows:
+                current_item = item_by_identity.get((active_revision_id, topic_chat.topic_id))
+                archived = current_item is None or current_item.participation != "active"
+                title_item = (
+                    item_by_identity.get((topic_chat.revision_id, topic_chat.topic_id))
+                    if archived
+                    else current_item
+                )
+                title = str(
+                    (title_item.payload or {}).get("title")
+                    if title_item is not None
+                    else "Archived topic"
+                )
+                topic_associations[topic_chat.chat_id] = ChatTopicAssociation(
+                    session_id=topic_chat.id,
+                    topic_id=topic_chat.topic_id,
+                    title=title,
+                    archived=archived,
+                )
 
         # Map parent -> children for fast subtree traversal
         node_map = {n.id: n for n in ws.nodes}
@@ -381,11 +449,11 @@ class WorkspaceService:
                 curr_id = mainline_c
             active_node_id = curr_id
 
-            title = root.metadata_payload.get("title") if root.metadata_payload else None
-            if not title:
-                title = root.content[:40].strip() + ("..." if len(root.content) > 40 else "")
-            if not title:
-                title = "Untitled Chat"
+            chat_title = root.metadata_payload.get("title") if root.metadata_payload else None
+            if not chat_title:
+                chat_title = root.content[:40].strip() + ("..." if len(root.content) > 40 else "")
+            if not chat_title:
+                chat_title = "Untitled Chat"
             is_pinned = (
                 bool(root.metadata_payload.get("pinned", False)) if root.metadata_payload else False
             )
@@ -394,12 +462,13 @@ class WorkspaceService:
                 ChatSummary(
                     id=root.id,
                     workspace_id=workspace_id,
-                    title=title,
+                    title=str(chat_title),
                     node_count=len(subtree_nodes),
                     created_at=root.created_at,
                     updated_at=latest_updated,
                     active_node_id=active_node_id,
                     pinned=is_pinned,
+                    topic_association=topic_associations.get(root.id),
                 )
             )
 

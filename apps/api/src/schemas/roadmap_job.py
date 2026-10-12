@@ -73,8 +73,21 @@ class CoverageTopic(CurriculumSchema):
     )
 
 
+class PromotionSourceSnapshot(CurriculumSchema):
+    workspace_id: str
+    owner_id: str | None = None
+    private: bool = False
+    chat_id: str
+    node_id: str
+    target_container_id: str
+    source_title: str = Field(max_length=180)
+    excerpt: str = Field(max_length=12000)
+    user_instruction: str | None = Field(default=None, max_length=2000)
+
+
 class JobCheckpoint(CurriculumSchema):
     workspace_id: str | None = None
+    promotion_source: PromotionSourceSnapshot | None = None
     original_candidate: CurriculumCandidate | None = None
     study_progress: dict[str, TopicProgressData] = Field(default_factory=dict, max_length=1200)
     identity_continuity: dict[str, str] = Field(

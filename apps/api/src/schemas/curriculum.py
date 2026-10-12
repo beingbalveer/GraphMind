@@ -182,9 +182,21 @@ class TopicBrief(CurriculumSchema):
     latest_check: KnowledgeCheckData | None = None
 
 
+class CurriculumTopicOriginData(CurriculumSchema):
+    topic_id: str
+    creation_revision_id: str
+    source_workspace_id: str | None
+    source_chat_id: str | None
+    source_node_id: str | None
+    source_title: str
+    source_excerpt: str
+    unavailable: bool = False
+
+
 class CurriculumView(CurriculumSchema):
     roadmap_id: str
     workspace_id: str
+    can_write: bool = False
     canvas_anchor_chat_id: str
     revision_id: str
     profile: LearningProfile
@@ -192,6 +204,7 @@ class CurriculumView(CurriculumSchema):
     sources: list[SourceData] = Field(max_length=600)
     progress: dict[str, TopicProgressData]
     validation: ValidationReport
+    origins: list[CurriculumTopicOriginData] = Field(default_factory=list)
 
 
 class TopicSessionData(CurriculumSchema):
@@ -205,3 +218,20 @@ class TopicSessionData(CurriculumSchema):
     progress: TopicProgressData | None = None
     checks: list[KnowledgeCheckData] = Field(default_factory=list, max_length=100)
     lesson_start_state: Literal["pending", "started", "completed", "interrupted"]
+
+
+class TopicSessionSummary(CurriculumSchema):
+    id: str
+    chat_id: str
+    topic_id: str
+    revision_id: str
+    title: str
+    is_primary: bool
+    archived: bool = False
+    lesson_start_state: Literal["pending", "started", "completed", "interrupted"]
+    created_at: datetime
+    updated_at: datetime
+
+
+class TopicSessionHistory(CurriculumSchema):
+    sessions: list[TopicSessionSummary]
