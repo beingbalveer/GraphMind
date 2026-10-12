@@ -39,6 +39,7 @@ export function curriculumFixture(): CurriculumView {
   return {
     roadmapId: "roadmap",
     workspaceId: "ws",
+    canWrite: true,
     canvasAnchorChatId: "anchor",
     revisionId: "revision",
     profile: {

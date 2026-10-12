@@ -8,7 +8,7 @@ import React, {
   useMemo,
 } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { GitBranch, ArrowDown } from "lucide-react";
+import { GitBranch, ArrowDown, ListFilter } from "lucide-react";
 
 import {
   getNodeChildren,
@@ -27,9 +27,11 @@ import { ChatInput } from "./ChatInput";
 import { BranchBreadcrumbs, BreadcrumbStep } from "./BranchBreadcrumbs";
 
 import { ChatSidebar } from "./ChatSidebar";
+import { NewWorkspaceChatModal, type NewWorkspaceChatCreated } from "./NewWorkspaceChatModal";
 import { RightSidebar } from "./RightSidebar";
 import { useTopicSession } from "@/hooks/useTopicSession";
 import { TopicBriefDrawer } from "@/components/roadmap/TopicBriefDrawer";
+import { BranchPromotionModal } from "@/components/roadmap/BranchPromotionModal";
 import { TutorLearningBar } from "@/components/roadmap/TutorLearningBar";
 import { openTopicSession, recordTopicCheck } from "@/lib/roadmapApi";
 import { useRoadmap } from "@/hooks/useRoadmap";
@@ -42,6 +44,8 @@ import { SettingsPage } from "../settings/SettingsPage";
 import { FileLibraryView } from "../library/FileLibraryView";
 import { SidePeekBranchSheet, SidePeekEntry } from "./SidePeekBranchSheet";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
 import { InlineFeedback } from "@/components/ui/feedback";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Toast } from "@/components/ui/toast";
@@ -82,6 +86,7 @@ import {
   updateWorkspaceNodeContent,
   fetchGraphSnapshot,
   addNodeToWorkspace,
+  persistWorkspaceChatNode,
   snapshotToTree,
   seedDemoWorkspace,
 } from "@/lib/workspaceApi";
@@ -236,18 +241,129 @@ export function ChatContainer({
 
   const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
   const [openingTopic, setOpeningTopic] = useState(false);
+  const [isNewWorkspaceChatOpen, setIsNewWorkspaceChatOpen] = useState(false);
+  const [pendingPreparedChat, setPendingPreparedChat] =
+    useState<NewWorkspaceChatCreated | null>(null);
+  const [isRoadmapContextOpen, setIsRoadmapContextOpen] = useState(false);
+  const [selectedRoadmapTopicIds, setSelectedRoadmapTopicIds] = useState<string[]>([]);
+  const [roadmapContextError, setRoadmapContextError] = useState<string | null>(null);
+  const [isSavingRoadmapContext, setIsSavingRoadmapContext] = useState(false);
+  const [promotionSource, setPromotionSource] = useState<{
+    chatId: string;
+    nodeId: string;
+    title: string;
+    excerpt: string;
+  } | null>(null);
+  const [promotionJobId, setPromotionJobId] = useState<string | null>(null);
+  const [promotionJobsBySource, setPromotionJobsBySource] = useState<Record<string, string>>({});
+  const [isPromotionOpen, setIsPromotionOpen] = useState(false);
+  const [unsavedAssistant, setUnsavedAssistant] = useState<{
+    workspaceId: string;
+    id: string;
+    parentId: string;
+    content: string;
+    provider: string;
+    model: string;
+    responseState: string;
+  } | null>(null);
+  const currentWorkspaceIdRef = useRef<string | null>(null);
+  const activeChatIdRef = useRef<string | null>(initialChatId || null);
+  currentWorkspaceIdRef.current = currentWorkspace?.id ?? null;
+  activeChatIdRef.current = activeChatId;
+  const contextSaveInFlight = useRef(false);
   const [learningError, setLearningError] = useState<string | null>(null);
   const [assessing, setAssessing] = useState(false);
   const openingRef = useRef(false);
   const startKeys = useRef(new Map<string, string>());
   const routeRef = useRef(pathname);
   routeRef.current = pathname;
+  const newChatOriginRouteRef = useRef<string | null>(null);
   const rootSessionId =
     tree?.rootNodeId === activeChatId
       ? tree?.nodes[tree.rootNodeId]?.metadata?.topicSessionId
       : null;
   const activeTopicSessionId =
     typeof rootSessionId === "string" ? rootSessionId : null;
+  const persistedRoadmapTopicIds = useMemo(() => {
+    if (!tree || tree.rootNodeId !== activeChatId) return [] as string[];
+    const value = tree.nodes[tree.rootNodeId]?.metadata?.roadmapTopicIds;
+    return Array.isArray(value)
+      ? value.filter((id): id is string => typeof id === "string").slice(0, 3)
+      : [];
+  }, [tree, activeChatId]);
+  useEffect(() => {
+    setSelectedRoadmapTopicIds(persistedRoadmapTopicIds);
+    setRoadmapContextError(null);
+  }, [activeChatId, persistedRoadmapTopicIds]);
+  const activeRoadmapTopics = useMemo(
+    () =>
+      roadmap.view?.candidate.items.filter(
+        (item) => item.kind === "topic" && item.participation === "active",
+      ) ?? [],
+    [roadmap.view],
+  );
+  const activeRoadmapTopicIds = useMemo(
+    () => new Set(activeRoadmapTopics.map((topic) => topic.id)),
+    [activeRoadmapTopics],
+  );
+  const selectedActiveRoadmapTopicIds = useMemo(
+    () => selectedRoadmapTopicIds.filter((id) => activeRoadmapTopicIds.has(id)),
+    [selectedRoadmapTopicIds, activeRoadmapTopicIds],
+  );
+  const handleRoadmapTopicSelection = useCallback(
+    async (topicId: string, selected: boolean) => {
+      if (contextSaveInFlight.current) return;
+      if (!currentWorkspace || !activeChatId || !roadmap.view || activeTopicSessionId)
+        return;
+      if (!roadmap.view.canWrite) return;
+      const next = selected
+        ? [...new Set([...selectedRoadmapTopicIds, topicId])]
+        : selectedRoadmapTopicIds.filter((id) => id !== topicId);
+      if (next.length > 3) {
+        setRoadmapContextError("Choose up to three topics for this conversation.");
+        return;
+      }
+      const rootId = tree?.rootNodeId;
+      if (!rootId || rootId !== activeChatId) return;
+      setRoadmapContextError(null);
+      contextSaveInFlight.current = true;
+      setIsSavingRoadmapContext(true);
+      let saved = false;
+      try {
+        saved = await updateWorkspaceNodeMetadata(currentWorkspace.id, rootId, {
+          roadmapTopicIds: next,
+        });
+      } catch {
+        saved = false;
+      } finally {
+        contextSaveInFlight.current = false;
+        if (
+          currentWorkspaceIdRef.current === currentWorkspace.id &&
+          activeChatIdRef.current === rootId
+        ) setIsSavingRoadmapContext(false);
+      }
+      if (
+        currentWorkspaceIdRef.current !== currentWorkspace.id ||
+        activeChatIdRef.current !== rootId
+      )
+        return;
+      if (!saved) {
+        setRoadmapContextError("Could not save topic context. Try again.");
+        return;
+      }
+      updateNodeMetadata(rootId, { roadmapTopicIds: next });
+      setSelectedRoadmapTopicIds(next);
+    },
+    [
+      currentWorkspace,
+      activeChatId,
+      roadmap.view,
+      activeTopicSessionId,
+      selectedRoadmapTopicIds,
+      tree,
+      updateNodeMetadata,
+    ],
+  );
   const topicSession = useTopicSession(
     currentWorkspace?.id ?? null,
     activeTopicSessionId,
@@ -331,6 +447,37 @@ export function ChatContainer({
     }
   }, []);
 
+  const isPromotableBranchNode = useCallback(
+    (nodeId: string) => {
+      if (!roadmap.view || !tree || isStreaming) return false;
+      if (!roadmap.view.canWrite) return false;
+      const node = tree.nodes[nodeId];
+      if (!node || node.role !== "assistant" || !node.content.trim()) return false;
+      if (!persistedNodeIdsRef.current.has(nodeId)) return false;
+      return getAncestorPath(tree, nodeId).some(
+        (ancestor) => ancestor.id !== tree.rootNodeId && Boolean(ancestor.highlightedContext),
+      );
+    },
+    [roadmap.view, tree, isStreaming],
+  );
+  const handleRequestPromotion = useCallback(
+    (nodeId: string) => {
+      if (!currentWorkspace || !activeChatId || !isPromotableBranchNode(nodeId) || !tree) return;
+      const node = tree.nodes[nodeId];
+      if (!node) return;
+      setPromotionSource({
+        chatId: activeChatId,
+        nodeId,
+        title: chats.find((chat) => chat.id === activeChatId)?.title || "Current conversation",
+        excerpt: node.content,
+      });
+      const sourceKey = `${activeChatId}:${nodeId}`;
+      setPromotionJobId(promotionJobsBySource[sourceKey] ?? null);
+      setIsPromotionOpen(true);
+    },
+    [currentWorkspace, activeChatId, isPromotableBranchNode, tree, chats, promotionJobsBySource],
+  );
+
   // Load a chat tree in the background. `loadingChatId` drives the skeleton
   // in the main pane so navigation feels instant even before data arrives.
   // A monotonic request id makes sure a slower earlier response never
@@ -345,7 +492,10 @@ export function ChatContainer({
         if (requestId !== latestChatRequestRef.current) return; // superseded
         if (snapshot) {
           const loadedTree = snapshotToTree(snapshot);
-          if (loadedTree) loadTree(loadedTree);
+          if (loadedTree) {
+            persistedNodeIdsRef.current = new Set(Object.keys(loadedTree.nodes));
+            loadTree(loadedTree);
+          }
         }
       } finally {
         if (requestId === latestChatRequestRef.current)
@@ -381,7 +531,10 @@ export function ChatContainer({
               const snapshot = await fetchGraphSnapshot(wsId, chatId);
               if (snapshot) {
                 loadedTree = snapshotToTree(snapshot);
-                if (loadedTree) loadTree(loadedTree);
+                if (loadedTree) {
+                  persistedNodeIdsRef.current = new Set(Object.keys(loadedTree.nodes));
+                  loadTree(loadedTree);
+                }
               }
             }
           } else {
@@ -434,6 +587,7 @@ export function ChatContainer({
 
           const targetChatId = chatId || null;
           loadedChatIdRef.current = targetChatId;
+          activeChatIdRef.current = targetChatId;
           setActiveChatId(targetChatId);
 
           // The target chat tree was loaded above in the deep-link branch;
@@ -521,6 +675,7 @@ export function ChatContainer({
 
     if (targetChatId && targetChatId !== loadedChatIdRef.current) {
       loadedChatIdRef.current = targetChatId;
+      activeChatIdRef.current = targetChatId;
       setActiveChatId(targetChatId);
       lastProcessedBranchRef.current = null;
       lastProcessedNodeRef.current = null;
@@ -533,6 +688,7 @@ export function ChatContainer({
       pathname === buildWorkspaceUrl(currentWorkspace.id)
     ) {
       loadedChatIdRef.current = null;
+      activeChatIdRef.current = null;
       setActiveChatId(null);
       setLoadingChatId(null);
       clearMessages();
@@ -583,9 +739,38 @@ export function ChatContainer({
     handleJumpToMessage,
   ]);
 
+  // A promotion-origin ?node= link can point inside a nested branch. Rebuild
+  // every branch step so the source opens in its conversation context.
+  useEffect(() => {
+    if (!tree || !activeChatId) return;
+    const nodeId = searchParams.get("node");
+    if (!nodeId || !tree.nodes[nodeId]) return;
+    const key = `${activeChatId}:${nodeId}`;
+    if (resolvedDeepNodeRef.current === key) return;
+    resolvedDeepNodeRef.current = key;
+    const branchRoots = getAncestorPath(tree, nodeId).filter(
+      (node) => node.id !== tree.rootNodeId && Boolean(node.highlightedContext),
+    );
+    if (branchRoots.length > 0) {
+      setSidePeekState({
+        stack: branchRoots.map((node) => ({
+          nodeId: node.id,
+          excerpt: node.highlightedContext || undefined,
+        })),
+        index: branchRoots.length - 1,
+      });
+      lastProcessedBranchRef.current = nodeId;
+    } else if (viewMode === "canvas") {
+      setSidePeekState({ stack: [{ nodeId }], index: 0 });
+    } else {
+      setTimeout(() => handleJumpToMessage(nodeId), 150);
+    }
+  }, [tree, activeChatId, searchParams, viewMode, handleJumpToMessage]);
+
   // Start a completely fresh chat tree inside the current workspace
   const handleNewChat = useCallback(() => {
     clearMessages();
+    activeChatIdRef.current = null;
     setActiveChatId(null);
     setLoadingChatId(null);
     loadedChatIdRef.current = null;
@@ -597,6 +782,163 @@ export function ChatContainer({
     }
   }, [clearMessages, currentWorkspace, router]);
 
+  const handleRequestNewChat = useCallback(() => {
+    if (roadmap.view && roadmap.view.canWrite && currentWorkspace) {
+      newChatOriginRouteRef.current = routeRef.current;
+      setIsNewWorkspaceChatOpen(true);
+      return;
+    }
+    if (roadmap.view && !roadmap.view.canWrite) return;
+    handleNewChat();
+  }, [roadmap.view, currentWorkspace, handleNewChat]);
+
+  const handleCreatedWorkspaceChat = useCallback(
+    async (chat: NewWorkspaceChatCreated) => {
+      if (
+        currentWorkspaceIdRef.current !== chat.workspaceId ||
+        routeRef.current !== newChatOriginRouteRef.current
+      ) return;
+      setIsNewWorkspaceChatOpen(false);
+      setSidePeekState({ stack: [], index: 0 });
+      setSelectedRoadmapTopicIds(chat.roadmapTopicIds);
+      activeChatIdRef.current = chat.rootNodeId;
+      setActiveChatId(chat.rootNodeId);
+      setLoadingChatId(chat.rootNodeId);
+      loadedChatIdRef.current = chat.rootNodeId;
+      lastProcessedBranchRef.current = null;
+      lastProcessedNodeRef.current = null;
+      router.push(buildChatUrl(chat.workspaceId, chat.rootNodeId), {
+        scroll: false,
+      });
+      const snapshot = await fetchGraphSnapshot(chat.workspaceId, chat.rootNodeId);
+      if (
+        currentWorkspaceIdRef.current !== chat.workspaceId ||
+        activeChatIdRef.current !== chat.rootNodeId ||
+        loadedChatIdRef.current !== chat.rootNodeId
+      )
+        return;
+      const loaded = snapshot ? snapshotToTree(snapshot) : null;
+      if (!loaded || loaded.rootNodeId !== chat.rootNodeId) {
+        setLoadingChatId(null);
+        if (activeChatIdRef.current === chat.rootNodeId) {
+          setLearningError("Your new conversation is saved. Reload it to start the response.");
+        }
+        return;
+      }
+      loadTree(loaded);
+      persistedNodeIdsRef.current = new Set(Object.keys(loaded.nodes));
+      setLoadingChatId(null);
+      setPendingPreparedChat(chat);
+    },
+    [router, loadTree],
+  );
+
+  const preparedStartInFlight = useRef<string | null>(null);
+  const persistedNodeIdsRef = useRef(new Set<string>());
+  const resolvedDeepNodeRef = useRef<string | null>(null);
+  useEffect(() => {
+    const prepared = pendingPreparedChat;
+    if (
+      !prepared ||
+      !tree ||
+      tree.rootNodeId !== prepared.rootNodeId ||
+      activeChatId !== prepared.rootNodeId ||
+      currentWorkspace?.id !== prepared.workspaceId ||
+      isStreaming ||
+      preparedStartInFlight.current === prepared.rootNodeId
+    )
+      return;
+    preparedStartInFlight.current = prepared.rootNodeId;
+    setPendingPreparedChat(null);
+    const roadmapTopicIds = prepared.roadmapTopicIds
+      .filter((id) => activeRoadmapTopicIds.has(id))
+      .slice(0, 3);
+    let assistantNodeId: string | null = null;
+    void (async () => {
+      let responseId: string | null = null;
+      let result: Awaited<ReturnType<typeof sendMessage>> = null;
+      try {
+        result = await sendMessage(
+          prepared.prompt,
+          prepared.provider,
+          prepared.model,
+          {
+            workspaceId: prepared.workspaceId,
+            preparedUserMessageId: prepared.rootNodeId,
+            roadmapTopicIds,
+            apiKey: getEffectiveApiKey(prepared.provider),
+            baseUrl: getEffectiveBaseUrl(prepared.provider),
+            temperature: llmConfig.temperature,
+            maxTokens: llmConfig.maxTokens,
+            systemPrompt: llmConfig.systemPrompt || undefined,
+            onNodeCreated: async ({ assistantNodeId: createdId, preparedUserMessage }) => {
+              if (!preparedUserMessage) {
+                throw new Error("The saved conversation root was not reused.");
+              }
+              assistantNodeId = createdId;
+            },
+          },
+        );
+        responseId = result?.assistantNodeId || assistantNodeId;
+        if (responseId && result) {
+          try {
+            await persistWorkspaceChatNode(prepared.workspaceId, {
+              id: responseId,
+              parentId: prepared.rootNodeId,
+              role: "assistant",
+              content: result.content,
+              provider: prepared.provider,
+              model: prepared.model,
+              metadata: { responseState: result.responseState },
+            });
+            persistedNodeIdsRef.current.add(responseId);
+            await refreshChats(prepared.workspaceId);
+          } catch (saveError) {
+            if (activeChatIdRef.current === prepared.rootNodeId) {
+              setUnsavedAssistant({
+                workspaceId: prepared.workspaceId,
+                id: responseId,
+                parentId: prepared.rootNodeId,
+                content: result.content,
+                provider: prepared.provider,
+                model: prepared.model,
+                responseState: result.responseState,
+              });
+              setLearningError(saveError instanceof Error ? saveError.message : "Could not save the response.");
+            }
+          }
+        }
+      } catch (error) {
+        if (
+          currentWorkspaceIdRef.current === prepared.workspaceId &&
+          activeChatIdRef.current === prepared.rootNodeId
+        ) {
+          setLearningError(
+            error instanceof Error
+              ? error.message
+              : "The conversation is saved. Retry the response from this chat.",
+          );
+        }
+      } finally {
+        preparedStartInFlight.current = null;
+      }
+    })();
+  }, [
+    pendingPreparedChat,
+    tree,
+    activeChatId,
+    currentWorkspace?.id,
+    activeRoadmapTopicIds,
+    isStreaming,
+    sendMessage,
+    getEffectiveApiKey,
+    getEffectiveBaseUrl,
+    llmConfig.temperature,
+    llmConfig.maxTokens,
+    llmConfig.systemPrompt,
+    refreshChats,
+  ]);
+
   // Select an existing chat inside the current workspace
   const handleSelectChat = useCallback(
     async (chat: ChatItem) => {
@@ -604,6 +946,7 @@ export function ChatContainer({
       if (activeChatId === chat.id) return;
 
       // Update active state immediately so sidebar reflects selection
+      activeChatIdRef.current = chat.id;
       setActiveChatId(chat.id);
       setLoadingChatId(chat.id);
       loadedChatIdRef.current = chat.id;
@@ -611,9 +954,7 @@ export function ChatContainer({
       lastProcessedNodeRef.current = null;
       setSidePeekState({ stack: [], index: 0 });
 
-      // Use replace (not push) with scroll:false so Next.js syncs the URL
-      // WITHOUT triggering a full RSC page re-fetch or unmounting ChatContainer.
-      router.replace(buildChatUrl(currentWorkspace.id, chat.id), {
+      router.push(buildChatUrl(currentWorkspace.id, chat.id), {
         scroll: false,
       });
 
@@ -726,6 +1067,8 @@ export function ChatContainer({
 
       const provider = llmConfig.provider;
       const model = llmConfig.model;
+      const sendOriginPath = routeRef.current;
+      const sendOriginChatId = activeChatId;
       const effectiveApiKey = getEffectiveApiKey(provider);
       const effectiveBaseUrl = getEffectiveBaseUrl(provider);
 
@@ -754,21 +1097,19 @@ export function ChatContainer({
         enabledSkills: activeSkill ? [activeSkill] : undefined,
         workspaceId: currentWorkspace.id,
         topicSessionId: activeTopicSessionId ?? undefined,
+        roadmapTopicIds:
+          roadmap.view && !activeTopicSessionId
+            ? selectedActiveRoadmapTopicIds
+            : undefined,
         targetParentId,
-        onNodeCreated: ({ userNodeId, assistantNodeId, parentId }) => {
+        onNodeCreated: async ({ userNodeId, assistantNodeId, parentId, preparedUserMessage }) => {
           createdUserNodeId = userNodeId;
           createdAssistantNodeId = assistantNodeId;
 
-          if (isFirstMessageInNewChat) {
-            setActiveChatId(userNodeId);
-            loadedChatIdRef.current = userNodeId;
-            router.replace(buildChatUrl(currentWorkspace.id, userNodeId), {
-              scroll: false,
-            });
-          }
+          if (preparedUserMessage) return;
 
-          // Persist user node immediately to backend with exact parentId
-          addNodeToWorkspace(currentWorkspace.id, {
+          // Persist and await the user node before ancestry verification starts.
+          await persistWorkspaceChatNode(currentWorkspace.id, {
             id: userNodeId,
             parentId: isFirstMessageInNewChat ? null : parentId,
             role: "user",
@@ -777,7 +1118,24 @@ export function ChatContainer({
             model,
             metadata:
               attachments && attachments.length > 0 ? { attachments } : {},
-          }).then(() => refreshChats(currentWorkspace.id));
+          });
+          persistedNodeIdsRef.current.add(userNodeId);
+          if (
+            currentWorkspaceIdRef.current !== currentWorkspace.id ||
+            routeRef.current !== sendOriginPath ||
+            (!isFirstMessageInNewChat && activeChatIdRef.current !== sendOriginChatId)
+          ) {
+            throw new Error("The conversation changed before the message could be sent.");
+          }
+          await refreshChats(currentWorkspace.id);
+          if (isFirstMessageInNewChat) {
+            activeChatIdRef.current = userNodeId;
+            setActiveChatId(userNodeId);
+            loadedChatIdRef.current = userNodeId;
+            router.push(buildChatUrl(currentWorkspace.id, userNodeId), {
+              scroll: false,
+            });
+          }
         },
       });
 
@@ -789,24 +1147,50 @@ export function ChatContainer({
       const assistantContent = result?.content || "";
 
       // When streaming finishes, persist final assistant response node
-      if (targetAssistantId && targetUserId) {
-        setTimeout(async () => {
-          await addNodeToWorkspace(currentWorkspace.id, {
-            id: targetAssistantId,
-            parentId: targetUserId,
-            role: "assistant",
-            content: assistantContent, // Pass the FULL content
-            provider,
-            model,
-          });
-          await refreshChats(currentWorkspace.id);
-        }, 1000);
+      if (result && targetAssistantId && targetUserId) {
+        {
+          try {
+            await persistWorkspaceChatNode(currentWorkspace.id, {
+              id: targetAssistantId,
+              parentId: targetUserId,
+              role: "assistant",
+              content: assistantContent,
+              provider,
+              model,
+              metadata: { responseState: result.responseState },
+            });
+            persistedNodeIdsRef.current.add(targetAssistantId);
+            await refreshChats(currentWorkspace.id);
+          } catch (saveError) {
+            if (
+              currentWorkspaceIdRef.current === currentWorkspace.id &&
+              activeChatIdRef.current === (isFirstMessageInNewChat ? targetUserId : activeChatId)
+            ) {
+              setUnsavedAssistant({
+                workspaceId: currentWorkspace.id,
+                id: targetAssistantId,
+                parentId: targetUserId,
+                content: assistantContent,
+                provider,
+                model,
+                responseState: result.responseState,
+              });
+              setLearningError(
+                saveError instanceof Error
+                  ? `The response is visible but could not be saved: ${saveError.message}`
+                  : "The response is visible but could not be saved. Retry saving this response.",
+              );
+            }
+          }
+        }
       }
     },
     [
       currentWorkspace,
       activeChatId,
       activeTopicSessionId,
+      roadmap.view,
+      selectedActiveRoadmapTopicIds,
       tree,
       activeMessages,
       activeBranch,
@@ -819,6 +1203,91 @@ export function ChatContainer({
       router,
     ],
   );
+
+  const handleResumeSavedRoot = useCallback(async () => {
+    if (!currentWorkspace || !tree || !activeChatId || activeTopicSessionId) return;
+    const root = tree.nodes[tree.rootNodeId];
+    if (!root || tree.rootNodeId !== activeChatId || root.role !== "user") return;
+    const roadmapTopicIds = Array.isArray(root.metadata?.roadmapTopicIds)
+      ? root.metadata.roadmapTopicIds
+          .filter((id): id is string => typeof id === "string" && activeRoadmapTopicIds.has(id))
+          .slice(0, 3)
+      : [];
+    let assistantNodeId: string | null = null;
+    try {
+      const result = await sendMessage(root.content, llmConfig.provider, llmConfig.model, {
+        workspaceId: currentWorkspace.id,
+        preparedUserMessageId: root.id,
+        roadmapTopicIds,
+        apiKey: getEffectiveApiKey(llmConfig.provider),
+        baseUrl: getEffectiveBaseUrl(llmConfig.provider),
+        temperature: llmConfig.temperature,
+        maxTokens: llmConfig.maxTokens,
+        systemPrompt: llmConfig.systemPrompt || undefined,
+        onNodeCreated: async ({ assistantNodeId: createdId, preparedUserMessage }) => {
+          if (!preparedUserMessage) throw new Error("The saved user message could not be reused.");
+          assistantNodeId = createdId;
+        },
+      });
+      if (result) {
+        const responseId = result.assistantNodeId || assistantNodeId;
+        if (responseId) {
+          await persistWorkspaceChatNode(currentWorkspace.id, {
+            id: responseId,
+            parentId: root.id,
+            role: "assistant",
+            content: result.content,
+            provider: llmConfig.provider,
+            model: llmConfig.model,
+            metadata: { responseState: result.responseState },
+          });
+          persistedNodeIdsRef.current.add(responseId);
+          await refreshChats(currentWorkspace.id);
+        }
+      }
+    } catch (failure) {
+      if (
+        currentWorkspaceIdRef.current === currentWorkspace.id &&
+        activeChatIdRef.current === root.id
+      )
+        setLearningError(failure instanceof Error ? failure.message : "Could not resume this saved response.");
+    }
+  }, [
+    currentWorkspace,
+    tree,
+    activeChatId,
+    activeTopicSessionId,
+    activeRoadmapTopicIds,
+    sendMessage,
+    llmConfig,
+    getEffectiveApiKey,
+    getEffectiveBaseUrl,
+    refreshChats,
+  ]);
+
+  const handleRetryAssistantSave = useCallback(async () => {
+    if (!unsavedAssistant) return;
+    try {
+      await persistWorkspaceChatNode(unsavedAssistant.workspaceId, {
+        id: unsavedAssistant.id,
+        parentId: unsavedAssistant.parentId,
+        role: "assistant",
+        content: unsavedAssistant.content,
+        provider: unsavedAssistant.provider,
+        model: unsavedAssistant.model,
+        metadata: { responseState: unsavedAssistant.responseState },
+      });
+      persistedNodeIdsRef.current.add(unsavedAssistant.id);
+      await refreshChats(unsavedAssistant.workspaceId);
+      setUnsavedAssistant(null);
+    } catch (failure) {
+      setLearningError(
+        failure instanceof Error
+          ? `The response is still visible, but saving failed: ${failure.message}`
+          : "The response is still visible, but saving failed.",
+      );
+    }
+  }, [unsavedAssistant, refreshChats]);
 
   // Synchronize sync status
   useEffect(() => {
@@ -989,12 +1458,18 @@ export function ChatContainer({
 
       const provider = llmConfig.provider;
       const model = llmConfig.model;
+      const sendOriginPath = routeRef.current;
+      const sendOriginChatId = activeChatId;
       const effectiveApiKey = getEffectiveApiKey(provider);
       const effectiveBaseUrl = getEffectiveBaseUrl(provider);
 
       const result = await sendMessage(prompt, provider, model, {
         workspaceId: currentWorkspace.id,
         topicSessionId: activeTopicSessionId ?? undefined,
+        roadmapTopicIds:
+          roadmap.view && !activeTopicSessionId
+            ? selectedActiveRoadmapTopicIds
+            : undefined,
         branchOverride: { parentNodeId, highlightedText },
         preserveActiveNodeId: true,
         apiKey: effectiveApiKey,
@@ -1002,9 +1477,30 @@ export function ChatContainer({
         temperature: llmConfig.temperature,
         maxTokens: llmConfig.maxTokens,
         systemPrompt: llmConfig.systemPrompt || undefined,
-        onNodeCreated: ({ userNodeId, assistantNodeId }) => {
+        onNodeCreated: async ({ userNodeId, assistantNodeId, preparedUserMessage }) => {
           createdUserNodeId = userNodeId;
           createdAssistantNodeId = assistantNodeId;
+
+          if (preparedUserMessage) return;
+
+          await persistWorkspaceChatNode(currentWorkspace.id, {
+            id: userNodeId,
+            parentId: parentNodeId,
+            role: "user",
+            content: options?.displayPrompt || prompt.trim(),
+            highlightedContext: highlightedText || null,
+            provider,
+            model,
+          });
+          persistedNodeIdsRef.current.add(userNodeId);
+          if (
+            currentWorkspaceIdRef.current !== currentWorkspace.id ||
+            routeRef.current !== sendOriginPath ||
+            activeChatIdRef.current !== sendOriginChatId
+          ) {
+            throw new Error("The conversation changed before the branch message could be sent.");
+          }
+          await refreshChats(currentWorkspace.id);
 
           if (options?.mode === "push") {
             handlePushSidePeekBranch(
@@ -1019,16 +1515,6 @@ export function ChatContainer({
             handleOpenSidePeek(assistantNodeId, highlightedText || undefined);
           }
 
-          // Persist user branch node immediately to backend
-          addNodeToWorkspace(currentWorkspace.id, {
-            id: userNodeId,
-            parentId: parentNodeId,
-            role: "user",
-            content: options?.displayPrompt || prompt.trim(),
-            highlightedContext: highlightedText || null,
-            provider,
-            model,
-          }).then(() => refreshChats(currentWorkspace.id));
         },
       });
 
@@ -1038,22 +1524,47 @@ export function ChatContainer({
       const assistantContent = result?.content || "";
 
       // When streaming finishes, persist final assistant response node
-      if (targetAssistantId && targetUserId) {
-        setTimeout(async () => {
-          await addNodeToWorkspace(currentWorkspace.id, {
+      if (result && targetAssistantId && targetUserId) {
+        try {
+          await persistWorkspaceChatNode(currentWorkspace.id, {
             id: targetAssistantId,
             parentId: targetUserId,
             role: "assistant",
             content: assistantContent,
             provider,
             model,
+            metadata: { responseState: result.responseState },
           });
+          persistedNodeIdsRef.current.add(targetAssistantId);
           await refreshChats(currentWorkspace.id);
-        }, 500);
+        } catch (saveError) {
+          if (
+            currentWorkspaceIdRef.current === currentWorkspace.id &&
+            activeChatIdRef.current === activeChatId
+          ) {
+            setUnsavedAssistant({
+              workspaceId: currentWorkspace.id,
+              id: targetAssistantId,
+              parentId: targetUserId,
+              content: assistantContent,
+              provider,
+              model,
+              responseState: result.responseState,
+            });
+            setLearningError(
+              saveError instanceof Error
+                ? `The branch response is visible but could not be saved: ${saveError.message}`
+                : "The branch response is visible but could not be saved.",
+            );
+          }
+        }
       }
     },
     [
       currentWorkspace,
+      roadmap.view,
+      selectedActiveRoadmapTopicIds,
+      activeChatId,
       activeTopicSessionId,
       handleOpenSidePeek,
       handlePushSidePeekBranch,
@@ -1425,7 +1936,7 @@ export function ChatContainer({
       ? undefined
       : () => setIsPaletteOpen((prev) => !prev),
     onToggleSidebar: () => setIsSidebarOpen((prev) => !prev),
-    onNewChat: roadmap.view ? undefined : handleNewChat,
+    onNewChat: roadmap.view && !roadmap.view.canWrite ? undefined : handleRequestNewChat,
     onOpenSettings: handleOpenSettings,
   });
 
@@ -1452,6 +1963,21 @@ export function ChatContainer({
         "Break down the architectural trade-offs between HNSW and IVFFlat vector indexing for pgvector semantic search.",
     },
   ];
+  const rootForResume =
+    tree && tree.rootNodeId === activeChatId ? tree.nodes[tree.rootNodeId] : null;
+  const rootHasCompletedResponse = Boolean(
+    rootForResume?.childrenIds.some((id) => {
+      const child = tree?.nodes[id];
+      return child?.role === "assistant" && child.metadata?.responseState === "completed";
+    }),
+  );
+  const canResumeSavedRoot = Boolean(
+    !activeTopicSessionId &&
+      rootForResume?.role === "user" &&
+      rootForResume.content.trim() &&
+      !rootHasCompletedResponse &&
+      !isStreaming,
+  );
 
   return (
     <>
@@ -1471,7 +1997,7 @@ export function ChatContainer({
             onRenameChat={handleRenameChat}
             onTogglePinChat={handleTogglePinChat}
             onOpenSettings={handleOpenSettings}
-            onNewChat={roadmap.view ? undefined : handleNewChat}
+            onNewChat={roadmap.view && !roadmap.view.canWrite ? undefined : handleRequestNewChat}
             onOpenRoadmap={roadmap.view ? handleOpenRoadmap : undefined}
             isRoadmapActive={roadmapMode === "page"}
             onOpenFileLibrary={() => {
@@ -1537,28 +2063,49 @@ export function ChatContainer({
               onToggleRightSidebar={
                 activeTopicSessionId ? undefined : handleToggleRightSidebar
               }
-              onNewChat={roadmap.view ? undefined : handleNewChat}
+              onNewChat={roadmap.view && !roadmap.view.canWrite ? undefined : handleRequestNewChat}
               onClearChat={() => {
                 clearMessages();
                 handleCloseSidePeek();
               }}
               breadcrumbs={
-                <BranchBreadcrumbs
-                  steps={breadcrumbSteps}
-                  suffix={viewMode === "canvas" ? "Canvas" : undefined}
-                  onSelectStep={(step) => {
-                    lastProcessedBranchRef.current = null;
-                    lastProcessedNodeRef.current = null;
-                    switchBranch(step.leafId);
-                    setSidePeekState({ stack: [], index: 0 });
-                    if (currentWorkspace && activeChatId) {
-                      router.replace(
-                        buildChatUrl(currentWorkspace.id, activeChatId),
-                        { scroll: false },
-                      );
-                    }
-                  }}
-                />
+                <div className="flex min-w-0 items-center gap-2">
+                  <BranchBreadcrumbs
+                    steps={breadcrumbSteps}
+                    suffix={viewMode === "canvas" ? "Canvas" : undefined}
+                    onSelectStep={(step) => {
+                      lastProcessedBranchRef.current = null;
+                      lastProcessedNodeRef.current = null;
+                      switchBranch(step.leafId);
+                      setSidePeekState({ stack: [], index: 0 });
+                      if (currentWorkspace && activeChatId) {
+                        router.push(buildChatUrl(currentWorkspace.id, activeChatId), {
+                          scroll: false,
+                        });
+                      }
+                    }}
+                  />
+                  {roadmap.view?.canWrite &&
+                    activeChatId &&
+                    !activeTopicSessionId &&
+                    tree?.rootNodeId === activeChatId && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="shrink-0"
+                        onClick={() => setIsRoadmapContextOpen(true)}
+                        aria-label="Choose roadmap topics for this conversation"
+                      >
+                        <ListFilter className="mr-1.5 size-4" />
+                        Topic context
+                        {selectedRoadmapTopicIds.length > 0 && (
+                          <span className="ml-1 text-xs text-foreground-muted">
+                            {selectedRoadmapTopicIds.length}/3
+                          </span>
+                        )}
+                      </Button>
+                    )}
+                </div>
               }
             />
           )
@@ -1777,6 +2324,20 @@ export function ChatContainer({
                 ) : (
                   /* Active Lineage Message Stream */
                   <div className="w-full pb-4">
+                    {canResumeSavedRoot && (
+                      <div className="mx-auto mt-5 w-full max-w-2xl rounded-xl border border-border-subtle bg-background-secondary p-3">
+                        <p className="text-sm text-foreground-muted">
+                          This saved conversation has no completed response yet.
+                        </p>
+                        <Button
+                          className="mt-2"
+                          size="sm"
+                          onClick={() => void handleResumeSavedRoot()}
+                        >
+                          Resume response
+                        </Button>
+                      </div>
+                    )}
                     {(() => {
                       const lastUserIndex = activeMessages
                         .map((m) => m.role)
@@ -1925,8 +2486,146 @@ export function ChatContainer({
           onEditUserMessage={handleEditUserMessage}
           onSwitchBranch={switchBranch}
           onRateResponse={handleRateResponse}
+          onPromoteToRoadmap={handleRequestPromotion}
+          isPromotableNode={isPromotableBranchNode}
         />
       </WorkspaceShell>
+
+      {currentWorkspace && roadmap.view?.canWrite && (
+        <NewWorkspaceChatModal
+          isOpen={isNewWorkspaceChatOpen && Boolean(roadmap.view)}
+          workspaceId={currentWorkspace.id}
+          provider={llmConfig.provider}
+          model={llmConfig.model}
+          roadmapTopics={activeRoadmapTopics.map(({ id, title, brief }) => ({ id, title, brief }))}
+          isWorkspaceCurrent={(workspaceId) =>
+            currentWorkspaceIdRef.current === workspaceId &&
+            routeRef.current === newChatOriginRouteRef.current
+          }
+          onClose={() => setIsNewWorkspaceChatOpen(false)}
+          onCreated={handleCreatedWorkspaceChat}
+        />
+      )}
+
+      {roadmap.view?.canWrite && (
+        <Modal
+          isOpen={isRoadmapContextOpen}
+          onClose={() => setIsRoadmapContextOpen(false)}
+          size="lg"
+          ariaLabel="Choose roadmap topics for this conversation"
+        >
+          <ModalHeader
+            title="Topic context"
+            description="Choose up to three roadmap topics to ground this general conversation."
+            icon={<ListFilter className="size-4" />}
+            onClose={() => setIsRoadmapContextOpen(false)}
+          />
+          <ModalBody className="space-y-4">
+            {selectedRoadmapTopicIds.some(
+              (id) => !activeRoadmapTopics.some((topic) => topic.id === id),
+            ) && (
+              <section className="space-y-2 rounded-xl border border-border-subtle bg-background-secondary p-3">
+                <h3 className="text-sm font-medium">Previously selected topics</h3>
+                <p className="text-xs text-foreground-muted">
+                  Archived or removed topics are excluded from chat context. Remove them here.
+                </p>
+                {selectedRoadmapTopicIds
+                  .filter((id) => !activeRoadmapTopics.some((topic) => topic.id === id))
+                  .map((id) => {
+                    const oldTopic = roadmap.view?.candidate.items.find((item) => item.id === id);
+                    return (
+                      <label key={id} className="flex items-center gap-3 rounded-lg px-2 py-1 text-sm">
+                        <Input
+                          type="checkbox"
+                          className="size-4 w-4 accent-primary"
+                          checked
+                          disabled={isSavingRoadmapContext}
+                          onChange={() => void handleRoadmapTopicSelection(id, false)}
+                          aria-label={`Remove ${oldTopic?.title ?? "unavailable topic"} from context`}
+                        />
+                        <span className="min-w-0 truncate text-foreground-muted">
+                          {oldTopic?.title ?? "Unavailable topic"} · excluded
+                        </span>
+                      </label>
+                    );
+                  })}
+              </section>
+            )}
+            <div className="max-h-[50vh] space-y-1 overflow-y-auto">
+              {activeRoadmapTopics.map((topic) => {
+                const checked = selectedRoadmapTopicIds.includes(topic.id);
+                const atLimit = selectedRoadmapTopicIds.length >= 3 && !checked;
+                return (
+                  <label
+                    key={topic.id}
+                    className="flex items-start gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors hover:bg-surface-hover"
+                  >
+                    <Input
+                      type="checkbox"
+                      className="mt-0.5 size-4 w-4 accent-primary"
+                      checked={checked}
+                      disabled={isSavingRoadmapContext || atLimit}
+                      onChange={(event) =>
+                        void handleRoadmapTopicSelection(topic.id, event.target.checked)
+                      }
+                      aria-label={`Include ${topic.title} in conversation context`}
+                    />
+                    <span className="min-w-0">
+                      <span className="block font-medium text-foreground">{topic.title}</span>
+                      <span className="mt-0.5 line-clamp-2 block text-xs text-foreground-muted">
+                        {topic.brief}
+                      </span>
+                    </span>
+                  </label>
+                );
+              })}
+              {activeRoadmapTopics.length === 0 && (
+                <p className="py-4 text-center text-sm text-foreground-muted">
+                  No active roadmap topics are available.
+                </p>
+              )}
+            </div>
+            {roadmapContextError && (
+              <p role="alert" className="text-sm text-destructive">{roadmapContextError}</p>
+            )}
+            {isSavingRoadmapContext && (
+              <p role="status" className="text-xs text-foreground-muted">Saving context…</p>
+            )}
+          </ModalBody>
+          <ModalFooter>
+            <Button
+              variant="secondary"
+              disabled={isSavingRoadmapContext}
+              onClick={() => setIsRoadmapContextOpen(false)}
+            >
+              Done
+            </Button>
+          </ModalFooter>
+        </Modal>
+      )}
+
+      {roadmap.view?.canWrite && promotionSource && (
+        <BranchPromotionModal
+          view={roadmap.view}
+          sourceChatId={promotionSource.chatId}
+          sourceNodeId={promotionSource.nodeId}
+          sourceTitle={promotionSource.title}
+          sourceExcerpt={promotionSource.excerpt}
+          isOpen={isPromotionOpen}
+          resumeJobId={promotionJobId}
+          onClose={() => setIsPromotionOpen(false)}
+          onSaved={(next) => {
+            roadmap.updateView(next);
+            setPromotionJobId(null);
+            setIsPromotionOpen(false);
+          }}
+          onJobAccepted={(jobId, chatId, nodeId) => {
+            setPromotionJobsBySource((jobs) => ({ ...jobs, [`${chatId}:${nodeId}`]: jobId }));
+            if (promotionSource?.chatId === chatId && promotionSource.nodeId === nodeId)
+              setPromotionJobId(jobId);
+          }}
+        />
+      )}
 
       {/* Global Command Palette (⌘K) */}
       {!roadmapMode && (
@@ -1958,6 +2657,19 @@ export function ChatContainer({
       )}
 
       {/* Non-intrusive Floating Toast Notification */}
+      {unsavedAssistant && (
+        <div className="fixed bottom-4 left-4 right-4 z-40 mx-auto max-w-xl">
+          <InlineFeedback
+            tone="warning"
+            title="Response save failed"
+            action={
+              <Button size="sm" onClick={() => void handleRetryAssistantSave()}>
+                Retry save
+              </Button>
+            }
+          >Retry saving the visible response so it can be resumed and promoted.</InlineFeedback>
+        </div>
+      )}
       <Toast message={error} onDismiss={clearError} />
     </>
   );

@@ -20,6 +20,7 @@ import {
   FileSpreadsheet,
   BookOpen,
   ExternalLink,
+  MapPlus,
 } from "lucide-react";
 import { FlashcardModal } from "@/components/flashcards/FlashcardModal";
 import type { FlashcardGenerationConfig } from "@/lib/flashcardApi";
@@ -81,6 +82,7 @@ interface ChatMessageProps {
   onOpenSideBranch?: (childNodeId: string, excerpt: string) => void;
   onRateResponse?: (nodeId: string, rating: "up" | "down" | null) => void;
   onLearningAction?: (nodeId: string, action: LearningActionId) => void;
+  onPromoteToRoadmap?: (nodeId: string) => void;
   workspaceId?: string;
   flashcardGenerationConfig?: FlashcardGenerationConfig;
   canEdit?: boolean;
@@ -338,6 +340,7 @@ export function ChatMessage({
   onOpenSideBranch,
   onRateResponse,
   onLearningAction,
+  onPromoteToRoadmap,
   workspaceId,
   flashcardGenerationConfig,
   canEdit = true,
@@ -965,6 +968,19 @@ export function ChatMessage({
                   className="opacity-0 text-foreground-subtle hover:text-foreground transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 shadow-none"
                   title="Copy response"
                 />
+
+                {onPromoteToRoadmap && !message.isStreaming && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-xs text-foreground-muted"
+                    onClick={() => onPromoteToRoadmap(message.id)}
+                    aria-label="Add this branch to the roadmap"
+                  >
+                    <MapPlus className="mr-1 size-3.5" />
+                    Add to roadmap
+                  </Button>
+                )}
 
                 {/* Generate or Review Flashcards */}
                 {canHaveFlashcards && (

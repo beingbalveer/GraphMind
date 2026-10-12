@@ -75,6 +75,8 @@ interface SidePeekBranchSheetProps {
   onEditUserMessage?: (userNodeId: string, newContent: string) => void;
   onSwitchBranch?: (nodeId: string) => void;
   onRateResponse?: (nodeId: string, rating: "up" | "down" | null) => void;
+  onPromoteToRoadmap?: (nodeId: string) => void;
+  isPromotableNode?: (nodeId: string) => boolean;
   workspaceId?: string;
   flashcardGenerationConfig?: FlashcardGenerationConfig;
 }
@@ -184,6 +186,8 @@ export function SidePeekBranchSheet({
   onEditUserMessage,
   onSwitchBranch,
   onRateResponse,
+  onPromoteToRoadmap,
+  isPromotableNode,
   workspaceId,
   flashcardGenerationConfig,
 }: SidePeekBranchSheetProps) {
@@ -830,6 +834,11 @@ export function SidePeekBranchSheet({
                         onPushBranch(childLeafId, excerpt);
                       }}
                       onRateResponse={onRateResponse}
+                      onPromoteToRoadmap={
+                        msg.role === "assistant" && isPromotableNode?.(msg.id)
+                          ? onPromoteToRoadmap
+                          : undefined
+                      }
                     />
                   );
                 });

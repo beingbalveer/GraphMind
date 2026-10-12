@@ -32,7 +32,8 @@ export interface SendMessageOptions {
     userNodeId: string;
     assistantNodeId: string;
     parentId: string | null;
-  }) => void;
+    preparedUserMessage: boolean;
+  }) => void | Promise<void>;
   apiKey?: string;
   baseUrl?: string;
   temperature?: number;
@@ -44,9 +45,14 @@ export interface SendMessageOptions {
   workspaceId?: string;
   topicSessionId?: string;
   lessonStart?: boolean;
+  /** Stream a response for an already-persisted, parentless user root. */
+  preparedUserMessageId?: string;
   enableRag?: boolean;
   ragFileIds?: string[];
+  roadmapTopicIds?: string[];
 }
+
+export type ChatResponseState = "pending" | "completed" | "interrupted" | "failed";
 
 import { safeGetItem, safeSetItem, safeRemoveItem } from "@/lib/storage";
 
@@ -113,6 +119,7 @@ export function useChatStream() {
   const [activeBranch, setActiveBranch] = useState<BranchContext | null>(null);
   const [isHydrated, setIsHydrated] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const sendInFlightRef = useRef(false);
 
   // 1. Initial rehydration from LocalStorage on client mount
   useEffect(() => {
@@ -297,7 +304,7 @@ export function useChatStream() {
       model = "gemini-2.5-flash",
       optionsOrBranch?: BranchContext | SendMessageOptions | null,
     ) => {
-      if (!prompt.trim() || isStreaming) return null;
+      if (!prompt.trim() || isStreaming || sendInFlightRef.current) return null;
 
       setError(null);
 
@@ -314,7 +321,8 @@ export function useChatStream() {
             userNodeId: string;
             assistantNodeId: string;
             parentId: string | null;
-          }) => void)
+            preparedUserMessage: boolean;
+          }) => void | Promise<void>)
         | undefined = undefined;
 
       if (optionsOrBranch) {
@@ -334,6 +342,11 @@ export function useChatStream() {
         preserveActiveNodeId = Boolean(activeBranch?.highlightedText);
       }
 
+      if (explicitOptions?.preparedUserMessageId) {
+        branch = null;
+        preserveActiveNodeId = false;
+      }
+
       setActiveBranch(null); // Clear branch input badge
 
       let currentTree = tree;
@@ -341,8 +354,89 @@ export function useChatStream() {
       let targetParentId: string | null = null;
       let userNodeId: string;
       let assistantNodeId: string;
+      const isPreparedUserMessage = Boolean(
+        explicitOptions?.preparedUserMessageId,
+      );
 
-      if (explicitOptions?.lessonStart && currentTree) {
+      if (explicitOptions?.preparedUserMessageId) {
+        const preparedUserNode = currentTree?.nodes[
+          explicitOptions.preparedUserMessageId
+        ];
+        if (
+          !currentTree ||
+          currentTree.rootNodeId !== explicitOptions.preparedUserMessageId ||
+          !preparedUserNode ||
+          preparedUserNode.role !== "user" ||
+          preparedUserNode.parentId !== null
+        ) {
+          setError("The saved conversation root is not loaded. Reload the chat and retry.");
+          return null;
+        }
+
+        userNodeId = preparedUserNode.id;
+        targetParentId = null;
+        const existingAssistant = preparedUserNode.childrenIds
+          .map((id) => currentTree!.nodes[id])
+          .find((node) => node?.role === "assistant");
+        if (existingAssistant) {
+          const previousResponse = existingAssistant.content.trim();
+          const state = existingAssistant.metadata?.responseState;
+          const isLegacyRetryMarker =
+            previousResponse.startsWith("⚠️ **Error:**") ||
+            previousResponse.includes("*(Generation stopped by user)*");
+          const retryableResponse =
+            !previousResponse ||
+            state === "failed" ||
+            state === "interrupted" ||
+            (!state && isLegacyRetryMarker);
+          if (!retryableResponse || existingAssistant.childrenIds.length > 0) {
+            setError("This conversation already has a response.");
+            return null;
+          }
+          assistantNodeId = existingAssistant.id;
+          const clearedTree = updateNodeContent(currentTree, assistantNodeId, "");
+          const assistantNode = clearedTree.nodes[assistantNodeId];
+          currentTree = {
+            ...clearedTree,
+            activeNodeId: assistantNodeId,
+            nodes: {
+              ...clearedTree.nodes,
+              [assistantNodeId]: {
+                ...assistantNode,
+                metadata: { ...assistantNode.metadata, responseState: "pending" },
+              },
+            },
+          };
+        } else {
+          const baseAssistantId = `${userNodeId}_response`;
+          assistantNodeId = baseAssistantId;
+          let suffix = 2;
+          while (currentTree.nodes[assistantNodeId]) {
+            assistantNodeId = `${baseAssistantId}_${suffix}`;
+            suffix += 1;
+          }
+          const { tree: treeWithAssistant } = addChildNode(currentTree, {
+            id: assistantNodeId,
+            role: "assistant",
+            parentId: userNodeId,
+            content: "",
+            provider,
+            model,
+          });
+          const assistantNode = treeWithAssistant.nodes[assistantNodeId];
+          currentTree = {
+            ...treeWithAssistant,
+            activeNodeId: assistantNodeId,
+            nodes: {
+              ...treeWithAssistant.nodes,
+              [assistantNodeId]: {
+                ...assistantNode,
+                metadata: { ...assistantNode.metadata, responseState: "pending" },
+              },
+            },
+          };
+        }
+      } else if (explicitOptions?.lessonStart && currentTree) {
         userNodeId = currentTree.rootNodeId;
         targetParentId = userNodeId;
         assistantNodeId = `${userNodeId}_lesson`;
@@ -435,13 +529,26 @@ export function useChatStream() {
         }
       }
 
-      // Synchronously notify caller immediately of created node IDs with exact parentId
-      if (!explicitOptions?.lessonStart)
-        onNodeCreated?.({
-          userNodeId,
-          assistantNodeId,
-          parentId: targetParentId,
-        });
+      // Wait for ancestry persistence before the backend validates this request.
+      sendInFlightRef.current = true;
+      if (!explicitOptions?.lessonStart && onNodeCreated) {
+        try {
+          await onNodeCreated({
+            userNodeId,
+            assistantNodeId,
+            parentId: targetParentId,
+            preparedUserMessage: isPreparedUserMessage,
+          });
+        } catch (persistError) {
+          setError(
+            persistError instanceof Error
+              ? persistError.message
+              : "Could not save your message. Please try again.",
+          );
+          sendInFlightRef.current = false;
+          return null;
+        }
+      }
 
       setTree(currentTree);
       setIsStreaming(true);
@@ -452,6 +559,7 @@ export function useChatStream() {
 
       let accumulatedContent = "";
       let success = false;
+      let responseState: ChatResponseState = "pending";
       try {
         // Build ancestor conversation lineage to forward to API
         const ancestorPath = getAncestorPath(currentTree, userNodeId);
@@ -466,9 +574,12 @@ export function useChatStream() {
           };
         });
 
+        const actualPrompt = isPreparedUserMessage
+          ? currentTree.nodes[userNodeId].content.trim()
+          : prompt.trim();
         const formattedPrompt = branch?.highlightedText
           ? `[Focusing on excerpt: "${branch.highlightedText.trim()}"]\n\n${prompt.trim()}`
-          : prompt.trim();
+          : actualPrompt;
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const payload: Record<string, any> = {
@@ -488,14 +599,16 @@ export function useChatStream() {
           workspace_id:
             explicitOptions?.workspaceId ??
             currentTree.nodes[currentTree.rootNodeId]?.metadata?.workspaceId,
-          topic_session_id:
-            explicitOptions?.topicSessionId ??
-            currentTree.nodes[currentTree.rootNodeId]?.metadata?.topicSessionId,
+          topic_session_id: isPreparedUserMessage
+            ? undefined
+            : explicitOptions?.topicSessionId ??
+              currentTree.nodes[currentTree.rootNodeId]?.metadata?.topicSessionId,
           lesson_start: explicitOptions?.lessonStart ?? false,
           enabled_tools: explicitOptions?.enabledTools,
           enabled_skills: explicitOptions?.enabledSkills,
           enable_rag: explicitOptions?.enableRag,
           rag_file_ids: explicitOptions?.ragFileIds,
+          roadmap_topic_ids: explicitOptions?.roadmapTopicIds,
         };
 
         const { body } = await fetchChatStream(payload, abortController.signal);
@@ -641,22 +754,22 @@ export function useChatStream() {
             }
           }
         }
+        responseState = success ? "completed" : "interrupted";
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (err: any) {
         if (err.name === "AbortError") {
+          responseState = "interrupted";
           setTree((prev) => {
             if (!prev) return prev;
             const node = prev.nodes[assistantNodeId];
-            if (!node || !node.content) {
-              return updateNodeContent(
-                prev,
-                assistantNodeId,
-                "*(Generation stopped by user)*",
-              );
-            }
-            return prev;
+            const partialContent = node?.content.trim();
+            const stoppedContent = partialContent
+              ? `${partialContent}\n\n*(Generation stopped by user)*`
+              : "*(Generation stopped by user)*";
+            return updateNodeContent(prev, assistantNodeId, stoppedContent);
           });
         } else {
+          responseState = "failed";
           const errorMsg = err.message || "Failed to generate AI response";
           setError(errorMsg);
           if (!explicitOptions?.lessonStart)
@@ -670,9 +783,29 @@ export function useChatStream() {
             });
         }
       } finally {
+        const finalResponseState = responseState;
+        setTree((prev) => {
+          if (!prev) return prev;
+          const node = prev.nodes[assistantNodeId];
+          if (!node) return prev;
+          return {
+            ...prev,
+            nodes: {
+              ...prev.nodes,
+              [assistantNodeId]: {
+                ...node,
+                metadata: {
+                  ...node.metadata,
+                  responseState: finalResponseState,
+                },
+              },
+            },
+          };
+        });
         setIsStreaming(false);
         setStreamingNodeId(null);
         abortControllerRef.current = null;
+        sendInFlightRef.current = false;
       }
 
       return {
@@ -680,6 +813,7 @@ export function useChatStream() {
         assistantNodeId,
         content: accumulatedContent,
         success,
+        responseState,
       };
     },
     [tree, isStreaming, activeBranch],

@@ -132,6 +132,8 @@ export interface TopicBrief {
 export interface CurriculumView {
   roadmapId: string;
   workspaceId: string;
+  /** Whether the current actor may change this workspace curriculum. */
+  canWrite: boolean;
   canvasAnchorChatId: string;
   revisionId: string;
   profile: LearningProfile;
@@ -139,6 +141,18 @@ export interface CurriculumView {
   sources: SourceData[];
   progress: Record<string, TopicProgressData>;
   validation: ValidationReport;
+  origins?: CurriculumTopicOrigin[];
+}
+
+export interface CurriculumTopicOrigin {
+  topicId: string;
+  creationRevisionId: string;
+  sourceWorkspaceId: string | null;
+  sourceChatId: string | null;
+  sourceNodeId: string | null;
+  sourceTitle: string;
+  sourceExcerpt: string;
+  unavailable: boolean;
 }
 
 export type JobStatus =
@@ -222,6 +236,20 @@ export interface TopicSessionData {
   checks?: KnowledgeCheckData[];
 }
 
+/** Lightweight history row used in a topic brief; knowledge checks are loaded only for the active session. */
+export interface TopicSessionSummary {
+  id: string;
+  chatId: string;
+  topicId: string;
+  title: string;
+  revisionId: string;
+  createdAt: string;
+  updatedAt: string;
+  isPrimary: boolean;
+  lessonStartState: "pending" | "started" | "completed" | "interrupted";
+  archived: boolean;
+}
+
 export type CurriculumPatch =
   | {
       op: "update_item";
@@ -276,6 +304,7 @@ export interface RevisionProposalData {
   affectedCompletedTopics: string[];
   status: string;
   outdated: boolean;
+  origins?: CurriculumTopicOrigin[];
 }
 export interface RefinementRequest {
   baseRevisionId: string;

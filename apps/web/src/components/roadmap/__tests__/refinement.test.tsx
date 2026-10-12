@@ -8,6 +8,7 @@ import {
   rejectRoadmapProposal,
 } from "@/lib/roadmapApi";
 import { ApiError } from "@/lib/apiClient";
+import { buildNodeUrl } from "@/lib/urls";
 vi.mock("@/lib/roadmapApi", () => ({
   readRoadmapProposal: vi.fn(),
   applyRoadmapRevision: vi.fn(),
@@ -110,4 +111,29 @@ it("shows actual before and after exercises inside collapsed change details",asy
  render(<RevisionProposal workspaceId="ws" revisionId="proposal" onSaved={vi.fn()} onClose={vi.fn()} onRegenerate={vi.fn()}/>);
  await screen.findByRole("button",{name:"View changes"});expect(screen.queryByText("Draw twenty slow lines and compare pressure.")).not.toBeInTheDocument();
  fireEvent.click(screen.getByRole("button",{name:"View changes"}));fireEvent.click(screen.getByRole("button",{name:"chosen"}));expect(screen.getByText("Draw twenty slow lines and compare pressure.")).toBeVisible();expect(screen.getByText("Practice")).toBeVisible();
+});
+
+it("shows source provenance and links back to the persisted branch", async () => {
+  const source = vi.spyOn(window, "open").mockImplementation(() => null);
+  vi.mocked(readRoadmapProposal).mockResolvedValue({
+    original: curriculumFixture().candidate,
+    view: curriculumFixture(),
+    baseRevisionId: "revision",
+    diff: { added: [], changed: [], removed: [], summary: "Source-backed addition", identityChanges: [] },
+    affectedCompletedTopics: [],
+    outdated: false,
+    status: "candidate",
+    origins: [{
+      topicId: "chosen", creationRevisionId: "proposal", sourceWorkspaceId: "ws",
+      sourceChatId: "chat", sourceNodeId: "branch-leaf", sourceTitle: "A useful exploration",
+      sourceExcerpt: "A persisted explanation worth keeping.", unavailable: false,
+    }],
+  });
+  render(<RevisionProposal workspaceId="ws" revisionId="proposal" onSaved={vi.fn()} onClose={vi.fn()} onRegenerate={vi.fn()} />);
+
+  expect(await screen.findByText("A useful exploration")).toBeVisible();
+  expect(screen.getByText("A persisted explanation worth keeping.")).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: "Open source branch" }));
+  expect(source).toHaveBeenCalledWith(buildNodeUrl("ws", "chat", "branch-leaf"), "_blank", "noopener,noreferrer");
+  source.mockRestore();
 });

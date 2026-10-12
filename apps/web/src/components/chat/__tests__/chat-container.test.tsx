@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
 const defaultChatStreamState = {
@@ -22,10 +22,13 @@ const defaultChatStreamState = {
   clearMessages: vi.fn(),
   deleteBranch: vi.fn(),
   updateNodeMetadata: vi.fn(),
-  loadTree: vi.fn(),
+  loadTree: vi.fn((tree: unknown) => {
+    streamTreeForTest = tree;
+  }),
 };
 
-const mockUseChatStream = vi.fn(() => ({ ...defaultChatStreamState }));
+let streamTreeForTest: unknown = null;
+const mockUseChatStream = vi.fn(() => ({ ...defaultChatStreamState, tree: streamTreeForTest }));
 
 vi.mock("@/hooks/useChatStream", () => ({
   useChatStream: () => mockUseChatStream(),
@@ -57,8 +60,12 @@ vi.mock("@/lib/workspaceApi", async (importOriginal) => {
   };
 });
 
+const apiFetchMock = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/apiClient", () => ({ apiFetch: apiFetchMock }));
+
 import { ChatContainer } from "../ChatContainer";
 import { curriculumFixture } from "@/components/roadmap/__tests__/fixtures";
+import { fetchGraphSnapshot } from "@/lib/workspaceApi";
 const roadmapState = vi.hoisted(() => ({
   path: "/w/ws_test",
   view: null as import("@/lib/roadmapTypes").CurriculumView | null,
@@ -102,12 +109,85 @@ describe("ChatContainer canonical composition", () => {
   });
 
   beforeEach(() => {
+    vi.clearAllMocks();
+    streamTreeForTest = null;
     mockUseChatStream.mockReturnValue({ ...defaultChatStreamState });
     roadmapState.path = "/w/ws_test";
     roadmapState.view = null;
     roadmapState.loading = false;
     roadmapState.error = null;
     vi.unstubAllEnvs();
+  });
+
+  it("saves a new root before the fast snapshot activates its prepared response", async () => {
+    vi.stubEnv("NEXT_PUBLIC_ROADMAP_GENERATOR_ENABLED", "true");
+    roadmapState.view = { ...curriculumFixture(), workspaceId: "ws_test" };
+    roadmapState.path = "/w/ws_test";
+    apiFetchMock.mockResolvedValue({
+      id: "new-root", workspaceId: "ws_test", parentId: null, role: "user",
+      content: "Explain topic one", metadata: { roadmapTopicIds: ["chosen"] },
+      positionX: 0, positionY: 0, createdAt: "now", updatedAt: "now",
+    });
+    vi.mocked(fetchGraphSnapshot).mockResolvedValueOnce({
+      workspace: { id: "ws_test", name: "Test workspace" } as never,
+      rootNodeId: "new-root",
+      nodes: [{
+        id: "new-root", workspaceId: "ws_test", parentId: null, role: "user",
+        content: "Explain topic one", metadata: { roadmapTopicIds: ["chosen"] },
+        positionX: 0, positionY: 0, createdAt: "now", updatedAt: "now",
+      }],
+      edges: [],
+    });
+    const sendMessage = vi.fn(async (..._args: unknown[]) => ({
+      assistantNodeId: "answer", content: "A useful answer", responseState: "completed" as const,
+    }));
+    mockUseChatStream.mockImplementation(() => ({
+      ...defaultChatStreamState,
+      tree: streamTreeForTest,
+      sendMessage,
+    }));
+
+    render(<ChatContainer initialWorkspaceId="ws_test" />);
+    fireEvent.click(await screen.findByRole("button", { name: "New Chat" }));
+    fireEvent.change(screen.getByLabelText("Your first message"), {
+      target: { value: "Explain topic one" },
+    });
+    fireEvent.click(screen.getByRole("checkbox", { name: "Include chosen in conversation context" }));
+    fireEvent.click(screen.getByRole("button", { name: "Start chat" }));
+
+    await waitFor(() => expect(sendMessage).toHaveBeenCalledTimes(1));
+    const options = (sendMessage.mock.calls[0] as unknown[] | undefined)?.[3];
+    expect(options).toMatchObject({
+      preparedUserMessageId: "new-root",
+      roadmapTopicIds: ["chosen"],
+    });
+    expect(apiFetchMock.mock.invocationCallOrder[0]).toBeLessThan(sendMessage.mock.invocationCallOrder[0]);
+    expect(fetchGraphSnapshot).toHaveBeenCalledWith("ws_test", "new-root");
+  });
+
+  it("does not start the stream or save an assistant when the first root cannot be saved", async () => {
+    vi.stubEnv("NEXT_PUBLIC_ROADMAP_GENERATOR_ENABLED", "true");
+    roadmapState.view = { ...curriculumFixture(), workspaceId: "ws_test" };
+    roadmapState.path = "/w/ws_test";
+    apiFetchMock.mockRejectedValue(new Error("Root save failed"));
+    const sendMessage = vi.fn();
+    mockUseChatStream.mockImplementation(() => ({
+      ...defaultChatStreamState,
+      tree: streamTreeForTest,
+      sendMessage,
+    }));
+
+    render(<ChatContainer initialWorkspaceId="ws_test" />);
+    fireEvent.click(await screen.findByRole("button", { name: "New Chat" }));
+    fireEvent.change(screen.getByLabelText("Your first message"), {
+      target: { value: "Start with a failed save" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Start chat" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Root save failed");
+    expect(sendMessage).not.toHaveBeenCalled();
+    expect(apiFetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchGraphSnapshot).not.toHaveBeenCalled();
   });
 
   it("renders starter prompt buttons without raw buttons and allows clicking them", () => {
@@ -201,11 +281,41 @@ describe("Roadmap shell routing", () => {
     expect(screen.getByText("Loading roadmap…")).toBeVisible();
     expect(screen.queryByTestId("chat-composer-shell")).not.toBeInTheDocument();
   });
+
+  it("continues a general chat without sending archived roadmap topic IDs", async () => {
+    vi.stubEnv("NEXT_PUBLIC_ROADMAP_GENERATOR_ENABLED", "true");
+    roadmapState.path = "/w/ws_test/chat/general-root";
+    const view = { ...curriculumFixture(), workspaceId: "ws_test" };
+    view.candidate.items.find((item) => item.id === "chosen")!.participation = "archived";
+    roadmapState.view = view;
+    const root = {
+      id: "general-root", role: "user" as const, content: "Explore this", parentId: null,
+      childrenIds: [], metadata: { roadmapTopicIds: ["chosen"] },
+    };
+    const sendMessage = vi.fn(async (..._args: unknown[]) => null);
+    mockUseChatStream.mockReturnValue({
+      ...defaultChatStreamState,
+      tree: {
+        id: "tree", rootNodeId: root.id, activeNodeId: root.id,
+        nodes: { [root.id]: root }, createdAt: "now", updatedAt: "now",
+      } as never,
+      sendMessage,
+    });
+
+    render(<ChatContainer initialWorkspaceId="ws_test" initialChatId="general-root" />);
+    const input = await screen.findByPlaceholderText("Message GraphMind, attach code or paste images...");
+    fireEvent.change(input, { target: { value: "Continue without archived context" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+
+    await waitFor(() => expect(sendMessage).toHaveBeenCalledTimes(1));
+    const options = (sendMessage.mock.calls[0] as unknown[] | undefined)?.[3];
+    expect(options).toMatchObject({ roadmapTopicIds: [] });
+  });
 });
 
 it("keeps conversation-only creation actions out of curriculum landing", () => {
   vi.stubEnv("NEXT_PUBLIC_ROADMAP_GENERATOR_ENABLED", "true");
-  roadmapState.view = { ...curriculumFixture(), workspaceId: "ws_test" };
+  roadmapState.view = { ...curriculumFixture(), workspaceId: "ws_test", canWrite: false };
   roadmapState.path = "/w/ws_test";
   render(<ChatContainer initialWorkspaceId="ws_test" />);
   expect(

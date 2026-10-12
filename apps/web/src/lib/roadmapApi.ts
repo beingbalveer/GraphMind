@@ -31,6 +31,7 @@ import type {
   JobReferenceData,
   CurriculumView,
   TopicBrief,
+  TopicSessionSummary,
 } from "./roadmapTypes";
 const jobPath = (id: string) => `/roadmap/jobs/${encodeURIComponent(id)}`;
 const curriculumPath = (id: string) =>
@@ -116,6 +117,16 @@ export const readTopicSession = (
     `${curriculumPath(workspaceId)}/sessions/${encodeURIComponent(sessionId)}`,
     { signal },
   );
+export const listTopicSessions = (
+  workspaceId: string,
+  topicId: string,
+  limit = 20,
+  signal?: AbortSignal,
+) =>
+  apiFetch<{ sessions: TopicSessionSummary[] }>(
+    `${curriculumPath(workspaceId)}/topics/${encodeURIComponent(topicId)}/sessions?limit=${Math.min(50, Math.max(1, limit))}`,
+    { signal },
+  );
 export const setTopicProgress = (
   workspaceId: string,
   topicId: string,
@@ -183,6 +194,23 @@ export const requestRoadmapRefinement = (
   key: string,
 ) =>
   apiFetch<JobSnapshot>(`${curriculumPath(workspaceId)}/refinements`, {
+    method: "POST",
+    headers: { "Idempotency-Key": key },
+    body: JSON.stringify(request),
+  });
+export interface RoadmapPromotionRequest {
+  sourceChatId: string;
+  sourceNodeId: string;
+  targetContainerId: string;
+  baseRevisionId: string;
+  instruction?: string;
+}
+export const requestRoadmapPromotion = (
+  workspaceId: string,
+  request: RoadmapPromotionRequest,
+  key: string,
+) =>
+  apiFetch<JobSnapshot>(`${curriculumPath(workspaceId)}/promotions`, {
     method: "POST",
     headers: { "Idempotency-Key": key },
     body: JSON.stringify(request),

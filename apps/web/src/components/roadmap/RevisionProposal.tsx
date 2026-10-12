@@ -11,6 +11,7 @@ import { ApiError } from "@/lib/apiClient";
 import type { CurriculumView, RevisionProposalData } from "@/lib/roadmapTypes";
 import { selectedCoreTopics } from "@/lib/canvas/curriculumProjection";
 import { CurriculumGroup } from "./CurriculumGroup";
+import { buildNodeUrl } from "@/lib/urls";
 export function RevisionProposal({
   workspaceId,
   revisionId,
@@ -124,6 +125,7 @@ export function RevisionProposal({
     proposal?.view.candidate.items.find((i) => i.id === id)?.title ??
     proposal?.original.items.find((i) => i.id === id)?.title ??
     "Archived topic";
+  const origins = proposal?.origins ?? proposal?.view.origins ?? [];
   const toggleTopic = (id: string) =>
     setExpandedTopics((old) => {
       const next = new Set(old);
@@ -270,6 +272,28 @@ export function RevisionProposal({
                 affected. Learning history stays saved.
               </p>
             )}
+            {origins.map((origin) => (
+              <section key={`${origin.topicId}:${origin.creationRevisionId}`} className="space-y-2 rounded-xl border border-border-subtle bg-background-secondary p-3">
+                <h4 className="text-sm font-medium">Source conversation</h4>
+                <p className="text-xs text-foreground-muted">{origin.sourceTitle}</p>
+                <p className="line-clamp-4 whitespace-pre-wrap text-sm text-foreground-muted">{origin.sourceExcerpt}</p>
+                {origin.unavailable || !origin.sourceWorkspaceId || !origin.sourceChatId || !origin.sourceNodeId ? (
+                  <p className="text-xs text-foreground-subtle">The source conversation is no longer available.</p>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.open(
+                      buildNodeUrl(origin.sourceWorkspaceId!, origin.sourceChatId!, origin.sourceNodeId!),
+                      "_blank",
+                      "noopener,noreferrer",
+                    )}
+                  >
+                    Open source branch
+                  </Button>
+                )}
+              </section>
+            ))}
           </div>
           <CurriculumGroup
             id="proposal-details"

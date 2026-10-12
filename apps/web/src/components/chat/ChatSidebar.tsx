@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { ChatItem } from "@/lib/workspaceApi";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { NavigationItem } from "@/components/ui/navigation-item";
 import { Input } from "@/components/ui/input";
 import { LogoBadge } from "@/components/ui/Logo";
@@ -47,6 +48,11 @@ const DEFAULT_WIDTH = 300;
 const COLLAPSED_WIDTH = 56;
 const MIN_WIDTH = 200;
 const MAX_WIDTH = 480;
+interface TopicChatGroup {
+  title: string;
+  archived: boolean;
+  chats: ChatItem[];
+}
 
 
 
@@ -89,6 +95,23 @@ export function ChatSidebar({
       return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
     });
   }, [chats]);
+
+  const chatGroups = useMemo(() => {
+    const general = sortedChats.filter((chat) => !chat.topicAssociation);
+    const topics: Record<string, TopicChatGroup> = {};
+    for (const chat of sortedChats) {
+      const association = chat.topicAssociation;
+      if (!association) continue;
+      const group = topics[association.topicId] ?? {
+        title: association.title,
+        archived: association.archived,
+        chats: [],
+      };
+      group.chats.push(chat);
+      topics[association.topicId] = group;
+    }
+    return { general, topics: Object.values(topics) };
+  }, [sortedChats]);
 
 
   // Auto-focus rename input when triggered
@@ -318,10 +341,32 @@ export function ChatSidebar({
               </div>
             ) : (
               <div className="space-y-0.5 pt-4 first:pt-2.5">
-                <div className="px-2.5 pb-2 pt-1 text-sm font-medium text-foreground-muted select-none">
-                  Conversations
-                </div>
-                {sortedChats.map(renderChatItem)}
+                {chatGroups.general.length > 0 && (
+                  <section aria-label="General conversations" className="space-y-0.5">
+                    <h2 className="px-2.5 pb-2 pt-1 text-sm font-medium text-foreground-muted select-none">
+                      General conversations
+                    </h2>
+                    {chatGroups.general.map(renderChatItem)}
+                  </section>
+                )}
+                {chatGroups.topics.length > 0 && (
+                  <section aria-label="Topic conversations" className="mt-4 space-y-2">
+                    <h2 className="px-2.5 pb-1 pt-1 text-sm font-medium text-foreground-muted select-none">
+                      Topic conversations
+                    </h2>
+                    {chatGroups.topics.map((group) => (
+                      <div key={group.chats[0]?.topicAssociation?.topicId} className="space-y-0.5">
+                        <div className="flex items-center gap-2 px-2.5 py-1">
+                          <span className="min-w-0 flex-1 truncate text-xs font-medium text-foreground-muted">
+                            {group.title}
+                          </span>
+                          {group.archived && <Badge variant="secondary">Archived</Badge>}
+                        </div>
+                        {group.chats.map(renderChatItem)}
+                      </div>
+                    ))}
+                  </section>
+                )}
               </div>
             )}
           </div>

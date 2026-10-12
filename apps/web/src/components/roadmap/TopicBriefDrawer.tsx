@@ -3,12 +3,14 @@ import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Drawer } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
-import { readTopicBrief, openTopicSession } from "@/lib/roadmapApi";
+import { readTopicBrief, openTopicSession, listTopicSessions } from "@/lib/roadmapApi";
 import { buildChatUrl } from "@/lib/urls";
+import { buildNodeUrl } from "@/lib/urls";
 import type {
   CurriculumView,
   TopicBrief,
   TopicProgressData,
+  TopicSessionSummary,
 } from "@/lib/roadmapTypes";
 import { TopicEditor } from "./TopicEditor";
 import { CurriculumGroup } from "./CurriculumGroup";
@@ -44,15 +46,20 @@ export function TopicBriefDrawer({
     onClose();
   }
   const [brief, setBrief] = useState<TopicBrief | null>(null);
+  const [sessions, setSessions] = useState<TopicSessionSummary[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [historyError, setHistoryError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [reload, setReload] = useState(0);
+  const [historyReload, setHistoryReload] = useState(0);
   const [expanded, setExpanded] = useState(new Set<string>());
   const keys = useRef(new Map<string, string>());
   const busy = useRef(false);
   useEffect(() => {
     setBrief(null);
+    setSessions([]);
     setError(null);
+    setHistoryError(null);
     setExpanded(new Set());
     if (!topicId) return;
     const controller = new AbortController();
@@ -70,6 +77,25 @@ export function TopicBriefDrawer({
       });
     return () => controller.abort();
   }, [view.workspaceId, view.revisionId, topicId, reload]);
+  useEffect(() => {
+    setSessions([]);
+    setHistoryError(null);
+    if (!topicId) return;
+    const controller = new AbortController();
+    void listTopicSessions(view.workspaceId, topicId, 20, controller.signal)
+      .then((history) => {
+        if (!controller.signal.aborted) setSessions(history.sessions);
+      })
+      .catch((error) => {
+        if (!controller.signal.aborted)
+          setHistoryError(
+            error instanceof Error
+              ? error.message
+              : "Could not load saved lesson sessions.",
+          );
+      });
+    return () => controller.abort();
+  }, [view.workspaceId, topicId, historyReload]);
   const toggle = (id: string) =>
     setExpanded((old) => {
       const next = new Set(old);
@@ -78,7 +104,7 @@ export function TopicBriefDrawer({
       return next;
     });
   async function start(fresh = false) {
-    if (!brief || busy.current) return;
+    if (!brief || busy.current || (fresh && brief.item.participation === "archived")) return;
     const scope = requestScope.current;
     busy.current = true;
     setPending(true);
@@ -116,6 +142,17 @@ export function TopicBriefDrawer({
     setBrief((old) => (old ? { ...old, progress } : old));
     onProgress(progress);
   }
+  function sessionStateLabel(state: TopicSessionSummary["lessonStartState"]) {
+    switch (state) {
+      case "pending": return "Ready to start";
+      case "started": return "In progress";
+      case "completed": return "Completed";
+      case "interrupted": return "Interrupted";
+    }
+  }
+  const origin = topicId
+    ? view.origins?.find((candidate) => candidate.topicId === topicId)
+    : undefined;
   return (
     <>
       <Drawer
@@ -165,6 +202,32 @@ export function TopicBriefDrawer({
                   {brief.item.brief}
                 </p>
               </div>
+              {origin && (
+                <section className="space-y-2 rounded-xl border border-border-subtle bg-background-secondary p-3">
+                  <h3 className="text-sm font-medium">Added from exploration</h3>
+                  <p className="text-xs text-foreground-muted">{origin.sourceTitle}</p>
+                  {origin.sourceExcerpt && (
+                    <p className="line-clamp-4 whitespace-pre-wrap text-sm text-foreground-muted">
+                      {origin.sourceExcerpt}
+                    </p>
+                  )}
+                  {origin.unavailable || !origin.sourceWorkspaceId || !origin.sourceChatId || !origin.sourceNodeId ? (
+                    <p className="text-xs text-foreground-subtle">The source conversation is no longer available.</p>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => router.push(buildNodeUrl(
+                        origin.sourceWorkspaceId!,
+                        origin.sourceChatId!,
+                        origin.sourceNodeId!,
+                      ))}
+                    >
+                      Open source branch
+                    </Button>
+                  )}
+                </section>
+              )}
               <section className="space-y-2">
                 <h3 className="text-sm font-medium">What you’ll learn</h3>
                 <ul className="list-disc space-y-2 pl-5 text-sm text-foreground-muted">
@@ -172,6 +235,50 @@ export function TopicBriefDrawer({
                     <li key={index}>{objective}</li>
                   ))}
                 </ul>
+              </section>
+              <section className="space-y-2" aria-labelledby="topic-session-history-heading">
+                <h3 id="topic-session-history-heading" className="text-sm font-medium">
+                  Saved lesson sessions
+                </h3>
+                {historyError ? (
+                  <div className="space-y-2">
+                    <p role="alert" className="text-xs text-foreground-muted">{historyError}</p>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setHistoryReload((old) => old + 1)}
+                    >
+                      Retry session history
+                    </Button>
+                  </div>
+                ) : sessions.length ? (
+                  <div className="space-y-1">
+                    {sessions.map((session, index) => (
+                      <Button
+                        key={session.id}
+                        variant="ghost"
+                        className="h-auto w-full justify-start rounded-xl border border-border-subtle px-3 py-2 text-left"
+                        onClick={() => {
+                          close();
+                          router.push(buildChatUrl(view.workspaceId, session.chatId));
+                        }}
+                        aria-label={`Resume lesson session ${index + 1}${session.archived ? ", archived topic" : ""}`}
+                      >
+                        <span className="flex min-w-0 flex-col items-start gap-0.5">
+                          <span className="text-sm font-medium text-foreground">
+                            {session.isPrimary ? "Primary lesson" : `Session ${index + 1}`}
+                            {session.archived ? " · Archived topic" : ""}
+                          </span>
+                          <span className="text-xs text-foreground-muted">
+                            Updated {new Date(session.updatedAt).toLocaleDateString()} · {sessionStateLabel(session.lessonStartState)}
+                          </span>
+                        </span>
+                      </Button>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-foreground-muted">No saved sessions yet.</p>
+                )}
               </section>
               {brief.item.exercise && (
                 <section className="space-y-2">
@@ -260,7 +367,8 @@ export function TopicBriefDrawer({
                   <Button
                     variant="ghost"
                     size="sm"
-                    disabled={pending}
+                    disabled={pending || brief.item.participation === "archived"}
+                    aria-label="Start a new lesson conversation"
                     onClick={() => void start(true)}
                   >
                     Start fresh session
@@ -282,7 +390,7 @@ export function TopicBriefDrawer({
               progress={brief.progress}
               onChange={change}
             />
-            <Button disabled={pending} onClick={() => void start()}>
+            <Button disabled={pending || brief.item.participation === "archived"} onClick={() => void start()}>
               {pending
                 ? "Opening…"
                 : brief.defaultChatId

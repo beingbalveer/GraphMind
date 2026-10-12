@@ -41,6 +41,15 @@ export interface ChatItem {
   updatedAt: string;
   activeNodeId?: string | null;
   pinned?: boolean;
+  topicAssociation?: TopicChatAssociation | null;
+}
+
+/** Server verified TopicChat association; absent/null means an ordinary chat. */
+export interface TopicChatAssociation {
+  sessionId: string;
+  topicId: string;
+  title: string;
+  archived: boolean;
 }
 
 
@@ -245,6 +254,28 @@ export async function addNodeToWorkspace(
     console.warn("Failed to persist node to workspace:", err);
     return null;
   }
+}
+
+/** Persist a node and surface failures when streaming must wait for ancestry. */
+export async function persistWorkspaceChatNode(
+  workspaceId: string,
+  payload: CreateNodePayload & { id: string },
+): Promise<GraphSnapshotNode> {
+  return apiFetch<GraphSnapshotNode>(`/workspaces/${workspaceId}/nodes`, {
+    method: "POST",
+    body: JSON.stringify({
+      id: payload.id,
+      parentId: payload.parentId ?? null,
+      role: payload.role,
+      content: payload.content,
+      highlightedContext: payload.highlightedContext ?? null,
+      provider: payload.provider ?? null,
+      model: payload.model ?? null,
+      positionX: payload.positionX ?? 0,
+      positionY: payload.positionY ?? 0,
+      metadata: payload.metadata ?? {},
+    }),
+  });
 }
 
 export async function deleteWorkspaceBranch(

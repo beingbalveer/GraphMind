@@ -216,7 +216,7 @@ describe("ChatSidebar & UserMenu Contract (Scope 3, Task 2)", () => {
     expect(roadmapBtn).toHaveAttribute("aria-current", "page");
   });
 
-  it("renders a single Conversations section with pinned chat on top and pin icon", () => {
+  it("renders general conversations with pinned chat on top and pin icon", () => {
     render(
       <ChatSidebar
         isOpen={true}
@@ -230,7 +230,7 @@ describe("ChatSidebar & UserMenu Contract (Scope 3, Task 2)", () => {
     );
 
     // Single unified section header
-    const conversationsHeader = screen.getByText("Conversations");
+    const conversationsHeader = screen.getByText("General conversations");
     expect(conversationsHeader).toBeInTheDocument();
     expect(conversationsHeader).toHaveClass("text-sm", "font-medium", "text-foreground-muted");
 
@@ -249,5 +249,34 @@ describe("ChatSidebar & UserMenu Contract (Scope 3, Task 2)", () => {
     );
     expect(chatElements[0]).toHaveTextContent("Pinned Architecture Notes");
     expect(chatElements[1]).toHaveTextContent("Quantum Computing Exploration");
+  });
+
+  it("separates server-associated topic sessions from general chats", () => {
+    const topicChat: ChatItem = {
+      ...mockChats[0],
+      id: "lesson-1",
+      title: "My lesson session",
+      topicAssociation: {
+        sessionId: "session-1",
+        topicId: "topic-1",
+        title: "Vector databases",
+        archived: false,
+      },
+    };
+    render(
+      <ChatSidebar
+        isOpen
+        onToggle={vi.fn()}
+        chats={[...mockChats, topicChat]}
+        activeChatId="lesson-1"
+        onSelectChat={vi.fn()}
+        onDeleteChat={vi.fn()}
+        onRenameChat={vi.fn().mockResolvedValue(undefined)}
+      />,
+    );
+    expect(screen.getByRole("region", { name: "General conversations" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Topic conversations" })).toBeInTheDocument();
+    expect(screen.getByText("Vector databases")).toBeInTheDocument();
+    expect(screen.getByText("My lesson session")).toBeInTheDocument();
   });
 });
