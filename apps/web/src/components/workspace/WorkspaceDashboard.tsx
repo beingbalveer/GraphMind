@@ -10,7 +10,6 @@ import {
   Pin,
   Plus,
   FolderOpen,
-  BookOpen,
 } from "lucide-react";
 import { fetchWorkspaces, createWorkspace, WorkspaceItem } from "@/lib/workspaceApi";
 import { buildWorkspaceUrl } from "@/lib/urls";
@@ -23,7 +22,6 @@ import { Surface } from "@/components/ui/surface";
 import { InlineFeedback } from "@/components/ui/feedback";
 import { UserMenu } from "@/components/layout/UserMenu";
 import { RoadmapJobsNotice } from "@/components/roadmap/RoadmapJobsNotice";
-import { RoadmapImportModal } from "@/components/roadmap/RoadmapImportModal";
 import { RoadmapModal } from "@/components/workspace/RoadmapModal";
 
 export function WorkspaceDashboard() {
@@ -33,7 +31,6 @@ export function WorkspaceDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [isRoadmapOpen, setIsRoadmapOpen] = useState(false);
-  const [isImportOpen, setIsImportOpen] = useState(false);
   const [resumeJobId, setResumeJobId] = useState<string | null>(null);
   const [workspaceView, setWorkspaceView] = useState<"mine" | "discover">("mine");
 
@@ -115,10 +112,6 @@ export function WorkspaceDashboard() {
           <header className="flex h-13 shrink-0 items-center justify-between gap-3 bg-background px-4 sm:px-6">
             <h1 className="truncate text-lg font-medium text-foreground">Workspaces</h1>
             <div className="flex shrink-0 items-center gap-2">
-              <Button onClick={() => setIsImportOpen(true)} variant="ghost" aria-label="Browse curated roadmaps">
-                <BookOpen className="size-4 sm:hidden" />
-                <span className="hidden sm:inline">Curated roadmaps</span>
-              </Button>
               <Button onClick={() => setIsRoadmapOpen(true)} variant="outline" aria-label="Generate roadmap">
                 <Compass className="size-4 sm:hidden" />
                 <span className="hidden sm:inline">Generate roadmap</span>
@@ -262,11 +255,6 @@ export function WorkspaceDashboard() {
         resumeJobId={resumeJobId}
         isOpen={isRoadmapOpen}
         onClose={() => setIsRoadmapOpen(false)}
-      />
-
-      <RoadmapImportModal
-        isOpen={isImportOpen}
-        onClose={() => setIsImportOpen(false)}
       />
     </>
   );

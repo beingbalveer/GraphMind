@@ -96,6 +96,7 @@ describe("WorkspaceDashboard & Learning Dashboard Contract (Scope 4, Task 1)", (
 
     expect(screen.getByRole("tab", { name: /discover/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /generate roadmap/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /curated roadmaps/i })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /create new/i })).toBeInTheDocument();
     expect(screen.queryByText(/learning workspaces/i)).not.toBeInTheDocument();
   });

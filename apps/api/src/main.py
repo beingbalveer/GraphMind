@@ -27,7 +27,6 @@ from routers import (
     flashcards,
     mastery,
     roadmap,
-    roadmap_import,
     roadmap_jobs,
     workspaces,
 )
@@ -189,7 +188,6 @@ app.include_router(chat.router)
 app.include_router(workspaces.router, prefix="/api/v1")
 app.include_router(canvas.router, prefix="/api/v1")
 app.include_router(roadmap.router, prefix="/api/v1")
-app.include_router(roadmap_import.router, prefix="/api/v1")
 app.include_router(roadmap_jobs.router, prefix="/api/v1")
 app.include_router(curriculum.router, prefix="/api/v1")
 app.include_router(mastery.router, prefix="/api/v1")
