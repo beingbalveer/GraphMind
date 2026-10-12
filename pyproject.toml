@@ -33,6 +33,14 @@ ignore_missing_imports = true
 warn_unused_ignores = true
 disallow_subclassing_any = false
 
+[tool.pyright]
+include = ["apps/api", "packages/ai-core"]
+extraPaths = ["apps/api/src", "packages/ai-core/src"]
+venvPath = "."
+venv = ".venv"
+typeCheckingMode = "basic"
+exclude = ["**/__pycache__", "**/*.pyc", ".venv", "node_modules", "**/build", "**/dist"]
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["apps/api/tests", "packages/ai-core/tests"]
