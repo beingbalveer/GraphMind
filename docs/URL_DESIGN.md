@@ -85,11 +85,13 @@ Query params are reserved **only** for transient, optional navigation state:
 | Param | Allowed on | Purpose |
 |---|---|---|
 | `?node={nodeId}` | `/w/{wid}/chat/{cid}` and `/canvas` | Scroll-to and highlight a specific message node |
+| `?branch={nodeId}` | `/w/{wid}/chat/{cid}` | Open a branch in the chat side peek |
 
 **Never use query params for:**
 - Active workspace selection
 - Active chat selection  
 - Active view mode
+- Primary workspace or chat identity
 
 ---
 
@@ -210,3 +212,17 @@ Topic tutoring uses ordinary persistent chat URLs and conversation canvases.
 Library and settings keep their existing routes. Back to roadmap returns to the
 workspace landing; page/canvas switching uses the published anchor. An ordinary
 workspace with `ROADMAP_NOT_FOUND` retains its existing chat landing behavior.
+
+In a roadmap workspace, New chat opens a focused composer. Submission persists the
+actual first user message as a parentless root in the same workspace, then opens
+`buildChatUrl(workspaceId, chatId)` and streams a response against that saved root.
+The first prompt never travels in the URL, and the root is the chat identity for
+subsequent refreshes and explicit response retries. Topic lesson roots continue to
+use their own saved topic-session association.
+
+When a promoted curriculum topic links back to an explored branch, its source action
+uses `buildNodeUrl(workspaceId, chatId, nodeId)`. In chat view, a `?node=` deep link
+to a nested branch opens the branch ancestry in the side peek; in canvas view it
+selects the corresponding node. `?branch=` remains available for direct chat
+side-peek navigation. These transient node parameters do not replace workspace or
+chat path segments, and URL creation continues through `@/lib/urls`.

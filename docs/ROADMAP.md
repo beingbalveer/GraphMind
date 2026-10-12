@@ -62,11 +62,13 @@ inside the workspace created by roadmap generation. Topic branches retain lesson
 context, and useful exploration can become a reviewed roadmap addition.
 
 The [implementation plan](superpowers/plans/2026-10-13-unified-roadmap-workspace.md)
-defines seven sequential tasks with acceptance checks. **Planning complete;
-application implementation has not started.** The current research-quality and
-whole-branch verification task above remains active. The first follow-on task is
-reliable general-chat creation in roadmap workspaces; explain its concrete design
-and obtain implementation approval before coding.
+defines seven tasks with acceptance checks. The user authorized full implementation
+and parallel work on `codex/unified-roadmap-workspace`; tasks 1–6 are implemented,
+and the automated gates and core integrated journey are verified. Additional manual
+browser checks and live-provider/research evaluation remain unverified. See the
+[verification record](quality/unified-roadmap-workspace-2026-10-13.md) for exact
+results and limits. The current research-quality and whole-branch verification task
+above remains active and is not replaced by this follow-on work.
 
 ### Phase 1: Production Core & Streamed Chat Engine
 - **AI Core (`packages/ai-core`)**: Provider-agnostic abstractions (`BaseProvider`, `BaseEmbeddingProvider`, `BaseTool`) decoupling business logic from OpenAI, Gemini, Anthropic, DeepSeek, and local Ollama.
