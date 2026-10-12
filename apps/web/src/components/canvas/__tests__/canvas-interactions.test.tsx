@@ -33,13 +33,14 @@ vi.mock("@xyflow/react", async () => {
     Background: () => null,
     Controls: () => null,
     MiniMap: () => <div data-testid="minimap" />,
-    ReactFlow: ({nodes, nodeTypes, edges, children, onNodeDragStop, panOnScroll, panOnScrollMode, zoomOnScroll, zoomOnPinch, zoomOnDoubleClick}: {nodes: Array<{id: string; data: unknown; position:{x:number;y:number};type:string}>;
+    ReactFlow: ({nodes, nodeTypes, edges, children, onNodeDragStop, panOnScroll, panOnScrollMode, zoomOnScroll, zoomOnPinch, zoomOnDoubleClick, translateExtent}: {nodes: Array<{id: string; data: unknown; position:{x:number;y:number};type:string}>;
       edges:Array<{id:string;sourceHandle?:string;targetHandle?:string}>;
       nodeTypes: Record<string, React.ComponentType<{data: unknown}>>; children: React.ReactNode;
       onNodeDragStop?: (event:null,node:unknown) => void; panOnScroll?: boolean; panOnScrollMode?: string;
-      zoomOnScroll?: boolean; zoomOnPinch?: boolean; zoomOnDoubleClick?: boolean}) => (
+      zoomOnScroll?: boolean; zoomOnPinch?: boolean; zoomOnDoubleClick?: boolean; translateExtent?: [[number, number], [number, number]]}) => (
       <div data-testid="react-flow" data-pan-on-scroll={panOnScroll} data-pan-on-scroll-mode={panOnScrollMode}
-        data-zoom-on-scroll={zoomOnScroll} data-zoom-on-pinch={zoomOnPinch} data-zoom-on-double-click={zoomOnDoubleClick}>
+        data-zoom-on-scroll={zoomOnScroll} data-zoom-on-pinch={zoomOnPinch} data-zoom-on-double-click={zoomOnDoubleClick}
+        data-translate-extent={JSON.stringify(translateExtent)}>
         {nodes.map(node => { const Component = nodeTypes[node.type]; return (
         <div key={node.id} data-testid={node.id} data-position={JSON.stringify(node.position)}><Component data={node.data} /></div>
       ); })}{edges.map(edge => <span key={edge.id} data-testid={`edge:${edge.id}`} data-source-handle={edge.sourceHandle ?? ""} data-target-handle={edge.targetHandle ?? ""} />)}
@@ -77,6 +78,9 @@ describe("shared conversation canvas", () => {
     expect(flow).toHaveAttribute("data-zoom-on-scroll", "false");
     expect(flow).toHaveAttribute("data-zoom-on-pinch", "false");
     expect(flow).toHaveAttribute("data-zoom-on-double-click", "false");
+    const extent = JSON.parse(flow.getAttribute("data-translate-extent") ?? "null");
+    expect(extent).toHaveLength(2);
+    expect(extent.flat().every(Number.isFinite)).toBe(true);
     expect(screen.getByRole("button", {name:"Zoom in"})).toBeVisible();
   });
 

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -15,6 +15,7 @@ import {
   type Node,
   type NodeProps,
   type Edge,
+  type CoordinateExtent,
 } from "@xyflow/react";
 import { CanvasControls } from "./CanvasControls";
 import { MindMapEdge } from "./MindMapEdge";
@@ -132,6 +133,28 @@ function Surface({
   const initialized = useNodesInitialized();
   const { zoom } = useViewport();
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<ItemData>>([]);
+  const translateExtent = useMemo<CoordinateExtent>(() => {
+    if (nodes.length === 0) return [[-1000, -1000], [1000, 1000]];
+
+    const margin = 120;
+    const bounds = nodes.map((node) => ({
+      left: node.position.x,
+      top: node.position.y,
+      right:
+        node.position.x +
+        (node.measured?.width ?? Number(node.style?.width ?? 300)),
+      bottom:
+        node.position.y +
+        (node.measured?.height ?? (layoutMode === "roadmap" ? 64 : 128)),
+    }));
+
+    return [
+      [Math.min(...bounds.map(({ left }) => left)) - margin,
+        Math.min(...bounds.map(({ top }) => top)) - margin],
+      [Math.max(...bounds.map(({ right }) => right)) + margin,
+        Math.max(...bounds.map(({ bottom }) => bottom)) + margin],
+    ];
+  }, [nodes, layoutMode]);
   const incomingPositions = useRef(layout.positions);
   const didInitialize = useRef(false);
   const appliedViewport = useRef<string | null>(null);
@@ -341,6 +364,7 @@ function Surface({
         zoomOnDoubleClick={false}
         minZoom={0.15}
         maxZoom={1.8}
+        translateExtent={translateExtent}
         onNodeDragStop={(_, node) => {
           if (readOnly) return;
           const state = latest.current;
