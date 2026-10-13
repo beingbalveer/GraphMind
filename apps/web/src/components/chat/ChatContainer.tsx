@@ -50,7 +50,10 @@ import { InlineFeedback } from "@/components/ui/feedback";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Toast } from "@/components/ui/toast";
 import { LogoBadge } from "@/components/ui/Logo";
-import { useChatStream } from "@/hooks/useChatStream";
+import {
+  isRetryableAssistantResponse,
+  useChatStream,
+} from "@/hooks/useChatStream";
 import { useModelConfig } from "@/hooks/useModelConfig";
 import { useScrollAnchor } from "@/hooks/useScrollAnchor";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
@@ -257,7 +260,7 @@ export function ChatContainer({
   const [promotionJobId, setPromotionJobId] = useState<string | null>(null);
   const [promotionJobsBySource, setPromotionJobsBySource] = useState<Record<string, string>>({});
   const [isPromotionOpen, setIsPromotionOpen] = useState(false);
-  const [unsavedAssistant, setUnsavedAssistant] = useState<{
+  type UnsavedAssistant = {
     workspaceId: string;
     id: string;
     parentId: string;
@@ -265,7 +268,25 @@ export function ChatContainer({
     provider: string;
     model: string;
     responseState: string;
-  } | null>(null);
+    generation?: number;
+  };
+  const [unsavedAssistant, setUnsavedAssistantState] =
+    useState<UnsavedAssistant | null>(null);
+  const unsavedAssistantRef = useRef<UnsavedAssistant | null>(null);
+  const setUnsavedAssistant = useCallback(
+    (
+      update:
+        | UnsavedAssistant
+        | null
+        | ((current: UnsavedAssistant | null) => UnsavedAssistant | null),
+    ) => {
+      const next =
+        typeof update === "function" ? update(unsavedAssistantRef.current) : update;
+      unsavedAssistantRef.current = next;
+      setUnsavedAssistantState(next);
+    },
+    [],
+  );
   const currentWorkspaceIdRef = useRef<string | null>(null);
   const activeChatIdRef = useRef<string | null>(initialChatId || null);
   currentWorkspaceIdRef.current = currentWorkspace?.id ?? null;
@@ -835,7 +856,44 @@ export function ChatContainer({
 
   const preparedStartInFlight = useRef<string | null>(null);
   const persistedNodeIdsRef = useRef(new Set<string>());
+  const assistantSaveQueueRef = useRef(new Map<string, Promise<void>>());
+  const assistantGenerationRef = useRef(new Map<string, number>());
   const resolvedDeepNodeRef = useRef<string | null>(null);
+  const invalidateAssistantPersistence = useCallback(
+    (workspaceId: string, assistantId: string) => {
+      const key = `${workspaceId}:${assistantId}`;
+      const generation = (assistantGenerationRef.current.get(key) ?? 0) + 1;
+      assistantGenerationRef.current.set(key, generation);
+      persistedNodeIdsRef.current.delete(assistantId);
+      setUnsavedAssistant((current) =>
+        current?.id === assistantId && current.workspaceId === workspaceId
+          ? null
+          : current,
+      );
+      return generation;
+    },
+    [setUnsavedAssistant],
+  );
+  const persistAssistantResponse = useCallback(
+    (
+      workspaceId: string,
+      payload: Parameters<typeof persistWorkspaceChatNode>[1],
+    ) => {
+      const key = `${workspaceId}:${payload.id}`;
+      const previous = assistantSaveQueueRef.current.get(key);
+      const current = (previous ?? Promise.resolve())
+        .catch(() => undefined)
+        .then(async () => {
+          await persistWorkspaceChatNode(workspaceId, payload);
+        });
+      assistantSaveQueueRef.current.set(key, current);
+      return current.finally(() => {
+        if (assistantSaveQueueRef.current.get(key) === current)
+          assistantSaveQueueRef.current.delete(key);
+      });
+    },
+    [],
+  );
   useEffect(() => {
     const prepared = pendingPreparedChat;
     if (
@@ -854,6 +912,7 @@ export function ChatContainer({
       .filter((id) => activeRoadmapTopicIds.has(id))
       .slice(0, 3);
     let assistantNodeId: string | null = null;
+    let assistantGeneration: number | null = null;
     void (async () => {
       let responseId: string | null = null;
       let result: Awaited<ReturnType<typeof sendMessage>> = null;
@@ -875,6 +934,12 @@ export function ChatContainer({
               if (!preparedUserMessage) {
                 throw new Error("The saved conversation root was not reused.");
               }
+              // A prepared retry reuses the existing assistant ID, but its
+              // replacement content is not durable until the save below.
+              assistantGeneration = invalidateAssistantPersistence(
+                prepared.workspaceId,
+                createdId,
+              );
               assistantNodeId = createdId;
             },
           },
@@ -882,7 +947,7 @@ export function ChatContainer({
         responseId = result?.assistantNodeId || assistantNodeId;
         if (responseId && result) {
           try {
-            await persistWorkspaceChatNode(prepared.workspaceId, {
+            await persistAssistantResponse(prepared.workspaceId, {
               id: responseId,
               parentId: prepared.rootNodeId,
               role: "assistant",
@@ -891,10 +956,22 @@ export function ChatContainer({
               model: prepared.model,
               metadata: { responseState: result.responseState },
             });
-            persistedNodeIdsRef.current.add(responseId);
+            const key = `${prepared.workspaceId}:${responseId}`;
+            if (assistantGenerationRef.current.get(key) === assistantGeneration) {
+              persistedNodeIdsRef.current.add(responseId);
+              setUnsavedAssistant((current) =>
+                current?.id === responseId && current.workspaceId === prepared.workspaceId
+                  ? null
+                  : current,
+              );
+            }
             await refreshChats(prepared.workspaceId);
           } catch (saveError) {
-            if (activeChatIdRef.current === prepared.rootNodeId) {
+            const key = `${prepared.workspaceId}:${responseId}`;
+            if (
+              activeChatIdRef.current === prepared.rootNodeId &&
+              assistantGenerationRef.current.get(key) === assistantGeneration
+            ) {
               setUnsavedAssistant({
                 workspaceId: prepared.workspaceId,
                 id: responseId,
@@ -903,6 +980,7 @@ export function ChatContainer({
                 provider: prepared.provider,
                 model: prepared.model,
                 responseState: result.responseState,
+                generation: assistantGeneration ?? 0,
               });
               setLearningError(saveError instanceof Error ? saveError.message : "Could not save the response.");
             }
@@ -933,6 +1011,9 @@ export function ChatContainer({
     sendMessage,
     getEffectiveApiKey,
     getEffectiveBaseUrl,
+    invalidateAssistantPersistence,
+    persistAssistantResponse,
+    setUnsavedAssistant,
     llmConfig.temperature,
     llmConfig.maxTokens,
     llmConfig.systemPrompt,
@@ -1064,6 +1145,7 @@ export function ChatContainer({
 
       let createdUserNodeId: string | null = null;
       let createdAssistantNodeId: string | null = null;
+      let createdAssistantGeneration: number | null = null;
 
       const provider = llmConfig.provider;
       const model = llmConfig.model;
@@ -1105,8 +1187,21 @@ export function ChatContainer({
         onNodeCreated: async ({ userNodeId, assistantNodeId, parentId, preparedUserMessage }) => {
           createdUserNodeId = userNodeId;
           createdAssistantNodeId = assistantNodeId;
+          createdAssistantGeneration =
+            assistantGenerationRef.current.get(
+              `${currentWorkspace.id}:${assistantNodeId}`,
+            ) ?? 0;
 
           if (preparedUserMessage) return;
+
+          if (
+            !isFirstMessageInNewChat &&
+            (!parentId || !persistedNodeIdsRef.current.has(parentId))
+          ) {
+            throw new Error(
+              "Save the visible response before sending a follow-up so the conversation ancestry is complete.",
+            );
+          }
 
           // Persist and await the user node before ancestry verification starts.
           await persistWorkspaceChatNode(currentWorkspace.id, {
@@ -1148,38 +1243,48 @@ export function ChatContainer({
 
       // When streaming finishes, persist final assistant response node
       if (result && targetAssistantId && targetUserId) {
+        const assistantKey = `${currentWorkspace.id}:${targetAssistantId}`;
+        const generation =
+          createdAssistantGeneration ??
+          assistantGenerationRef.current.get(assistantKey) ??
+          0;
         {
-          try {
-            await persistWorkspaceChatNode(currentWorkspace.id, {
-              id: targetAssistantId,
-              parentId: targetUserId,
-              role: "assistant",
-              content: assistantContent,
-              provider,
-              model,
-              metadata: { responseState: result.responseState },
-            });
-            persistedNodeIdsRef.current.add(targetAssistantId);
-            await refreshChats(currentWorkspace.id);
-          } catch (saveError) {
-            if (
-              currentWorkspaceIdRef.current === currentWorkspace.id &&
-              activeChatIdRef.current === (isFirstMessageInNewChat ? targetUserId : activeChatId)
-            ) {
-              setUnsavedAssistant({
-                workspaceId: currentWorkspace.id,
+          if ((assistantGenerationRef.current.get(assistantKey) ?? 0) === generation) {
+            try {
+              await persistAssistantResponse(currentWorkspace.id, {
                 id: targetAssistantId,
                 parentId: targetUserId,
+                role: "assistant",
                 content: assistantContent,
                 provider,
                 model,
-                responseState: result.responseState,
+                metadata: { responseState: result.responseState },
               });
-              setLearningError(
-                saveError instanceof Error
-                  ? `The response is visible but could not be saved: ${saveError.message}`
-                  : "The response is visible but could not be saved. Retry saving this response.",
-              );
+              if ((assistantGenerationRef.current.get(assistantKey) ?? 0) === generation)
+                persistedNodeIdsRef.current.add(targetAssistantId);
+              await refreshChats(currentWorkspace.id);
+            } catch (saveError) {
+              if (
+                (assistantGenerationRef.current.get(assistantKey) ?? 0) === generation &&
+                currentWorkspaceIdRef.current === currentWorkspace.id &&
+                activeChatIdRef.current === (isFirstMessageInNewChat ? targetUserId : activeChatId)
+              ) {
+                setUnsavedAssistant({
+                  workspaceId: currentWorkspace.id,
+                  id: targetAssistantId,
+                  parentId: targetUserId,
+                  content: assistantContent,
+                  provider,
+                  model,
+                  responseState: result.responseState,
+                  generation,
+                });
+                setLearningError(
+                  saveError instanceof Error
+                    ? `The response is visible but could not be saved: ${saveError.message}`
+                    : "The response is visible but could not be saved. Retry saving this response.",
+                );
+              }
             }
           }
         }
@@ -1200,6 +1305,8 @@ export function ChatContainer({
       sendMessage,
       scrollToBottom,
       refreshChats,
+      persistAssistantResponse,
+      setUnsavedAssistant,
       router,
     ],
   );
@@ -1214,6 +1321,7 @@ export function ChatContainer({
           .slice(0, 3)
       : [];
     let assistantNodeId: string | null = null;
+    let assistantGeneration: number | null = null;
     try {
       const result = await sendMessage(root.content, llmConfig.provider, llmConfig.model, {
         workspaceId: currentWorkspace.id,
@@ -1226,23 +1334,57 @@ export function ChatContainer({
         systemPrompt: llmConfig.systemPrompt || undefined,
         onNodeCreated: async ({ assistantNodeId: createdId, preparedUserMessage }) => {
           if (!preparedUserMessage) throw new Error("The saved user message could not be reused.");
+          // Invalidate a previously saved response before streaming its retry.
+          assistantGeneration = invalidateAssistantPersistence(
+            currentWorkspace.id,
+            createdId,
+          );
           assistantNodeId = createdId;
         },
       });
       if (result) {
         const responseId = result.assistantNodeId || assistantNodeId;
         if (responseId) {
-          await persistWorkspaceChatNode(currentWorkspace.id, {
-            id: responseId,
-            parentId: root.id,
-            role: "assistant",
-            content: result.content,
-            provider: llmConfig.provider,
-            model: llmConfig.model,
-            metadata: { responseState: result.responseState },
-          });
-          persistedNodeIdsRef.current.add(responseId);
-          await refreshChats(currentWorkspace.id);
+          try {
+            await persistAssistantResponse(currentWorkspace.id, {
+              id: responseId,
+              parentId: root.id,
+              role: "assistant",
+              content: result.content,
+              provider: llmConfig.provider,
+              model: llmConfig.model,
+              metadata: { responseState: result.responseState },
+            });
+            const key = `${currentWorkspace.id}:${responseId}`;
+            if (assistantGenerationRef.current.get(key) === assistantGeneration) {
+              persistedNodeIdsRef.current.add(responseId);
+              setUnsavedAssistant((current) =>
+                current?.id === responseId && current.workspaceId === currentWorkspace.id
+                  ? null
+                  : current,
+              );
+            }
+            await refreshChats(currentWorkspace.id);
+          } catch (saveError) {
+            const key = `${currentWorkspace.id}:${responseId}`;
+            if (assistantGenerationRef.current.get(key) === assistantGeneration) {
+              setUnsavedAssistant({
+                workspaceId: currentWorkspace.id,
+                id: responseId,
+                parentId: root.id,
+                content: result.content,
+                provider: llmConfig.provider,
+                model: llmConfig.model,
+                responseState: result.responseState,
+                generation: assistantGeneration ?? 0,
+              });
+              setLearningError(
+                saveError instanceof Error
+                  ? `The response is visible but could not be saved: ${saveError.message}`
+                  : "The response is visible but could not be saved. Retry saving this response.",
+              );
+            }
+          }
         }
       }
     } catch (failure) {
@@ -1262,13 +1404,25 @@ export function ChatContainer({
     llmConfig,
     getEffectiveApiKey,
     getEffectiveBaseUrl,
+    invalidateAssistantPersistence,
+    persistAssistantResponse,
+    setUnsavedAssistant,
     refreshChats,
   ]);
 
   const handleRetryAssistantSave = useCallback(async () => {
     if (!unsavedAssistant) return;
+    const assistantId = unsavedAssistant.id;
+    const workspaceId = unsavedAssistant.workspaceId;
+    const generationKey = `${workspaceId}:${assistantId}`;
+    const generation =
+      unsavedAssistant.generation ??
+      assistantGenerationRef.current.get(generationKey) ??
+      0;
+    if ((assistantGenerationRef.current.get(generationKey) ?? 0) !== generation)
+      return;
     try {
-      await persistWorkspaceChatNode(unsavedAssistant.workspaceId, {
+      await persistAssistantResponse(unsavedAssistant.workspaceId, {
         id: unsavedAssistant.id,
         parentId: unsavedAssistant.parentId,
         role: "assistant",
@@ -1277,17 +1431,28 @@ export function ChatContainer({
         model: unsavedAssistant.model,
         metadata: { responseState: unsavedAssistant.responseState },
       });
-      persistedNodeIdsRef.current.add(unsavedAssistant.id);
-      await refreshChats(unsavedAssistant.workspaceId);
-      setUnsavedAssistant(null);
+      if ((assistantGenerationRef.current.get(generationKey) ?? 0) === generation) {
+        await refreshChats(workspaceId);
+        const currentRecovery = unsavedAssistantRef.current;
+        if (
+          (assistantGenerationRef.current.get(generationKey) ?? 0) === generation &&
+          currentRecovery?.id === assistantId &&
+          currentRecovery.workspaceId === workspaceId &&
+          (currentRecovery.generation ?? 0) === generation
+        ) {
+          persistedNodeIdsRef.current.add(assistantId);
+          setUnsavedAssistant(null);
+        }
+      }
     } catch (failure) {
-      setLearningError(
-        failure instanceof Error
-          ? `The response is still visible, but saving failed: ${failure.message}`
-          : "The response is still visible, but saving failed.",
-      );
+      if ((assistantGenerationRef.current.get(generationKey) ?? 0) === generation)
+        setLearningError(
+          failure instanceof Error
+            ? `The response is still visible, but saving failed: ${failure.message}`
+            : "The response is still visible, but saving failed.",
+        );
     }
-  }, [unsavedAssistant, refreshChats]);
+  }, [unsavedAssistant, persistAssistantResponse, refreshChats, setUnsavedAssistant]);
 
   // Synchronize sync status
   useEffect(() => {
@@ -1455,6 +1620,7 @@ export function ChatContainer({
 
       let createdUserNodeId: string | null = null;
       let createdAssistantNodeId: string | null = null;
+      let createdAssistantGeneration: number | null = null;
 
       const provider = llmConfig.provider;
       const model = llmConfig.model;
@@ -1480,8 +1646,18 @@ export function ChatContainer({
         onNodeCreated: async ({ userNodeId, assistantNodeId, preparedUserMessage }) => {
           createdUserNodeId = userNodeId;
           createdAssistantNodeId = assistantNodeId;
+          createdAssistantGeneration =
+            assistantGenerationRef.current.get(
+              `${currentWorkspace.id}:${assistantNodeId}`,
+            ) ?? 0;
 
           if (preparedUserMessage) return;
+
+          if (!persistedNodeIdsRef.current.has(parentNodeId)) {
+            throw new Error(
+              "Save the visible response before branching so the conversation ancestry is complete.",
+            );
+          }
 
           await persistWorkspaceChatNode(currentWorkspace.id, {
             id: userNodeId,
@@ -1525,37 +1701,47 @@ export function ChatContainer({
 
       // When streaming finishes, persist final assistant response node
       if (result && targetAssistantId && targetUserId) {
-        try {
-          await persistWorkspaceChatNode(currentWorkspace.id, {
-            id: targetAssistantId,
-            parentId: targetUserId,
-            role: "assistant",
-            content: assistantContent,
-            provider,
-            model,
-            metadata: { responseState: result.responseState },
-          });
-          persistedNodeIdsRef.current.add(targetAssistantId);
-          await refreshChats(currentWorkspace.id);
-        } catch (saveError) {
-          if (
-            currentWorkspaceIdRef.current === currentWorkspace.id &&
-            activeChatIdRef.current === activeChatId
-          ) {
-            setUnsavedAssistant({
-              workspaceId: currentWorkspace.id,
+        const assistantKey = `${currentWorkspace.id}:${targetAssistantId}`;
+        const generation =
+          createdAssistantGeneration ??
+          assistantGenerationRef.current.get(assistantKey) ??
+          0;
+        if ((assistantGenerationRef.current.get(assistantKey) ?? 0) === generation) {
+          try {
+            await persistAssistantResponse(currentWorkspace.id, {
               id: targetAssistantId,
               parentId: targetUserId,
+              role: "assistant",
               content: assistantContent,
               provider,
               model,
-              responseState: result.responseState,
+              metadata: { responseState: result.responseState },
             });
-            setLearningError(
-              saveError instanceof Error
-                ? `The branch response is visible but could not be saved: ${saveError.message}`
-                : "The branch response is visible but could not be saved.",
-            );
+            if ((assistantGenerationRef.current.get(assistantKey) ?? 0) === generation)
+              persistedNodeIdsRef.current.add(targetAssistantId);
+            await refreshChats(currentWorkspace.id);
+          } catch (saveError) {
+            if (
+              (assistantGenerationRef.current.get(assistantKey) ?? 0) === generation &&
+              currentWorkspaceIdRef.current === currentWorkspace.id &&
+              activeChatIdRef.current === activeChatId
+            ) {
+              setUnsavedAssistant({
+                workspaceId: currentWorkspace.id,
+                id: targetAssistantId,
+                parentId: targetUserId,
+                content: assistantContent,
+                provider,
+                model,
+                responseState: result.responseState,
+                generation,
+              });
+              setLearningError(
+                saveError instanceof Error
+                  ? `The branch response is visible but could not be saved: ${saveError.message}`
+                  : "The branch response is visible but could not be saved.",
+              );
+            }
           }
         }
       }
@@ -1572,6 +1758,8 @@ export function ChatContainer({
       llmConfig,
       getEffectiveApiKey,
       getEffectiveBaseUrl,
+      persistAssistantResponse,
+      setUnsavedAssistant,
       sendMessage,
       refreshChats,
     ],
@@ -1642,7 +1830,10 @@ export function ChatContainer({
       );
       if (snapshot && routeRef.current === startPath) {
         const saved = snapshotToTree(snapshot);
-        if (saved) loadTree(saved);
+        if (saved) {
+          persistedNodeIdsRef.current = new Set(Object.keys(saved.nodes));
+          loadTree(saved);
+        }
       }
     }
   }, [
@@ -1698,7 +1889,10 @@ export function ChatContainer({
           snapshot
         ) {
           const saved = snapshotToTree(snapshot);
-          if (saved) loadTree(saved);
+          if (saved) {
+            persistedNodeIdsRef.current = new Set(Object.keys(saved.nodes));
+            loadTree(saved);
+          }
         }
       },
     );
@@ -1971,11 +2165,25 @@ export function ChatContainer({
       return child?.role === "assistant" && child.metadata?.responseState === "completed";
     }),
   );
+  const rootHasRetryableResponse = Boolean(
+    rootForResume?.childrenIds.some((id) => {
+      const child = tree?.nodes[id];
+      return (
+        child?.role === "assistant" &&
+        isRetryableAssistantResponse(
+          child.content,
+          child.metadata?.responseState,
+        ) &&
+        child.childrenIds.length === 0
+      );
+    }),
+  );
   const canResumeSavedRoot = Boolean(
     !activeTopicSessionId &&
       rootForResume?.role === "user" &&
       rootForResume.content.trim() &&
       !rootHasCompletedResponse &&
+      (!rootForResume.childrenIds.length || rootHasRetryableResponse) &&
       !isStreaming,
   );
 
@@ -2619,6 +2827,7 @@ export function ChatContainer({
             setPromotionJobId(null);
             setIsPromotionOpen(false);
           }}
+          onRoadmapRefreshed={(next) => roadmap.updateView(next)}
           onJobAccepted={(jobId, chatId, nodeId) => {
             setPromotionJobsBySource((jobs) => ({ ...jobs, [`${chatId}:${nodeId}`]: jobId }));
             if (promotionSource?.chatId === chatId && promotionSource.nodeId === nodeId)

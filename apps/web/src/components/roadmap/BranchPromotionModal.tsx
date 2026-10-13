@@ -22,6 +22,7 @@ export function BranchPromotionModal({
   resumeJobId,
   onClose,
   onSaved,
+  onRoadmapRefreshed,
   onJobAccepted,
 }: {
   view: CurriculumView;
@@ -33,6 +34,7 @@ export function BranchPromotionModal({
   resumeJobId?: string | null;
   onClose: () => void;
   onSaved: (view: CurriculumView) => void;
+  onRoadmapRefreshed?: (view: CurriculumView) => void;
   onJobAccepted?: (jobId: string, sourceChatId: string, sourceNodeId: string) => void;
 }) {
   const [jobId, setJobId] = useState<string | null>(resumeJobId ?? null);
@@ -59,6 +61,9 @@ export function BranchPromotionModal({
   useEffect(() => {
     setPending(false);
     setError(null);
+    setJobId(resumeJobId ?? null);
+    setInstruction("");
+    pendingSourceKeyRef.current = null;
     key.current = null;
   }, [sourceKey]);
   useEffect(() => {
@@ -120,7 +125,7 @@ export function BranchPromotionModal({
       const fresh = await readRoadmap(base.workspaceId);
       if (!alive.current) return;
       setBase(fresh);
-      onSaved(fresh);
+      onRoadmapRefreshed?.(fresh);
       setJobId(null);
       key.current = null;
       pendingSourceKeyRef.current = null;

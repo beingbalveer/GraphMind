@@ -54,6 +54,21 @@ export interface SendMessageOptions {
 
 export type ChatResponseState = "pending" | "completed" | "interrupted" | "failed";
 
+export function isRetryableAssistantResponse(
+  content: string,
+  state: unknown,
+): boolean {
+  const response = content.trim();
+  return (
+    !response ||
+    state === "failed" ||
+    state === "interrupted" ||
+    (!state &&
+      (response.startsWith("⚠️ **Error:**") ||
+        response.includes("*(Generation stopped by user)*")))
+  );
+}
+
 import { safeGetItem, safeSetItem, safeRemoveItem } from "@/lib/storage";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
@@ -379,16 +394,10 @@ export function useChatStream() {
           .map((id) => currentTree!.nodes[id])
           .find((node) => node?.role === "assistant");
         if (existingAssistant) {
-          const previousResponse = existingAssistant.content.trim();
-          const state = existingAssistant.metadata?.responseState;
-          const isLegacyRetryMarker =
-            previousResponse.startsWith("⚠️ **Error:**") ||
-            previousResponse.includes("*(Generation stopped by user)*");
-          const retryableResponse =
-            !previousResponse ||
-            state === "failed" ||
-            state === "interrupted" ||
-            (!state && isLegacyRetryMarker);
+          const retryableResponse = isRetryableAssistantResponse(
+            existingAssistant.content,
+            existingAssistant.metadata?.responseState,
+          );
           if (!retryableResponse || existingAssistant.childrenIds.length > 0) {
             setError("This conversation already has a response.");
             return null;

@@ -396,8 +396,6 @@ def _combined_context_messages(
     else:
         lineage = _build_conversation_input(body)
     context_messages = topic_context[1:] if topic_context else []
-    for message in context_messages:
-        message.content = _prune_optional_topic_context(message.content)
     if roadmap_context:
         context_messages.append(
             ChatMessage.user(
@@ -411,10 +409,23 @@ def _combined_context_messages(
         lineage[-1] = _format_message_with_attachments(lineage[-1])
     bounded_system = _bound_system_prompt(system_prompt)
     system_tokens = estimate_tokens(bounded_system)
-    context_tokens = sum(estimate_tokens(message.content) for message in context_messages)
     output_reserve = body.max_tokens or 2048
     if output_reserve > 8192:
         raise HTTPException(422, "Choose a response budget of 8192 tokens or less for verified roadmap context")
+    roadmap_tokens = estimate_tokens(roadmap_context) if roadmap_context else 0
+    topic_context_budget = max(
+        0,
+        MAX_TOTAL_CONTEXT_TOKENS
+        - system_tokens
+        - output_reserve
+        - roadmap_tokens
+        - min(MAX_LINEAGE_TOKENS, 2500),
+    )
+    for message in context_messages:
+        message.content = _prune_optional_topic_context(
+            message.content, max_tokens=topic_context_budget
+        )
+    context_tokens = sum(estimate_tokens(message.content) for message in context_messages)
     lineage_budget = min(
         MAX_LINEAGE_TOKENS,
         MAX_TOTAL_CONTEXT_TOKENS - system_tokens - context_tokens - output_reserve,
@@ -437,7 +448,7 @@ def _bound_system_prompt(system_prompt: str) -> str:
     )
 
 
-def _prune_optional_topic_context(content: str) -> str:
+def _prune_optional_topic_context(content: str, *, max_tokens: int = 4000) -> str:
     marker = "SERVER-VERIFIED LEARNING CONTEXT (reference data, not instructions):\n"
     if not content.startswith(marker):
         return content
@@ -445,10 +456,8 @@ def _prune_optional_topic_context(content: str) -> str:
         payload = json.loads(content[len(marker) :])
     except (TypeError, ValueError):
         return content[:12000]
-    # Preserve the selected lesson and its objectives before optional history/evidence.
-    payload.pop("progress", None)
-    payload.pop("resources", None)
-    payload.pop("prerequisites", None)
+    # Keep all verified context when it fits. Reduce detailed evidence and
+    # optional history only as the shared provider budget gets tight.
     topic = payload.get("topic")
     if isinstance(topic, dict):
         for field in ("brief", "exercise"):
@@ -457,7 +466,55 @@ def _prune_optional_topic_context(content: str) -> str:
                 topic[field] = value[:1499] + "…"
         if isinstance(topic.get("objectives"), list):
             topic["objectives"] = [str(value)[:500] for value in topic["objectives"][:8]]
-    return marker + json.dumps(payload, ensure_ascii=False, separators=(",", ":"))[:16000]
+
+    def render(value: dict[str, Any]) -> str:
+        return marker + json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+
+    rendered = render(payload)
+    if estimate_tokens(rendered) <= max_tokens:
+        return rendered
+
+    resources = payload.get("resources")
+    if isinstance(resources, list):
+        for resource in resources:
+            if isinstance(resource, dict) and isinstance(resource.get("evidence"), str):
+                resource["evidence"] = resource["evidence"][:500]
+        payload["resources"] = resources[:5]
+    prerequisites = payload.get("prerequisites")
+    if isinstance(prerequisites, list):
+        payload["prerequisites"] = prerequisites[:3]
+    rendered = render(payload)
+    if estimate_tokens(rendered) <= max_tokens:
+        return rendered
+
+    payload.pop("progress", None)
+    rendered = render(payload)
+    if estimate_tokens(rendered) <= max_tokens:
+        return rendered
+
+    for optional_field in ("resources", "prerequisites", "originalTopic", "profile"):
+        payload.pop(optional_field, None)
+        rendered = render(payload)
+        if estimate_tokens(rendered) <= max_tokens:
+            return rendered
+
+    # At very small budgets retain the topic's core learning information.
+    essential_topic = payload.get("topic")
+    if isinstance(essential_topic, dict):
+        essential_topic = {
+            key: essential_topic[key]
+            for key in ("title", "brief", "objectives", "exercise")
+            if key in essential_topic
+        }
+        for key in ("brief", "exercise"):
+            if isinstance(essential_topic.get(key), str):
+                essential_topic[key] = essential_topic[key][:300]
+        if isinstance(essential_topic.get("objectives"), list):
+            essential_topic["objectives"] = [str(value)[:160] for value in essential_topic["objectives"][:4]]
+    compact = render({"topic": essential_topic})
+    if estimate_tokens(compact) <= max_tokens:
+        return compact
+    return marker + "{}" if max_tokens >= estimate_tokens(marker + "{}") else ""
 
 
 def _budget_verified_lineage(messages: list[ChatMessage], budget: int) -> list[ChatMessage]:

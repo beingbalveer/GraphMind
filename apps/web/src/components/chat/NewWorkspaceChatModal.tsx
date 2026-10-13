@@ -123,12 +123,16 @@ export function NewWorkspaceChatModal({
         },
       );
 
+      // The root is now durably created. Do not reuse this id if the handoff
+      // closes the modal before this handler resumes, or if navigation fails.
+      if (draftRequestRef.current === request) draftRequestRef.current = null;
       if (
         operation !== operationRef.current ||
         !isWorkspaceCurrent(workspaceId)
       ) {
         return;
       }
+      if (operation === operationRef.current) setPrompt("");
 
       await onCreated({
         workspaceId,
@@ -139,8 +143,6 @@ export function NewWorkspaceChatModal({
         roadmapTopicIds: [...selectedTopicIds],
       });
       if (operation === operationRef.current) {
-        setPrompt("");
-        draftRequestRef.current = null;
         close();
       }
     } catch (submitError) {

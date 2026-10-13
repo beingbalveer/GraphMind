@@ -146,6 +146,10 @@ The following architectural capabilities define GraphMind's enterprise scale-up 
 
 ### Researched roadmap workspace — implementation branch
 
+**Product decision:** The curated roadmap.sh importer is retired. Its API and UI
+were removed; existing roadmap and workspace data remains supported, and new
+roadmaps use the current curriculum generation workflow.
+
 The roadmap generator now has durable researched jobs and a concise setup/progress
 flow. The ordered page and shared curriculum canvas read the same immutable
 revision, with explicit prerequisite links and selected-core progress. The
