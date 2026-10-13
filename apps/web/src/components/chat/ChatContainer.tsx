@@ -2197,7 +2197,6 @@ export function ChatContainer({
             <RoadmapHeader
               view={roadmap.view}
               mode={roadmapMode}
-              onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
             />
           ) : viewMode === "library" ? (
             <LibraryHeader

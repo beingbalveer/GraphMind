@@ -1,32 +1,20 @@
 "use client";
 import { BookOpen, Network } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { SegmentedTabs } from "@/components/ui/segmented-tabs";
-import { SidebarToggleIcon } from "@/components/ui/sidebar-toggle-icon";
 import { buildWorkspaceUrl, buildCanvasUrl } from "@/lib/urls";
 import type { CurriculumView } from "@/lib/roadmapTypes";
 export function RoadmapHeader({
   view,
   mode,
-  onToggleSidebar,
 }: {
   view: CurriculumView;
   mode: "page" | "canvas";
-  onToggleSidebar: () => void;
 }) {
   const router = useRouter();
   return (
     <header className="flex h-13 shrink-0 items-center justify-between gap-3 border-b border-border bg-background px-4">
       <div className="flex min-w-0 items-center gap-2">
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label="Toggle sidebar"
-          onClick={onToggleSidebar}
-        >
-          <SidebarToggleIcon className="size-5" />
-        </Button>
         <span className="truncate text-sm font-medium">Roadmap</span>
       </div>
       <SegmentedTabs
