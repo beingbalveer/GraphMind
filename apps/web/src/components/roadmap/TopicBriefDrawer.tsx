@@ -159,7 +159,6 @@ export function TopicBriefDrawer({
         isOpen={Boolean(topicId)}
         onClose={close}
         title="Learning brief"
-        widthClassName="w-full sm:w-[480px]"
       >
         <div className="min-h-0 flex-1 overflow-y-auto p-6">
           {!brief ? (
