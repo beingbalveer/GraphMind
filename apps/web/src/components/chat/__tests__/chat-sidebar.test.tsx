@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -216,7 +216,7 @@ describe("ChatSidebar & UserMenu Contract (Scope 3, Task 2)", () => {
     expect(roadmapBtn).toHaveAttribute("aria-current", "page");
   });
 
-  it("renders general conversations with pinned chat on top and pin icon", () => {
+  it("renders a flat conversation list with a small serif heading and pinned chat on top", () => {
     render(
       <ChatSidebar
         isOpen={true}
@@ -229,10 +229,11 @@ describe("ChatSidebar & UserMenu Contract (Scope 3, Task 2)", () => {
       />
     );
 
-    // Single unified section header
-    const conversationsHeader = screen.getByText("General conversations");
+    const conversationsHeader = screen.getByRole("heading", { name: "Conversations" });
     expect(conversationsHeader).toBeInTheDocument();
-    expect(conversationsHeader).toHaveClass("text-sm", "font-medium", "text-foreground-muted");
+    expect(conversationsHeader).toHaveClass("text-xs", "font-roadmap-display", "text-foreground-muted");
+    expect(screen.queryByText("General conversations")).not.toBeInTheDocument();
+    expect(screen.queryByText("Topic conversations")).not.toBeInTheDocument();
 
     // Date-based split section headers are gone
     expect(screen.queryByText("Pinned")).not.toBeInTheDocument();
@@ -251,7 +252,7 @@ describe("ChatSidebar & UserMenu Contract (Scope 3, Task 2)", () => {
     expect(chatElements[1]).toHaveTextContent("Quantum Computing Exploration");
   });
 
-  it("separates server-associated topic sessions from general chats", () => {
+  it("shows topic-associated chats in the same flat list without topic headers", () => {
     const topicChat: ChatItem = {
       ...mockChats[0],
       id: "lesson-1",
@@ -274,9 +275,12 @@ describe("ChatSidebar & UserMenu Contract (Scope 3, Task 2)", () => {
         onRenameChat={vi.fn().mockResolvedValue(undefined)}
       />,
     );
-    expect(screen.getByRole("region", { name: "General conversations" })).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Topic conversations" })).toBeInTheDocument();
-    expect(screen.getByText("Vector databases")).toBeInTheDocument();
-    expect(screen.getByText("My lesson session")).toBeInTheDocument();
+    const conversations = screen.getByRole("region", { name: "Conversations" });
+    expect(conversations).toBeInTheDocument();
+    expect(within(conversations).getByText("My lesson session")).toBeInTheDocument();
+    expect(within(conversations).getByText("Pinned Architecture Notes")).toBeInTheDocument();
+    expect(within(conversations).getByText("Quantum Computing Exploration")).toBeInTheDocument();
+    expect(screen.queryByText("Vector databases")).not.toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Topic conversations" })).not.toBeInTheDocument();
   });
 });

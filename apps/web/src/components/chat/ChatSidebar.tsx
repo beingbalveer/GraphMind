@@ -14,7 +14,6 @@ import {
 } from "lucide-react";
 import { ChatItem } from "@/lib/workspaceApi";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { NavigationItem } from "@/components/ui/navigation-item";
 import { Input } from "@/components/ui/input";
 import { LogoBadge } from "@/components/ui/Logo";
@@ -48,14 +47,6 @@ const DEFAULT_WIDTH = 300;
 const COLLAPSED_WIDTH = 56;
 const MIN_WIDTH = 200;
 const MAX_WIDTH = 480;
-interface TopicChatGroup {
-  title: string;
-  archived: boolean;
-  chats: ChatItem[];
-}
-
-
-
 export function ChatSidebar({
   isOpen,
   onToggle,
@@ -95,24 +86,6 @@ export function ChatSidebar({
       return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
     });
   }, [chats]);
-
-  const chatGroups = useMemo(() => {
-    const general = sortedChats.filter((chat) => !chat.topicAssociation);
-    const topics: Record<string, TopicChatGroup> = {};
-    for (const chat of sortedChats) {
-      const association = chat.topicAssociation;
-      if (!association) continue;
-      const group = topics[association.topicId] ?? {
-        title: association.title,
-        archived: association.archived,
-        chats: [],
-      };
-      group.chats.push(chat);
-      topics[association.topicId] = group;
-    }
-    return { general, topics: Object.values(topics) };
-  }, [sortedChats]);
-
 
   // Auto-focus rename input when triggered
   useEffect(() => {
@@ -335,40 +308,23 @@ export function ChatSidebar({
         {/* ThreadList Content */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden px-2 py-1 space-y-0.5 relative">
           <div className={`transition-opacity duration-150 ${isOpen ? "opacity-100" : "opacity-0 pointer-events-none hidden"}`}>
-            {sortedChats.length === 0 ? (
-              <div className="py-2 px-2.5 text-left text-sm text-foreground-muted">
-                No conversations yet
-              </div>
-            ) : (
-              <div className="space-y-0.5 pt-4 first:pt-2.5">
-                {chatGroups.general.length > 0 && (
-                  <section aria-label="General conversations" className="space-y-0.5">
-                    <h2 className="px-2.5 pb-2 pt-1 text-sm font-medium text-foreground-muted select-none">
-                      General conversations
-                    </h2>
-                    {chatGroups.general.map(renderChatItem)}
-                  </section>
-                )}
-                {chatGroups.topics.length > 0 && (
-                  <section aria-label="Topic conversations" className="mt-4 space-y-2">
-                    <h2 className="px-2.5 pb-1 pt-1 text-sm font-medium text-foreground-muted select-none">
-                      Topic conversations
-                    </h2>
-                    {chatGroups.topics.map((group) => (
-                      <div key={group.chats[0]?.topicAssociation?.topicId} className="space-y-0.5">
-                        <div className="flex items-center gap-2 px-2.5 py-1">
-                          <span className="min-w-0 flex-1 truncate text-xs font-medium text-foreground-muted">
-                            {group.title}
-                          </span>
-                          {group.archived && <Badge variant="secondary">Archived</Badge>}
-                        </div>
-                        {group.chats.map(renderChatItem)}
-                      </div>
-                    ))}
-                  </section>
-                )}
-              </div>
-            )}
+            <section aria-labelledby="conversation-list-heading" className="space-y-0.5 pt-4 first:pt-2.5">
+              <h2
+                id="conversation-list-heading"
+                className="px-2.5 pb-2 pt-1 font-roadmap-display text-xs font-normal tracking-wide text-foreground-muted select-none"
+              >
+                Conversations
+              </h2>
+              {sortedChats.length === 0 ? (
+                <div className="py-2 px-2.5 text-left text-sm text-foreground-muted">
+                  No conversations yet
+                </div>
+              ) : (
+                <div className="space-y-0.5">
+                  {sortedChats.map(renderChatItem)}
+                </div>
+              )}
+            </section>
           </div>
 
           {!isOpen && (
