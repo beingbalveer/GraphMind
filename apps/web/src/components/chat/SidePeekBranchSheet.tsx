@@ -534,6 +534,7 @@ export function SidePeekBranchSheet({
         hasBackdrop={hasBackdrop}
         title={displayContext}
         icon={<GitBranch className="size-4" />}
+        widthClassName="w-full sm:w-[480px]"
         headerActions={(
           <>
             {/* Branch history navigation */}
