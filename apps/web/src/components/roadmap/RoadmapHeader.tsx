@@ -1,8 +1,9 @@
 "use client";
-import { PanelLeft, BookOpen, Network } from "lucide-react";
+import { BookOpen, Network } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { SegmentedTabs } from "@/components/ui/segmented-tabs";
+import { SidebarToggleIcon } from "@/components/ui/sidebar-toggle-icon";
 import { buildWorkspaceUrl, buildCanvasUrl } from "@/lib/urls";
 import type { CurriculumView } from "@/lib/roadmapTypes";
 export function RoadmapHeader({
@@ -24,7 +25,7 @@ export function RoadmapHeader({
           aria-label="Toggle sidebar"
           onClick={onToggleSidebar}
         >
-          <PanelLeft className="size-4" />
+          <SidebarToggleIcon className="size-4" />
         </Button>
         <span className="truncate text-sm font-medium">Roadmap</span>
       </div>

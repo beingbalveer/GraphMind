@@ -1,8 +1,9 @@
 "use client";
 
 import React from "react";
-import { FolderOpen, PanelLeft } from "lucide-react";
+import { FolderOpen } from "lucide-react";
 import { IconButton } from "@/components/ui/icon-button";
+import { SidebarToggleIcon } from "@/components/ui/sidebar-toggle-icon";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
@@ -40,7 +41,7 @@ export function LibraryHeader({
             onClick={onToggleSidebar}
             className="md:hidden shrink-0"
           >
-            <PanelLeft className="size-4" />
+            <SidebarToggleIcon className="size-4" />
           </IconButton>
         )}
 

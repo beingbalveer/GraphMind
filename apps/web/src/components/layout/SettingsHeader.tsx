@@ -1,8 +1,9 @@
 "use client";
 
 import React from "react";
-import { Settings, PanelLeft } from "lucide-react";
+import { Settings } from "lucide-react";
 import { IconButton } from "@/components/ui/icon-button";
+import { SidebarToggleIcon } from "@/components/ui/sidebar-toggle-icon";
 import { cn } from "@/lib/utils";
 
 export interface SettingsHeaderProps {
@@ -37,7 +38,7 @@ export function SettingsHeader({
             onClick={onToggleSidebar}
             className="md:hidden shrink-0"
           >
-            <PanelLeft className="size-4" />
+            <SidebarToggleIcon className="size-4" />
           </IconButton>
         )}
 

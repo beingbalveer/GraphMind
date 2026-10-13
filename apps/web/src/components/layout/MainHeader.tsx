@@ -5,10 +5,10 @@ import {
   MessageSquare,
   LayoutGrid,
   PanelRight,
-  PanelLeft,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
+import { SidebarToggleIcon } from "@/components/ui/sidebar-toggle-icon";
 import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { cn } from "@/lib/utils";
 
@@ -70,7 +70,7 @@ export function MainHeader({
             onClick={onToggleSidebar}
             className="md:hidden shrink-0"
           >
-            <PanelLeft className="size-4" />
+            <SidebarToggleIcon className="size-4" />
           </IconButton>
         )}
         {breadcrumbs && (

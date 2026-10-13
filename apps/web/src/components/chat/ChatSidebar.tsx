@@ -8,7 +8,6 @@ import {
   Pencil,
   Trash2,
   Plus,
-  PanelLeft,
   FolderOpen,
   MessageSquare,
   Map,
@@ -21,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { LogoBadge } from "@/components/ui/Logo";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
+import { SidebarToggleIcon } from "@/components/ui/sidebar-toggle-icon";
 import { useResizableSidebar } from "@/hooks/useResizableSidebar";
 import { UserMenu } from "@/components/layout/UserMenu";
 import Link from "next/link";
@@ -286,7 +286,7 @@ export function ChatSidebar({
             title={isOpen ? "Collapse sidebar (⌘B)" : "Expand sidebar (⌘B)"}
             aria-label={isOpen ? "Collapse sidebar" : "Expand sidebar"}
           >
-            <PanelLeft className="w-4 h-4" />
+            <SidebarToggleIcon className="w-4 h-4" />
           </Button>
         </div>
 
