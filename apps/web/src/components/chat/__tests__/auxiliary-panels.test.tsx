@@ -135,7 +135,9 @@ describe("Auxiliary Panels & Repeated Patterns", () => {
     expect(handleClose).toHaveBeenCalledTimes(1);
   });
 
-  it("renders SidePeekBranchSheet using Drawer primitive and semantic tokens", () => {
+  it("renders SidePeekBranchSheet using Drawer primitive and semantic tokens", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
     const historyStack = [
       {
         nodeId: "node-2",
@@ -146,7 +148,7 @@ describe("Auxiliary Panels & Repeated Patterns", () => {
     render(
       <SidePeekBranchSheet
         isOpen={true}
-        onClose={vi.fn()}
+        onClose={onClose}
         historyStack={historyStack}
         historyIndex={0}
         onNavigateBack={vi.fn()}
@@ -159,6 +161,9 @@ describe("Auxiliary Panels & Repeated Patterns", () => {
     );
 
     expect(screen.getAllByText("Attention mechanism").length).toBeGreaterThan(0);
+    expect(screen.getByRole("dialog", { name: "Attention mechanism" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Close drawer" }));
+    expect(onClose).toHaveBeenCalledOnce();
   });
 
   it("forwards workspaceId in SidePeekBranchSheet so assistant messages expose the flashcard action", () => {

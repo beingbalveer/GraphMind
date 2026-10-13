@@ -2,7 +2,6 @@
 
 import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import {
-  X,
   ChevronLeft,
   ChevronRight,
   Maximize2,
@@ -29,6 +28,7 @@ import {
 } from "@graphmind/shared";
 
 import { Button } from "@/components/ui/button";
+import { Drawer } from "@/components/ui/drawer";
 import { CopyButton } from "@/components/ui/copy-button";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -205,9 +205,9 @@ export function SidePeekBranchSheet({
   const prevNodeIdRef = useRef<string | null>(null);
   const scrollPositionsRef = useRef<Record<string, number>>({});
 
-  // Smooth mount/unmount animation lifecycle
+  // Keep the active content mounted briefly after close so cached branch state
+  // remains available during the drawer's exit lifecycle.
   const [isMounted, setIsMounted] = useState(isOpen);
-  const [isVisible, setIsVisible] = useState(false);
 
   // Cache last active entry so content stays rendered while sliding out
   const [cachedEntry, setCachedEntry] = useState<SidePeekEntry | null>(null);
@@ -225,14 +225,10 @@ export function SidePeekBranchSheet({
     let timeout: NodeJS.Timeout;
     if (isOpen) {
       setIsMounted(true);
-      timeout = setTimeout(() => {
-        setIsVisible(true);
-      }, 16);
     } else {
-      setIsVisible(false);
       timeout = setTimeout(() => {
         setIsMounted(false);
-      }, 320);
+      }, 220);
     }
     return () => clearTimeout(timeout);
   }, [isOpen]);
@@ -490,7 +486,7 @@ export function SidePeekBranchSheet({
     }
   }, [branchMessages, isStreaming, currentNodeId]);
 
-  // Keyboard navigation shortcuts: ⌘[ / ⌘] to go back/forward, Esc to close
+  // Keyboard navigation shortcuts: ⌘[ / ⌘] to go back/forward.
   useEffect(() => {
     if (!isOpen) return;
 
@@ -501,15 +497,12 @@ export function SidePeekBranchSheet({
       } else if ((e.metaKey || e.ctrlKey) && e.key === "]") {
         e.preventDefault();
         if (canGoForward) onNavigateForward();
-      } else if (e.key === "Escape") {
-        e.preventDefault();
-        onClose();
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, canGoBack, canGoForward, onNavigateBack, onNavigateForward, onClose]);
+  }, [isOpen, canGoBack, canGoForward, onNavigateBack, onNavigateForward]);
 
   if (!isMounted || !currentEntry || !currentNodeId) return null;
 
@@ -534,26 +527,16 @@ export function SidePeekBranchSheet({
 
   return (
     <>
-      {/* Invisible Click-Catcher Backdrop: allows clicking anywhere outside to dismiss in chat view */}
-      {hasBackdrop && (
-        <div
-          onClick={onClose}
-          className={`fixed inset-0 z-30 ${
-            isVisible ? "block bg-transparent" : "hidden pointer-events-none"
-          }`}
-          title="Click outside to close (Esc)"
-        />
-      )}
-
-      {/* Sliding Sheet Container */}
-      <aside
-        className={`fixed inset-y-0 right-0 z-40 w-full sm:w-[480px] md:w-[540px] lg:w-[580px] bg-surface border-l border-border shadow-2xl flex flex-col font-sans select-text transform transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] will-change-transform ${
-          isVisible ? "translate-x-0" : "translate-x-full pointer-events-none"
-        }`}
-      >
-        {/* Top Bar: History Navigation + Excerpt Title Badge + Actions */}
-        <div className="h-13 px-3 sm:px-4 border-b border-border flex items-center justify-between shrink-0 bg-surface/95 backdrop-blur-md select-none">
-          {/* Left: Back / Forward History Navigation Buttons */}
+      {isMounted && (
+      <Drawer
+        isOpen={isOpen}
+        onClose={onClose}
+        hasBackdrop={hasBackdrop}
+        title={displayContext}
+        icon={<GitBranch className="size-4" />}
+        headerActions={(
+          <>
+            {/* Branch history navigation */}
           <div className="flex items-center space-x-1 shrink-0">
             <Button
               variant="ghost"
@@ -579,22 +562,12 @@ export function SidePeekBranchSheet({
 
             {/* Depth Counter Badge */}
             {historyStack.length > 1 && (
-              <span className="text-2xs font-mono text-muted-foreground px-1.5 py-0.5 rounded-md bg-muted border border-border ml-0.5">
+              <span className="text-2xs font-mono text-foreground-muted px-1.5 py-0.5 rounded-md bg-background-secondary border border-border-subtle ml-0.5">
                 {historyIndex + 1}/{historyStack.length}
               </span>
             )}
           </div>
 
-          {/* Center: Branch Context Badge */}
-          <div className="flex items-center space-x-1.5 min-w-0 mx-2 px-2 py-0.5 rounded-lg bg-muted border border-border text-foreground">
-            <GitBranch className="w-3.5 h-3.5 text-foreground-muted shrink-0" />
-            <span className="text-xs font-semibold truncate max-w-[140px] sm:max-w-[200px]">
-              {displayContext}
-            </span>
-          </div>
-
-          {/* Right: Actions (Copy + Make Primary + Close) */}
-          <div className="flex items-center space-x-1 shrink-0">
             <CopyButton
               text={fullText}
               title="Copy branch conversation"
@@ -614,22 +587,14 @@ export function SidePeekBranchSheet({
               <Maximize2 className="w-3.5 h-3.5" />
             </Button>
 
-            <div className="w-px h-3.5 bg-border mx-0.5" />
-
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              onClick={onClose}
-              className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer"
-              title="Close side peek (Esc)"
-            >
-              <X className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
+          </>
+        )}
+        className="select-text"
+      >
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
 
         {/* Sub-Header Sibling Sub-Branch Tabs Bar (Material Design M3) */}
-        <div className="h-10 px-2 sm:px-3 border-b border-border flex items-center justify-between shrink-0 bg-surface select-none overflow-x-auto no-scrollbar">
+        <div className="h-10 px-2 sm:px-3 border-b border-border-subtle flex items-center justify-between shrink-0 bg-surface select-none overflow-x-auto no-scrollbar">
           <div className="flex items-center h-full space-x-0.5 min-w-0 pr-2">
             {siblingTabs.map((tab) => {
               const isActive = !isDraftingNewTab && (tab.leafId === activeLeafNodeId || tab.rootId === currentNodeId);
@@ -759,7 +724,7 @@ export function SidePeekBranchSheet({
         {/* Messages Scroll Area or New Tab Starter View */}
         <div
           ref={scrollRef}
-          className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-2 bg-surface"
+          className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5 space-y-2 bg-surface"
         >
           {isDraftingNewTab ? (
             /* Blank Draft Tab Starter View */
@@ -880,7 +845,9 @@ export function SidePeekBranchSheet({
             </Button>
           </form>
         </div>
-      </aside>
+        </div>
+      </Drawer>
+      )}
 
       {/* Confirm Delete Branch Dialog */}
       {deletingTab && (
