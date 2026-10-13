@@ -86,9 +86,9 @@ describe("Scope 3 Master Shell Verification (Task 7)", () => {
     const header = screen.getByTestId("main-header");
     expect(header).toHaveClass("h-13");
 
-    // Mode switch: Click Canvas tab
-    const canvasTab = screen.getByRole("tab", { name: /canvas/i });
-    await user.click(canvasTab);
+    // Mode switch: Click the compact Canvas control
+    const canvasSwitch = screen.getByRole("button", { name: "Switch to canvas" });
+    await user.click(canvasSwitch);
     expect(handleViewModeChange).toHaveBeenCalledWith("canvas");
 
     // Toggle contextual rail

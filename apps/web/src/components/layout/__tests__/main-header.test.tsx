@@ -57,7 +57,7 @@ describe("MainHeader Component & Contract (Scope 3, Task 3)", () => {
     expect(screen.queryByRole("button", { name: "Expand sidebar" })).not.toBeInTheDocument();
   });
 
-  it("supports mode switching between Chat and Canvas via shared tabs", async () => {
+  it("supports mode switching between Chat and Canvas via a compact icon button", async () => {
     const user = userEvent.setup();
     const handleViewModeChange = vi.fn();
 
@@ -68,13 +68,10 @@ describe("MainHeader Component & Contract (Scope 3, Task 3)", () => {
       />
     );
 
-    const chatTab = screen.getByRole("tab", { name: /chat/i });
-    const canvasTab = screen.getByRole("tab", { name: /canvas/i });
-
-    expect(chatTab).toHaveAttribute("aria-selected", "true");
-    expect(canvasTab).toHaveAttribute("aria-selected", "false");
-
-    await user.click(canvasTab);
+    const switchToCanvas = screen.getByRole("button", { name: "Switch to canvas" });
+    expect(switchToCanvas).toHaveAttribute("title", "Switch to canvas");
+    expect(switchToCanvas).not.toHaveClass("bg-surface-hover");
+    await user.click(switchToCanvas);
     expect(handleViewModeChange).toHaveBeenCalledWith("canvas");
 
     rerender(
@@ -84,8 +81,11 @@ describe("MainHeader Component & Contract (Scope 3, Task 3)", () => {
       />
     );
 
-    expect(canvasTab).toHaveAttribute("aria-selected", "true");
-    expect(chatTab).toHaveAttribute("aria-selected", "false");
+    const switchToChat = screen.getByRole("button", { name: "Switch to chat" });
+    expect(switchToChat).toHaveAttribute("title", "Switch to chat");
+    expect(switchToChat).toHaveClass("bg-surface-hover");
+    await user.click(switchToChat);
+    expect(handleViewModeChange).toHaveBeenCalledWith("chat");
   });
 
   it("renders contextual rail toggle and fires callback", async () => {

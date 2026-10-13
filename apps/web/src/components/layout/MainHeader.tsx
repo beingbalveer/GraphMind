@@ -9,7 +9,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import { SidebarToggleIcon } from "@/components/ui/sidebar-toggle-icon";
-import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { cn } from "@/lib/utils";
 
 export type ViewMode = "chat" | "canvas" | "library" | "settings";
@@ -83,15 +82,22 @@ export function MainHeader({
       {/* Right Zone: Mode Switcher (Chat ↔ Canvas) & Contextual Rail Control */}
       <div className="flex items-center gap-2 shrink-0">
         {onViewModeChange && (
-          <SegmentedTabs
-            ariaLabel="View mode"
-            value={viewMode}
-            onChange={onViewModeChange}
-            items={[
-              { id: "chat", label: "Chat", icon: MessageSquare },
-              { id: "canvas", label: "Canvas", icon: LayoutGrid },
-            ]}
-          />
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label={viewMode === "canvas" ? "Switch to chat" : "Switch to canvas"}
+            title={viewMode === "canvas" ? "Switch to chat" : "Switch to canvas"}
+            className={cn(viewMode === "canvas" && "bg-surface-hover")}
+            onClick={() =>
+              onViewModeChange(viewMode === "canvas" ? "chat" : "canvas")
+            }
+          >
+            {viewMode === "canvas" ? (
+              <MessageSquare aria-hidden="true" className="size-4" />
+            ) : (
+              <LayoutGrid aria-hidden="true" className="size-4" />
+            )}
+          </Button>
         )}
 
         {onToggleRightSidebar && (
