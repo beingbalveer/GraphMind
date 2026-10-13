@@ -34,6 +34,12 @@ Every single task must follow this strict **3-step workflow**:
 - Run tests (`pytest`, `vitest`, `ruff`, `mypy`, `next build`) to ensure 100% verification.
 - Provide a clear summary of what was accomplished and state the next task.
 
+### Rule 5: Model Selection
+- Use `gpt-6.1-sol` for all planning and design work.
+- Delegate implementation to a subagent using `gpt-6-luna`.
+- Users do not need to select models for new tasks.
+- If the active planning model is not `gpt-6.1-sol`, inform the user.
+
 ---
 
 ## 2. Core Project Principles (Non-Negotiable)
