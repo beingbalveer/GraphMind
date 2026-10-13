@@ -59,7 +59,6 @@ export function UserMenu({ collapsed = false, placement = "bottom", className, o
           {
             label: "Sign Out",
             icon: <LogOut className="size-4" />,
-            variant: "destructive",
             onClick: () => { void logout(); },
           },
         ]}
