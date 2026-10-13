@@ -15,32 +15,42 @@ import {
   ModalHeader,
 } from "@/components/ui/modal";
 import { NavigationItem } from "@/components/ui/navigation-item";
-import { Textarea } from "@/components/ui/textarea";
 import {
   BookOpen,
-  Check,
-  ChevronLeft,
-  ChevronRight,
-  CircleHelp,
-  Clock3,
   Compass,
-  Expand,
   GraduationCap,
   Library,
   Menu,
   Moon,
-  PanelRight,
   RotateCcw,
-  Send,
   Sun,
   X,
+  ChevronRight,
+  PanelRight,
+  Expand,
 } from "lucide-react";
-
-import { curriculum } from "./curriculum";
-export { curriculum } from "./curriculum";
-
-import { initial, reducer, type State } from "./state";
-import { LessonRow, PlanCreator, TutorPanel } from "./studio-components";
+import { roadmaps, allLessons } from "./catalog";
+import {
+  CatalogView,
+  Generator,
+  LessonReader,
+  RoadmapOverview,
+} from "./studio-views";
+import {
+  initial,
+  reducer,
+  getRoadmap,
+  activeEnrollment,
+  enrollmentFor,
+  currentEnrollment,
+  privateKey,
+  scopedKey,
+  validGeneratorProfile,
+  type State,
+  type View,
+} from "./state";
+import { TutorPanel } from "./studio-components";
+import { Home, MyLearning, Conversation, LibraryView } from "./learner-views";
 
 function useSmallScreen() {
   const [small, setSmall] = useState(
@@ -59,798 +69,571 @@ function useSmallScreen() {
 export function LearningStudio() {
   const [state, dispatch] = useReducer(reducer, initial);
   const [tutorOpen, setTutorOpen] = useState(false);
-  const [tab, setTab] = useState<"tutor" | "sources">("tutor");
-  const [drafts, setDrafts] = useState<Record<string, string>>({});
-  const [titleInput, setTitleInput] = useState(initial.title);
-  const [dark, setDark] = useState(false);
-  const [notice, setNotice] = useState("");
+  const [tutorTab, setTutorTab] = useState<"tutor" | "sources">("tutor");
   const [mobileNav, setMobileNav] = useState(false);
   const [noteOpen, setNoteOpen] = useState(false);
-  const readingPosition = useRef<Record<string, number>>({});
-  const mainRef = useRef<HTMLElement>(null);
-  const messageId = useRef(Date.now());
+  const readingRef = useRef<HTMLElement>(null);
+  const jobTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const nextMessageId = useRef(1);
   const small = useSmallScreen();
-  const lesson = curriculum[state.lesson];
-  const prompt = drafts[lesson.id] ?? "";
-  const setPrompt = (value: string) =>
-    setDrafts((current) => ({ ...current, [lesson.id]: value }));
-  const lessonArticleRef = useRef<HTMLElement>(null);
+  const roadmap = getRoadmap(state.roadmapId) ?? roadmaps[0];
+  const lessons = allLessons(roadmap);
+  const lesson =
+    lessons.find((item) => item.id === state.topicId) ?? lessons[0];
+  const enrollment = currentEnrollment(state);
+  const key = privateKey(state);
+  const quote = key ? state.quotes[key] : undefined;
+  const prompt = key ? (state.drafts[key] ?? "") : "";
+  const messages = key ? (state.conversations[key] ?? []) : [];
+  const canUsePrivate = state.mode === "learner" && Boolean(enrollment);
+  const localPositionKey =
+    key ?? `public::${state.roadmapId}::${state.topicId}`;
+
   useEffect(() => {
-    document.documentElement.classList.toggle("dark", dark);
-  }, [dark]);
+    document.documentElement.classList.toggle("dark", state.dark);
+  }, [state.dark]);
   useLayoutEffect(() => {
-    if (state.view === "lesson" && mainRef.current) {
-      mainRef.current.scrollTop = readingPosition.current[lesson.id] ?? 0;
-    }
-  }, [state.view, state.lesson, lesson.id]);
+    if (state.view === "lesson" && readingRef.current)
+      readingRef.current.scrollTop =
+        state.readingPositions[localPositionKey] ?? 0;
+  }, [state.view, state.topicId, state.roadmapId, state.enrollmentId]);
+  useEffect(
+    () => () => {
+      if (jobTimer.current) clearTimeout(jobTimer.current);
+    },
+    [],
+  );
+  useEffect(() => {
+    if (state.generatorStep !== "generating") return;
+    const jobId = state.generatorJobId;
+    jobTimer.current = setTimeout(
+      () => dispatch({ type: "generator-complete", jobId }),
+      650,
+    );
+    return () => {
+      if (jobTimer.current) clearTimeout(jobTimer.current);
+    };
+  }, [state.generatorStep, state.generatorJobId]);
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !noteOpen && !mobileNav && !small)
+      if (
+        event.key === "Escape" &&
+        !state.authOpen &&
+        !noteOpen &&
+        !mobileNav &&
+        !small
+      )
         setTutorOpen(false);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [mobileNav, noteOpen, small]);
-  const messages = state.conversations[lesson.id] ?? [];
-  const done = state.completed.includes(lesson.id);
-  const progress = Math.round(
-    (state.completed.length / curriculum.length) * 100,
-  );
-  const resetDemo = () => {
-    dispatch({ type: "reset" });
-    setDrafts({});
-    readingPosition.current = {};
+  }, [state.authOpen, noteOpen, mobileNav, small]);
+
+  const rememberPosition = () => {
+    if (state.view === "lesson" && readingRef.current)
+      dispatch({
+        type: "reading-position",
+        key: localPositionKey,
+        value: readingRef.current.scrollTop,
+      });
+  };
+  const navigate = (view: View) => {
+    rememberPosition();
+    dispatch({ type: "navigate", view });
     setTutorOpen(false);
     setMobileNav(false);
-    setNoteOpen(false);
-    setTab("tutor");
-    setTitleInput(initial.title);
-    setNotice(
-      "Demo reset. Your sample progress and conversations are cleared.",
-    );
+  };
+  const openRoadmap = (roadmapId: string) => {
+    dispatch({ type: "open-roadmap", roadmapId });
+    setTutorOpen(false);
+  };
+  const openTopic = (topicId: string) => {
+    rememberPosition();
+    dispatch({ type: "open-topic", topicId });
+    setTutorOpen(false);
+  };
+  const openConversations = () => {
+    rememberPosition();
+    if (state.mode === "learner" && !enrollment) {
+      dispatch({
+        type: "open-tutor",
+        roadmapId: state.roadmapId,
+        topicId: state.topicId,
+      });
+    }
+    dispatch({ type: "navigate", view: "conversation" });
+    setTutorOpen(false);
+    setMobileNav(false);
+  };
+  const gate = (
+    intent: Parameters<typeof reducer>[1] extends never
+      ? never
+      : import("./state").PendingIntent,
+  ) => dispatch({ type: "gate", intent });
+  const save = () =>
+    state.mode === "learner"
+      ? dispatch({ type: "save-roadmap", roadmapId: state.roadmapId })
+      : gate({ type: "save", roadmapId: state.roadmapId });
+  const completion = () =>
+    state.mode === "learner"
+      ? dispatch({
+          type: "complete-topic",
+          roadmapId: state.roadmapId,
+          topicId: state.topicId,
+          enrollmentId: enrollment?.id,
+        })
+      : gate({
+          type: "complete",
+          roadmapId: state.roadmapId,
+          topicId: state.topicId,
+        });
+  const askTutor = (selectedQuote?: string) => {
+    if (state.mode === "guest") {
+      gate({
+        type: "tutor",
+        roadmapId: state.roadmapId,
+        topicId: state.topicId,
+        quote: selectedQuote,
+      });
+      return;
+    }
+    dispatch({
+      type: "open-tutor",
+      roadmapId: state.roadmapId,
+      topicId: state.topicId,
+      quote: selectedQuote,
+    });
+    setTutorTab("tutor");
+    setTutorOpen(true);
   };
   const send = () => {
-    const text = prompt.trim();
-    if (!text && !state.quote) return;
+    if (!canUsePrivate || (!prompt.trim() && !quote)) return;
+    const text = prompt.trim() || "Can you explain this passage?";
     dispatch({
-      type: "message",
-      topicId: lesson.id,
-      message: {
-        id: messageId.current++,
-        role: "learner",
-        text: text || "Can you explain this passage?",
-        quote: state.quote,
-      },
+      type: "send-message",
+      message: { id: nextMessageId.current++, role: "learner", text, quote },
     });
     dispatch({
-      type: "message",
-      topicId: lesson.id,
+      type: "send-message",
       message: {
-        id: messageId.current++,
+        id: nextMessageId.current++,
         role: "tutor",
-        text: `Sample tutor reply: In ${lesson.title}, follow the data through one step at a time. Identify what enters, what the code guarantees, and what the caller receives.`,
+        text: `Sample tutor reply: In ${lesson.title}, follow the idea one step at a time. Notice what enters, what the code guarantees, and what the caller receives.`,
       },
     });
-    dispatch({ type: "quote", value: undefined });
-    setDrafts((current) => ({ ...current, [lesson.id]: "" }));
   };
-  const selection = () => {
-    const selected = window.getSelection();
-    if (!selected || !selected.rangeCount) return;
-    const range = selected.getRangeAt(0);
-    if (!lessonArticleRef.current?.contains(range.commonAncestorContainer))
-      return;
-    const value = selected.toString().trim();
-    if (value) {
-      dispatch({ type: "quote", value });
-      setTutorOpen(true);
-      setTab("tutor");
-    }
-  };
-  const goNext = () => {
-    if (state.lesson === curriculum.length - 1) {
-      dispatch({ type: "view", view: "home" });
-      setNotice(
-        "You reached the end of this sample path. Completion reflects the lessons you marked complete.",
-      );
-      return;
-    }
-    dispatch({ type: "lesson", index: state.lesson + 1 });
-  };
-  const leaveLesson = () => {
-    if (state.view === "lesson" && mainRef.current)
-      readingPosition.current[lesson.id] = mainRef.current.scrollTop;
-  };
-  const openView = (view: State["view"]) => {
-    leaveLesson();
-    dispatch({ type: "view", view });
-    setTutorOpen(false);
-    setMobileNav(false);
-  };
-  const nav = (view: State["view"], label: string, icon: React.ReactNode) => (
+  const navItem = (view: View, label: string, icon: React.ReactNode) => (
     <NavigationItem
+      key={view}
       active={state.view === view}
       icon={icon}
-      onClick={() => openView(view)}
+      onClick={() => navigate(view)}
     >
       {label}
     </NavigationItem>
   );
+  const firstIncomplete = (roadmapId: string, completedIds: string[]) =>
+    allLessons(getRoadmap(roadmapId) ?? roadmaps[0]).find(
+      (item) => !completedIds.includes(item.id),
+    )?.id ?? allLessons(getRoadmap(roadmapId) ?? roadmaps[0])[0].id;
+  const startGenerator = () => {
+    if (state.mode === "guest") return gate({ type: "generator" });
+    navigate("generator");
+    dispatch({ type: "generator-step", step: "form" });
+  };
+  const reset = () => {
+    if (jobTimer.current) clearTimeout(jobTimer.current);
+    setTutorOpen(false);
+    setMobileNav(false);
+    setNoteOpen(false);
+    dispatch({ type: "reset" });
+  };
+  const signIn = () => {
+    const intent = state.pendingIntent;
+    dispatch({ type: "sign-in" });
+    if (intent?.type === "tutor") {
+      setTutorTab("tutor");
+      setTutorOpen(true);
+    }
+  };
+  const signOut = () => {
+    if (jobTimer.current) clearTimeout(jobTimer.current);
+    setTutorOpen(false);
+    setMobileNav(false);
+    dispatch({ type: "sign-out" });
+  };
+  const startGeneration = () => {
+    if (!validGeneratorProfile(state.generatorProfile)) return;
+    const jobId = state.generatorJobId + 1;
+    dispatch({ type: "generator-job", jobId });
+  };
+  const goNext = () => {
+    const index = lessons.findIndex((item) => item.id === state.topicId);
+    if (index === lessons.length - 1) {
+      navigate(state.mode === "learner" ? "my-learning" : "overview");
+      return;
+    }
+    openTopic(lessons[index + 1].id);
+  };
+
   return (
     <div className="studio-shell flex h-dvh min-h-0 overflow-hidden bg-background text-foreground">
-      <aside className="studio-nav fixed inset-y-0 left-0 z-20 flex w-60 flex-col border-r border-border-subtle bg-background px-3 py-4">
-        <div className="mb-8 flex items-center gap-2 px-2">
-          <div className="flex size-8 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-            <GraduationCap className="size-4" />
+      {state.mode === "learner" && (
+        <aside className="studio-nav fixed inset-y-0 left-0 z-20 flex w-60 flex-col border-r border-border-subtle bg-background px-3 py-4">
+          <Brand />
+          <div className="mb-2 px-2 text-2xs font-medium uppercase tracking-wider text-foreground-subtle">
+            Learning
           </div>
-          <div>
-            <div className="text-sm font-semibold">GraphMind</div>
-            <div className="text-xs text-foreground-muted">Learning studio</div>
-          </div>
-        </div>
-        <div className="mb-2 px-2 text-2xs font-medium uppercase tracking-wider text-foreground-subtle">
-          Workspace
-        </div>
-        <nav aria-label="Main navigation" className="space-y-1">
-          {nav("home", "Home", <Compass />)}
-          {nav("roadmap", "My learning", <BookOpen />)}
-          {nav("library", "Library", <Library />)}
-          <div className="ml-4 mt-4 border-l border-border-subtle pl-3">
-            <div className="mb-2 text-xs text-foreground-subtle">
-              Current path
-            </div>
-            <NavigationItem
-              active={state.view === "lesson" || state.view === "roadmap"}
-              icon={<span className="size-1.5 rounded-full bg-primary" />}
-              onClick={() => openView("roadmap")}
+          <nav aria-label="Main navigation" className="space-y-1">
+            {navItem("home", "Home", <Compass />)}
+            {navItem("my-learning", "My learning", <BookOpen />)}
+            {navItem("catalog", "Browse roadmaps", <Compass />)}
+            {navItem("generator", "Create roadmap", <GraduationCap />)}
+            {navItem("library", "Library", <Library />)}
+            {(state.view === "lesson" ||
+              state.view === "overview" ||
+              state.view === "conversation") && (
+              <div className="ml-4 mt-4 border-l border-border-subtle pl-3">
+                <div className="mb-2 text-xs text-foreground-subtle">
+                  Active roadmap
+                </div>
+                <NavigationItem
+                  active={state.view === "overview" || state.view === "lesson"}
+                  icon={<span className="size-1.5 rounded-full bg-primary" />}
+                  onClick={() => navigate("overview")}
+                >
+                  Roadmap
+                </NavigationItem>
+                <NavigationItem
+                  active={state.view === "conversation"}
+                  icon={
+                    <span className="size-1.5 rounded-full border border-foreground-subtle" />
+                  }
+                  onClick={openConversations}
+                >
+                  Conversations
+                </NavigationItem>
+              </div>
+            )}
+          </nav>
+          <div className="mt-auto space-y-1 border-t border-border-subtle pt-3">
+            <Appearance
+              dark={state.dark}
+              toggle={() => dispatch({ type: "theme", dark: !state.dark })}
+            />
+            <Button
+              variant="ghost"
+              className="w-full justify-start gap-2"
+              onClick={signOut}
             >
-              Roadmap
-            </NavigationItem>
-            <NavigationItem
-              active={state.view === "conversation"}
-              icon={
-                <span className="size-1.5 rounded-full border border-foreground-subtle" />
-              }
-              onClick={() => openView("conversation")}
+              Sign out
+            </Button>
+            <Button
+              variant="ghost"
+              className="w-full justify-start gap-2 text-foreground-muted"
+              onClick={reset}
             >
-              Conversations
-            </NavigationItem>
+              <RotateCcw className="size-4" />
+              Reset demo
+            </Button>
           </div>
-        </nav>
-        <div className="mt-auto space-y-1 border-t border-border-subtle pt-3">
-          <div className="px-2 pb-2 text-xs text-foreground-subtle">
-            Demo preferences
-          </div>
-          <Button
-            variant="ghost"
-            className="w-full justify-start gap-2"
-            onClick={() => setDark(!dark)}
-          >
-            {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
-            {dark ? "Light appearance" : "Dark appearance"}
-          </Button>
-          <Button
-            variant="ghost"
-            className="w-full justify-start gap-2 text-foreground-muted"
-            onClick={resetDemo}
-          >
-            <RotateCcw className="size-4" />
-            Reset demo
-          </Button>
-        </div>
-      </aside>
-      <div className="studio-main ml-60 flex h-dvh min-h-0 min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-10 flex h-13 shrink-0 items-center justify-between border-b border-border-subtle bg-background/95 px-6 backdrop-blur">
-          <div className="flex items-center gap-2 text-xs text-foreground-muted">
+        </aside>
+      )}
+      <div
+        className={`studio-main ${state.mode === "learner" ? "ml-60" : ""} flex h-dvh min-h-0 min-w-0 flex-1 flex-col`}
+      >
+        <header className="flex h-13 shrink-0 items-center justify-between border-b border-border-subtle bg-background/95 px-5 backdrop-blur">
+          <div className="flex min-w-0 items-center gap-2">
             <Button
               className="mobile-nav-trigger hidden"
               variant="ghost"
               size="iconSm"
               aria-label="Open navigation"
-              onClick={() => {
-                setTutorOpen(false);
-                setMobileNav(true);
-              }}
+              onClick={() => setMobileNav(true)}
             >
               <Menu className="size-4" />
             </Button>
-            <span className="studio-title-prefix">Learning studio</span>
-            <ChevronRight className="size-3" />
-            <span className="studio-title-current min-w-0 truncate text-foreground">
-              {state.view === "lesson"
-                ? lesson.title
-                : state.view === "conversation"
-                  ? "Conversations"
-                  : state.view === "library"
-                    ? "Library"
-                    : state.view === "roadmap"
-                      ? "My learning"
-                      : "Home"}
-            </span>
+            {state.mode === "guest" ? (
+              <Brand compact />
+            ) : (
+              <>
+                <span className="studio-title-prefix text-xs text-foreground-muted">
+                  Learning studio
+                </span>
+                <ChevronRight className="size-3 text-foreground-muted" />
+                <span className="min-w-0 truncate text-sm">
+                  {state.view === "lesson"
+                    ? lesson.title
+                    : viewTitle(state.view)}
+                </span>
+              </>
+            )}
           </div>
-          <div className="flex items-center gap-2">
-            <Badge variant="secondary" className="rounded-md">
-              <span className="demo-label-desktop">Local demo</span>
-              <span className="demo-label-mobile">Demo</span>
+          <div className="flex shrink-0 items-center gap-2">
+            <Badge variant="secondary">
+              {state.mode === "guest" ? "Guest preview" : "Local demo"}
             </Badge>
-            {state.view === "lesson" && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setMobileNav(false);
-                  setTutorOpen(!tutorOpen);
-                }}
-              >
-                <PanelRight className="size-3.5" /> Tutor
-              </Button>
+            {state.mode === "guest" ? (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="hidden sm:inline-flex"
+                  onClick={() => navigate("catalog")}
+                >
+                  Browse roadmaps
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="hidden sm:inline-flex"
+                  onClick={startGenerator}
+                >
+                  Create roadmap
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="iconSm"
+                  aria-label={
+                    state.dark
+                      ? "Switch to light appearance"
+                      : "Switch to dark appearance"
+                  }
+                  onClick={() => dispatch({ type: "theme", dark: !state.dark })}
+                >
+                  {state.dark ? (
+                    <Sun className="size-4" />
+                  ) : (
+                    <Moon className="size-4" />
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => gate({ type: "signin" })}
+                >
+                  Sign in
+                </Button>
+              </>
+            ) : (
+              state.view === "lesson" && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setTutorOpen((open) => !open)}
+                >
+                  <PanelRight className="size-4" />
+                  Tutor
+                </Button>
+              )
             )}
           </div>
         </header>
         <div className="studio-content flex min-h-0 min-w-0 flex-1">
           <main
-            ref={mainRef}
+            ref={readingRef}
             className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto"
-            onScroll={(e) => {
+            onScroll={(event) => {
               if (state.view === "lesson")
-                readingPosition.current[lesson.id] = e.currentTarget.scrollTop;
+                dispatch({
+                  type: "reading-position",
+                  key: localPositionKey,
+                  value: event.currentTarget.scrollTop,
+                });
             }}
           >
-            {state.view === "home" && (
-              <div className="mx-auto max-w-5xl px-8 py-12">
-                <div className="mb-10">
-                  <div className="mb-3 flex items-center gap-2 text-xs text-foreground-muted">
-                    <span className="size-2 rounded-full bg-success" />
-                    Your learning space
-                  </div>
-                  <h1 className="max-w-2xl text-xl font-semibold tracking-tight">
-                    Make room for a little learning.
-                  </h1>
-                  <p className="mt-3 max-w-xl text-sm leading-6 text-foreground-muted">
-                    Pick up where you left off, or shape a focused path around a
-                    skill you want to build.
-                  </p>
-                </div>
-                <section className="grid gap-5 lg:grid-cols-[1.35fr_0.9fr]">
-                  <article className="rounded-2xl border border-border-subtle bg-surface p-6 shadow-2xs">
-                    <div className="mb-5 flex items-center justify-between">
-                      <Badge
-                        variant={
-                          state.completed.length === curriculum.length
-                            ? "success"
-                            : "outline"
-                        }
-                      >
-                        {state.completed.length === curriculum.length
-                          ? "PATH COMPLETE"
-                          : "IN PROGRESS"}
-                      </Badge>
-                      <span className="text-xs text-foreground-muted">
-                        {state.completed.length} of {curriculum.length} lessons
-                      </span>
-                    </div>
-                    <div className="mb-2 text-xs text-foreground-muted">
-                      YOUR CURRENT PATH
-                    </div>
-                    <h2 className="text-xl font-semibold">{state.title}</h2>
-                    <p className="mt-2 max-w-lg text-sm leading-6 text-foreground-muted">
-                      A practical route from Python fundamentals to reliable
-                      backend endpoints and tests.
-                    </p>
-                    <div className="mt-6 h-1.5 overflow-hidden rounded-full bg-muted">
-                      <div
-                        className="h-full rounded-full bg-primary transition-all"
-                        style={{ width: `${progress}%` }}
-                      />
-                    </div>
-                    <div className="mt-2 flex justify-between text-xs text-foreground-muted">
-                      <span>{progress}% complete</span>
-                      <span>
-                        {curriculum.length - state.completed.length} lessons to
-                        go
-                      </span>
-                    </div>
-                    <Button
-                      className="mt-6 gap-2"
-                      onClick={() =>
-                        dispatch({
-                          type: "lesson",
-                          index: Math.max(
-                            0,
-                            curriculum.findIndex(
-                              (item) => !state.completed.includes(item.id),
-                            ),
-                          ),
-                        })
-                      }
-                    >
-                      {state.completed.length === curriculum.length
-                        ? "Review lessons"
-                        : "Continue learning"}
-                      <ChevronRight className="size-4" />
-                    </Button>
-                  </article>
-                  <article className="rounded-2xl border border-border-subtle bg-background-secondary p-6">
-                    <div className="mb-4 flex size-9 items-center justify-center rounded-xl border border-border-subtle bg-surface">
-                      <Clock3 className="size-4 text-foreground-muted" />
-                    </div>
-                    <h2 className="text-base font-semibold">
-                      A steady pace works
-                    </h2>
-                    <p className="mt-2 text-sm leading-6 text-foreground-muted">
-                      Four short lessons, about an hour in total. Stop and
-                      return whenever you like; your place stays here for this
-                      demo session.
-                    </p>
-                    <Button
-                      variant="ghost"
-                      className="mt-4 px-0"
-                      onClick={() =>
-                        dispatch({ type: "view", view: "roadmap" })
-                      }
-                    >
-                      View the roadmap
-                      <ChevronRight className="size-4" />
-                    </Button>
-                  </article>
-                </section>
-                <section className="mt-10">
-                  <div className="mb-4 flex items-end justify-between">
-                    <div>
-                      <div className="text-xs text-foreground-muted">
-                        YOUR NEXT STEPS
-                      </div>
-                      <h2 className="mt-1 text-lg font-semibold">
-                        A path with a clear destination
-                      </h2>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() =>
-                        dispatch({ type: "view", view: "roadmap" })
-                      }
-                    >
-                      See all
-                    </Button>
-                  </div>
-                  <div className="grid gap-3 md:grid-cols-2">
-                    {curriculum.slice(0, 2).map((item, i) => (
-                      <LessonRow
-                        key={item.id}
-                        title={item.title}
-                        index={i}
-                        done={state.completed.includes(item.id)}
-                        onClick={() => dispatch({ type: "lesson", index: i })}
-                      />
-                    ))}
-                  </div>
-                </section>
-                <PlanCreator
-                  value={titleInput}
-                  setValue={setTitleInput}
-                  onCreate={() => {
-                    dispatch({ type: "title", value: titleInput });
-                    dispatch({ type: "view", view: "roadmap" });
-                    setNotice(
-                      "Showing the fixed sample curriculum. The title is a local label; no custom plan was generated.",
-                    );
-                  }}
-                />
-              </div>
+            {state.view === "catalog" && (
+              <CatalogView
+                state={state}
+                onFilter={(field, value) =>
+                  dispatch({ type: "catalog-filter", field, value })
+                }
+                onOpen={openRoadmap}
+              />
             )}
-            {state.view === "roadmap" && (
-              <div className="mx-auto max-w-4xl px-8 py-10">
-                <div className="mb-8">
-                  <Badge variant="secondary">SAMPLE CURRICULUM</Badge>
-                  <h1 className="mt-4 text-xl font-semibold">{state.title}</h1>
-                  <p className="mt-2 text-sm leading-6 text-foreground-muted">
-                    A four-part introduction to the habits behind dependable
-                    Python services.
-                  </p>
-                </div>
-                <div className="mb-8 rounded-2xl border border-border-subtle bg-surface p-5">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium">Course progress</span>
-                    <span className="text-foreground-muted">
-                      {state.completed.length}/{curriculum.length} lessons
-                      complete
-                    </span>
-                  </div>
-                  <div className="mt-3 h-1.5 rounded-full bg-muted">
-                    <div
-                      className="h-full rounded-full bg-primary"
-                      style={{ width: `${progress}%` }}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  {curriculum.map((item, i) => (
-                    <LessonRow
-                      key={item.id}
-                      title={item.title}
-                      index={i}
-                      done={state.completed.includes(item.id)}
-                      onClick={() => dispatch({ type: "lesson", index: i })}
-                    />
-                  ))}
-                </div>
-              </div>
+            {state.view === "overview" && (
+              <RoadmapOverview
+                roadmapId={state.roadmapId}
+                enrollment={currentEnrollment(state)}
+                onLesson={openTopic}
+                onSave={save}
+                onGate={startGenerator}
+                onBack={() => navigate("catalog")}
+              />
             )}
             {state.view === "lesson" && (
-              <div className="lesson-layout mx-auto w-full max-w-[1280px]">
-                <article
-                  ref={lessonArticleRef}
-                  className="lesson-reading min-w-0 flex-1 px-8 pb-20 pt-8 lg:px-14"
-                  onMouseUp={selection}
-                >
-                  <div className="mx-auto max-w-2xl">
-                    <div className="mb-5 flex items-center gap-2 text-xs text-foreground-muted">
-                      <Button
-                        type="button"
-                        variant="link"
-                        size="sm"
-                        className="h-auto min-w-0 p-0 text-xs"
-                        onClick={() =>
-                          dispatch({ type: "view", view: "roadmap" })
-                        }
-                      >
-                        Roadmap
-                      </Button>
-                      <ChevronRight className="size-3" />
-                      <span>{lesson.section}</span>
-                    </div>
-                    <div className="mb-3 flex items-center gap-2">
-                      <Badge variant="secondary">
-                        LESSON {String(state.lesson + 1).padStart(2, "0")}
-                      </Badge>
-                      <span className="flex items-center gap-1 text-xs text-foreground-muted">
-                        <Clock3 className="size-3" />
-                        {lesson.duration}
-                      </span>
-                    </div>
-                    <h1 className="text-xl font-semibold leading-tight tracking-tight">
-                      {lesson.title}
-                    </h1>
-                    <p className="mt-3 text-sm leading-6 text-foreground-muted">
-                      Build a clear foundation, then connect it to the kind of
-                      code you will write in a real service.
-                    </p>
-                    <div className="my-7 flex items-center gap-3 rounded-xl border border-border-subtle bg-background-secondary px-4 py-3">
-                      <div className="flex size-8 items-center justify-center rounded-lg bg-surface text-foreground-muted">
-                        <BookOpen className="size-4" />
-                      </div>
-                      <div className="flex-1">
-                        <div className="text-xs font-medium">Learning goal</div>
-                        <div className="mt-0.5 text-xs text-foreground-muted">
-                          Explain the idea, then recognize where it fits in a
-                          backend service.
-                        </div>
-                      </div>
-                      <CircleHelp className="size-4 text-foreground-subtle" />
-                    </div>
-                    <div className="space-y-6" onDoubleClick={selection}>
-                      {lesson.paragraphs.map(([heading, body]) => (
-                        <section key={heading}>
-                          <h2 className="mb-2 text-base font-semibold">
-                            {heading}
-                          </h2>
-                          <p className="reading-text text-foreground-muted">
-                            {body}
-                          </p>
-                        </section>
-                      ))}
-                    </div>
-                    <div className="my-6 overflow-hidden rounded-xl border border-border-subtle bg-code-bg">
-                      <div className="flex h-9 items-center justify-between border-b border-border-subtle bg-code-header-bg px-3">
-                        <span className="text-xs text-code-foreground">
-                          python
-                        </span>
-                        <span className="text-xs text-code-foreground">
-                          Example
-                        </span>
-                      </div>
-                      <pre className="overflow-x-auto p-4 text-xs leading-6 text-code-foreground">
-                        <code>{lesson.code}</code>
-                      </pre>
-                    </div>
-                    <div className="rounded-xl border border-border-subtle bg-background-secondary p-4">
-                      <div className="text-xs font-medium">
-                        Try this as you read
-                      </div>
-                      <p className="mt-1.5 text-sm leading-6 text-foreground-muted">
-                        Select a sentence that feels unclear, then ask a
-                        question with that passage attached.
-                      </p>
-                      <Button
-                        className="mt-3"
-                        variant="outline"
-                        size="sm"
-                        onPointerDown={(event) => event.preventDefault()}
-                        onClick={selection}
-                      >
-                        Ask about selected text
-                      </Button>
-                    </div>
-                    <div className="mt-10 flex flex-col gap-3 border-t border-border-subtle pt-5 sm:flex-row sm:items-center sm:justify-between">
-                      <Button
-                        variant="ghost"
-                        disabled={state.lesson === 0}
-                        onClick={() =>
-                          dispatch({ type: "lesson", index: state.lesson - 1 })
-                        }
-                      >
-                        <ChevronLeft className="size-4" />
-                        Previous
-                      </Button>
-                      <div className="flex flex-wrap justify-end gap-2">
-                        {!done && (
-                          <Button
-                            variant="outline"
-                            onClick={() => {
-                              dispatch({ type: "complete" });
-                              setNotice(
-                                "Lesson marked complete. This records your choice; it does not measure mastery.",
-                              );
-                            }}
-                          >
-                            <Check className="size-4" />
-                            Mark complete
-                          </Button>
-                        )}
-                        <Button onClick={goNext}>
-                          {state.lesson === curriculum.length - 1
-                            ? "Finish path"
-                            : "Next lesson"}
-                          <ChevronRight className="size-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </article>
-              </div>
+              <LessonReader
+                roadmapId={state.roadmapId}
+                topicId={state.topicId}
+                enrollment={enrollment}
+                guest={!canUsePrivate}
+                onPrev={() => {
+                  const index = lessons.findIndex(
+                    (item) => item.id === state.topicId,
+                  );
+                  if (index > 0) openTopic(lessons[index - 1].id);
+                }}
+                onRoadmap={() => navigate("overview")}
+                onNext={goNext}
+                onComplete={completion}
+                onAsk={askTutor}
+                onQuote={(value) => {
+                  if (state.mode === "learner") askTutor(value);
+                  else
+                    gate({
+                      type: "tutor",
+                      roadmapId: state.roadmapId,
+                      topicId: state.topicId,
+                      quote: value,
+                    });
+                }}
+                quote={quote}
+                note={false}
+                onNote={setNoteOpen}
+              />
+            )}
+            {state.view === "home" && (
+              <Home
+                state={state}
+                activeEnrollment={
+                  enrollment ?? state.enrollments[state.enrollments.length - 1]
+                }
+                onResume={() => {
+                  const chosen =
+                    enrollment ??
+                    state.enrollments[state.enrollments.length - 1];
+                  if (!chosen) return navigate("catalog");
+                  const id = firstIncomplete(
+                    chosen.templateId,
+                    chosen.completedTopicIds,
+                  );
+                  dispatch({
+                    type: "open-enrollment",
+                    enrollmentId: chosen.id,
+                    topicId: id,
+                  });
+                }}
+                onBrowse={() => navigate("catalog")}
+                onCreate={startGenerator}
+              />
+            )}
+            {state.view === "my-learning" && (
+              <MyLearning
+                state={state}
+                onOpen={(id) => {
+                  const enrollment = state.enrollments.find(
+                    (item) => item.id === id,
+                  )!;
+                  dispatch({
+                    type: "open-enrollment",
+                    enrollmentId: id,
+                    topicId: firstIncomplete(
+                      enrollment.templateId,
+                      enrollment.completedTopicIds,
+                    ),
+                  });
+                }}
+                onBrowse={() => navigate("catalog")}
+              />
+            )}
+            {state.view === "generator" && (
+              <Generator
+                profile={state.generatorProfile}
+                step={state.generatorStep}
+                selectedTemplate={state.generatorTemplateId}
+                onProfile={(field, value) =>
+                  dispatch({ type: "generator-profile", field, value })
+                }
+                onStep={(step) => dispatch({ type: "generator-step", step })}
+                onTemplate={(id) =>
+                  dispatch({ type: "generator-template", roadmapId: id })
+                }
+                onGenerate={startGeneration}
+                onCancel={() => {
+                  if (jobTimer.current) clearTimeout(jobTimer.current);
+                  dispatch({ type: "generator-step", step: "review" });
+                }}
+                onDone={() => navigate("my-learning")}
+                onStartLearning={() => {
+                  const generated = state.enrollments.find(
+                    (item) => item.id === state.enrollmentId,
+                  );
+                  if (generated)
+                    dispatch({
+                      type: "open-enrollment",
+                      enrollmentId: generated.id,
+                      topicId: firstIncomplete(
+                        generated.templateId,
+                        generated.completedTopicIds,
+                      ),
+                    });
+                }}
+              />
             )}
             {state.view === "conversation" && (
-              <div className="mx-auto flex min-h-full w-full max-w-3xl flex-col px-6 py-8">
-                <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-                  <div>
-                    <div className="text-xs text-foreground-muted">
-                      THIS LEARNING PATH
-                    </div>
-                    <h1 className="mt-2 text-xl font-semibold">
-                      {lesson.title}
-                    </h1>
-                    <p className="mt-2 text-sm text-foreground-muted">
-                      Conversation for lesson {state.lesson + 1} · replies are
-                      local samples.
-                    </p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      dispatch({ type: "lesson", index: state.lesson })
-                    }
-                  >
-                    Return to lesson
-                  </Button>
-                </div>
-                <div
-                  className="mb-5 flex gap-2 overflow-x-auto pb-1"
-                  aria-label="Choose a lesson conversation"
-                >
-                  {curriculum.map((item, index) => (
-                    <Button
-                      key={item.id}
-                      size="sm"
-                      variant={index === state.lesson ? "secondary" : "ghost"}
-                      onClick={() =>
-                        dispatch({ type: "conversation-topic", index })
-                      }
-                    >
-                      {item.title}
-                    </Button>
-                  ))}
-                </div>
-                <div className="min-h-40 flex-1 space-y-3 overflow-y-auto rounded-2xl border border-border-subtle bg-surface p-4">
-                  {messages.length ? (
-                    messages.map((message) => (
-                      <div
-                        key={message.id}
-                        className={`max-w-[90%] rounded-xl p-3 text-sm leading-6 ${message.role === "learner" ? "ml-auto bg-primary text-primary-foreground" : "border border-border-subtle bg-background-secondary"}`}
-                      >
-                        <div className="mb-1 text-xs font-medium">
-                          {message.role === "learner"
-                            ? "You"
-                            : "Sample tutor reply"}
-                        </div>
-                        {message.quote && (
-                          <blockquote className="mb-2 border-l-2 border-current pl-3 text-xs italic opacity-80">
-                            {message.quote}
-                          </blockquote>
-                        )}
-                        {message.text}
-                      </div>
-                    ))
-                  ) : (
-                    <div className="flex h-full min-h-32 flex-col items-center justify-center text-center">
-                      <BookOpen className="size-5 text-foreground-subtle" />
-                      <p className="mt-2 text-sm font-medium">
-                        No messages for this lesson yet
-                      </p>
-                      <p className="mt-1 text-xs text-foreground-muted">
-                        Ask a question here or return to the lesson to select a
-                        passage.
-                      </p>
-                    </div>
-                  )}
-                </div>
-                <form
-                  className="mt-3 rounded-2xl border border-border-subtle bg-surface p-3"
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    send();
-                  }}
-                >
-                  {state.quote && (
-                    <div className="mb-3 rounded-xl border border-border-subtle bg-background-secondary p-3">
-                      <div className="mb-1 flex items-center justify-between text-xs font-medium">
-                        Selected passage
-                        <Button
-                          type="button"
-                          size="iconSm"
-                          variant="ghost"
-                          aria-label="Remove quoted passage"
-                          onClick={() =>
-                            dispatch({ type: "quote", value: undefined })
-                          }
-                        >
-                          <X className="size-3.5" />
-                        </Button>
-                      </div>
-                      <blockquote className="border-l-2 border-border-strong pl-3 text-xs leading-5 text-foreground-muted">
-                        {state.quote}
-                      </blockquote>
-                    </div>
-                  )}
-                  <Textarea
-                    value={prompt}
-                    onChange={(event) => setPrompt(event.target.value)}
-                    aria-label="Write a message in this lesson conversation"
-                    placeholder="Ask a question about this lesson…"
-                    className="min-h-20 border-0 bg-transparent shadow-none"
-                  />
-                  <div className="mt-2 flex justify-end">
-                    <Button
-                      type="submit"
-                      size="sm"
-                      disabled={!prompt.trim() && !state.quote}
-                    >
-                      <Send className="size-3.5" />
-                      Send message
-                    </Button>
-                  </div>
-                </form>
-              </div>
+              <Conversation
+                state={state}
+                messages={messages}
+                prompt={prompt}
+                setPrompt={(value) => dispatch({ type: "set-draft", value })}
+                send={send}
+                onReturn={() => navigate("lesson")}
+                onTopic={(topicId) =>
+                  dispatch({ type: "conversation-topic", topicId })
+                }
+                quote={quote}
+                clearQuote={() =>
+                  dispatch({ type: "set-quote", value: undefined })
+                }
+              />
             )}
-            {state.view === "library" && (
-              <div className="mx-auto max-w-4xl px-8 py-10">
-                <Badge variant="secondary">REFERENCE LIBRARY</Badge>
-                <h1 className="mt-4 text-xl font-semibold">
-                  Read alongside your lessons
-                </h1>
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-foreground-muted">
-                  Short notes from this demo curriculum and real documentation
-                  links that support the concepts.
-                </p>
-                <div className="mt-7 grid gap-4 md:grid-cols-2">
-                  {[
-                    {
-                      name: "Python functions",
-                      kind: "Demo reference · lesson 1",
-                      summary:
-                        "Functions bundle a named operation with parameters and a return value.",
-                      ref: "Python tutorial: defining functions",
-                      url: "https://docs.python.org/3/tutorial/controlflow.html#defining-functions",
-                    },
-                    {
-                      name: "Pydantic models",
-                      kind: "Demo reference · lesson 2",
-                      summary:
-                        "Models parse and validate data into typed objects at application boundaries.",
-                      ref: "Pydantic models documentation",
-                      url: "https://docs.pydantic.dev/latest/concepts/models/",
-                    },
-                    {
-                      name: "FastAPI path operations",
-                      kind: "Demo reference · lesson 3",
-                      summary:
-                        "Path operations connect a URL and HTTP method to a Python function.",
-                      ref: "FastAPI first steps",
-                      url: "https://fastapi.tiangolo.com/tutorial/first-steps/",
-                    },
-                    {
-                      name: "pytest assertions",
-                      kind: "Demo reference · lesson 4",
-                      summary:
-                        "Readable assertions make expected behavior explicit in a test.",
-                      ref: "pytest getting started",
-                      url: "https://docs.pytest.org/en/stable/getting-started.html",
-                    },
-                  ].map((x) => (
-                    <article
-                      key={x.name}
-                      className="rounded-2xl border border-border-subtle bg-surface p-5"
-                    >
-                      <div className="flex items-center gap-2 text-xs text-foreground-muted">
-                        <Library className="size-3.5" />
-                        {x.kind}
-                      </div>
-                      <h2 className="mt-3 text-base font-semibold">{x.name}</h2>
-                      <p className="mt-2 text-sm leading-6 text-foreground-muted">
-                        {x.summary}
-                      </p>
-                      <div className="mt-4 border-t border-border-subtle pt-3">
-                        <a
-                          href={x.url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-xs font-medium underline underline-offset-4"
-                        >
-                          {x.ref}
-                        </a>
-                        <p className="mt-1 text-xs text-foreground-subtle">
-                          External documentation · opens in a new tab
-                        </p>
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              </div>
-            )}
+            {state.view === "library" && <LibraryView />}
           </main>
-          {state.view === "lesson" && tutorOpen && !small && (
+          {state.view === "lesson" && tutorOpen && !small && canUsePrivate && (
             <aside className="desktop-tutor min-h-0 w-[360px] shrink-0 border-l border-border-subtle">
               <TutorPanel
-                tab={tab}
-                setTab={setTab}
-                openNote={() => setNoteOpen(true)}
-                expandConversation={() => {
-                  readingPosition.current[lesson.id] =
-                    mainRef.current?.scrollTop ?? 0;
-                  dispatch({ type: "view", view: "conversation" });
-                  setTutorOpen(false);
-                }}
+                tab={tutorTab}
+                setTab={setTutorTab}
                 messages={messages}
-                quote={state.quote}
-                clearQuote={() => dispatch({ type: "quote", value: undefined })}
+                quote={quote}
+                clearQuote={() =>
+                  dispatch({ type: "set-quote", value: undefined })
+                }
                 prompt={prompt}
-                setPrompt={setPrompt}
+                setPrompt={(value) => dispatch({ type: "set-draft", value })}
                 send={send}
                 topic={lesson.title}
+                source={lesson.source}
+                localNote={lesson.note}
+                openNote={() => setNoteOpen(true)}
+                expandConversation={() => {
+                  rememberPosition();
+                  navigate("conversation");
+                  setTutorOpen(false);
+                }}
               />
             </aside>
           )}
         </div>
-        {notice && (
+        {state.notice && (
           <div
             role="status"
             className="fixed bottom-5 right-5 z-30 flex max-w-sm items-start gap-3 rounded-xl border border-border bg-surface p-4 text-sm shadow-lg"
           >
-            <p className="text-foreground-muted">{notice}</p>
+            <p>{state.notice}</p>
             <Button
               variant="ghost"
               size="iconSm"
               aria-label="Dismiss message"
-              onClick={() => setNotice("")}
+              onClick={() => dispatch({ type: "notice" })}
             >
               <X className="size-4" />
             </Button>
           </div>
         )}
-        {small && (
+        {small && state.mode === "learner" && (
           <Drawer
-            isOpen={tutorOpen && state.view === "lesson"}
+            isOpen={tutorOpen && state.view === "lesson" && canUsePrivate}
             onClose={() => setTutorOpen(false)}
             title="Tutor"
             description={lesson.title}
@@ -860,117 +643,188 @@ export function LearningStudio() {
                 size="iconSm"
                 aria-label="Open full conversation"
                 onClick={() => {
-                  leaveLesson();
-                  dispatch({ type: "view", view: "conversation" });
-                  setTutorOpen(false);
+                  rememberPosition();
+                  navigate("conversation");
                 }}
               >
                 <Expand className="size-4" />
               </Button>
             }
-            widthClassName="w-full sm:w-[420px]"
+            widthClassName="h-full w-full sm:w-[420px]"
           >
             <TutorPanel
               showPanelHeader={false}
-              tab={tab}
-              setTab={setTab}
-              openNote={() => setNoteOpen(true)}
-              expandConversation={() => {
-                readingPosition.current[lesson.id] =
-                  mainRef.current?.scrollTop ?? 0;
-                dispatch({ type: "view", view: "conversation" });
-                setTutorOpen(false);
-              }}
+              tab={tutorTab}
+              setTab={setTutorTab}
               messages={messages}
-              quote={state.quote}
-              clearQuote={() => dispatch({ type: "quote", value: undefined })}
+              quote={quote}
+              clearQuote={() =>
+                dispatch({ type: "set-quote", value: undefined })
+              }
               prompt={prompt}
-              setPrompt={setPrompt}
+              setPrompt={(value) => dispatch({ type: "set-draft", value })}
               send={send}
               topic={lesson.title}
+              source={lesson.source}
+              localNote={lesson.note}
+              openNote={() => setNoteOpen(true)}
+              expandConversation={() => {
+                rememberPosition();
+                navigate("conversation");
+              }}
             />
           </Drawer>
         )}
         <Drawer
           isOpen={mobileNav}
           onClose={() => setMobileNav(false)}
-          title="Learning studio"
+          title={state.mode === "learner" ? "Learning studio" : "GraphMind"}
           description="Navigation"
-          widthClassName="w-[300px]"
+          widthClassName="w-[320px]"
         >
           <nav aria-label="Mobile navigation" className="space-y-1 p-3">
-            {(["home", "roadmap", "library"] as const).map((view, i) => (
-              <NavigationItem
-                key={view}
-                active={state.view === view}
-                icon={[<Compass />, <BookOpen />, <Library />][i]}
-                onClick={() => openView(view)}
-              >
-                {["Home", "My learning", "Library"][i]}
-              </NavigationItem>
-            ))}
-            <div className="mt-4 border-t border-border-subtle pt-3">
-              <div className="px-2 pb-2 text-xs text-foreground-muted">
-                Current path
-              </div>
-              <NavigationItem
-                active={state.view === "lesson" || state.view === "roadmap"}
-                icon={<BookOpen />}
-                onClick={() => openView("roadmap")}
-              >
-                Roadmap
-              </NavigationItem>
-              <NavigationItem
-                active={state.view === "conversation"}
-                icon={<BookOpen />}
-                onClick={() => openView("conversation")}
-              >
-                Conversations
-              </NavigationItem>
-            </div>
+            {state.mode === "guest" ? (
+              <>
+                <NavigationItem
+                  active={state.view === "catalog"}
+                  icon={<Compass />}
+                  onClick={() => navigate("catalog")}
+                >
+                  Browse roadmaps
+                </NavigationItem>
+                <Button
+                  className="mt-3 w-full"
+                  onClick={() => {
+                    setMobileNav(false);
+                    gate({ type: "generator" });
+                  }}
+                >
+                  Create roadmap
+                </Button>
+                <Button
+                  variant="outline"
+                  className="mt-2 w-full"
+                  onClick={() => {
+                    setMobileNav(false);
+                    gate({ type: "signin" });
+                  }}
+                >
+                  Sign in
+                </Button>
+                <Appearance
+                  dark={state.dark}
+                  toggle={() => dispatch({ type: "theme", dark: !state.dark })}
+                />
+              </>
+            ) : (
+              <>
+                {navItem("home", "Home", <Compass />)}
+                {navItem("my-learning", "My learning", <BookOpen />)}
+                {navItem("catalog", "Browse roadmaps", <Compass />)}
+                {navItem("generator", "Create roadmap", <GraduationCap />)}
+                {navItem("library", "Library", <Library />)}
+                {(state.view === "lesson" ||
+                  state.view === "overview" ||
+                  state.view === "conversation") && (
+                  <div className="mt-4 border-t border-border-subtle pt-3">
+                    <div className="mb-2 px-2 text-xs text-foreground-subtle">
+                      Active roadmap
+                    </div>
+                    <NavigationItem
+                      active={
+                        state.view === "overview" || state.view === "lesson"
+                      }
+                      icon={<BookOpen />}
+                      onClick={() => navigate("overview")}
+                    >
+                      Roadmap
+                    </NavigationItem>
+                    <NavigationItem
+                      active={state.view === "conversation"}
+                      icon={<BookOpen />}
+                      onClick={openConversations}
+                    >
+                      Conversations
+                    </NavigationItem>
+                  </div>
+                )}
+              </>
+            )}
           </nav>
-          <div className="mt-auto border-t border-border-subtle p-3">
-            <div className="mb-2 px-2 text-xs text-foreground-subtle">
-              Demo preferences
-            </div>
-            <Button
-              variant="ghost"
-              className="w-full justify-start gap-2"
-              onClick={() => setDark(!dark)}
-            >
-              {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
-              {dark ? "Light appearance" : "Dark appearance"}
-            </Button>
-            <Button
-              variant="ghost"
-              className="w-full justify-start gap-2 text-foreground-muted"
-              onClick={resetDemo}
-            >
-              <RotateCcw className="size-4" />
-              Reset demo
-            </Button>
+          <div className="mt-auto space-y-1 border-t border-border-subtle p-3">
+            <Appearance
+              dark={state.dark}
+              toggle={() => dispatch({ type: "theme", dark: !state.dark })}
+            />
+            {state.mode === "learner" && (
+              <>
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start"
+                  onClick={signOut}
+                >
+                  Sign out
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start"
+                  onClick={reset}
+                >
+                  <RotateCcw className="size-4" />
+                  Reset demo
+                </Button>
+              </>
+            )}
           </div>
         </Drawer>
         <Modal
-          isOpen={noteOpen}
-          onClose={() => setNoteOpen(false)}
-          ariaLabel="Local lesson note"
+          isOpen={state.authOpen}
+          onClose={() => dispatch({ type: "dismiss-auth" })}
+          ariaLabel="Demo sign in"
         >
           <ModalHeader
-            title="Local lesson note"
+            title="Continue as a demo learner"
+            description="Sign-in is simulated for this local preview. No credentials are collected."
+            onClose={() => dispatch({ type: "dismiss-auth" })}
+          />
+          <ModalBody>
+            <p className="text-sm leading-6 text-foreground-muted">
+              Your public lesson stays open. Continuing will return to the same
+              roadmap and carry out the action you selected.
+            </p>
+          </ModalBody>
+          <ModalFooter>
+            <Button
+              variant="outline"
+              onClick={() => dispatch({ type: "dismiss-auth" })}
+            >
+              Keep browsing
+            </Button>
+            <Button onClick={signIn}>Continue as demo learner</Button>
+          </ModalFooter>
+        </Modal>
+        <Modal
+          isOpen={noteOpen}
+          onClose={() => setNoteOpen(false)}
+          ariaLabel="Lesson source note"
+        >
+          <ModalHeader
+            title="Lesson source note"
             description={lesson.title}
             onClose={() => setNoteOpen(false)}
           />
           <ModalBody>
             <p className="text-sm leading-6 text-foreground-muted">
-              This reference preview is seeded with the local curriculum. Follow
-              each value through the code: inputs enter at a clear boundary, a
-              focused operation transforms them, and callers receive an explicit
-              result.
+              {lesson.note}
             </p>
-            <p className="mt-4 text-xs text-foreground-subtle">
-              Local sample content · no external source
-            </p>
+            <a
+              className="mt-4 inline-block text-xs underline underline-offset-4"
+              href={lesson.source.url}
+              target="_blank"
+              rel="noreferrer"
+            >
+              {lesson.source.title} · official external reference
+            </a>
           </ModalBody>
           <ModalFooter>
             <Button onClick={() => setNoteOpen(false)}>Done</Button>
@@ -979,4 +833,44 @@ export function LearningStudio() {
       </div>
     </div>
   );
+}
+
+function Brand({ compact = false }: { compact?: boolean }) {
+  return (
+    <div className="flex items-center gap-2">
+      <div className="flex size-8 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+        <GraduationCap className="size-4" />
+      </div>
+      <div>
+        <div className="text-sm font-semibold">GraphMind</div>
+        {!compact && (
+          <div className="text-xs text-foreground-muted">Learning studio</div>
+        )}
+      </div>
+    </div>
+  );
+}
+function Appearance({ dark, toggle }: { dark: boolean; toggle: () => void }) {
+  return (
+    <Button
+      variant="ghost"
+      className="w-full justify-start gap-2"
+      onClick={toggle}
+    >
+      {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
+      {dark ? "Light appearance" : "Dark appearance"}
+    </Button>
+  );
+}
+function viewTitle(view: View) {
+  return {
+    home: "Home",
+    "my-learning": "My learning",
+    catalog: "Browse roadmaps",
+    overview: "Roadmap",
+    lesson: "Lesson",
+    generator: "Create roadmap",
+    conversation: "Conversations",
+    library: "Library",
+  }[view];
 }

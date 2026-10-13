@@ -1,120 +1,210 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { LearningStudio } from "./studio";
 
-describe("learning studio rendered journey", () => {
-  it("keeps the current-topic composer and reply after expanding, then returns to the same reading position", async () => {
+describe("public-to-learner journeys", () => {
+  it("lets a guest browse and read a public lesson without opening the sign-in gate", async () => {
     const user = userEvent.setup();
     render(<LearningStudio />);
-
     await user.click(
-      screen.getByRole("button", { name: /continue learning/i }),
+      screen.getAllByRole("button", { name: "View roadmap" })[0],
     );
-    const main = document.querySelector("main")!;
-    main.scrollTop = 79;
-    fireEvent.scroll(main);
-
-    await user.click(screen.getByRole("button", { name: "Tutor" }));
-    await user.type(
-      screen.getByRole("textbox", { name: "Ask a question about this lesson" }),
-      "Why use a named function?",
-    );
-    await user.click(screen.getByRole("button", { name: "Send question" }));
-    expect(
-      await screen.findByText(/Sample tutor reply: In Python foundations/),
-    ).toBeTruthy();
-
+    await user.click(screen.getByRole("button", { name: "Read first lesson" }));
+    expect(screen.getByText(/Public lesson preview/)).toBeTruthy();
+    expect(screen.queryByRole("dialog", { name: "Demo sign in" })).toBeNull();
+  });
+  it("saves the selected public roadmap after demo sign-in", async () => {
+    const user = userEvent.setup();
+    render(<LearningStudio />);
     await user.click(
-      screen.getByRole("button", { name: "Open full conversation" }),
+      screen.getAllByRole("button", { name: "View roadmap" })[0],
     );
+    await user.click(
+      screen.getByRole("button", { name: "Save to My learning" }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Continue as demo learner" }),
+    );
+    expect(screen.getByRole("heading", { name: "My learning" })).toBeTruthy();
     expect(
       screen.getByRole("heading", {
         name: "Python foundations for backend work",
       }),
     ).toBeTruthy();
-    expect(screen.getByText("Why use a named function?")).toBeTruthy();
-    await user.type(
+  });
+});
+
+describe("gated tutor and generator journeys", () => {
+  it("keeps a selected public passage through simulated sign-in and opens the topic tutor", async () => {
+    const user = userEvent.setup();
+    render(<LearningStudio />);
+    await user.click(
+      screen.getAllByRole("button", { name: "View roadmap" })[0],
+    );
+    await user.click(screen.getByRole("button", { name: "Read first lesson" }));
+    const paragraph = screen.getByText(/A Python program is a sequence/);
+    const range = document.createRange();
+    range.selectNodeContents(paragraph);
+    window.getSelection()?.removeAllRanges();
+    window.getSelection()?.addRange(range);
+    await user.click(
+      screen.getByRole("button", { name: "Ask about selected text" }),
+    );
+    expect(
+      screen.getByRole("dialog", { name: "Continue as a demo learner" }),
+    ).toBeTruthy();
+    await user.click(
+      screen.getByRole("button", { name: "Continue as demo learner" }),
+    );
+    expect(await screen.findByText("Selected passage")).toBeTruthy();
+    expect(
+      screen.getAllByText(/A Python program is a sequence/).length,
+    ).toBeGreaterThan(0);
+    await user.click(
+      screen.getByRole("button", { name: "Open full conversation" }),
+    );
+    expect(
       screen.getByRole("textbox", {
         name: "Write a message in this lesson conversation",
       }),
-      "One more question",
+    ).toBeTruthy();
+    expect(screen.getByText("Selected passage")).toBeTruthy();
+    await user.click(
+      screen.getByRole("button", { name: "Remove quoted passage" }),
     );
-    await user.click(screen.getByRole("button", { name: "Send message" }));
-    expect(screen.getByText("One more question")).toBeTruthy();
-
-    await user.click(screen.getByRole("button", { name: "Return to lesson" }));
-    await waitFor(() => expect(main.scrollTop).toBe(79));
+    expect(screen.queryByText("Selected passage")).toBeNull();
   });
 
-  it("offers all four navigation areas and resets local progress from the mobile navigation drawer", async () => {
+  it("preserves generator edits across review and creates a distinct personal copy", async () => {
     const user = userEvent.setup();
     render(<LearningStudio />);
-    await user.click(screen.getByRole("button", { name: "Open navigation" }));
+    await user.click(screen.getByRole("button", { name: "Sign in" }));
+    await user.click(
+      screen.getByRole("button", { name: "Continue as demo learner" }),
+    );
+    await user.click(
+      screen.getAllByRole("button", { name: "Create roadmap" })[0],
+    );
+    expect(screen.getByRole("tablist", { name: "Current level" })).toBeTruthy();
     expect(
-      screen.getByRole("navigation", { name: "Mobile navigation" }),
+      screen.getByRole("button", {
+        name: /Python foundations for backend work/,
+      }),
     ).toBeTruthy();
+    await user.type(
+      screen.getByPlaceholderText("e.g. Build my first API"),
+      "Build a weather API",
+    );
+    await user.type(
+      screen.getByPlaceholderText("What do you want to learn and why?"),
+      "Learn how to build a small weather API",
+    );
+    await user.type(
+      screen.getByPlaceholderText("What should you be able to do?"),
+      "Deploy an API with a clear health endpoint",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Review roadmap details" }),
+    );
+    expect(screen.getByText(/Build a weather API/)).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Back and edit" }));
     expect(
-      screen.getByRole("button", { name: "Dark appearance" }),
+      (
+        screen.getByPlaceholderText(
+          "What should you be able to do?",
+        ) as HTMLInputElement
+      ).value,
+    ).toBe("Deploy an API with a clear health endpoint");
+    await user.click(
+      screen.getByRole("button", { name: "Review roadmap details" }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Start demo generation" }),
+    );
+    await user.click(
+      await screen.findByRole(
+        "button",
+        { name: "Review in My learning" },
+        { timeout: 3000 },
+      ),
+    );
+    expect(
+      screen.getByRole("heading", { name: "Build a weather API" }),
     ).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Reset demo" })).toBeTruthy();
   });
 });
 
-it("keeps drafts with each lesson conversation and clears them when the demo resets", async () => {
+it("filters My learning by completion state", async () => {
   const user = userEvent.setup();
   render(<LearningStudio />);
-  await user.click(screen.getByRole("button", { name: "Open navigation" }));
-  await user.click(screen.getByRole("button", { name: "Conversations" }));
-  const composer = () =>
-    screen.getByRole("textbox", {
-      name: "Write a message in this lesson conversation",
-    });
-  await user.type(composer(), "Draft for Python");
+  await user.click(screen.getByRole("button", { name: "Sign in" }));
   await user.click(
-    screen.getByRole("button", { name: "Shape data with types and models" }),
+    screen.getByRole("button", { name: "Continue as demo learner" }),
   );
-  expect((composer() as HTMLTextAreaElement).value).toBe("");
-  await user.type(composer(), "Draft for Pydantic");
   await user.click(
-    screen.getByRole("button", { name: "Python foundations for backend work" }),
+    screen.getAllByRole("button", { name: "Browse roadmaps" })[0],
   );
-  expect((composer() as HTMLTextAreaElement).value).toBe("Draft for Python");
-
-  await user.click(screen.getByRole("button", { name: "Open navigation" }));
-  await user.click(screen.getByRole("button", { name: "Reset demo" }));
-  await user.click(screen.getByRole("button", { name: /continue learning/i }));
-  await user.click(screen.getByRole("button", { name: "Open navigation" }));
-  await user.click(screen.getByRole("button", { name: "Conversations" }));
-  expect((composer() as HTMLTextAreaElement).value).toBe("");
+  await user.click(screen.getAllByRole("button", { name: "View roadmap" })[0]);
+  await user.click(screen.getByRole("button", { name: "Save to My learning" }));
+  expect(
+    screen.getByRole("heading", {
+      name: "Python foundations for backend work",
+    }),
+  ).toBeTruthy();
+  await user.click(screen.getByRole("tab", { name: "Completed" }));
+  expect(screen.getByText("No matching roadmaps")).toBeTruthy();
+  await user.click(screen.getByRole("tab", { name: "In progress" }));
+  expect(
+    screen.getByRole("heading", {
+      name: "Python foundations for backend work",
+    }),
+  ).toBeTruthy();
 });
 
-it("offers passage selection and carries a removable quote into the expanded conversation", async () => {
+it("lets a signed-in learner track a public lesson without a second sign-in dialog", async () => {
   const user = userEvent.setup();
   render(<LearningStudio />);
-  await user.click(screen.getByRole("button", { name: /continue learning/i }));
-  const paragraph = screen.getByText(/A Python program is a sequence/);
-  const range = document.createRange();
-  range.selectNodeContents(paragraph);
-  window.getSelection()?.removeAllRanges();
-  window.getSelection()?.addRange(range);
+  await user.click(screen.getByRole("button", { name: "Sign in" }));
   await user.click(
-    screen.getByRole("button", { name: "Ask about selected text" }),
+    screen.getByRole("button", { name: "Continue as demo learner" }),
   );
+  await user.click(
+    screen.getAllByRole("button", { name: "Browse roadmaps" })[0],
+  );
+  await user.click(screen.getAllByRole("button", { name: "View roadmap" })[0]);
+  await user.click(screen.getByRole("button", { name: "Read first lesson" }));
+  await user.click(screen.getByRole("button", { name: "Track progress" }));
   expect(
-    (await screen.findAllByText(/A Python program is a sequence/)).length,
-  ).toBe(2);
+    screen.queryByRole("dialog", { name: "Continue as a demo learner" }),
+  ).toBeNull();
+});
+
+it("resumes the roadmap shown on Home when a learner has multiple enrollments", async () => {
+  const user = userEvent.setup();
+  render(<LearningStudio />);
+  await user.click(screen.getByRole("button", { name: "Sign in" }));
   await user.click(
-    screen.getByRole("button", { name: "Open full conversation" }),
+    screen.getByRole("button", { name: "Continue as demo learner" }),
   );
-  expect(screen.getAllByText(/A Python program is a sequence/).length).toBe(1);
   await user.click(
-    screen.getByRole("button", { name: "Remove quoted passage" }),
+    screen.getAllByRole("button", { name: "Browse roadmaps" })[0],
   );
-  expect(screen.queryByText(/A Python program is a sequence/)).toBeNull();
-  await user.click(screen.getByRole("button", { name: "Open navigation" }));
-  await user.click(screen.getByRole("button", { name: "Reset demo" }));
-  await user.click(screen.getByRole("button", { name: /continue learning/i }));
-  await user.click(screen.getByRole("button", { name: "Tutor" }));
-  expect(screen.queryByText("Selected passage")).toBeNull();
+  await user.click(screen.getAllByRole("button", { name: "View roadmap" })[0]);
+  await user.click(screen.getByRole("button", { name: "Save to My learning" }));
+  await user.click(
+    screen.getAllByRole("button", { name: "Browse roadmaps" })[0],
+  );
+  await user.click(screen.getAllByRole("button", { name: "View roadmap" })[1]);
+  await user.click(screen.getByRole("button", { name: "Save to My learning" }));
+  await user.click(screen.getAllByRole("button", { name: "Home" })[0]);
+  expect(
+    screen.getByRole("heading", { name: "Accessible web foundations" }),
+  ).toBeTruthy();
+  await user.click(screen.getByRole("button", { name: "Continue learning" }));
+  expect(
+    screen.getByRole("heading", {
+      name: "Give content a meaningful structure",
+    }),
+  ).toBeTruthy();
 });

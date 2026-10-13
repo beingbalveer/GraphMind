@@ -1,6 +1,6 @@
 # Learning studio local preview
 
-This is a standalone React + Vite prototype. It starts without Next.js, authentication, middleware, or API calls.
+Standalone React + Vite prototype for a public roadmap catalog and learner flow. It runs without Next.js, authentication middleware, or backend APIs. All auth and generation actions are explicitly simulated in local memory.
 
 From the repository root:
 
@@ -8,6 +8,10 @@ From the repository root:
 pnpm dev:prototype
 ```
 
-Open `http://127.0.0.1:3400`. The preview uses the UI primitives and semantic theme from `apps/web/src` through the Vite `@/` alias. Build with `pnpm --filter @graphmind/web prototype:build`; typecheck with `pnpm --filter @graphmind/web prototype:typecheck`; run focused journey/state checks with `pnpm --filter @graphmind/web prototype:test`.
+Open `http://127.0.0.1:3400`. You can browse three seeded sample roadmaps and read lessons as a guest. Saving, tracking progress, asking the tutor, and creating a roadmap open a simulated sign-in dialog. Continuing enters a local demo learner; no credentials are requested. Progress, conversations, drafts, and reading positions are in-memory and reset on refresh or Reset demo.
 
-The Python curriculum and tutor replies are fixed local sample content. Renaming the path changes only its local label. Lesson completion is a learner choice and does not imply measured mastery. Conversations are held in memory per lesson and clear when the demo is reset or the page reloads. Source links identify official external documentation; other notes are marked as local sample content. No service or backend API is contacted.
+The generator collects a learning goal, level, background, outcome, pace, duration, and optional reference URL. It requires an explicit fixed sample curriculum, then creates a separate local enrollment copy carrying the submitted profile. It does not generate arbitrary curriculum content or perform research. Tutor replies are scripted examples. External references link to the relevant official documentation and local notes are labeled as sample content.
+
+Build with `pnpm --filter @graphmind/web prototype:build`; typecheck with `pnpm --filter @graphmind/web prototype:typecheck`; run focused state and render journeys with `pnpm --filter @graphmind/web prototype:test`.
+
+See [BACKEND_HANDOFF.md](./BACKEND_HANDOFF.md) for state ownership, access boundaries, existing API mappings, and proposed production endpoints/contracts. The prototype does not modify production routes, auth, middleware, theme, or API behavior.

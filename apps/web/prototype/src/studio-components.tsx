@@ -1,103 +1,11 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { BookOpen, Check, ChevronRight, Expand, Send, X } from "lucide-react";
-import { curriculum } from "./curriculum";
+import { Expand, Send, X } from "lucide-react";
+import type { Lesson } from "./catalog";
 import type { Message } from "./state";
 
-const referencesByLesson = [
-  {
-    title: "Python functions",
-    description: "Official Python reference for defining reusable functions.",
-    url: "https://docs.python.org/3/tutorial/controlflow.html#defining-functions",
-  },
-  {
-    title: "Pydantic models",
-    description: "Official guide to model validation and typed data.",
-    url: "https://docs.pydantic.dev/latest/concepts/models/",
-  },
-  {
-    title: "FastAPI path operations",
-    description: "Official FastAPI guide to declaring path operations.",
-    url: "https://fastapi.tiangolo.com/tutorial/first-steps/",
-  },
-  {
-    title: "pytest getting started",
-    description: "Official pytest guide to writing and running tests.",
-    url: "https://docs.pytest.org/en/stable/getting-started.html",
-  },
-];
-
-export function LessonRow({
-  title,
-  index,
-  done,
-  onClick,
-}: {
-  title: string;
-  index: number;
-  done: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <Button
-      variant="ghost"
-      onClick={onClick}
-      className="h-auto w-full justify-start rounded-2xl border border-border-subtle bg-surface p-4 text-left hover:border-border"
-    >
-      <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-background-secondary text-xs font-medium text-foreground-muted">
-        {done ? (
-          <Check className="size-4 text-success" />
-        ) : (
-          String(index + 1).padStart(2, "0")
-        )}
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="block text-xs text-foreground-muted">
-          {curriculum[index].section} · {curriculum[index].duration}
-        </span>
-        <span className="mt-1 block whitespace-normal text-sm font-medium leading-5">
-          {title}
-        </span>
-      </span>
-      <ChevronRight className="size-4 shrink-0 text-foreground-subtle" />
-    </Button>
-  );
-}
-export function PlanCreator({
-  value,
-  setValue,
-  onCreate,
-}: {
-  value: string;
-  setValue: (s: string) => void;
-  onCreate: () => void;
-}) {
-  return (
-    <section className="mt-10 rounded-2xl border border-border-subtle bg-background-secondary p-5">
-      <div className="text-xs text-foreground-muted">START WITH A FOCUS</div>
-      <h2 className="mt-1 text-base font-semibold">Name a skill to work on</h2>
-      <p className="mt-1 text-sm text-foreground-muted">
-        This local demo uses its fixed Python curriculum. Your text only changes
-        the path label.
-      </p>
-      <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-        <Input
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          aria-label="Learning path title"
-          placeholder="e.g. Python for backend developers"
-        />
-        <Button onClick={onCreate} disabled={!value.trim()}>
-          Create sample plan
-          <ChevronRight className="size-4" />
-        </Button>
-      </div>
-    </section>
-  );
-}
 export function TutorPanel({
   tab,
   setTab,
@@ -108,6 +16,8 @@ export function TutorPanel({
   setPrompt,
   send,
   topic,
+  source,
+  localNote,
   openNote,
   expandConversation,
   showPanelHeader = true,
@@ -124,6 +34,8 @@ export function TutorPanel({
   setPrompt: (s: string) => void;
   send: () => void;
   topic: string;
+  source: Lesson["source"];
+  localNote: string;
 }) {
   return (
     <section className="tutor-panel flex h-full min-h-0 w-full flex-col bg-background">
@@ -254,31 +166,15 @@ export function TutorPanel({
             {[
               {
                 title: "Lesson note",
-                desc: "A concise explanation included in this local curriculum fixture.",
+                desc: localNote,
                 href: "local-note",
                 label: "Local sample content",
               },
               {
-                title:
-                  referencesByLesson[
-                    Math.max(
-                      0,
-                      curriculum.findIndex((item) => item.title === topic),
-                    )
-                  ].title,
-                desc: referencesByLesson[
-                  Math.max(
-                    0,
-                    curriculum.findIndex((item) => item.title === topic),
-                  )
-                ].description,
-                href: referencesByLesson[
-                  Math.max(
-                    0,
-                    curriculum.findIndex((item) => item.title === topic),
-                  )
-                ].url,
-                label: "Official documentation",
+                title: source.title,
+                desc: source.description,
+                href: source.url,
+                label: "Official external documentation",
               },
             ].map((x) => (
               <article
