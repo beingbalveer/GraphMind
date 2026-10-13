@@ -1,0 +1,36 @@
+@source "../**/*.{js,ts,jsx,tsx}";
+
+@media (max-width: 1279px) {
+  .desktop-tutor {
+    display: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .studio-nav { display: none; }
+  .studio-main { margin-left: 0; }
+  .mobile-nav-trigger { display: inline-flex; }
+  .studio-main header { padding-inline: 0.75rem; }
+  .studio-title-prefix { display: none; }
+  .studio-title-current { max-width: 10rem; }
+  .demo-label-desktop { display: none; }
+  .lesson-reading { padding-inline: 1rem; }
+  .studio-main > .studio-content > main { overflow-x: hidden; }
+  .studio-main > .studio-content > main > div { padding-inline: 1rem; }
+  .studio-main > .studio-content > main .lesson-layout { width: 100%; }
+  .studio-main > .studio-content > main .lesson-reading { padding-inline: 1rem; }
+  .studio-main > .studio-content > main .lesson-reading > div { max-width: 100%; }
+}
+
+@media (max-width: 420px) {
+  .studio-main header { gap: 0.5rem; }
+  .studio-main header > div:first-child { min-width: 0; flex: 1; }
+  .studio-main header > div:last-child { flex-shrink: 0; }
+  .studio-title-current { max-width: 8rem; }
+  .lesson-reading .mt-10.flex { align-items: stretch; }
+  .lesson-reading .mt-10.flex > div { justify-content: flex-end; }
+}
+
+@media (min-width: 721px) {
+  .demo-label-mobile { display: none; }
+}

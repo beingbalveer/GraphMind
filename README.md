@@ -335,3 +335,7 @@ agent has been removed. New clients use `/api/v1/roadmap/jobs`.
 Restart the API and worker together after changes to checkpoint contracts. See the
 [roadmap quality report](docs/quality/roadmap-generator-2026-10-07.md) for observed
 research evaluations, browser evidence and outstanding verification limits.
+
+## Local learning studio preview
+
+Run the standalone, API-free learning studio prototype with `pnpm dev:prototype` and open `http://127.0.0.1:3400`. See the [prototype guide](apps/web/prototype/README.md) for sample behavior and commands, and the [verification report](docs/quality/learning-studio-prototype-2026-10-14.md) for browser and build results.
