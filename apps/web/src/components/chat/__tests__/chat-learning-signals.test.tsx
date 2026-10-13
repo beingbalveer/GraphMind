@@ -109,8 +109,8 @@ describe("chat learning signals", () => {
   });
 
   it("respects reduced motion for migrated signal animations", () => {
-    const { container } = render(<SelectionTooltip {...selectionProps} />);
-    expect(container.ownerDocument.body.lastElementChild).toHaveClass("motion-reduce:animate-none");
+    render(<SelectionTooltip {...selectionProps} />);
+    expect(screen.getByRole("menu").firstElementChild).toHaveClass("motion-reduce:animate-none");
 
     const { unmount } = render(<AgentToolCallsBanner toolCalls={[{ ...toolCall, status: "running" }]} />);
     expect(screen.getByRole("button", { name: /activity/i }).querySelector("svg")).toHaveClass("motion-reduce:animate-none");
@@ -127,7 +127,7 @@ describe("chat learning signals", () => {
     const user = userEvent.setup();
     render(<SelectionTooltip {...selectionProps} />);
 
-    await user.click(screen.getByRole("button", { name: "Explore branch" }));
+    await user.click(screen.getByRole("menuitem", { name: "Explore branch" }));
     expect(selectionProps.onExplore).toHaveBeenCalledOnce();
   });
 });

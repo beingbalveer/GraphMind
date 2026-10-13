@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
-import { MenuCard, MenuItem } from "@/components/ui/menu";
+import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { Surface } from "@/components/ui/surface";
 import { Textarea } from "@/components/ui/textarea";
 import { BranchContext } from "@/hooks/useChatStream";
@@ -381,33 +381,38 @@ export function ChatInput({
         >
         {/* Floating Slash Command Autocomplete Menu */}
         {isSlashMode && matchingSlashCommands.length > 0 && (
-          <div className="absolute bottom-full left-0 mb-2 z-50 animate-in fade-in-50 zoom-in-95 duration-150 motion-reduce:animate-none">
-            <MenuCard className="min-w-[240px]">
-              {matchingSlashCommands.map((cmd, idx) => {
-                const Icon = cmd.icon;
-                const isHighlighted = idx === slashIndex;
-                return (
-                  <MenuItem
-                    key={cmd.command}
-                    icon={<Icon className="w-4 h-4 stroke-[1.75]" />}
-                    active={isHighlighted}
-                    onClick={() => {
-                      setSelectedSkill(cmd.id);
-                      setPrompt("");
-                      textareaRef.current?.focus();
-                    }}
-                  >
-                    <div className="flex items-center space-x-2">
-                      <span className="font-mono text-xs font-normal text-foreground-muted">
-                        {cmd.command}
-                      </span>
-                      <span className="font-medium text-foreground">{cmd.label}</span>
-                    </div>
-                  </MenuItem>
-                );
-              })}
-            </MenuCard>
-          </div>
+          <DropdownMenu
+            open
+            onOpenChange={(open) => {
+              if (!open) {
+                setPrompt("");
+                textareaRef.current?.focus();
+              }
+            }}
+            side="top"
+            align="left"
+            sideOffset={0}
+            className="min-w-[240px]"
+            trigger={<span className="absolute bottom-full left-0 mb-2 inline-block size-0" aria-hidden="true" />}
+            items={matchingSlashCommands.map((cmd, idx) => {
+              const Icon = cmd.icon;
+              return {
+                label: (
+                  <span className="flex items-center space-x-2">
+                    <span className="font-mono text-xs font-normal text-foreground-muted">{cmd.command}</span>
+                    <span className="font-medium text-foreground">{cmd.label}</span>
+                  </span>
+                ),
+                icon: <Icon className="w-4 h-4 stroke-[1.75]" />,
+                active: idx === slashIndex,
+                onClick: () => {
+                  setSelectedSkill(cmd.id);
+                  setPrompt("");
+                  textareaRef.current?.focus();
+                },
+              };
+            })}
+          />
         )}
 
         {/* Active Branch Context Pill */}
@@ -558,49 +563,36 @@ export function ChatInput({
                 }}
               />
 
-              <IconButton
-                label="Add attachment or select mode"
-                onClick={() => setIsAttachMenuOpen((prev) => !prev)}
-                disabled={isStreaming || isUploading}
-                variant={isAttachMenuOpen ? "secondary" : "ghost"}
-                className={`size-8 rounded-full border border-border-subtle ${
-                  isAttachMenuOpen
-                    ? "text-foreground"
-                    : "text-foreground-muted"
-                }`}
-              >
-                <Plus className={`h-4 w-4 stroke-[1.75] transition-transform duration-200 motion-reduce:transition-none ${isAttachMenuOpen ? "rotate-45 text-foreground" : ""}`} />
-              </IconButton>
-
-              {/* Unified Action Dropdown Menu */}
-              {isAttachMenuOpen && (
-                <div className="absolute bottom-full left-0 mb-2 z-50 animate-in fade-in-50 zoom-in-95 duration-150 motion-reduce:animate-none">
-                  <MenuCard className="min-w-[210px]">
-                    <MenuItem
-                      icon={<Upload className="w-4 h-4 stroke-[1.75]" />}
-                      onClick={() => {
-                        setIsAttachMenuOpen(false);
-                        fileInputRef.current?.click();
-                      }}
-                    >
-                      Upload from computer
-                    </MenuItem>
-
-                    {workspaceId && (
-                      <MenuItem
-                        icon={<FolderOpen className="w-4 h-4 stroke-[1.75]" />}
-                        onClick={() => {
-                          setIsAttachMenuOpen(false);
-                          setIsLibraryPickerOpen(true);
-                        }}
-                      >
-                        Attach from Library
-                      </MenuItem>
-                    )}
-
-                  </MenuCard>
-                </div>
-              )}
+              <DropdownMenu
+                open={isAttachMenuOpen}
+                onOpenChange={setIsAttachMenuOpen}
+                side="top"
+                align="left"
+                sideOffset={8}
+                className="min-w-[210px]"
+                trigger={
+                  <IconButton
+                    label="Add attachment or select mode"
+                    disabled={isStreaming || isUploading}
+                    variant={isAttachMenuOpen ? "secondary" : "ghost"}
+                    className={`size-8 rounded-full border border-border-subtle ${isAttachMenuOpen ? "text-foreground" : "text-foreground-muted"}`}
+                  >
+                    <Plus className={`h-4 w-4 stroke-[1.75] transition-transform duration-200 motion-reduce:transition-none ${isAttachMenuOpen ? "rotate-45 text-foreground" : ""}`} />
+                  </IconButton>
+                }
+                items={[
+                  {
+                    label: "Upload from computer",
+                    icon: <Upload className="w-4 h-4 stroke-[1.75]" />,
+                    onClick: () => fileInputRef.current?.click(),
+                  },
+                  ...(workspaceId ? [{
+                    label: "Attach from Library",
+                    icon: <FolderOpen className="w-4 h-4 stroke-[1.75]" />,
+                    onClick: () => setIsLibraryPickerOpen(true),
+                  }] : []),
+                ]}
+              />
             </div>
 
             {/* Active Mode Compact Chip */}

@@ -147,7 +147,7 @@ describe("ChatSidebar & UserMenu Contract (Scope 3, Task 2)", () => {
     const userMenuBtn = screen.getByRole("button", { name: /user profile menu/i });
     await user.click(userMenuBtn);
 
-    const settingsBtn = screen.getByRole("button", { name: /settings/i });
+    const settingsBtn = screen.getByRole("menuitem", { name: /settings/i });
     await user.click(settingsBtn);
     expect(handleOpenSettings).toHaveBeenCalledTimes(1);
   });

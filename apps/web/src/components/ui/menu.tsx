@@ -8,7 +8,7 @@ export function MenuCard({ className, children, ...props }: MenuCardProps) {
   return (
     <div
       className={cn(
-        "flex flex-col gap-0.5 rounded-xl border border-border-subtle bg-surface-raised p-1 text-foreground shadow-lg",
+        "flex flex-col gap-0.5 rounded-xl border border-border-subtle bg-background p-1 text-foreground shadow-lg",
         className
       )}
       {...props}
