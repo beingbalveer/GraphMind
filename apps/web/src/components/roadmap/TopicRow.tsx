@@ -25,7 +25,7 @@ export function TopicRow({
       >
         {progress?.status === "completed" && <Check className="size-3" />}
       </span>
-      <span className="min-w-0 flex-1 text-sm font-normal text-foreground">
+      <span className="reading-text min-w-0 flex-1 font-normal text-foreground">
         {topic.title}
       </span>
       <span className="shrink-0 text-xs font-normal text-foreground-subtle">

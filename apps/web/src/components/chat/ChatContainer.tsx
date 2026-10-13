@@ -32,8 +32,7 @@ import { RightSidebar } from "./RightSidebar";
 import { useTopicSession } from "@/hooks/useTopicSession";
 import { TopicBriefDrawer } from "@/components/roadmap/TopicBriefDrawer";
 import { BranchPromotionModal } from "@/components/roadmap/BranchPromotionModal";
-import { TutorLearningBar } from "@/components/roadmap/TutorLearningBar";
-import { openTopicSession, recordTopicCheck } from "@/lib/roadmapApi";
+import { openTopicSession } from "@/lib/roadmapApi";
 import { useRoadmap } from "@/hooks/useRoadmap";
 import { RoadmapWorkspace } from "@/components/roadmap/RoadmapWorkspace";
 import { RoadmapHeader } from "@/components/roadmap/RoadmapHeader";
@@ -293,7 +292,6 @@ export function ChatContainer({
   activeChatIdRef.current = activeChatId;
   const contextSaveInFlight = useRef(false);
   const [learningError, setLearningError] = useState<string | null>(null);
-  const [assessing, setAssessing] = useState(false);
   const openingRef = useRef(false);
   const startKeys = useRef(new Map<string, string>());
   const routeRef = useRef(pathname);
@@ -1905,27 +1903,6 @@ export function ChatContainer({
     currentWorkspace,
     loadTree,
   ]);
-  const assessAnswer = async () => {
-    if (!currentWorkspace || !topicSession.session || assessing) return;
-    setAssessing(true);
-    setLearningError(null);
-    try {
-      await recordTopicCheck(
-        currentWorkspace.id,
-        topicSession.session.topicId,
-        topicSession.session.id,
-      );
-      await refreshTopicSession();
-    } catch (error) {
-      setLearningError(
-        error instanceof Error
-          ? error.message
-          : "Could not assess the saved answer.",
-      );
-    } finally {
-      setAssessing(false);
-    }
-  };
   const retryCurrentLesson = () => {
     if (
       activeTopicSessionId &&
@@ -2422,23 +2399,6 @@ export function ChatContainer({
         ) : (
           /* Linear Mainline Stream Chat View */
           <div className="w-full h-full flex flex-col min-w-0 relative">
-            {topicSession.session && currentWorkspace && (
-              <TutorLearningBar
-                workspaceId={currentWorkspace.id}
-                session={topicSession.session}
-                onResume={() => void startInitialLesson()}
-                onAsk={() =>
-                  tree && void handleLearningAction(tree.activeNodeId, "quiz")
-                }
-                onAssess={() => void assessAnswer()}
-                onProgress={(progress) => {
-                  topicSession.updateProgress(progress);
-                  roadmap.updateProgress(progress);
-                }}
-                busy={isStreaming || assessing}
-                error={learningError ?? topicSession.error}
-              />
-            )}
             <main
               ref={scrollRef}
               className="flex-1 overflow-y-auto min-h-0 flex flex-col bg-background"

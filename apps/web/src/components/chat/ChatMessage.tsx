@@ -204,7 +204,7 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
           return <CodeBlock {...codeProps} workspaceId={workspaceId} />;
         },
         p({ children }) {
-          return <p className="mb-4 last:mb-0 leading-[1.8]">{children}</p>;
+          return <p className="mb-4 last:mb-0">{children}</p>;
         },
         h1({ children }) {
           return (
@@ -917,9 +917,9 @@ export function ChatMessage({
           {/* Markdown Rendered Body */}
           <div
             ref={contentRef}
-            className={`text-base select-text ${
+            className={`reading-text select-text ${
               message.isError ? "text-destructive" : "text-foreground"
-            } leading-[1.8] break-words`}
+            } break-words`}
           >
             {message.content ? (
               <MarkdownRenderer

@@ -347,6 +347,11 @@ it("does not show generic mastery recommendations in a roadmap topic lesson", ()
     } as never,
   });
   render(<ChatContainer initialWorkspaceId="ws_test" initialChatId="tutor" />);
+  expect(screen.getByTestId("main-header")).toBeVisible();
+  expect(screen.getByText("Teach me")).toBeVisible();
+  expect(screen.queryByRole("button", { name: "Back to roadmap" })).not.toBeInTheDocument();
+  expect(screen.queryByText("Learning details")).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Mark completed" })).not.toBeInTheDocument();
   expect(
     screen.queryByRole("button", { name: "Open right panel" }),
   ).not.toBeInTheDocument();

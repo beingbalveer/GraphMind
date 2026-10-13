@@ -37,7 +37,7 @@ export function SourcesList({
               )}
             </p>
             {rationales[source.id] && (
-              <p className="leading-5 text-foreground-muted">
+              <p className="reading-text text-foreground-muted">
                 {rationales[source.id]}
               </p>
             )}
