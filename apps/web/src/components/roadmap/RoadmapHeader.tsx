@@ -1,7 +1,7 @@
 "use client";
 import { BookOpen, Network } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { SegmentedTabs } from "@/components/ui/segmented-tabs";
+import { Button } from "@/components/ui/button";
 import { buildWorkspaceUrl, buildCanvasUrl } from "@/lib/urls";
 import type { CurriculumView } from "@/lib/roadmapTypes";
 export function RoadmapHeader({
@@ -17,22 +17,26 @@ export function RoadmapHeader({
       <div className="flex min-w-0 items-center gap-2">
         <span className="truncate text-sm font-medium">Roadmap</span>
       </div>
-      <SegmentedTabs
-        ariaLabel="Roadmap view"
-        value={mode}
-        className="bg-roadmap-switch"
-        items={[
-          { id: "page", label: "Roadmap", icon: BookOpen },
-          { id: "canvas", label: "Canvas", icon: Network },
-        ]}
-        onChange={(next) =>
+      <Button
+        variant="ghost"
+        size="icon"
+        aria-label={mode === "page" ? "Switch to canvas" : "Switch to roadmap"}
+        title={mode === "page" ? "Switch to canvas" : "Switch to roadmap"}
+        className={mode === "canvas" ? "bg-surface-hover" : undefined}
+        onClick={() =>
           router.push(
-            next === "page"
-              ? buildWorkspaceUrl(view.workspaceId)
-              : buildCanvasUrl(view.workspaceId, view.canvasAnchorChatId),
+            mode === "page"
+              ? buildCanvasUrl(view.workspaceId, view.canvasAnchorChatId)
+              : buildWorkspaceUrl(view.workspaceId),
           )
         }
-      />
+      >
+        {mode === "page" ? (
+          <Network aria-hidden="true" className="size-4" />
+        ) : (
+          <BookOpen aria-hidden="true" className="size-4" />
+        )}
+      </Button>
     </header>
   );
 }
