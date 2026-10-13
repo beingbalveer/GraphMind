@@ -2,8 +2,8 @@
 
 import React from "react";
 import {
-  MessageSquare,
-  LayoutGrid,
+  BookOpen,
+  Network,
   PanelRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -93,9 +93,9 @@ export function MainHeader({
             }
           >
             {viewMode === "canvas" ? (
-              <MessageSquare aria-hidden="true" className="size-4" />
+              <BookOpen aria-hidden="true" className="size-4" />
             ) : (
-              <LayoutGrid aria-hidden="true" className="size-4" />
+              <Network aria-hidden="true" className="size-4" />
             )}
           </Button>
         )}

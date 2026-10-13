@@ -71,6 +71,10 @@ describe("MainHeader Component & Contract (Scope 3, Task 3)", () => {
     const switchToCanvas = screen.getByRole("button", { name: "Switch to canvas" });
     expect(switchToCanvas).toHaveAttribute("title", "Switch to canvas");
     expect(switchToCanvas).not.toHaveClass("bg-surface-hover");
+    expect(Array.from(switchToCanvas.querySelectorAll("svg path"), (path) => path.getAttribute("d"))).toEqual([
+      "M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3",
+      "M12 12V8",
+    ]);
     await user.click(switchToCanvas);
     expect(handleViewModeChange).toHaveBeenCalledWith("canvas");
 
@@ -84,6 +88,10 @@ describe("MainHeader Component & Contract (Scope 3, Task 3)", () => {
     const switchToChat = screen.getByRole("button", { name: "Switch to chat" });
     expect(switchToChat).toHaveAttribute("title", "Switch to chat");
     expect(switchToChat).toHaveClass("bg-surface-hover");
+    expect(Array.from(switchToChat.querySelectorAll("svg path"), (path) => path.getAttribute("d"))).toEqual([
+      "M12 7v14",
+      "M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z",
+    ]);
     await user.click(switchToChat);
     expect(handleViewModeChange).toHaveBeenCalledWith("chat");
   });
