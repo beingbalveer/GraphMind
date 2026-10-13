@@ -76,7 +76,7 @@ export function RoadmapWorkspace({
     const content = (
       <>
         {choice && (
-          <p className="reading-text px-2 text-foreground-muted">
+          <p className="reading-text px-2 text-reading-foreground">
             {choice.rationale}
           </p>
         )}
@@ -152,7 +152,7 @@ export function RoadmapWorkspace({
               open={expanded.has(`${choice.choiceId}-weekly-options`)}
               onToggle={() => toggle(`${choice.choiceId}-weekly-options`)}
             >
-              <p className="reading-text mb-2 text-foreground-muted">
+              <p className="reading-text mb-2 text-reading-foreground">
                 {choice.rationale}
               </p>
               {curriculumChildren(view, choice.choiceId)
@@ -249,7 +249,7 @@ export function RoadmapWorkspace({
           <h1 className="font-roadmap-display text-2xl font-normal leading-tight text-foreground sm:text-roadmap-title">
             {view.candidate.title}
           </h1>
-          <p className="reading-text max-w-2xl text-foreground-muted">
+          <p className="reading-text max-w-2xl text-reading-foreground">
             {view.candidate.outcome}
           </p>
           <p className="text-xs text-foreground-muted">

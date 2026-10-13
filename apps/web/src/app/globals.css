@@ -24,6 +24,7 @@
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
   --color-foreground: var(--foreground);
+  --color-reading-foreground: var(--reading-foreground);
   --color-foreground-muted: var(--foreground-muted);
   --color-foreground-subtle: var(--foreground-subtle);
   --color-primary: var(--primary);
@@ -87,8 +88,11 @@
 }
 
 @utility reading-text {
-  font-size: 0.875rem;
-  line-height: 1.8;
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 26px;
 }
 
 .canvas-compact .canvas-card-summary,
@@ -110,6 +114,7 @@
 
     /* Text & Foreground */
     --foreground: #1a1a1a;
+    --reading-foreground: #0d0d0d;
     --foreground-muted: #4d4d4d;
     --foreground-subtle: #737373;
 
@@ -215,6 +220,7 @@
 
     /* Text & Foreground */
     --foreground: #f4f4f5;
+    --reading-foreground: #f4f4f5;
     --foreground-muted: #a1a1aa;
     --foreground-subtle: #71717a;
 

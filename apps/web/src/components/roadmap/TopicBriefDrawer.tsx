@@ -198,7 +198,7 @@ export function TopicBriefDrawer({
                     ? `${brief.item.estimateMinutes} min`
                     : "Self paced"}
                 </p>
-                <p className="reading-text text-foreground-muted">
+                <p className="reading-text text-reading-foreground">
                   {brief.item.brief}
                 </p>
               </div>
@@ -207,7 +207,7 @@ export function TopicBriefDrawer({
                   <h3 className="text-sm font-medium">Added from exploration</h3>
                   <p className="text-xs text-foreground-muted">{origin.sourceTitle}</p>
                   {origin.sourceExcerpt && (
-                    <p className="line-clamp-4 whitespace-pre-wrap reading-text text-foreground-muted">
+                    <p className="line-clamp-4 whitespace-pre-wrap reading-text text-reading-foreground">
                       {origin.sourceExcerpt}
                     </p>
                   )}
@@ -230,7 +230,7 @@ export function TopicBriefDrawer({
               )}
               <section className="space-y-2">
                 <h3 className="text-sm font-medium">What you’ll learn</h3>
-                <ul className="reading-text list-disc space-y-2 pl-5 text-foreground-muted">
+                <ul className="reading-text list-disc space-y-2 pl-5 text-reading-foreground">
                   {brief.item.objectives.map((objective, index) => (
                     <li key={index}>{objective}</li>
                   ))}
@@ -283,7 +283,7 @@ export function TopicBriefDrawer({
               {brief.item.exercise && (
                 <section className="space-y-2">
                   <h3 className="text-sm font-medium">Try it</h3>
-                  <p className="reading-text rounded-xl bg-background p-4 text-foreground-muted">
+                  <p className="reading-text rounded-xl bg-background p-4 text-reading-foreground">
                     {brief.item.exercise}
                   </p>
                 </section>
@@ -322,7 +322,7 @@ export function TopicBriefDrawer({
               >
                 <div className="space-y-2">
                   {brief.prerequisites.map((item) => (
-                    <p key={item.id} className="reading-text text-foreground-muted">
+                    <p key={item.id} className="reading-text text-reading-foreground">
                       {item.title} ·{" "}
                       {view.progress[item.id]?.status === "completed"
                         ? "Completed"

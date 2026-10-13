@@ -918,7 +918,7 @@ export function ChatMessage({
           <div
             ref={contentRef}
             className={`reading-text select-text ${
-              message.isError ? "text-destructive" : "text-foreground"
+              message.isError ? "text-destructive" : "text-reading-foreground"
             } break-words`}
           >
             {message.content ? (

@@ -30,7 +30,7 @@ export function MilestoneCard({
         onToggle={onToggle}
       >
         <div className="space-y-3 px-1">
-          <p className="reading-text text-foreground-muted">{phase.brief}</p>
+          <p className="reading-text text-reading-foreground">{phase.brief}</p>
           {children}
         </div>
       </CurriculumGroup>
