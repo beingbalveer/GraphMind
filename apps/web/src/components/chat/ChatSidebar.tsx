@@ -286,7 +286,7 @@ export function ChatSidebar({
             title={isOpen ? "Collapse sidebar (⌘B)" : "Expand sidebar (⌘B)"}
             aria-label={isOpen ? "Collapse sidebar" : "Expand sidebar"}
           >
-            <SidebarToggleIcon className="w-4 h-4" />
+            <SidebarToggleIcon className="size-5" />
           </Button>
         </div>
 

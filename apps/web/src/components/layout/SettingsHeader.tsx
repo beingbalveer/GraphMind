@@ -38,7 +38,7 @@ export function SettingsHeader({
             onClick={onToggleSidebar}
             className="md:hidden shrink-0"
           >
-            <SidebarToggleIcon className="size-4" />
+            <SidebarToggleIcon className="size-5" />
           </IconButton>
         )}
 

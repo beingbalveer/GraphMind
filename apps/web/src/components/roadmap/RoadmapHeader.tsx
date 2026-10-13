@@ -25,7 +25,7 @@ export function RoadmapHeader({
           aria-label="Toggle sidebar"
           onClick={onToggleSidebar}
         >
-          <SidebarToggleIcon className="size-4" />
+          <SidebarToggleIcon className="size-5" />
         </Button>
         <span className="truncate text-sm font-medium">Roadmap</span>
       </div>
