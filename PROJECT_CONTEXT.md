@@ -76,6 +76,15 @@ The software should adapt to how humans think.
 
 Humans think through branching ideas, not linear conversations.
 
+Teaching should begin with the simplest useful and accurate model, then add one
+conceptual layer at a time. Where it helps, keep one example or visual and evolve
+it as each layer is introduced. Explain why each layer is needed, how it works,
+and how it connects to what came before; identify simplifications and their limits.
+Adapt the starting point and pace to the learner's knowledge, use lightweight
+prediction, explanation, or application checks when useful, and revisit a
+prerequisite when needed. This is a teaching principle, not a required quiz on
+every turn or a fixed historical sequence.
+
 # 7. WOW Feature (Frozen)
 
 Knowledge Evolution.

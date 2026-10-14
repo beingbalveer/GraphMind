@@ -48,6 +48,7 @@ Every single task must follow this strict **3-step workflow**:
 2. **Progressive Evolution**: The app starts as a rock-solid, minimalist streamed AI chat (Phase 1), grows into a hierarchical tree (Phase 2), then a 2D spatial canvas (Phase 3), with persistence (Phase 4), semantic discovery (Phase 5), and multi-agent knowledge evolution (Phase 6).
 3. **Build Interfaces, Not Implementations**: Decouple business logic from external LLM providers and frameworks (`packages/ai-core`).
 4. **Observable & Production-Grade**: Every service must have structured logging, strict types, comprehensive error handling, and unit test suites.
+5. **Teach Progressively**: Future learning features and teaching prompts must follow the canonical teaching philosophy in [`PROJECT_CONTEXT.md` §6](./PROJECT_CONTEXT.md#6-project-philosophy): start with a simple useful model and build understanding in explained layers, adapting to the learner. Teaching progression is distinct from the product's phase-by-phase roadmap progression.
 
 ---
 

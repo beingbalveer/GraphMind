@@ -55,6 +55,16 @@ Implementation uses `codex/roadmap-generator`, one verified task and commit at a
 
 No unfinished future actions are exposed in the application during this delivery.
 
+### Planned follow-on: Progressive Teaching Guidance
+
+Apply the teaching philosophy in [Project Context §6](../PROJECT_CONTEXT.md#6-project-philosophy)
+to the existing guided-tutoring instructions and relevant lesson prompts. Evaluate
+representative explanations for continuity of examples or visuals, justified
+conceptual layers, correctness, and adaptation to learner knowledge. This is a
+planned documentation and prompt follow-on; it does not change runtime prompts
+through this roadmap entry and does not replace the active research-quality and
+whole-branch verification task above.
+
 ### Planned follow-on: Unified Roadmap Workspace
 
 The agreed product direction keeps topic conversations and general conversations
