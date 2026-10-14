@@ -34,6 +34,34 @@ flowchart TD
 | Generator job                      | Authenticated owner + idempotency key                                         | Job status is private. A cancelled or stale job must not publish a copy later.                                                                                                         |
 | Source reference                   | Published lesson/topic                                                        | Public metadata may expose vetted reference title, URL, locator, and attribution; private uploads and conversation data are never attached to it.                                      |
 
+## Chats and branch boundaries
+
+The prototype's **Chats** view is a unified presentation, not a second transcript store. Existing `enrollmentId::topicId` tutor histories are projected into the thread list and remain backed by the existing scoped `conversations` records; **Continue in lesson** returns to that history's existing composer. A new **general chat** is a standalone root in the selected enrollment workspace, or in the explicitly named `personal-workspace` when no enrollment is selected. It does not inherit the currently open lesson as topic context. A **branch** is a local child-thread record with its own stable ID, workspace ID, parent thread ID, assistant source-message ID, highlighted quote, optional topic ID, messages, title, and draft. Nested branches preserve the original workspace and topic context. Reducer and storage validation require a tutor source in the same workspace, require the selected quote to occur in that source text, and reject missing/stale origins and cycles. The local demo scripts responses; it creates no API records.
+
+| Prototype concept | Existing production boundary | Existing route / contract |
+| --- | --- | --- |
+| Workspace chat list, root IDs, titles, recent/pinned metadata, topic association | A chat is one root node and its descendant nodes form its conversation tree | `GET /api/v1/workspaces/{workspaceId}/chats` |
+| Load one root's graph | Filter the workspace graph by the root node | `GET /api/v1/workspaces/{workspaceId}/graph?root_id={chatRootId}` |
+| Add a user or assistant child, including `parentId` and optional `highlightedContext` | Branches remain nodes inside the same root chat tree; a branch is not a new chat root | `POST /api/v1/workspaces/{workspaceId}/nodes` (`NodeCreate`) |
+| Rename a chat root | Update root title metadata | `PATCH /api/v1/workspaces/{workspaceId}/chats/{chatRootId}` |
+| Generate a response from a selected parent node | Stream with workspace and parent-node context; a topic session is optional and explicit | `POST /api/v1/chat/stream` (`workspaceId`, `parentNodeId`, optional `topicSessionId` / `roadmapTopicIds`) |
+| Open or create a topic tutoring session | Topic tutoring retains its separate `TopicChat` association and can request a fresh session idempotently | `POST /api/v1/workspaces/{workspaceId}/roadmap/topics/{topicId}/sessions` with `fresh` and `Idempotency-Key`; read with `GET /api/v1/workspaces/{workspaceId}/roadmap/sessions/{sessionId}` or list at `GET /api/v1/workspaces/{workspaceId}/roadmap/topics/{topicId}/sessions` |
+
+The prototype branch ID is only a local thread identifier. On production wiring it must resolve to a child node ID under its canonical chat-root ID; title, parent, source-node, and highlighted quote must be authorized and persisted in the same workspace tree. The canonical URL contract remains the one in [docs/URL_DESIGN.md](../../../docs/URL_DESIGN.md): `/w/{workspaceId}/chat/{chatId}` identifies the root chat and optional `?node=` / `?branch=` values select transient node context. Do not turn each prototype branch into a new root chat URL or encode workspace/chat identity in query parameters.
+
+The chosen sequence is to finish this static prototype, wire the behaviors to the existing backend contracts, and then replace the older learner-facing UI after feature parity is demonstrated. The prototype is not a retirement signal. Keep the older UI until the parity gate below passes in the production implementation.
+
+Parity gate before retiring the older UI:
+
+- Preserve workspace-owned root chats, recent ordering, rename/pinning behavior where exposed, active-node navigation, and existing topic-session history.
+- Create ordinary parentless chats without silently attaching them to a lesson; create lesson sessions through the explicit topic-session association and support fresh idempotent sessions.
+- Continue conversations from any user or assistant node while retaining the same root chat ID; persist branch parent ID, source message ID, selected quote, and nested ancestry.
+- Validate workspace access, stale origins, stream cancellation, retries, and late responses at the service boundary; do not rely on browser-local checks for authorization.
+- Keep current production URLs and legacy redirects intact, including branch/node context as optional navigation state only.
+- Verify the existing product surfaces not covered by this prototype: canvas editing and keyboard access, files and attachments, learning actions/flashcards, roadmap revision workflows, provider selection, and workspace management.
+
+The last checklist is intentionally broader than this chat task. Those existing surfaces must not disappear from the shipped application during a UI replacement; this prototype does not implement them.
+
 ## Static product-demo behavior and production mapping
 
 The local lesson outline contains 12 Python lessons and practice uses 18 deterministic sample activities with hints, retries, and completion kept distinct from correctness. Library search and source-note previews are local; collection progress and last-unfinished-lesson resume use the versioned browser state. Tutor drafts and reading positions stay scoped by learner copy and lesson. During a refresh while streaming, the pending learner question can be retried. These behaviors are product-preview state, not server records or claims of mastery.
@@ -72,7 +100,7 @@ The API currently provides these relevant routes under `/api/v1`:
 - `GET /roadmap/jobs`, `GET /roadmap/jobs/{jobId}`, `GET /roadmap/jobs/{jobId}/events` inspect the caller's jobs; job actions include `POST /roadmap/jobs/{jobId}/start`, `/cancel`, `/retry`, and `/answers`.
 - `GET /workspaces` lists accessible workspaces; there is no dedicated signed-in roadmap collection endpoint today.
 - `GET /workspaces/{workspaceId}/roadmap`, `GET /workspaces/{workspaceId}/roadmap/topics/{topicId}`, and `PATCH /workspaces/{workspaceId}/roadmap/topics/{topicId}/progress` read/update a workspace roadmap and topic progress.
-- `POST /workspaces/{workspaceId}/roadmap/topics/{topicId}/sessions` creates a topic session with a UUID `Idempotency-Key`; `GET` on the same path lists sessions, and `GET .../sessions/{sessionId}` fetches one session.
+- `POST /workspaces/{workspaceId}/roadmap/topics/{topicId}/sessions` creates a topic session with a UUID `Idempotency-Key`; `GET` on the same path lists sessions, and `GET /workspaces/{workspaceId}/roadmap/sessions/{sessionId}` fetches one session.
 - `POST /workspaces/{workspaceId}/roadmap/topics/{topicId}/checks` submits a knowledge check.
 - `POST /chat/stream` streams a chat response.
 - Auth routes include register, login, Google login, refresh, logout, and `GET /auth/me`.

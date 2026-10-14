@@ -1,5 +1,5 @@
 import { allLessons, findRoadmap } from "./catalog";
-import { initial, type ActivityProgress, type DemoPreferences, type DemoScenario, type Enrollment, type GeneratorProfile, type Message, type State, type View } from "./state";
+import { initial, type ActivityProgress, type ChatMessage, type ChatThread, type DemoPreferences, type DemoScenario, type Enrollment, type GeneratorProfile, type Message, type State, type View } from "./state";
 
 const STORAGE_KEY = "graphmind-studio-v2";
 const VERSION = 2;
@@ -72,6 +72,71 @@ function sanitizeScopedRecord<T>(value: unknown, enrollments: Enrollment[], conv
   }
   return result;
 }
+function safeChatMessage(value: unknown): ChatMessage | undefined {
+  if (!owns(value) || typeof value.id !== "string" || value.id.length > 120 || !["learner", "tutor"].includes(String(value.role))) return undefined;
+  const text = str(value.text, 4000);
+  if (text === undefined) return undefined;
+  const message: ChatMessage = { id: value.id, role: value.role as ChatMessage["role"], text };
+  if (value.role === "tutor" && ["streaming", "complete", "stopped"].includes(String(value.status))) message.status = value.status === "streaming" ? "stopped" : value.status as ChatMessage["status"];
+  return message;
+}
+function sanitizeChats(value: unknown, enrollments: Enrollment[], conversations: Record<string, Message[]>): ChatThread[] {
+  if (!Array.isArray(value)) return [];
+  const ids = new Set<string>();
+  const candidates = value.flatMap((raw): ChatThread[] => {
+    if (!owns(raw) || typeof raw.id !== "string" || !/^[\w:-]{1,160}$/.test(raw.id) || ids.has(raw.id)) return [];
+    const workspaceId = str(raw.workspaceId, 120);
+    if (!workspaceId || (workspaceId !== "personal-workspace" && !enrollments.some((item) => item.id === workspaceId))) return [];
+    if (raw.kind !== "general" && raw.kind !== "branch") return [];
+    const messages = Array.isArray(raw.messages) ? raw.messages.map(safeChatMessage).filter((item): item is ChatMessage => Boolean(item)) : [];
+    const title = str(raw.title, 120)?.trim();
+    const quote = str(raw.quote, 1000);
+    const thread: ChatThread = { id: raw.id, workspaceId, title: title || "New chat", kind: raw.kind, messages, draft: str(raw.draft, 4000) ?? "", updatedAt: Number.isFinite(raw.updatedAt) && Number(raw.updatedAt) >= 0 ? Number(raw.updatedAt) : 0 };
+    const parentThreadId = str(raw.parentThreadId, 160);
+    const sourceMessageId = str(raw.sourceMessageId, 120);
+    if (raw.topicId !== undefined) {
+      const topicId = str(raw.topicId, 120);
+      const enrollment = enrollments.find((item) => item.id === workspaceId);
+      if (!topicId || !enrollment || !allLessons(findRoadmap(enrollment.templateId)!).some((lesson) => lesson.id === topicId)) return [];
+      thread.topicId = topicId;
+    }
+    if (raw.kind === "branch") {
+      if (!parentThreadId || !sourceMessageId || !quote?.trim()) return [];
+      thread.parentThreadId = parentThreadId; thread.sourceMessageId = sourceMessageId; thread.quote = quote;
+    } else if (parentThreadId || sourceMessageId || quote !== undefined) return [];
+    ids.add(raw.id);
+    return [thread];
+  });
+  const byId = new Map(candidates.map((item) => [item.id, item]));
+  const valid = new Map<string, ChatThread>();
+  const rejected = new Set<string>();
+  const resolving = new Set<string>();
+  const resolve = (id: string): ChatThread | undefined => {
+    if (valid.has(id)) return valid.get(id);
+    if (rejected.has(id) || resolving.has(id)) { rejected.add(id); return undefined; }
+    const item = byId.get(id);
+    if (!item) return undefined;
+    resolving.add(id);
+    if (item.kind === "branch") {
+      const parentId = item.parentThreadId!;
+      let parentWorkspace: string | undefined;
+      let parentMessages: { id: string | number; role: string; text: string; status?: string }[] = [];
+      if (parentId.startsWith("topic:")) {
+        try { const key = decodeURIComponent(parentId.slice(6)); parentWorkspace = key.split("::", 1)[0]; parentMessages = (conversations[key] ?? []).map((message) => ({ id: message.id, role: message.role, text: message.text, status: message.status })); } catch { parentWorkspace = undefined; }
+      } else {
+        const parent = resolve(parentId);
+        parentWorkspace = parent?.workspaceId;
+        parentMessages = parent?.messages ?? [];
+      }
+      if (parentWorkspace !== item.workspaceId || !parentMessages.some((message) => String(message.id) === item.sourceMessageId && message.role === "tutor" && message.status !== "streaming" && Boolean(message.text.trim()) && message.text.includes(item.quote!))) {
+        resolving.delete(id); rejected.add(id); return undefined;
+      }
+    }
+    resolving.delete(id); valid.set(id, item); return item;
+  };
+  candidates.forEach((item) => resolve(item.id));
+  return candidates.filter((item) => valid.has(item.id));
+}
 
 /** Reads only the versioned demo state and drops unsafe transient state. */
 export function restoreState(storage: Storage | undefined): State {
@@ -86,6 +151,13 @@ export function restoreState(storage: Storage | undefined): State {
     const enrollments = sanitizeEnrollments(saved.enrollments);
     const preferences = safePreferences(saved.preferences);
     const conversations = sanitizeScopedRecord(saved.conversations, enrollments, (items) => Array.isArray(items) ? items.map(safeMessage).filter((item): item is Message => Boolean(item)) : undefined);
+    const chats = sanitizeChats(saved.chats, enrollments, conversations);
+    const chatErrors: Record<string, string> = {};
+    for (const [id, message] of Object.entries(record(saved.chatErrors))) if (chats.some((thread) => thread.id === id) && typeof message === "string" && message.length <= 1000) chatErrors[id] = message;
+    for (const thread of chats) {
+      const lastMessage = thread.messages[thread.messages.length - 1];
+      if ((lastMessage?.role === "learner" || lastMessage?.status === "stopped") && !chatErrors[thread.id]) chatErrors[thread.id] = "The response was interrupted when this preview was refreshed. Your question is saved; retry to continue the sample response.";
+    }
     const drafts = sanitizeScopedRecord(saved.drafts, enrollments, (value) => str(value, 4000));
     const quotes = sanitizeScopedRecord(saved.quotes, enrollments, (value) => value === undefined ? undefined : str(value, 1000));
     const readingPositions: Record<string, number> = {};
@@ -114,9 +186,12 @@ export function restoreState(storage: Storage | undefined): State {
     let enrollmentId = mode === "learner" && typeof saved.enrollmentId === "string" && enrollments.some((item) => item.id === saved.enrollmentId && item.templateId === roadmapId) ? saved.enrollmentId : undefined;
     const savedTopicIsValid = typeof saved.topicId === "string" && validTopics.some((lesson) => lesson.id === saved.topicId);
     let topicId = savedTopicIsValid ? saved.topicId as string : validTopics[0].id;
-    let view = (typeof saved.view === "string" && ["catalog", "overview", "lesson", "home", "my-learning", "generator", "conversation", "library", "settings"].includes(saved.view) ? saved.view : "catalog") as View;
+    let view = (typeof saved.view === "string" && ["catalog", "overview", "lesson", "home", "my-learning", "generator", "conversation", "chats", "library", "settings"].includes(saved.view) ? saved.view : "catalog") as View;
     if (mode === "guest" && !["catalog", "overview", "lesson"].includes(view)) view = "catalog";
     if (view === "conversation" && (!enrollmentId || mode !== "learner")) view = "lesson";
+    const activeChatId = typeof saved.activeChatId === "string" && (chats.some((thread) => thread.id === saved.activeChatId) || (() => { try { return saved.activeChatId.startsWith("topic:") && Boolean(conversations[decodeURIComponent(saved.activeChatId.slice(6))]); } catch { return false; } })()) ? saved.activeChatId : undefined;
+    if (mode !== "learner" && view === "chats") view = "catalog";
+    if (view === "chats" && !activeChatId && !chats.length && !Object.keys(conversations).length) view = "home";
     if (view === "lesson" && !savedTopicIsValid) view = "catalog";
     if (view === "catalog" || view === "home" || view === "my-learning" || view === "settings") enrollmentId = undefined;
     const catalogField = (key: string, max: number, fallback: string) => str(saved[key], max) ?? fallback;
@@ -129,7 +204,7 @@ export function restoreState(storage: Storage | undefined): State {
     }
     const generatorTemplateId = str(saved.generatorTemplateId, 120) && findRoadmap(String(saved.generatorTemplateId)) ? String(saved.generatorTemplateId) : initial.generatorTemplateId;
     return {
-      ...initial, mode, view, roadmapId, topicId, enrollmentId, enrollments, conversations, drafts, quotes, readingPositions, activity, tutorErrors, saveJobs: {},
+      ...initial, mode, view, roadmapId, topicId, enrollmentId, enrollments, conversations, chats, activeChatId, chatErrors, drafts, quotes, readingPositions, activity, tutorErrors, saveJobs: {},
       catalogQuery: catalogField("catalogQuery", 200, ""), catalogCategory: catalogField("catalogCategory", 100, "All topics"), catalogLevel: catalogField("catalogLevel", 80, "All levels"),
       generatorProfile: safeProfile(saved.generatorProfile), generatorTemplateId, generatorStep: saved.generatorStep === "result" ? "result" : "form", generatorJobId: Number.isSafeInteger(saved.generatorJobId) && Number(saved.generatorJobId) >= 0 ? Number(saved.generatorJobId) : 0,
       preferences, dark: preferences.theme === "dark", scenario: scenarioValues.includes(saved.scenario as DemoScenario) ? saved.scenario as DemoScenario : "normal", notice: str(saved.notice, 240), authOpen: false, pendingIntent: undefined,

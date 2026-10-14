@@ -7,6 +7,11 @@ export type Message = {
   quote?: string;
   status?: "streaming" | "complete" | "stopped";
 };
+export type ChatMessage = { id: string; role: "learner" | "tutor"; text: string; status?: "streaming" | "complete" | "stopped" };
+export type ChatThread = {
+  id: string; workspaceId: string; title: string; kind: "general" | "branch"; messages: ChatMessage[];
+  parentThreadId?: string; sourceMessageId?: string; quote?: string; topicId?: string; draft: string; updatedAt: number;
+};
 export type Enrollment = {
   id: string;
   templateId: string;
@@ -53,6 +58,7 @@ export type View =
   | "my-learning"
   | "generator"
   | "conversation"
+  | "chats"
   | "library"
   | "settings";
 export type State = {
@@ -63,6 +69,9 @@ export type State = {
   enrollmentId?: string;
   enrollments: Enrollment[];
   conversations: Record<string, Message[]>;
+  chats: ChatThread[];
+  activeChatId?: string;
+  chatErrors: Record<string, string>;
   drafts: Record<string, string>;
   quotes: Record<string, string | undefined>;
   readingPositions: Record<string, number>;
@@ -106,6 +115,8 @@ export const initial: State = {
   topicId: allLessons(roadmaps[0])[0].id,
   enrollments: [],
   conversations: {},
+  chats: [],
+  chatErrors: {},
   drafts: {},
   quotes: {},
   readingPositions: {},
@@ -158,6 +169,28 @@ export const visibleConversations = (state: State) => {
     ),
   );
 };
+export const topicThreadId = (key: string) => `topic:${encodeURIComponent(key)}`;
+export function chatMessages(state: State, id: string): ChatMessage[] {
+  const thread = state.chats.find((item) => item.id === id);
+  if (thread) return thread.messages;
+  if (!id.startsWith("topic:")) return [];
+  try {
+    const key = decodeURIComponent(id.slice(6));
+    return (state.conversations[key] ?? []).map((message) => ({ id: String(message.id), role: message.role, text: message.text, ...(message.status ? { status: message.status } : {}) }));
+  } catch { return []; }
+}
+export function chatWorkspace(state: State, id: string): string | undefined {
+  const thread = state.chats.find((item) => item.id === id);
+  if (thread) return thread.workspaceId;
+  if (!id.startsWith("topic:")) return undefined;
+  try { return decodeURIComponent(id.slice(6)).split("::", 1)[0]; } catch { return undefined; }
+}
+export function chatTopicId(state: State, id: string): string | undefined {
+  const thread = state.chats.find((item) => item.id === id);
+  if (thread?.topicId) return thread.topicId;
+  if (!id.startsWith("topic:")) return undefined;
+  try { const key = decodeURIComponent(id.slice(6)); const separator = key.indexOf("::"); return separator > 0 ? key.slice(separator + 2) : undefined; } catch { return undefined; }
+}
 function resolvePrivateKey(state: State, key: string) {
   const divider = key.indexOf("::");
   if (divider < 1) return undefined;
@@ -189,6 +222,13 @@ export type Action =
   | { type: "set-quote"; value?: string }
   | { type: "set-draft"; value: string }
   | { type: "send-message"; message: Message }
+  | { type: "chat-create"; id: string; workspaceId: string; title?: string; topicId?: string }
+  | { type: "chat-open"; id: string }
+  | { type: "chat-rename"; id: string; title: string }
+  | { type: "chat-draft"; id: string; value: string }
+  | { type: "chat-message"; id: string; message: ChatMessage }
+  | { type: "chat-error"; id: string; value?: string }
+  | { type: "chat-branch"; id: string; parentThreadId: string; workspaceId: string; sourceMessageId: string; quote: string; title?: string }
   | { type: "tutor-upsert"; key: string; message: Message }
   | { type: "tutor-remove"; key: string; messageId: number }
   | { type: "reading-position"; key: string; value: number }
@@ -521,6 +561,63 @@ export function reducer(state: State, action: Action): State {
         quotes: { ...state.quotes, [key]: undefined },
         drafts: { ...state.drafts, [key]: "" },
       };
+    }
+    case "chat-create": {
+      if (state.mode !== "learner" || !/^[\w:-]{1,160}$/.test(action.id) || state.chats.some((chat) => chat.id === action.id)) return state;
+      const validWorkspace = action.workspaceId === "personal-workspace" || state.enrollments.some((item) => item.id === action.workspaceId);
+      const enrollment = state.enrollments.find((item) => item.id === action.workspaceId);
+      if (!validWorkspace || (action.topicId && (!enrollment || !allLessons(findRoadmap(enrollment.templateId)!).some((lesson) => lesson.id === action.topicId)))) return state;
+      const thread: ChatThread = { id: action.id, workspaceId: action.workspaceId, title: action.title?.slice(0, 120) || "New chat", kind: "general", messages: [], ...(action.topicId ? { topicId: action.topicId } : {}), draft: "", updatedAt: Date.now() };
+      const owner = state.enrollments.find((item) => item.id === action.workspaceId);
+      return { ...state, chats: [thread, ...state.chats], activeChatId: thread.id, enrollmentId: owner?.id, ...(owner ? { roadmapId: owner.templateId } : {}), view: "chats" };
+    }
+    case "chat-open": {
+      if (state.mode !== "learner") return state;
+      const workspaceId = chatWorkspace(state, action.id);
+      if (!workspaceId || (workspaceId !== "personal-workspace" && !state.enrollments.some((item) => item.id === workspaceId))) return state;
+      let enrollment: Enrollment | undefined;
+      let topicId: string | undefined;
+      if (action.id.startsWith("topic:")) {
+        try {
+          const key = decodeURIComponent(action.id.slice(6));
+          const divider = key.indexOf("::");
+          enrollment = divider > 0 ? state.enrollments.find((item) => item.id === key.slice(0, divider)) : undefined;
+          topicId = divider > 0 ? key.slice(divider + 2) : undefined;
+        } catch { return state; }
+        if (!enrollment || !allLessons(findRoadmap(enrollment.templateId)!).some((lesson) => lesson.id === topicId)) return state;
+      }
+      const workspaceEnrollment = state.enrollments.find((item) => item.id === workspaceId);
+      return { ...state, activeChatId: action.id, enrollmentId: workspaceEnrollment?.id, ...(workspaceEnrollment ? { roadmapId: workspaceEnrollment.templateId } : {}), ...(enrollment && topicId ? { topicId } : {}), view: "chats" };
+    }
+    case "chat-rename":
+      return state.mode === "learner" && state.chats.some((chat) => chat.id === action.id) ? { ...state, chats: state.chats.map((chat) => chat.id === action.id ? { ...chat, title: action.title.trim().slice(0, 120) || "New chat" } : chat) } : state;
+    case "chat-draft":
+      return state.mode === "learner" && state.chats.some((chat) => chat.id === action.id) ? { ...state, chats: state.chats.map((chat) => chat.id === action.id ? { ...chat, draft: action.value.slice(0, 4000) } : chat) } : state;
+    case "chat-message": {
+      const thread = state.chats.find((chat) => chat.id === action.id);
+      if (state.mode !== "learner" || !thread || thread.workspaceId !== chatWorkspace(state, action.id) || !action.message.id || action.message.id.length > 120 || action.message.text.length > 4000) return state;
+      const messages = thread.messages.some((message) => message.id === action.message.id) ? thread.messages.map((message) => message.id === action.message.id ? action.message : message) : [...thread.messages, action.message];
+      return { ...state, chats: state.chats.map((chat) => chat.id === action.id ? { ...chat, messages, draft: action.message.role === "learner" ? "" : chat.draft, updatedAt: Date.now(), title: chat.title === "New chat" && action.message.role === "learner" ? action.message.text.slice(0, 48) : chat.title } : chat) };
+    }
+    case "chat-error": {
+      if (state.mode !== "learner" || !state.chats.some((chat) => chat.id === action.id) || (action.value && action.value.length > 1000)) return state;
+      const { [action.id]: _removed, ...chatErrors } = state.chatErrors;
+      return action.value ? { ...state, chatErrors: { ...chatErrors, [action.id]: action.value } } : { ...state, chatErrors };
+    }
+    case "chat-branch": {
+      if (state.mode !== "learner" || !/^[\w:-]{1,160}$/.test(action.id) || state.chats.some((chat) => chat.id === action.id) || !action.quote.trim() || action.quote.length > 1000 || chatWorkspace(state, action.parentThreadId) !== action.workspaceId) return state;
+      const source = chatMessages(state, action.parentThreadId).find((message) => message.id === action.sourceMessageId && message.role === "tutor");
+      if (!source || source.status === "streaming" || !source.text.trim() || !source.text.includes(action.quote)) return state;
+      let ancestor: string | undefined = action.parentThreadId;
+      const seen = new Set<string>([action.id]);
+      while (ancestor) {
+        if (seen.has(ancestor)) return state;
+        seen.add(ancestor);
+        ancestor = state.chats.find((item) => item.id === ancestor)?.parentThreadId;
+      }
+      const topicId = chatTopicId(state, action.parentThreadId);
+      const thread: ChatThread = { id: action.id, workspaceId: action.workspaceId, title: action.title?.slice(0, 120) || action.quote.slice(0, 48), kind: "branch", messages: [], parentThreadId: action.parentThreadId, sourceMessageId: action.sourceMessageId, quote: action.quote, ...(topicId ? { topicId } : {}), draft: "", updatedAt: Date.now() };
+      return { ...state, chats: [thread, ...state.chats], activeChatId: action.parentThreadId, view: "chats" };
     }
     case "tutor-upsert": {
       if (state.mode !== "learner") return state;

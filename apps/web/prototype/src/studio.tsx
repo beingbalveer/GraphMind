@@ -31,6 +31,7 @@ import {
   Expand,
   Settings,
   List,
+  MessageSquare,
 } from "lucide-react";
 import { roadmaps, allLessons } from "./catalog";
 import {
@@ -55,6 +56,8 @@ import { restoreState, persistState, clearDemoStorage, exportState } from "./per
 import { GeneratorFlow } from "./generator-flow";
 import { SettingsView } from "./settings-view";
 import { Appearance, Brand, RoadmapOutline } from "./studio-chrome";
+import { ChatsView } from "./chats-view";
+import { chatWorkspace, type ChatMessage } from "./state";
 
 function useSmallScreen() {
   const [small, setSmall] = useState(
@@ -87,6 +90,8 @@ export function LearningStudio() {
   const saveTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
   const nextMessageId = useRef(Math.max(0, ...Object.values(state.conversations).flat().map((message) => message.id)) + 1);
   const [tutorBusy, setTutorBusy] = useState(false);
+  const [chatBusy, setChatBusy] = useState<Record<string, boolean>>({});
+  const chatJobs = useRef(new Map<string, { timer: ReturnType<typeof setTimeout>; id: string; text: string; offset: number }>());
   const small = useSmallScreen();
   const roadmap = getRoadmap(state.roadmapId) ?? roadmaps[0];
   const lessons = allLessons(roadmap);
@@ -353,8 +358,102 @@ export function LearningStudio() {
     tutorJob.current = undefined;
     setTutorBusy(false);
     saveTimers.current.forEach(clearTimeout);
+    chatJobs.current.forEach((job, id) => {
+      clearTimeout(job.timer);
+      dispatch({ type: "chat-message", id, message: { id: job.id, role: "tutor", text: job.text.slice(0, job.offset), status: "stopped" } });
+      dispatch({ type: "chat-error", id, value: "Response interrupted when you signed out. Your question is saved; retry after signing in again." });
+    });
+    chatJobs.current.clear();
+    setChatBusy({});
     dispatch({ type: "sign-out" });
   };
+  const createChat = () => {
+    const activeWorkspace = state.view === "chats" && state.activeChatId ? chatWorkspace(state, state.activeChatId) : undefined;
+    const workspaceId = activeWorkspace ?? enrollment?.id ?? "personal-workspace";
+    dispatch({ type: "chat-create", id: `chat-${crypto.randomUUID()}`, workspaceId });
+    setMobileNav(false);
+  };
+  const openChat = (id: string) => {
+    if (id.startsWith("topic:")) {
+      try {
+        const topicKey = decodeURIComponent(id.slice(6));
+        const separator = topicKey.indexOf("::");
+        if (separator > 0) {
+          const topicId = topicKey.slice(separator + 2);
+          const owner = state.enrollments.find((item) => item.id === topicKey.slice(0, separator));
+          if (owner) { rememberPosition(); dispatch({ type: "open-enrollment", enrollmentId: owner.id, topicId }); }
+        }
+      } catch { /* corrupted local key is ignored */ }
+    }
+    dispatch({ type: "chat-open", id });
+  };
+  const startChatReply = (id: string, prompt: string, reuseAnswerId?: string) => {
+    const thread = state.chats.find((item) => item.id === id);
+    if (!thread || chatJobs.current.has(id) || state.mode !== "learner") return;
+    dispatch({ type: "chat-error", id });
+    if (state.scenario === "tutor-error") {
+      dispatch({ type: "scenario", value: "normal" });
+      dispatch({ type: "chat-error", id, value: "The sample response could not finish. Your question is saved; retry when ready." });
+      return;
+    }
+    const answerId = reuseAnswerId ?? crypto.randomUUID();
+    const reply = (thread.quote
+      ? `Let’s focus on “${thread.quote.slice(0, 140)}”. A useful next step is to identify the claim in that passage, then test it with one concrete example. Your question was: ${prompt}`
+      : `Let’s explore ${prompt}. Start with the simplest useful model: name the main idea, connect it to one familiar example, and then check where that model stops being accurate. Which part would you like to unpack first?`).slice(0, 4000);
+    setChatBusy((current) => ({ ...current, [id]: true }));
+    let offset = 0;
+    if (reuseAnswerId) dispatch({ type: "chat-message", id, message: { id: answerId, role: "tutor", text: "", status: "streaming" } });
+    const stream = () => {
+      if (state.mode !== "learner" || !state.chats.some((item) => item.id === id)) { chatJobs.current.delete(id); setChatBusy((current) => ({ ...current, [id]: false })); return; }
+      offset = Math.min(offset + 14, reply.length);
+      dispatch({ type: "chat-message", id, message: { id: answerId, role: "tutor", text: reply.slice(0, offset), status: offset < reply.length ? "streaming" : "complete" } });
+      if (offset < reply.length) {
+        const timer = setTimeout(stream, 26);
+        chatJobs.current.set(id, { timer, id: answerId, text: reply, offset });
+      } else { chatJobs.current.delete(id); setChatBusy((current) => ({ ...current, [id]: false })); }
+    };
+    const timer = setTimeout(stream, 150);
+    chatJobs.current.set(id, { timer, id: answerId, text: reply, offset });
+  };
+  const sendChat = (id: string) => {
+    const thread = state.chats.find((item) => item.id === id);
+    if (!thread || !thread.draft.trim() || chatJobs.current.size > 0 || state.mode !== "learner") return;
+    const prompt = thread.draft.trim();
+    dispatch({ type: "chat-message", id, message: { id: crypto.randomUUID(), role: "learner", text: prompt, status: "complete" } });
+    startChatReply(id, prompt);
+  };
+  const retryChat = (id: string) => {
+    if (chatJobs.current.size > 0) return;
+    const thread = state.chats.find((item) => item.id === id);
+    const lastQuestion = thread?.messages.findLast((message) => message.role === "learner");
+    if (!thread || !lastQuestion) return;
+    const questionIndex = thread.messages.findIndex((message) => message.id === lastQuestion.id);
+    const interruptedReply = thread.messages.slice(questionIndex + 1).findLast((message) => message.role === "tutor" && message.status === "stopped");
+    startChatReply(id, lastQuestion.text, interruptedReply?.id);
+  };
+  const stopChat = (id: string) => {
+    const job = chatJobs.current.get(id);
+    if (!job) return;
+    clearTimeout(job.timer);
+    dispatch({ type: "chat-message", id, message: { id: job.id, role: "tutor", text: job.text.slice(0, job.offset), status: "stopped" } });
+    dispatch({ type: "chat-error", id, value: "Response stopped. Your question is saved; retry to continue the sample response." });
+    chatJobs.current.delete(id);
+    setChatBusy((current) => ({ ...current, [id]: false }));
+  };
+  const branchChat = (parentThreadId: string, message: ChatMessage, quote: string) => {
+    const workspaceId = chatWorkspace(state, parentThreadId);
+    if (!workspaceId || message.role !== "tutor") return;
+    dispatch({ type: "chat-branch", id: `chat-${crypto.randomUUID()}`, parentThreadId, workspaceId, sourceMessageId: message.id, quote });
+  };
+  const lastActiveChat = useRef(state.activeChatId);
+  useEffect(() => {
+    const previous = lastActiveChat.current;
+    if (previous !== state.activeChatId || state.view !== "chats") {
+      for (const id of [...chatJobs.current.keys()]) stopChat(id);
+    }
+    lastActiveChat.current = state.activeChatId;
+  }, [state.activeChatId, state.view]);
+  useEffect(() => () => { chatJobs.current.forEach((job) => clearTimeout(job.timer)); chatJobs.current.clear(); }, []);
   const goNext = () => {
     const index = lessons.findIndex((item) => item.id === state.topicId);
     if (index === lessons.length - 1) {
@@ -366,13 +465,14 @@ export function LearningStudio() {
 
   return (
     <div className={`studio-shell ${state.preferences.readingSize === "large" ? "reading-large" : ""} ${state.preferences.reducedMotion ? "reduced-motion" : ""} flex h-dvh min-h-0 overflow-hidden bg-background text-foreground`}>
-      {state.mode === "learner" && (
+      {state.mode === "learner" && state.view !== "chats" && (
         <aside className="studio-nav fixed inset-y-0 left-0 z-20 flex w-60 flex-col border-r border-border-subtle bg-background px-3 py-4">
           <Brand />
           <div className="mb-2 px-2 text-2xs font-medium uppercase tracking-wider text-foreground-subtle">
             Learning
           </div>
           <nav aria-label="Main navigation" className="min-h-0 flex-1 space-y-1 overflow-y-auto">
+            {navItem("chats", "Chats", <MessageSquare />)}
             {navItem("home", "Home", <Compass />)}
             {navItem("my-learning", "My learning", <BookOpen />)}
             {navItem("catalog", "Browse roadmaps", <Compass />)}
@@ -409,7 +509,7 @@ export function LearningStudio() {
         </aside>
       )}
       <div
-        className={`studio-main ${state.mode === "learner" ? "ml-60" : ""} flex h-dvh min-h-0 min-w-0 flex-1 flex-col`}
+        className={`studio-main ${state.mode === "learner" && state.view !== "chats" ? "ml-60" : ""} flex h-dvh min-h-0 min-w-0 flex-1 flex-col`}
       >
         <header className="flex h-13 shrink-0 items-center justify-between border-b border-border-subtle bg-background/95 px-5 backdrop-blur">
           <div className="flex min-w-0 items-center gap-2">
@@ -671,6 +771,7 @@ export function LearningStudio() {
               />
               </>
             )}
+            {state.view === "chats" && <ChatsView state={state} small={small} onCreate={createChat} onOpen={openChat} onRename={(id, title) => dispatch({ type: "chat-rename", id, title })} onDraft={(id, value) => dispatch({ type: "chat-draft", id, value })} onSend={sendChat} onStop={stopChat} onRetry={retryChat} onBranch={branchChat} onHome={() => navigate("home")} onContinueTopic={(id) => { openChat(id); dispatch({ type: "navigate", view: "conversation" }); }} busyId={Object.keys(chatBusy).find((id) => chatBusy[id])} />}
             {state.view === "library" && <LibraryView />}
           </main>
           {state.view === "lesson" && tutorOpen && !small && canUsePrivate && (
@@ -811,6 +912,7 @@ export function LearningStudio() {
               </>
             ) : (
               <>
+                {navItem("chats", "Chats", <MessageSquare />)}
                 {navItem("home", "Home", <Compass />)}
                 {navItem("my-learning", "My learning", <BookOpen />)}
                 {navItem("catalog", "Browse roadmaps", <Compass />)}
@@ -950,6 +1052,7 @@ function viewTitle(view: View) {
     lesson: "Lesson",
     generator: "Create roadmap",
     conversation: "Conversations",
+    chats: "Chats",
     library: "Library",
     settings: "Settings",
   }[view];
