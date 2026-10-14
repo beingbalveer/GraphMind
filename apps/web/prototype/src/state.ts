@@ -5,6 +5,7 @@ export type Message = {
   role: "learner" | "tutor";
   text: string;
   quote?: string;
+  status?: "streaming" | "complete" | "stopped";
 };
 export type Enrollment = {
   id: string;
@@ -12,9 +13,21 @@ export type Enrollment = {
   sourceSnapshotRef: string;
   title: string;
   completedTopicIds: string[];
+  lastTopicId?: string;
   generation?: GeneratorProfile;
   generatedCopy?: boolean;
+  generationRunId?: string;
 };
+export type DemoPreferences = {
+  displayName: string;
+  theme: "light" | "dark" | "system";
+  readingSize: "standard" | "large";
+  weeklyHours: number;
+  reducedMotion: boolean;
+  tutorStyle: "concise" | "step-by-step";
+};
+export type DemoScenario = "normal" | "generation-clarification" | "generation-error" | "tutor-error" | "save-error";
+export type ActivityProgress = { draft: string; selectedAnswer?: string; attempts: number; submitted: boolean; correct?: boolean; feedback?: string };
 export type GeneratorProfile = {
   title: string;
   prompt: string;
@@ -29,6 +42,7 @@ export type PendingIntent =
   | { type: "save"; roadmapId: string }
   | { type: "tutor"; roadmapId: string; topicId: string; quote?: string }
   | { type: "complete"; roadmapId: string; topicId: string }
+  | { type: "practice"; roadmapId: string; topicId: string }
   | { type: "generator" }
   | { type: "signin" };
 export type View =
@@ -39,7 +53,8 @@ export type View =
   | "my-learning"
   | "generator"
   | "conversation"
-  | "library";
+  | "library"
+  | "settings";
 export type State = {
   mode: "guest" | "learner";
   view: View;
@@ -62,6 +77,16 @@ export type State = {
   generatorTemplateId: string;
   generatorJobId: number;
   dark: boolean;
+  preferences: DemoPreferences;
+  scenario: DemoScenario;
+  activity: Record<string, ActivityProgress>;
+  tutorErrors: Record<string, string>;
+  saveJobs: Record<string, "pending" | "error">;
+};
+
+export const defaultPreferences: DemoPreferences = {
+  displayName: "Alex Morgan", theme: "system", readingSize: "standard",
+  weeklyHours: 4, reducedMotion: false, tutorStyle: "step-by-step",
 };
 
 export const blankProfile: GeneratorProfile = {
@@ -93,6 +118,11 @@ export const initial: State = {
   generatorTemplateId: roadmaps[0].id,
   generatorJobId: 0,
   dark: false,
+  preferences: defaultPreferences,
+  scenario: "normal",
+  activity: {},
+  tutorErrors: {},
+  saveJobs: {},
 };
 
 export const scopedKey = (enrollmentId: string, topicId: string) =>
@@ -128,6 +158,14 @@ export const visibleConversations = (state: State) => {
     ),
   );
 };
+function resolvePrivateKey(state: State, key: string) {
+  const divider = key.indexOf("::");
+  if (divider < 1) return undefined;
+  const enrollment = state.enrollments.find((item) => item.id === key.slice(0, divider));
+  const topicId = key.slice(divider + 2);
+  const roadmap = enrollment && findRoadmap(enrollment.templateId);
+  return roadmap && allLessons(roadmap).some((lesson) => lesson.id === topicId) ? { enrollment, topicId } : undefined;
+}
 
 export type Action =
   | { type: "navigate"; view: View }
@@ -135,6 +173,7 @@ export type Action =
   | { type: "open-topic"; topicId: string }
   | { type: "conversation-topic"; topicId: string }
   | { type: "open-tutor"; roadmapId: string; topicId: string; quote?: string }
+  | { type: "enable-practice"; roadmapId: string; topicId: string }
   | { type: "open-enrollment"; enrollmentId: string; topicId?: string }
   | { type: "gate"; intent: PendingIntent }
   | { type: "dismiss-auth" }
@@ -150,6 +189,8 @@ export type Action =
   | { type: "set-quote"; value?: string }
   | { type: "set-draft"; value: string }
   | { type: "send-message"; message: Message }
+  | { type: "tutor-upsert"; key: string; message: Message }
+  | { type: "tutor-remove"; key: string; messageId: number }
   | { type: "reading-position"; key: string; value: number }
   | {
       type: "catalog-filter";
@@ -167,6 +208,15 @@ export type Action =
   | { type: "generator-complete"; jobId: number }
   | { type: "notice"; value?: string }
   | { type: "theme"; dark: boolean }
+  | { type: "preferences"; value: Partial<DemoPreferences> }
+  | { type: "scenario"; value: DemoScenario }
+  | { type: "activity"; key: string; value: ActivityProgress }
+  | { type: "save-start"; key: string }
+  | { type: "save-fail"; key: string }
+  | { type: "save-retry"; key: string }
+  | { type: "save-finish"; key: string }
+  | { type: "tutor-error"; key: string; value?: string }
+  | { type: "generator-create"; runId: string; profile: GeneratorProfile; templateId: string }
   | { type: "reset" };
 
 function createEnrollment(
@@ -295,13 +345,8 @@ function fulfillIntent(state: State, intent?: PendingIntent): State {
         [scopedKey(enrollment.id, intent.topicId)]: intent.quote,
       },
     };
-  if (intent.type === "complete")
-    next = complete(
-      { ...next, mode: "learner" },
-      roadmapId,
-      intent.topicId,
-      enrollment.id,
-    );
+  if (intent.type === "practice")
+    next = { ...next, view: "lesson", topicId: intent.topicId };
   return next;
 }
 
@@ -340,6 +385,9 @@ export function reducer(state: State, action: Action): State {
       return {
         ...state,
         ...activateRoadmap(state, enrollment.templateId, action.topicId),
+        enrollments: action.topicId && allLessons(findRoadmap(enrollment.templateId)!).some((lesson) => lesson.id === action.topicId)
+          ? state.enrollments.map((item) => item.id === enrollment.id ? { ...item, lastTopicId: action.topicId } : item)
+          : state.enrollments,
         enrollmentId: enrollment.id,
         view: action.topicId ? "lesson" : "overview",
         generatorStep:
@@ -347,15 +395,13 @@ export function reducer(state: State, action: Action): State {
       };
     }
     case "open-topic":
-      return currentLessons(state).some(
-        (lesson) => lesson.id === action.topicId,
-      )
-        ? { ...state, topicId: action.topicId, view: "lesson" }
+      return currentLessons(state).some((lesson) => lesson.id === action.topicId)
+        ? { ...state, topicId: action.topicId, view: "lesson", ...(state.enrollmentId ? { enrollments: state.enrollments.map((item) => item.id === state.enrollmentId ? { ...item, lastTopicId: action.topicId } : item) } : {}) }
         : state;
     case "conversation-topic":
       return state.mode === "learner" &&
         currentLessons(state).some((lesson) => lesson.id === action.topicId)
-        ? { ...state, topicId: action.topicId, view: "conversation" }
+        ? { ...state, topicId: action.topicId, view: "conversation", ...(state.enrollmentId ? { enrollments: state.enrollments.map((item) => item.id === state.enrollmentId ? { ...item, lastTopicId: action.topicId } : item) } : {}) }
         : state;
     case "open-tutor": {
       if (state.mode !== "learner") return state;
@@ -390,11 +436,19 @@ export function reducer(state: State, action: Action): State {
         ...state,
         ...activateRoadmap(state, roadmap.id, action.topicId),
         enrollmentId: created.enrollment.id,
-        enrollments: created.enrollments,
+        enrollments: created.enrollments.map((item) => item.id === created.enrollment!.id ? { ...item, lastTopicId: action.topicId } : item),
         readingPositions,
         quotes: { ...state.quotes, [contextKey]: action.quote },
         view: "lesson",
       };
+    }
+    case "enable-practice": {
+      if (state.mode !== "learner") return state;
+      const roadmap = findRoadmap(action.roadmapId);
+      if (!roadmap || !allLessons(roadmap).some((item) => item.id === action.topicId)) return state;
+      const existing = activeEnrollment(state)?.templateId === roadmap.id ? activeEnrollment(state) : enrollmentFor(state, roadmap.id);
+      const created = existing ? { enrollment: existing, enrollments: state.enrollments } : createEnrollment(state, roadmap.id);
+      return created.enrollment ? { ...state, ...activateRoadmap(state, roadmap.id, action.topicId), enrollmentId: created.enrollment.id, enrollments: created.enrollments.map((item) => item.id === created.enrollment!.id ? { ...item, lastTopicId: action.topicId } : item), view: "lesson" } : state;
     }
     case "gate":
       return state.mode === "guest"
@@ -416,6 +470,7 @@ export function reducer(state: State, action: Action): State {
         authOpen: false,
         pendingIntent: undefined,
         generatorStep: "form",
+        saveJobs: {},
         notice: undefined,
       };
     case "save-roadmap": {
@@ -466,6 +521,20 @@ export function reducer(state: State, action: Action): State {
         quotes: { ...state.quotes, [key]: undefined },
         drafts: { ...state.drafts, [key]: "" },
       };
+    }
+    case "tutor-upsert": {
+      if (state.mode !== "learner") return state;
+      const activeKey = state.enrollmentId ? scopedKey(state.enrollmentId, state.topicId) : undefined;
+      if (!activeKey || activeKey !== action.key || !["lesson", "conversation"].includes(state.view)) return state;
+      const messages = state.conversations[action.key] ?? [];
+      const exists = messages.some((message) => message.id === action.message.id);
+      return { ...state, conversations: { ...state.conversations, [action.key]: exists ? messages.map((message) => message.id === action.message.id ? action.message : message) : [...messages, action.message] } };
+    }
+    case "tutor-remove": {
+      if (state.mode !== "learner" || !resolvePrivateKey(state, action.key)) return state;
+      const messages = state.conversations[action.key] ?? [];
+      const filtered = messages.filter((message) => message.id !== action.messageId);
+      return filtered.length === messages.length ? state : { ...state, conversations: { ...state.conversations, [action.key]: filtered } };
     }
     case "reading-position":
       return {
@@ -543,9 +612,55 @@ export function reducer(state: State, action: Action): State {
     case "notice":
       return { ...state, notice: action.value };
     case "theme":
-      return { ...state, dark: action.dark };
+      return { ...state, dark: action.dark, preferences: { ...state.preferences, theme: action.dark ? "dark" : "light" } };
+    case "preferences":
+      {
+        const patch = { ...action.value };
+        if (patch.displayName !== undefined) patch.displayName = typeof patch.displayName === "string" ? patch.displayName.slice(0, 60) : state.preferences.displayName;
+        if (patch.theme !== undefined && !["light", "dark", "system"].includes(patch.theme)) delete patch.theme;
+        if (patch.readingSize !== undefined && !["standard", "large"].includes(patch.readingSize)) delete patch.readingSize;
+        if (patch.weeklyHours !== undefined && (!Number.isInteger(patch.weeklyHours) || patch.weeklyHours < 1 || patch.weeklyHours > 40)) delete patch.weeklyHours;
+        if (patch.tutorStyle !== undefined && !["concise", "step-by-step"].includes(patch.tutorStyle)) delete patch.tutorStyle;
+        if (patch.reducedMotion !== undefined && typeof patch.reducedMotion !== "boolean") delete patch.reducedMotion;
+        const preferences = { ...state.preferences, ...patch };
+        return { ...state, preferences, generatorProfile: patch.weeklyHours === undefined ? state.generatorProfile : { ...state.generatorProfile, hoursPerWeek: patch.weeklyHours }, dark: preferences.theme === "dark" };
+      }
+    case "scenario":
+      return { ...state, scenario: action.value };
+    case "activity":
+      if (state.mode !== "learner" || !state.enrollmentId || action.key !== scopedKey(state.enrollmentId, state.topicId) || !resolvePrivateKey(state, action.key)) return state;
+      return { ...state, activity: { ...state.activity, [action.key]: action.value } };
+    case "save-start":
+      return state.mode === "learner" && resolvePrivateKey(state, action.key) && state.saveJobs[action.key] !== "pending" ? { ...state, saveJobs: { ...state.saveJobs, [action.key]: "pending" } } : state;
+    case "save-fail":
+      return state.mode === "learner" && resolvePrivateKey(state, action.key) && state.saveJobs[action.key] === "pending" ? { ...state, saveJobs: { ...state.saveJobs, [action.key]: "error" } } : state;
+    case "save-retry":
+      return state.mode === "learner" && resolvePrivateKey(state, action.key) && state.saveJobs[action.key] === "error" ? { ...state, saveJobs: { ...state.saveJobs, [action.key]: "pending" }, scenario: "normal" } : state;
+    case "save-finish": {
+      if (state.mode !== "learner" || state.saveJobs[action.key] !== "pending") return state;
+      const target = resolvePrivateKey(state, action.key);
+      if (!target) return state;
+      const { [action.key]: _removed, ...saveJobs } = state.saveJobs;
+      return { ...state, saveJobs, enrollments: state.enrollments.map((item) => item.id === target.enrollment.id ? { ...item, completedTopicIds: item.completedTopicIds.includes(target.topicId) ? item.completedTopicIds : [...item.completedTopicIds, target.topicId] } : item) };
+    }
+    case "tutor-error": {
+      if (state.mode !== "learner" || !state.enrollmentId || !resolvePrivateKey(state, action.key)) return state;
+      if (!action.value) { const { [action.key]: _removed, ...tutorErrors } = state.tutorErrors; return { ...state, tutorErrors }; }
+      return { ...state, tutorErrors: { ...state.tutorErrors, [action.key]: action.value } };
+    }
+    case "generator-create": {
+      if (state.mode !== "learner" || state.view !== "generator" || !validGeneratorProfile(action.profile)) return state;
+      const existing = state.enrollments.find((item) => item.generationRunId === action.runId);
+      if (existing) return { ...state, enrollmentId: existing.id, view: "generator", generatorStep: "result" };
+      const template = findRoadmap(action.templateId);
+      if (!template) return state;
+      const enrollment: Enrollment = { id: `demo-generated-${action.runId}`, templateId: template.id, sourceSnapshotRef: `${template.id}@${template.snapshotVersion}`, title: action.profile.title.trim() || action.profile.prompt.trim(), completedTopicIds: [], generation: action.profile, generatedCopy: true, generationRunId: action.runId };
+      return { ...state, enrollments: [...state.enrollments, enrollment], roadmapId: template.id, enrollmentId: enrollment.id, topicId: allLessons(template)[0].id, view: "generator", generatorStep: "result", notice: "Demo copy added to My learning." };
+    }
     case "reset":
       return initial;
+    default:
+      return state;
   }
 }
 

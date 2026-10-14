@@ -21,12 +21,20 @@ export function TutorPanel({
   openNote,
   expandConversation,
   showPanelHeader = true,
+  busy = false,
+  error,
+  onRetry,
+  onStop,
 }: {
   tab: "tutor" | "sources";
   setTab: (v: "tutor" | "sources") => void;
   openNote: () => void;
   expandConversation: () => void;
   showPanelHeader?: boolean;
+  busy?: boolean;
+  error?: string;
+  onRetry?: () => void;
+  onStop?: () => void;
   messages: Message[];
   quote?: string;
   clearQuote: () => void;
@@ -125,6 +133,8 @@ export function TutorPanel({
                 {m.text}
               </div>
             ))}
+            {busy && <div role="status" className="text-xs text-foreground-muted">Sample tutor is writing…</div>}
+            {error && <div role="alert" className="rounded-xl border border-destructive/40 bg-background-secondary p-3 text-sm"><p>{error}</p><Button className="mt-2" size="sm" variant="outline" onClick={onRetry}>Retry sample response</Button></div>}
           </div>
           <form
             className="border-t border-border-subtle p-3"
@@ -147,12 +157,13 @@ export function TutorPanel({
               <Button
                 type="submit"
                 size="sm"
-                disabled={!prompt.trim() && !quote}
+                disabled={busy || (!prompt.trim() && !quote)}
                 aria-label="Send question"
               >
                 <Send className="size-3.5" />
                 Ask tutor
               </Button>
+              {busy && <Button type="button" size="sm" variant="outline" onClick={onStop}>Stop</Button>}
             </div>
           </form>
         </>

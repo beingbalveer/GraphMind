@@ -4,9 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { BookOpen, Check, ChevronRight, Library, Send, X } from "lucide-react";
-import { allLessons } from "./catalog";
-import { allAvailableRoadmaps, getRoadmap, type State } from "./state";
+import { ChevronRight, Send, X } from "lucide-react";
+import { allLessons, type Lesson } from "./catalog";
+import { allAvailableRoadmaps, getRoadmap, scopedKey, type State } from "./state";
+import { LessonActivity, type ActivityProgress } from "./lesson-activity";
 
 export function Home({
   state,
@@ -14,17 +15,23 @@ export function Home({
   onResume,
   onBrowse,
   onCreate,
+  displayName,
 }: {
   state: State;
   activeEnrollment?: State["enrollments"][number];
   onResume: () => void;
   onBrowse: () => void;
   onCreate: () => void;
+  displayName?: string;
 }) {
   const current = activeEnrollment;
   const roadmap = current && getRoadmap(current.templateId);
   const done = current?.completedTopicIds.length ?? 0;
   const count = roadmap ? allLessons(roadmap).length : 0;
+  const currentLesson = roadmap && state.enrollmentId === current?.id
+    ? allLessons(roadmap).find((lesson) => lesson.id === state.topicId)
+    : undefined;
+  const nextLesson = roadmap?.phases.flatMap((phase) => phase.lessons).find((lesson) => !current?.completedTopicIds.includes(lesson.id));
   return (
     <div className="mx-auto max-w-5xl px-6 py-12 md:px-10">
       <div className="mb-9">
@@ -33,7 +40,7 @@ export function Home({
           Your learning space
         </div>
         <h1 className="text-xl font-semibold">
-          Make room for a little learning.
+          {displayName ? `Welcome back, ${displayName}.` : "Make room for a little learning."}
         </h1>
         <p className="mt-3 max-w-xl text-sm leading-6 text-foreground-muted">
           Pick up where you left off, explore a sample roadmap, or describe a
@@ -56,6 +63,8 @@ export function Home({
               <p className="mt-2 text-sm leading-6 text-foreground-muted">
                 {roadmap?.summary}
               </p>
+              {currentLesson && <p className="mt-4 text-sm"><span className="text-foreground-muted">Last active · </span>{currentLesson.title}</p>}
+              {nextLesson && <p className="mt-1 text-sm"><span className="text-foreground-muted">Next lesson · </span>{nextLesson.title}</p>}
               <div className="mt-5 h-1.5 overflow-hidden rounded-full bg-muted">
                 <div
                   className="h-full bg-primary"
@@ -107,15 +116,29 @@ export function MyLearning({
 }) {
   const [query, setQuery] = useState("");
   const [progressFilter, setProgressFilter] = useState<
-    "all" | "in-progress" | "completed"
+    "all" | "not-started" | "in-progress" | "completed"
   >("all");
   const rows = state.enrollments.filter((enrollment) => {
     if (!enrollment.title.toLowerCase().includes(query.toLowerCase()))
       return false;
-    const total = allLessons(getRoadmap(enrollment.templateId)!).length;
+    const course = getRoadmap(enrollment.templateId);
+    if (!course) return false;
+    const total = allLessons(course).length;
     const complete = enrollment.completedTopicIds.length;
+    const topics = allLessons(course);
+    const enrollmentWithLastTopic = enrollment as typeof enrollment & { lastTopicId?: string };
+    const hasStarted = Boolean(enrollmentWithLastTopic.lastTopicId) || topics.some((lesson) => {
+      const key = scopedKey(enrollment.id, lesson.id);
+      const activity = state.activity[key];
+      return Boolean(
+        activity?.attempts || activity?.draft.trim() || activity?.selectedAnswer ||
+        state.drafts[key]?.trim() || state.conversations[key]?.length ||
+        state.readingPositions[key] > 0
+      );
+    });
     if (progressFilter === "completed") return complete >= total;
-    if (progressFilter === "in-progress") return complete < total;
+    if (progressFilter === "not-started") return !hasStarted;
+    if (progressFilter === "in-progress") return hasStarted && complete < total;
     return true;
   });
   return (
@@ -138,6 +161,7 @@ export function MyLearning({
           ariaLabel="Filter My learning by progress"
           items={[
             { id: "all", label: "All" },
+            { id: "not-started", label: "Not started" },
             { id: "in-progress", label: "In progress" },
             { id: "completed", label: "Completed" },
           ]}
@@ -150,7 +174,16 @@ export function MyLearning({
         <div className="mt-5 grid gap-3 md:grid-cols-2">
           {rows.map((e) => {
             const course = getRoadmap(e.templateId);
-            const total = course ? allLessons(course).length : 0;
+            const lessons = course ? allLessons(course) : [];
+            const total = lessons.length;
+            const next = lessons.find((item) => !e.completedTopicIds.includes(item.id));
+            const complete = e.completedTopicIds.length >= total;
+            const hasStudy = Boolean((e as typeof e & { lastTopicId?: string }).lastTopicId) || lessons.some((lesson) => {
+              const key = scopedKey(e.id, lesson.id);
+              const activity = state.activity[key];
+              return Boolean(activity?.attempts || activity?.draft.trim() || activity?.selectedAnswer || state.drafts[key]?.trim() || state.conversations[key]?.length || state.readingPositions[key] > 0);
+            });
+            const lastActive = state.enrollmentId === e.id ? lessons.find((item) => item.id === state.topicId) : undefined;
             return (
               <article
                 key={e.id}
@@ -170,12 +203,17 @@ export function MyLearning({
                     ? `${e.generation.level} · ${e.generation.hoursPerWeek} hours/week · ${e.generation.duration} weeks`
                     : course?.duration}
                 </p>
+                <p className="mt-3 text-sm"><span className="text-foreground-muted">{complete ? "Ready to review" : next ? "Next lesson · " : "Progress · "}</span>{complete ? "Choose any lesson to revisit" : next?.title ?? `${e.completedTopicIds.length} lessons complete`}</p>
+                {lastActive && <p className="mt-1 text-sm"><span className="text-foreground-muted">Last active · </span>{lastActive.title}</p>}
+                <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-muted" aria-label={`${total ? Math.round((e.completedTopicIds.length / total) * 100) : 0}% complete`}>
+                  <div className="h-full bg-primary" style={{ width: `${total ? Math.min(100, (e.completedTopicIds.length / total) * 100) : 0}%` }} />
+                </div>
                 <Button
                   className="mt-5"
                   variant="outline"
                   onClick={() => onOpen(e.id)}
                 >
-                  Resume roadmap
+                  {complete ? "Review roadmap" : hasStudy ? "Resume learning" : "Start learning"}
                   <ChevronRight className="size-4" />
                 </Button>
               </article>
@@ -194,7 +232,8 @@ export function MyLearning({
               ? "Try another search."
               : "Browse a sample and save it to keep your progress here."}
           </p>
-          <Button className="mt-4" onClick={onBrowse}>
+          {(query || progressFilter !== "all") && <Button className="mt-3" variant="outline" onClick={() => { setQuery(""); setProgressFilter("all"); }}>Clear search and filters</Button>}
+          <Button className={query || progressFilter !== "all" ? "ml-2 mt-3" : "mt-4"} onClick={onBrowse}>
             Browse roadmaps
           </Button>
         </div>
@@ -208,6 +247,10 @@ export function Conversation({
   prompt,
   setPrompt,
   send,
+  busy = false,
+  onStop,
+  error,
+  onRetry,
   onReturn,
   onTopic,
   quote,
@@ -218,6 +261,10 @@ export function Conversation({
   prompt: string;
   setPrompt: (value: string) => void;
   send: () => void;
+  busy?: boolean;
+  onStop?: () => void;
+  error?: string;
+  onRetry?: () => void;
   onReturn: () => void;
   onTopic: (id: string) => void;
   quote?: string;
@@ -226,9 +273,9 @@ export function Conversation({
   const course = getRoadmap(state.roadmapId)!;
   const lesson = allLessons(course).find((item) => item.id === state.topicId)!;
   return (
-    <div className="mx-auto flex min-h-full w-full max-w-3xl flex-col px-6 py-8">
-      <div className="mb-5 flex items-start justify-between gap-3">
-        <div>
+    <div className="mx-auto flex h-full min-h-0 w-full max-w-3xl flex-col px-6 py-4 md:py-6">
+      <div className="mb-4 flex shrink-0 items-start justify-between gap-3">
+        <div className="min-w-0">
           <div className="text-xs text-foreground-muted">{course.title}</div>
           <h1 className="mt-2 text-lg font-semibold">{lesson.title}</h1>
           <p className="mt-1 text-xs text-foreground-muted">
@@ -239,19 +286,20 @@ export function Conversation({
           Return to lesson
         </Button>
       </div>
-      <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
+      <nav aria-label="Choose a lesson topic" className="mb-3 flex max-w-full min-w-0 shrink-0 gap-2 overflow-x-auto pb-2">
         {allLessons(course).map((item) => (
           <Button
             key={item.id}
             size="sm"
+            className="shrink-0"
             variant={item.id === lesson.id ? "secondary" : "ghost"}
             onClick={() => onTopic(item.id)}
           >
             {item.title}
           </Button>
         ))}
-      </div>
-      <div className="min-h-40 flex-1 space-y-3 overflow-y-auto rounded-2xl border border-border-subtle bg-surface p-4">
+      </nav>
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain rounded-2xl border border-border-subtle bg-surface p-4">
         {messages.length ? (
           messages.map((m) => (
             <div
@@ -275,11 +323,12 @@ export function Conversation({
           </p>
         )}
       </div>
+      {error && <div role="alert" className="mt-3 flex shrink-0 flex-wrap items-center justify-between gap-2 rounded-xl border border-destructive/40 bg-background-secondary px-3 py-2 text-sm"><p>{error}</p>{onRetry && <Button size="sm" variant="outline" onClick={onRetry}>Retry response</Button>}</div>}
       <form
-        className="mt-3 rounded-2xl border border-border-subtle bg-surface p-3"
+        className="mt-3 shrink-0 rounded-2xl border border-border-subtle bg-surface p-3"
         onSubmit={(e) => {
           e.preventDefault();
-          send();
+          if (!busy) send();
         }}
       >
         {quote && (
@@ -307,8 +356,9 @@ export function Conversation({
           placeholder="Ask a question about this lesson…"
           className="min-h-20"
         />
-        <div className="mt-2 flex justify-end">
-          <Button type="submit" size="sm" disabled={!prompt.trim() && !quote}>
+        <div className="mt-2 flex justify-end gap-2">
+          {busy && onStop && <Button type="button" size="sm" variant="outline" onClick={onStop}>Stop generating</Button>}
+          <Button type="submit" size="sm" disabled={busy || (!prompt.trim() && !quote)}>
             <Send className="size-3.5" />
             Send message
           </Button>
@@ -317,10 +367,132 @@ export function Conversation({
     </div>
   );
 }
+
+export function LearningLesson({
+  roadmapId,
+  topicId,
+  enrollment,
+  guest,
+  onPrev,
+  onRoadmap,
+  onNext,
+  onComplete,
+  onAsk,
+  onQuote,
+  quote,
+  note,
+  onNote,
+  activity,
+  onActivityChange,
+  onEnablePractice,
+}: {
+  roadmapId: string;
+  topicId: string;
+  enrollment?: State["enrollments"][number];
+  guest: boolean;
+  onPrev: () => void;
+  onRoadmap: () => void;
+  onNext: () => void;
+  onComplete: () => void;
+  onAsk: (quote?: string) => void;
+  onQuote: (quote?: string) => void;
+  quote?: string;
+  note: boolean;
+  onNote: (value: boolean) => void;
+  activity?: ActivityProgress;
+  onActivityChange: (progress: ActivityProgress) => void;
+  onEnablePractice: () => void;
+}) {
+  const roadmap = getRoadmap(roadmapId);
+  const lessons = roadmap ? allLessons(roadmap) : [];
+  const index = Math.max(0, lessons.findIndex((item) => item.id === topicId));
+  const lesson = lessons[index] ?? lessons[0];
+  const [selectionNotice, setSelectionNotice] = useState<string>();
+  if (!roadmap || !lesson) return <div className="mx-auto max-w-3xl px-6 py-10 text-sm text-foreground-muted">This lesson is no longer available.</div>;
+  const done = enrollment?.completedTopicIds.includes(lesson.id) ?? false;
+  const capture = () => {
+    const selection = window.getSelection();
+    if (!selection || !selection.rangeCount) return false;
+    const range = selection.getRangeAt(0);
+    const content = document.querySelector("[data-lesson-content]");
+    if (content?.contains(range.commonAncestorContainer) && selection.toString().trim()) {
+      onQuote(selection.toString().trim());
+      setSelectionNotice(undefined);
+      return true;
+    }
+    return false;
+  };
+  const requestCapture = () => {
+    if (!capture()) setSelectionNotice("Select text from the lesson reading first. Practice questions and controls are not included.");
+  };
+
+  return (
+    <section aria-labelledby="lesson-title" className="lesson-reading mx-auto w-full max-w-3xl px-6 pb-16 pt-8 md:px-12">
+      <nav aria-label="Lesson location" className="flex flex-wrap items-center gap-2 text-sm text-foreground-muted">
+        <Button variant="link" className="h-auto p-0" onClick={onRoadmap}>Roadmap</Button><span aria-hidden="true">›</span><span>{lesson.section}</span>
+      </nav>
+      <div className="mt-5 flex flex-wrap items-center gap-2">
+        <Badge variant="secondary">LESSON {String(index + 1).padStart(2, "0")}</Badge>
+        <span className="text-sm text-foreground-muted">{lesson.duration} min</span>
+        {done && <Badge variant="success">Completed</Badge>}
+      </div>
+      <h1 id="lesson-title" className="mt-3 text-xl font-semibold">{lesson.title}</h1>
+      <p className="mt-2 text-base leading-7 text-foreground-muted">{lesson.objective}</p>
+
+      <article data-lesson-content onMouseUp={capture} className="mt-8 space-y-7">
+        {lesson.paragraphs.map(([heading, body]) => <section key={heading}><h2 className="mb-2 text-lg font-semibold">{heading}</h2><p className="text-base leading-7 text-foreground-muted">{body}</p></section>)}
+        <section aria-labelledby="example-heading" className="overflow-hidden rounded-xl border border-border-subtle bg-code-bg">
+          <h2 id="example-heading" className="border-b border-border-subtle bg-code-header-bg px-4 py-3 text-sm font-medium text-code-foreground">Worked example</h2>
+          <pre className="overflow-x-auto p-4 text-sm leading-6 text-code-foreground"><code>{lesson.code}</code></pre>
+        </section>
+      </article>
+
+      <section aria-labelledby="reflection-heading" className="mt-8 rounded-2xl border border-border-subtle bg-background-secondary p-5">
+        <h2 id="reflection-heading" className="text-lg font-semibold">Pause and reflect</h2>
+        <p className="mt-2 text-base leading-7 text-foreground-muted">{lesson.exercise}</p>
+        <p className="mt-3 text-sm leading-6 text-foreground-muted">{lesson.note}</p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" onPointerDown={(event) => event.preventDefault()} onClick={requestCapture}>Ask about selected passage</Button>
+          <Button size="sm" onClick={() => onAsk(quote)}>{quote ? "Ask tutor with passage" : "Ask tutor about this lesson"}</Button>
+        </div>
+        {selectionNotice && <p role="status" className="mt-3 text-sm text-foreground-muted">{selectionNotice}</p>}
+        {quote && <div className="mt-4 rounded-lg border border-border-subtle bg-surface p-3"><p className="text-xs font-medium text-foreground-muted">Selected lesson passage</p><blockquote className="mt-1 text-sm leading-6">{quote}</blockquote><Button variant="link" className="mt-1 h-auto p-0" onClick={() => onQuote(undefined)}>Clear selection</Button></div>}
+      </section>
+
+      <LessonActivity topicId={lesson.id} progress={activity} enabled={!guest && Boolean(enrollment)} onChange={onActivityChange} onEnablePractice={onEnablePractice} />
+
+      <section className="mt-7 rounded-xl border border-border-subtle bg-surface p-4">
+        <h2 className="text-base font-semibold">Source</h2>
+        <p className="mt-2 text-sm leading-6 text-foreground-muted">{lesson.source.description}</p>
+        <div className="mt-3 flex flex-wrap items-center gap-4">
+          <Button variant="link" className="h-auto p-0" onClick={() => onNote(true)}>Preview source note</Button>
+          <a className="text-sm underline underline-offset-4" href={lesson.source.url} target="_blank" rel="noreferrer">{lesson.source.title} · official reference</a>
+        </div>
+        {note && <p role="status" className="mt-3 text-sm text-foreground-muted">Source note preview is open in the lesson details panel.</p>}
+      </section>
+
+      {guest && <p className="mt-6 text-sm text-foreground-muted">Public lesson preview. Reading is open; private practice and progress are available in a learning copy.</p>}
+      <footer className="mt-9 flex flex-col gap-3 border-t border-border-subtle pt-5 sm:flex-row sm:items-center sm:justify-between">
+        <Button variant="ghost" disabled={index === 0} onClick={onPrev}>Previous lesson</Button>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {done ? <Badge variant="success">This lesson is complete</Badge> : <Button variant="outline" onClick={onComplete}>{guest ? "Track progress" : "Mark complete"}</Button>}
+          <Button onClick={onNext}>{index === lessons.length - 1 ? "Finish roadmap" : "Continue to next lesson"}<ChevronRight className="size-4" /></Button>
+        </div>
+      </footer>
+    </section>
+  );
+}
+
+export const LessonReader = LearningLesson;
 export function LibraryView() {
+  const [query, setQuery] = useState("");
+  const [preview, setPreview] = useState<string | undefined>();
+  const [category, setCategory] = useState("all");
   const items = allAvailableRoadmaps().flatMap((course) =>
     allLessons(course).map((lesson) => ({ lesson, course })),
   );
+  const categories = [...new Set(items.map(({ course }) => course.category))];
+  const filtered = items.filter(({ lesson, course }) => (category === "all" || course.category === category) && `${lesson.title} ${lesson.source.title} ${lesson.source.description} ${course.title}`.toLowerCase().includes(query.trim().toLowerCase()));
   return (
     <div className="mx-auto max-w-5xl px-6 py-10 md:px-10">
       <Badge variant="secondary">REFERENCE LIBRARY</Badge>
@@ -330,8 +502,14 @@ export function LibraryView() {
       <p className="mt-2 text-sm text-foreground-muted">
         Local notes and cited official references from the sample roadmaps.
       </p>
-      <div className="mt-6 grid gap-3 md:grid-cols-2">
-        {items.map(({ lesson, course }) => (
+      <div className="mt-5 max-w-lg">
+        <Input aria-label="Search reference library" placeholder="Search topics and sources" value={query} onChange={(event) => setQuery(event.target.value)} />
+      </div>
+      <div className="mt-4">
+        <SegmentedTabs ariaLabel="Filter reference library by roadmap category" items={[{ id: "all", label: "All topics" }, ...categories.map((item) => ({ id: item, label: item }))]} value={category} onChange={setCategory} size="sm" />
+      </div>
+      {filtered.length ? <div className="mt-6 grid gap-3 md:grid-cols-2">
+        {filtered.map(({ lesson, course }) => (
           <article
             key={`${course.id}:${lesson.id}`}
             className="rounded-2xl border border-border-subtle bg-surface p-4"
@@ -349,11 +527,13 @@ export function LibraryView() {
               target="_blank"
               rel="noreferrer"
             >
-              Official external documentation
+              Open official reference
             </a>
+            <Button variant="link" className="mt-3 block h-auto p-0" aria-expanded={preview === lesson.id} onClick={() => setPreview(preview === lesson.id ? undefined : lesson.id)}>{preview === lesson.id ? "Hide lesson note" : "Preview lesson note"}</Button>
+            {preview === lesson.id && <p className="mt-2 rounded-lg bg-background-secondary p-3 text-sm leading-6 text-foreground-muted">{lesson.note}</p>}
           </article>
         ))}
-      </div>
+      </div> : <div className="mt-6 rounded-2xl border border-border-subtle bg-surface p-6"><h2 className="text-base font-medium">No matching references</h2><p className="mt-2 text-sm text-foreground-muted">Try another topic, roadmap, or source name.</p><Button className="mt-3" variant="outline" onClick={() => { setQuery(""); setCategory("all"); }}>Clear search and filter</Button></div>}
     </div>
   );
 }

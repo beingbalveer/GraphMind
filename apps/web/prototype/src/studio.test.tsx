@@ -97,6 +97,22 @@ describe("guest and learner state boundaries", () => {
     expect(visibleConversations(state)).toEqual({});
   });
 
+  it("resumes the last unfinished topic after sign-out and sign-in while retaining its draft", () => {
+    let state = reducer(initial, { type: "sign-in" });
+    state = reducer(state, { type: "save-roadmap", roadmapId: "roadmap-python-backend" });
+    const enrollmentId = state.enrollmentId!;
+    state = reducer(state, { type: "open-topic", topicId: "py-02" });
+    state = reducer(state, { type: "set-draft", value: "I want to revisit runtime validation." });
+    state = reducer(state, { type: "sign-out" });
+    state = reducer(state, { type: "sign-in" });
+
+    const enrollment = state.enrollments.find((item) => item.id === enrollmentId)!;
+    expect(enrollment.lastTopicId).toBe("py-02");
+    expect(state.drafts[scopedKey(enrollmentId, "py-02")]).toBe("I want to revisit runtime validation.");
+    state = reducer(state, { type: "open-enrollment", enrollmentId, topicId: enrollment.lastTopicId });
+    expect(state).toMatchObject({ view: "lesson", enrollmentId, topicId: "py-02" });
+  });
+
   it("adds a generated personal copy only after a valid demo job completes", () => {
     let state = reducer(initial, { type: "sign-in" });
     state = reducer(state, { type: "navigate", view: "generator" });

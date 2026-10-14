@@ -75,3 +75,10 @@
     display: none;
   }
 }
+/* Learner preferences are scoped to the local studio shell. */
+.studio-shell.reading-large .lesson-reading { font-size: 1.125rem; line-height: 1.85; }
+.studio-shell.reading-large .lesson-reading p,
+.studio-shell.reading-large .lesson-reading li { font-size: 1.125rem; line-height: 1.85; }
+.studio-shell.reduced-motion *,
+.studio-shell.reduced-motion *::before,
+.studio-shell.reduced-motion *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }

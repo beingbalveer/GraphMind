@@ -8,6 +8,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Drawer } from "@/components/ui/drawer";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
   Modal,
   ModalBody,
@@ -28,12 +29,12 @@ import {
   ChevronRight,
   PanelRight,
   Expand,
+  Settings,
+  List,
 } from "lucide-react";
 import { roadmaps, allLessons } from "./catalog";
 import {
   CatalogView,
-  Generator,
-  LessonReader,
   RoadmapOverview,
 } from "./studio-views";
 import {
@@ -45,12 +46,15 @@ import {
   currentEnrollment,
   privateKey,
   scopedKey,
-  validGeneratorProfile,
   type State,
   type View,
 } from "./state";
 import { TutorPanel } from "./studio-components";
-import { Home, MyLearning, Conversation, LibraryView } from "./learner-views";
+import { Home, MyLearning, Conversation, LibraryView, LearningLesson } from "./learner-views";
+import { restoreState, persistState, clearDemoStorage, exportState } from "./persistence";
+import { GeneratorFlow } from "./generator-flow";
+import { SettingsView } from "./settings-view";
+import { Appearance, Brand, RoadmapOutline } from "./studio-chrome";
 
 function useSmallScreen() {
   const [small, setSmall] = useState(
@@ -67,14 +71,22 @@ function useSmallScreen() {
 }
 
 export function LearningStudio() {
-  const [state, dispatch] = useReducer(reducer, initial);
+  const [state, dispatch] = useReducer(reducer, initial, () => restoreState(readStorage()));
   const [tutorOpen, setTutorOpen] = useState(false);
   const [tutorTab, setTutorTab] = useState<"tutor" | "sources">("tutor");
   const [mobileNav, setMobileNav] = useState(false);
   const [noteOpen, setNoteOpen] = useState(false);
+  const [resetOpen, setResetOpen] = useState(false);
+  const [outlineOpen, setOutlineOpen] = useState(true);
+  const [mobileOutlineOpen, setMobileOutlineOpen] = useState(false);
+  const [effectiveDark, setEffectiveDark] = useState(false);
   const readingRef = useRef<HTMLElement>(null);
-  const jobTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const nextMessageId = useRef(1);
+  const skipNextPersist = useRef(false);
+  const tutorTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const tutorJob = useRef<{ key: string; messageId: number; question: string; quote?: string } | undefined>(undefined);
+  const saveTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  const nextMessageId = useRef(Math.max(0, ...Object.values(state.conversations).flat().map((message) => message.id)) + 1);
+  const [tutorBusy, setTutorBusy] = useState(false);
   const small = useSmallScreen();
   const roadmap = getRoadmap(state.roadmapId) ?? roadmaps[0];
   const lessons = allLessons(roadmap);
@@ -88,10 +100,23 @@ export function LearningStudio() {
   const canUsePrivate = state.mode === "learner" && Boolean(enrollment);
   const localPositionKey =
     key ?? `public::${state.roadmapId}::${state.topicId}`;
+  const tutorLocation = useRef({ key: localPositionKey, view: state.view });
 
   useEffect(() => {
-    document.documentElement.classList.toggle("dark", state.dark);
-  }, [state.dark]);
+    const media = window.matchMedia?.("(prefers-color-scheme: dark)");
+    const apply = () => {
+      const dark = state.preferences.theme === "dark" || (state.preferences.theme === "system" && media?.matches);
+      document.documentElement.classList.toggle("dark", Boolean(dark));
+      setEffectiveDark(Boolean(dark));
+    };
+    apply();
+    media?.addEventListener("change", apply);
+    return () => media?.removeEventListener("change", apply);
+  }, [state.preferences.theme, state.dark]);
+  useEffect(() => {
+    if (skipNextPersist.current) { skipNextPersist.current = false; return; }
+    persistState(readStorage(), state);
+  }, [state]);
   useLayoutEffect(() => {
     if (state.view === "lesson" && readingRef.current)
       readingRef.current.scrollTop =
@@ -99,21 +124,27 @@ export function LearningStudio() {
   }, [state.view, state.topicId, state.roadmapId, state.enrollmentId]);
   useEffect(
     () => () => {
-      if (jobTimer.current) clearTimeout(jobTimer.current);
+      if (tutorTimer.current) clearTimeout(tutorTimer.current);
+      saveTimers.current.forEach(clearTimeout);
     },
     [],
   );
   useEffect(() => {
-    if (state.generatorStep !== "generating") return;
-    const jobId = state.generatorJobId;
-    jobTimer.current = setTimeout(
-      () => dispatch({ type: "generator-complete", jobId }),
-      650,
-    );
-    return () => {
-      if (jobTimer.current) clearTimeout(jobTimer.current);
-    };
-  }, [state.generatorStep, state.generatorJobId]);
+    const previous = tutorLocation.current;
+    const canContinue = previous.key === localPositionKey && ["lesson", "conversation"].includes(previous.view) && ["lesson", "conversation"].includes(state.view);
+    if (!canContinue && tutorTimer.current) {
+      clearTimeout(tutorTimer.current);
+      tutorTimer.current = undefined;
+      const job = tutorJob.current;
+      if (job) {
+        dispatch({ type: "tutor-remove", key: job.key, messageId: job.messageId });
+        dispatch({ type: "tutor-error", key: job.key, value: "Response paused because you left this topic. Return to the conversation to retry the same question." });
+      }
+      tutorJob.current = undefined;
+      setTutorBusy(false);
+    }
+    tutorLocation.current = { key: localPositionKey, view: state.view };
+  }, [localPositionKey, state.view]);
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (
@@ -174,19 +205,29 @@ export function LearningStudio() {
     state.mode === "learner"
       ? dispatch({ type: "save-roadmap", roadmapId: state.roadmapId })
       : gate({ type: "save", roadmapId: state.roadmapId });
-  const completion = () =>
-    state.mode === "learner"
-      ? dispatch({
-          type: "complete-topic",
-          roadmapId: state.roadmapId,
-          topicId: state.topicId,
-          enrollmentId: enrollment?.id,
-        })
-      : gate({
-          type: "complete",
-          roadmapId: state.roadmapId,
-          topicId: state.topicId,
-        });
+  const scheduleSave = (saveKey: string, retry: boolean) => {
+    if (state.saveJobs[saveKey] === "pending") return;
+    if (retry) dispatch({ type: "save-retry", key: saveKey });
+    else dispatch({ type: "save-start", key: saveKey });
+    const existingTimer = saveTimers.current.get(saveKey);
+    if (existingTimer) clearTimeout(existingTimer);
+    const failOnce = !retry && state.scenario === "save-error";
+    if (failOnce) dispatch({ type: "scenario", value: "normal" });
+    const timer = setTimeout(() => {
+      if (failOnce) dispatch({ type: "save-fail", key: saveKey });
+      else dispatch({ type: "save-finish", key: saveKey });
+      saveTimers.current.delete(saveKey);
+    }, 500);
+    saveTimers.current.set(saveKey, timer);
+  };
+  const completion = () => {
+    if (state.mode !== "learner") return gate({ type: "complete", roadmapId: state.roadmapId, topicId: state.topicId });
+    const targetEnrollment = enrollment ?? enrollmentFor(state, state.roadmapId);
+    const enrollmentId = targetEnrollment?.id ?? `demo-enrollment-${state.enrollments.length + 1}`;
+    const saveKey = scopedKey(enrollmentId, state.topicId);
+    if (!targetEnrollment) dispatch({ type: "enable-practice", roadmapId: state.roadmapId, topicId: state.topicId });
+    scheduleSave(saveKey, state.saveJobs[saveKey] === "error");
+  };
   const askTutor = (selectedQuote?: string) => {
     if (state.mode === "guest") {
       gate({
@@ -206,21 +247,57 @@ export function LearningStudio() {
     setTutorTab("tutor");
     setTutorOpen(true);
   };
+  const runTutor = (key: string, question: string, passage?: string) => {
+    if (tutorTimer.current) clearTimeout(tutorTimer.current);
+    const answerId = nextMessageId.current++;
+    tutorJob.current = { key, messageId: answerId, question, quote: passage };
+    dispatch({ type: "tutor-error", key });
+    if (state.scenario === "tutor-error") {
+      dispatch({ type: "scenario", value: "normal" });
+      tutorTimer.current = setTimeout(() => {
+        dispatch({ type: "tutor-error", key, value: "The sample tutor could not finish this request. Your question is saved; retry when ready." });
+        tutorJob.current = undefined;
+        setTutorBusy(false);
+      }, 450);
+      setTutorBusy(true);
+      return;
+    }
+    const lessonContext = lesson;
+    const detail = state.preferences.tutorStyle === "concise"
+      ? `${lessonContext.title} focuses on: ${lessonContext.objective} For your question “${question}”, apply that objective to one small example${passage ? `, using the selected passage “${passage.slice(0, 100)}”` : ""}.`
+      : `In ${lessonContext.title}, the goal is to ${lessonContext.objective.toLowerCase()} Start with the idea in “${lessonContext.paragraphs[0]?.[0] ?? lessonContext.section}”. ${passage ? `The selected passage says “${passage.slice(0, 120)}”. ` : ""}Try a small example: write down the starting value, apply the rule described in the lesson, and check whether the result meets its objective. What part of that example is unclear in your question: ${question}`;
+    const reply = detail;
+    setTutorBusy(true);
+    let position = 0;
+    const stream = () => {
+      position = Math.min(position + 12, reply.length);
+      dispatch({ type: "tutor-upsert", key, message: { id: answerId, role: "tutor", text: reply.slice(0, position), quote: passage, status: position < reply.length ? "streaming" : "complete" } });
+      if (position < reply.length) tutorTimer.current = setTimeout(stream, 28);
+      else { setTutorBusy(false); tutorJob.current = undefined; }
+    };
+    tutorTimer.current = setTimeout(stream, 100);
+  };
   const send = () => {
-    if (!canUsePrivate || (!prompt.trim() && !quote)) return;
+    if (!canUsePrivate || (!prompt.trim() && !quote) || tutorBusy || !key) return;
     const text = prompt.trim() || "Can you explain this passage?";
-    dispatch({
-      type: "send-message",
-      message: { id: nextMessageId.current++, role: "learner", text, quote },
-    });
-    dispatch({
-      type: "send-message",
-      message: {
-        id: nextMessageId.current++,
-        role: "tutor",
-        text: `Sample tutor reply: In ${lesson.title}, follow the idea one step at a time. Notice what enters, what the code guarantees, and what the caller receives.`,
-      },
-    });
+    dispatch({ type: "send-message", message: { id: nextMessageId.current++, role: "learner", text, quote } });
+    runTutor(key, text, quote);
+  };
+  const retryTutor = () => {
+    if (!key || tutorBusy) return;
+    const prior = [...messages].reverse().find((message) => message.role === "learner");
+    if (prior) runTutor(key, prior.text, prior.quote);
+  };
+  const stopTutor = () => {
+    if (tutorTimer.current) clearTimeout(tutorTimer.current);
+    tutorTimer.current = undefined;
+    const job = tutorJob.current;
+    if (job) {
+      dispatch({ type: "tutor-remove", key: job.key, messageId: job.messageId });
+      dispatch({ type: "tutor-error", key: job.key, value: "Response stopped. Your question is saved; retry to continue the sample response." });
+    }
+    tutorJob.current = undefined;
+    setTutorBusy(false);
   };
   const navItem = (view: View, label: string, icon: React.ReactNode) => (
     <NavigationItem
@@ -236,36 +313,47 @@ export function LearningStudio() {
     allLessons(getRoadmap(roadmapId) ?? roadmaps[0]).find(
       (item) => !completedIds.includes(item.id),
     )?.id ?? allLessons(getRoadmap(roadmapId) ?? roadmaps[0])[0].id;
+  const resumeTopic = (item: { templateId: string; completedTopicIds: string[]; lastTopicId?: string }, current?: string) => {
+    const valid = allLessons(getRoadmap(item.templateId) ?? roadmaps[0]);
+    const available = (id?: string) => id && valid.some((lesson) => lesson.id === id) && !item.completedTopicIds.includes(id) ? id : undefined;
+    return available(current) ?? available(item.lastTopicId) ?? firstIncomplete(item.templateId, item.completedTopicIds);
+  };
   const startGenerator = () => {
     if (state.mode === "guest") return gate({ type: "generator" });
     navigate("generator");
     dispatch({ type: "generator-step", step: "form" });
   };
   const reset = () => {
-    if (jobTimer.current) clearTimeout(jobTimer.current);
+    if (tutorTimer.current) clearTimeout(tutorTimer.current);
+    tutorJob.current = undefined;
+    setTutorBusy(false);
+      saveTimers.current.forEach(clearTimeout);
     setTutorOpen(false);
     setMobileNav(false);
     setNoteOpen(false);
+    skipNextPersist.current = true;
     dispatch({ type: "reset" });
   };
   const signIn = () => {
     const intent = state.pendingIntent;
     dispatch({ type: "sign-in" });
+    if (intent?.type === "complete") {
+      const targetEnrollmentId = enrollmentFor(state, intent.roadmapId)?.id ?? `demo-enrollment-${state.enrollments.length + 1}`;
+      scheduleSave(scopedKey(targetEnrollmentId, intent.topicId), false);
+    }
     if (intent?.type === "tutor") {
       setTutorTab("tutor");
       setTutorOpen(true);
     }
   };
   const signOut = () => {
-    if (jobTimer.current) clearTimeout(jobTimer.current);
     setTutorOpen(false);
     setMobileNav(false);
+    if (tutorTimer.current) clearTimeout(tutorTimer.current);
+    tutorJob.current = undefined;
+    setTutorBusy(false);
+    saveTimers.current.forEach(clearTimeout);
     dispatch({ type: "sign-out" });
-  };
-  const startGeneration = () => {
-    if (!validGeneratorProfile(state.generatorProfile)) return;
-    const jobId = state.generatorJobId + 1;
-    dispatch({ type: "generator-job", jobId });
   };
   const goNext = () => {
     const index = lessons.findIndex((item) => item.id === state.topicId);
@@ -277,49 +365,30 @@ export function LearningStudio() {
   };
 
   return (
-    <div className="studio-shell flex h-dvh min-h-0 overflow-hidden bg-background text-foreground">
+    <div className={`studio-shell ${state.preferences.readingSize === "large" ? "reading-large" : ""} ${state.preferences.reducedMotion ? "reduced-motion" : ""} flex h-dvh min-h-0 overflow-hidden bg-background text-foreground`}>
       {state.mode === "learner" && (
         <aside className="studio-nav fixed inset-y-0 left-0 z-20 flex w-60 flex-col border-r border-border-subtle bg-background px-3 py-4">
           <Brand />
           <div className="mb-2 px-2 text-2xs font-medium uppercase tracking-wider text-foreground-subtle">
             Learning
           </div>
-          <nav aria-label="Main navigation" className="space-y-1">
+          <nav aria-label="Main navigation" className="min-h-0 flex-1 space-y-1 overflow-y-auto">
             {navItem("home", "Home", <Compass />)}
             {navItem("my-learning", "My learning", <BookOpen />)}
             {navItem("catalog", "Browse roadmaps", <Compass />)}
             {navItem("generator", "Create roadmap", <GraduationCap />)}
             {navItem("library", "Library", <Library />)}
+            {navItem("settings", "Settings", <Settings />)}
             {(state.view === "lesson" ||
               state.view === "overview" ||
               state.view === "conversation") && (
-              <div className="ml-4 mt-4 border-l border-border-subtle pl-3">
-                <div className="mb-2 text-xs text-foreground-subtle">
-                  Active roadmap
-                </div>
-                <NavigationItem
-                  active={state.view === "overview" || state.view === "lesson"}
-                  icon={<span className="size-1.5 rounded-full bg-primary" />}
-                  onClick={() => navigate("overview")}
-                >
-                  Roadmap
-                </NavigationItem>
-                <NavigationItem
-                  active={state.view === "conversation"}
-                  icon={
-                    <span className="size-1.5 rounded-full border border-foreground-subtle" />
-                  }
-                  onClick={openConversations}
-                >
-                  Conversations
-                </NavigationItem>
-              </div>
+              <RoadmapOutline roadmap={roadmap} topicId={state.topicId} completedIds={enrollment?.completedTopicIds ?? []} open={outlineOpen} onOpenChange={setOutlineOpen} onTopic={openTopic} onRoadmap={() => navigate("overview")} />
             )}
           </nav>
-          <div className="mt-auto space-y-1 border-t border-border-subtle pt-3">
+          <div className="mt-auto shrink-0 space-y-1 border-t border-border-subtle pt-3">
             <Appearance
-              dark={state.dark}
-              toggle={() => dispatch({ type: "theme", dark: !state.dark })}
+              dark={effectiveDark}
+              toggle={() => dispatch({ type: "preferences", value: { theme: effectiveDark ? "light" : "dark" } })}
             />
             <Button
               variant="ghost"
@@ -328,10 +397,10 @@ export function LearningStudio() {
             >
               Sign out
             </Button>
-            <Button
+              <Button
               variant="ghost"
               className="w-full justify-start gap-2 text-foreground-muted"
-              onClick={reset}
+              onClick={() => setResetOpen(true)}
             >
               <RotateCcw className="size-4" />
               Reset demo
@@ -370,6 +439,7 @@ export function LearningStudio() {
             )}
           </div>
           <div className="flex shrink-0 items-center gap-2">
+            {state.view === "lesson" && (small || state.mode === "guest") && <Button variant="ghost" size="iconSm" aria-label="Open course outline" onClick={() => { setOutlineOpen(true); setMobileOutlineOpen(true); }}><List className="size-4" /></Button>}
             <Badge variant="secondary">
               {state.mode === "guest" ? "Guest preview" : "Local demo"}
             </Badge>
@@ -395,13 +465,13 @@ export function LearningStudio() {
                   variant="ghost"
                   size="iconSm"
                   aria-label={
-                    state.dark
+                    effectiveDark
                       ? "Switch to light appearance"
                       : "Switch to dark appearance"
                   }
-                  onClick={() => dispatch({ type: "theme", dark: !state.dark })}
+                  onClick={() => dispatch({ type: "preferences", value: { theme: effectiveDark ? "light" : "dark" } })}
                 >
-                  {state.dark ? (
+                  {effectiveDark ? (
                     <Sun className="size-4" />
                   ) : (
                     <Moon className="size-4" />
@@ -462,7 +532,7 @@ export function LearningStudio() {
               />
             )}
             {state.view === "lesson" && (
-              <LessonReader
+              <LearningLesson
                 roadmapId={state.roadmapId}
                 topicId={state.topicId}
                 enrollment={enrollment}
@@ -490,11 +560,18 @@ export function LearningStudio() {
                 quote={quote}
                 note={false}
                 onNote={setNoteOpen}
+                activity={key ? state.activity[key] : undefined}
+                onActivityChange={(progress) => key && dispatch({ type: "activity", key, value: progress })}
+                onEnablePractice={() => {
+                  if (state.mode === "guest") gate({ type: "practice", roadmapId: state.roadmapId, topicId: state.topicId });
+                  else dispatch({ type: "enable-practice", roadmapId: state.roadmapId, topicId: state.topicId });
+                }}
               />
             )}
             {state.view === "home" && (
               <Home
                 state={state}
+                displayName={state.preferences.displayName}
                 activeEnrollment={
                   enrollment ?? state.enrollments[state.enrollments.length - 1]
                 }
@@ -503,10 +580,7 @@ export function LearningStudio() {
                     enrollment ??
                     state.enrollments[state.enrollments.length - 1];
                   if (!chosen) return navigate("catalog");
-                  const id = firstIncomplete(
-                    chosen.templateId,
-                    chosen.completedTopicIds,
-                  );
+                  const id = resumeTopic(chosen, state.enrollmentId === chosen.id ? state.topicId : undefined);
                   dispatch({
                     type: "open-enrollment",
                     enrollmentId: chosen.id,
@@ -524,36 +598,29 @@ export function LearningStudio() {
                   const enrollment = state.enrollments.find(
                     (item) => item.id === id,
                   )!;
+                  const topicId = resumeTopic(enrollment, state.enrollmentId === id ? state.topicId : undefined);
                   dispatch({
                     type: "open-enrollment",
                     enrollmentId: id,
-                    topicId: firstIncomplete(
-                      enrollment.templateId,
-                      enrollment.completedTopicIds,
-                    ),
+                    topicId,
                   });
                 }}
                 onBrowse={() => navigate("catalog")}
               />
             )}
             {state.view === "generator" && (
-              <Generator
+              <GeneratorFlow
                 profile={state.generatorProfile}
-                step={state.generatorStep}
                 selectedTemplate={state.generatorTemplateId}
                 onProfile={(field, value) =>
                   dispatch({ type: "generator-profile", field, value })
                 }
-                onStep={(step) => dispatch({ type: "generator-step", step })}
                 onTemplate={(id) =>
                   dispatch({ type: "generator-template", roadmapId: id })
                 }
-                onGenerate={startGeneration}
-                onCancel={() => {
-                  if (jobTimer.current) clearTimeout(jobTimer.current);
-                  dispatch({ type: "generator-step", step: "review" });
-                }}
-                onDone={() => navigate("my-learning")}
+                onCreate={(profile, templateId, runId) => dispatch({ type: "generator-create", profile, templateId, runId })}
+                scenario={state.scenario}
+                onScenarioConsumed={() => dispatch({ type: "scenario", value: "normal" })}
                 onStartLearning={() => {
                   const generated = state.enrollments.find(
                     (item) => item.id === state.enrollmentId,
@@ -568,15 +635,29 @@ export function LearningStudio() {
                       ),
                     });
                 }}
+                onShowCollection={() => navigate("my-learning")}
               />
             )}
+            {state.view === "settings" && <SettingsView
+              preferences={state.preferences}
+              onChange={(value) => dispatch({ type: "preferences", value })}
+              scenario={state.scenario}
+              onScenarioChange={(value) => dispatch({ type: "scenario", value })}
+              onExport={() => downloadExport(state)}
+              onResetRequest={() => setResetOpen(true)}
+              roadmapCount={state.enrollments.length}
+              completedCount={state.enrollments.reduce((count, item) => count + item.completedTopicIds.length, 0)}
+            />}
             {state.view === "conversation" && (
+              <>
               <Conversation
                 state={state}
                 messages={messages}
                 prompt={prompt}
                 setPrompt={(value) => dispatch({ type: "set-draft", value })}
                 send={send}
+                busy={tutorBusy}
+                onStop={stopTutor}
                 onReturn={() => navigate("lesson")}
                 onTopic={(topicId) =>
                   dispatch({ type: "conversation-topic", topicId })
@@ -585,7 +666,10 @@ export function LearningStudio() {
                 clearQuote={() =>
                   dispatch({ type: "set-quote", value: undefined })
                 }
+                error={key ? state.tutorErrors[key] : undefined}
+                onRetry={retryTutor}
               />
+              </>
             )}
             {state.view === "library" && <LibraryView />}
           </main>
@@ -602,6 +686,10 @@ export function LearningStudio() {
                 prompt={prompt}
                 setPrompt={(value) => dispatch({ type: "set-draft", value })}
                 send={send}
+                busy={tutorBusy}
+                error={key ? state.tutorErrors[key] : undefined}
+                onRetry={retryTutor}
+                onStop={stopTutor}
                 topic={lesson.title}
                 source={lesson.source}
                 localNote={lesson.note}
@@ -615,12 +703,13 @@ export function LearningStudio() {
             </aside>
           )}
         </div>
-        {state.notice && (
+        {(state.notice || (key && state.saveJobs[key])) && (
           <div
             role="status"
             className="fixed bottom-5 right-5 z-30 flex max-w-sm items-start gap-3 rounded-xl border border-border bg-surface p-4 text-sm shadow-lg"
           >
-            <p>{state.notice}</p>
+            <p>{key && state.saveJobs[key] === "error" ? "Progress could not be saved. Retry to mark this lesson complete." : key && state.saveJobs[key] === "pending" ? "Saving lesson progress…" : state.notice}</p>
+            {key && state.saveJobs[key] === "error" && <Button size="sm" onClick={completion}>Retry save</Button>}
             <Button
               variant="ghost"
               size="iconSm"
@@ -664,6 +753,10 @@ export function LearningStudio() {
               prompt={prompt}
               setPrompt={(value) => dispatch({ type: "set-draft", value })}
               send={send}
+              busy={tutorBusy}
+              error={key ? state.tutorErrors[key] : undefined}
+              onRetry={retryTutor}
+              onStop={stopTutor}
               topic={lesson.title}
               source={lesson.source}
               localNote={lesson.note}
@@ -712,8 +805,8 @@ export function LearningStudio() {
                   Sign in
                 </Button>
                 <Appearance
-                  dark={state.dark}
-                  toggle={() => dispatch({ type: "theme", dark: !state.dark })}
+                  dark={effectiveDark}
+                  toggle={() => dispatch({ type: "preferences", value: { theme: effectiveDark ? "light" : "dark" } })}
                 />
               </>
             ) : (
@@ -723,38 +816,14 @@ export function LearningStudio() {
                 {navItem("catalog", "Browse roadmaps", <Compass />)}
                 {navItem("generator", "Create roadmap", <GraduationCap />)}
                 {navItem("library", "Library", <Library />)}
-                {(state.view === "lesson" ||
-                  state.view === "overview" ||
-                  state.view === "conversation") && (
-                  <div className="mt-4 border-t border-border-subtle pt-3">
-                    <div className="mb-2 px-2 text-xs text-foreground-subtle">
-                      Active roadmap
-                    </div>
-                    <NavigationItem
-                      active={
-                        state.view === "overview" || state.view === "lesson"
-                      }
-                      icon={<BookOpen />}
-                      onClick={() => navigate("overview")}
-                    >
-                      Roadmap
-                    </NavigationItem>
-                    <NavigationItem
-                      active={state.view === "conversation"}
-                      icon={<BookOpen />}
-                      onClick={openConversations}
-                    >
-                      Conversations
-                    </NavigationItem>
-                  </div>
-                )}
+                {navItem("settings", "Settings", <Settings />)}
               </>
             )}
           </nav>
-          <div className="mt-auto space-y-1 border-t border-border-subtle p-3">
+          <div className="mt-auto shrink-0 space-y-1 border-t border-border-subtle p-3">
             <Appearance
-              dark={state.dark}
-              toggle={() => dispatch({ type: "theme", dark: !state.dark })}
+              dark={effectiveDark}
+              toggle={() => dispatch({ type: "preferences", value: { theme: effectiveDark ? "light" : "dark" } })}
             />
             {state.mode === "learner" && (
               <>
@@ -768,13 +837,24 @@ export function LearningStudio() {
                 <Button
                   variant="ghost"
                   className="w-full justify-start"
-                  onClick={reset}
+                  onClick={() => setResetOpen(true)}
                 >
                   <RotateCcw className="size-4" />
                   Reset demo
                 </Button>
               </>
             )}
+          </div>
+        </Drawer>
+        <Drawer
+          isOpen={mobileOutlineOpen && state.view === "lesson"}
+          onClose={() => setMobileOutlineOpen(false)}
+          title="Course outline"
+          description={roadmap.title}
+          widthClassName="w-[320px]"
+        >
+          <div className="p-3">
+            <RoadmapOutline roadmap={roadmap} topicId={state.topicId} completedIds={enrollment?.completedTopicIds ?? []} open={outlineOpen} onOpenChange={setOutlineOpen} onTopic={(id) => { openTopic(id); setMobileOutlineOpen(false); }} onRoadmap={() => { navigate("overview"); setMobileOutlineOpen(false); }} />
           </div>
         </Drawer>
         <Modal
@@ -803,6 +883,14 @@ export function LearningStudio() {
             <Button onClick={signIn}>Continue as demo learner</Button>
           </ModalFooter>
         </Modal>
+        <ConfirmDialog
+          isOpen={resetOpen}
+          onClose={() => setResetOpen(false)}
+          onConfirm={() => { clearDemoStorage(readStorage()); reset(); }}
+          title="Reset local demo?"
+          description="This clears saved lessons, progress, preferences, and demo conversations from this browser."
+          confirmText="Reset demo"
+        />
         <Modal
           isOpen={noteOpen}
           onClose={() => setNoteOpen(false)}
@@ -835,33 +923,24 @@ export function LearningStudio() {
   );
 }
 
-function Brand({ compact = false }: { compact?: boolean }) {
-  return (
-    <div className="flex items-center gap-2">
-      <div className="flex size-8 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-        <GraduationCap className="size-4" />
-      </div>
-      <div>
-        <div className="text-sm font-semibold">GraphMind</div>
-        {!compact && (
-          <div className="text-xs text-foreground-muted">Learning studio</div>
-        )}
-      </div>
-    </div>
-  );
+function readStorage(): Storage | undefined {
+  try { return typeof window === "undefined" ? undefined : window.localStorage; }
+  catch { return undefined; }
 }
-function Appearance({ dark, toggle }: { dark: boolean; toggle: () => void }) {
-  return (
-    <Button
-      variant="ghost"
-      className="w-full justify-start gap-2"
-      onClick={toggle}
-    >
-      {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
-      {dark ? "Light appearance" : "Dark appearance"}
-    </Button>
-  );
+function downloadExport(state: State) {
+  try {
+    const blob = new Blob([exportState(state)], { type: "application/json" });
+    const href = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = href;
+    anchor.download = "graphmind-demo-export.json";
+    anchor.click();
+    URL.revokeObjectURL(href);
+  } catch {
+    // Browser download APIs can be unavailable in embedded previews.
+  }
 }
+
 function viewTitle(view: View) {
   return {
     home: "Home",
@@ -872,5 +951,6 @@ function viewTitle(view: View) {
     generator: "Create roadmap",
     conversation: "Conversations",
     library: "Library",
+    settings: "Settings",
   }[view];
 }

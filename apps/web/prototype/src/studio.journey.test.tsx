@@ -1,7 +1,13 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { LearningStudio } from "./studio";
+
+beforeEach(() => {
+  Array.from({ length: localStorage.length }, (_, index) => localStorage.key(index))
+    .filter((key): key is string => Boolean(key) && key!.startsWith("graphmind-studio-"))
+    .forEach((key) => localStorage.removeItem(key));
+});
 
 describe("public-to-learner journeys", () => {
   it("lets a guest browse and read a public lesson without opening the sign-in gate", async () => {
@@ -49,7 +55,7 @@ describe("gated tutor and generator journeys", () => {
     window.getSelection()?.removeAllRanges();
     window.getSelection()?.addRange(range);
     await user.click(
-      screen.getByRole("button", { name: "Ask about selected text" }),
+      screen.getByRole("button", { name: "Ask about selected passage" }),
     );
     expect(
       screen.getByRole("dialog", { name: "Continue as a demo learner" }),
@@ -100,10 +106,10 @@ describe("gated tutor and generator journeys", () => {
       screen.getByPlaceholderText("What do you want to learn and why?"),
       "Learn how to build a small weather API",
     );
-    await user.type(
-      screen.getByPlaceholderText("What should you be able to do?"),
-      "Deploy an API with a clear health endpoint",
-    );
+    await user.click(screen.getByRole("button", { name: "Add background and planning details" }));
+    const outcomeInput = screen.getByPlaceholderText("What should you be able to do?");
+    await user.clear(outcomeInput);
+    await user.type(outcomeInput, "Deploy an API with a clear health endpoint");
     await user.click(
       screen.getByRole("button", { name: "Review roadmap details" }),
     );
@@ -125,7 +131,7 @@ describe("gated tutor and generator journeys", () => {
     await user.click(
       await screen.findByRole(
         "button",
-        { name: "Review in My learning" },
+        { name: "Show collection" },
         { timeout: 3000 },
       ),
     );
@@ -154,7 +160,7 @@ it("filters My learning by completion state", async () => {
   ).toBeTruthy();
   await user.click(screen.getByRole("tab", { name: "Completed" }));
   expect(screen.getByText("No matching roadmaps")).toBeTruthy();
-  await user.click(screen.getByRole("tab", { name: "In progress" }));
+  await user.click(screen.getByRole("tab", { name: "Not started" }));
   expect(
     screen.getByRole("heading", {
       name: "Python foundations for backend work",
