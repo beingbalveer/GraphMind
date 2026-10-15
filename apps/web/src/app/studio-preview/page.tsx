@@ -390,6 +390,9 @@ Always avoid invoking CPU-bound or blocking synchronous routines directly in \`a
         <StudioCourseRail
           courseTitle="Backend Engineering with Python"
           progressPercent={20}
+          workspaceId={viewWithProgress.workspaceId}
+          topicId={activeTopicId}
+          topicTitle={activeTopic}
           onClose={() => setIsLeftRailOpen(false)}
           onNewChat={() => alert("New course conversation triggered")}
           outlineContent={
@@ -406,15 +409,12 @@ Always avoid invoking CPU-bound or blocking synchronous routines directly in \`a
               }}
             />
           }
-          chatsContent={
-            <div className="p-3 text-xs text-foreground-muted">
-              Course conversations will appear here when connected to the backend.
-            </div>
-          }
         />
       }
       tutorRail={
         <StudioTutorRail
+          workspaceId={viewWithProgress.workspaceId}
+          topicId={activeTopicId}
           topicTitle={activeTopic}
           isExpanded={isRightExpanded}
           onToggleExpand={() => setIsRightExpanded((v) => !v)}

@@ -4,11 +4,20 @@ import React, { useState } from "react";
 import { BookOpen, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SegmentedTabs } from "@/components/ui/segmented-tabs";
+import { StudioTopicChatHistory } from "./StudioTopicChatHistory";
 import { cn } from "@/lib/utils";
+import type { TopicSessionData, TopicSessionSummary } from "@/lib/roadmapTypes";
 
 export interface StudioCourseRailProps {
   courseTitle?: string;
   progressPercent?: number;
+  workspaceId?: string;
+  topicId?: string;
+  topicTitle?: string;
+  isArchived?: boolean;
+  activeSessionId?: string | null;
+  onSelectSession?: (session: TopicSessionSummary) => void;
+  onSessionCreated?: (session: TopicSessionData) => void;
   outlineContent?: React.ReactNode;
   chatsContent?: React.ReactNode;
   onNewChat?: () => void;
@@ -23,6 +32,13 @@ export interface StudioCourseRailProps {
 export function StudioCourseRail({
   courseTitle = "Course Workspace",
   progressPercent = 0,
+  workspaceId,
+  topicId,
+  topicTitle,
+  isArchived = false,
+  activeSessionId,
+  onSelectSession,
+  onSessionCreated,
   outlineContent,
   chatsContent,
   onNewChat,
@@ -120,6 +136,16 @@ export function StudioCourseRail({
             )}
             {chatsContent ? (
               chatsContent
+            ) : workspaceId && topicId ? (
+              <StudioTopicChatHistory
+                workspaceId={workspaceId}
+                topicId={topicId}
+                topicTitle={topicTitle}
+                isArchived={isArchived}
+                activeSessionId={activeSessionId}
+                onSelectSession={onSelectSession}
+                onSessionCreated={onSessionCreated}
+              />
             ) : (
               <div className="p-4 text-center text-xs text-foreground-muted">
                 No active conversations for this course.

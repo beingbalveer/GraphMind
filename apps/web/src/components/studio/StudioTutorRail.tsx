@@ -1,13 +1,21 @@
 "use client";
 
 import React, { useState } from "react";
-import { BookMarked, Maximize2, Minimize2, Sparkles, X } from "lucide-react";
+import { BookMarked, History, Maximize2, Minimize2, MessageSquare, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SegmentedTabs } from "@/components/ui/segmented-tabs";
+import { StudioTopicChatHistory } from "./StudioTopicChatHistory";
 import { cn } from "@/lib/utils";
+import type { TopicSessionData, TopicSessionSummary } from "@/lib/roadmapTypes";
 
 export interface StudioTutorRailProps {
+  workspaceId?: string;
+  topicId?: string;
   topicTitle?: string;
+  isArchived?: boolean;
+  activeSessionId?: string | null;
+  onSelectSession?: (session: TopicSessionSummary) => void;
+  onSessionCreated?: (session: TopicSessionData) => void;
   tutorContent?: React.ReactNode;
   resourcesContent?: React.ReactNode;
   onClose?: () => void;
@@ -21,7 +29,13 @@ export interface StudioTutorRailProps {
  * Conforms to semantic tokens, dark mode, and responsive layout standards.
  */
 export function StudioTutorRail({
+  workspaceId,
+  topicId,
   topicTitle = "Current Topic",
+  isArchived = false,
+  activeSessionId,
+  onSelectSession,
+  onSessionCreated,
   tutorContent,
   resourcesContent,
   onClose,
@@ -30,6 +44,7 @@ export function StudioTutorRail({
   className,
 }: StudioTutorRailProps) {
   const [activeTab, setActiveTab] = useState<"tutor" | "resources">("tutor");
+  const [showHistory, setShowHistory] = useState(false);
 
   return (
     <div
@@ -92,13 +107,66 @@ export function StudioTutorRail({
           onChange={(id) => setActiveTab(id as "tutor" | "resources")}
           size="sm"
         />
+
+        {/* History / Active session toggle */}
+        {activeTab === "tutor" && workspaceId && topicId && (
+          <div className="flex items-center justify-between pt-1">
+            <span className="text-2xs text-foreground-muted">
+              {showHistory ? "Viewing previous chats" : "Active tutor session"}
+            </span>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setShowHistory((v) => !v)}
+              className="h-6 text-2xs gap-1 px-2 text-foreground-muted hover:text-foreground"
+            >
+              {showHistory ? (
+                <>
+                  <MessageSquare className="size-3" />
+                  <span>Back to tutor</span>
+                </>
+              ) : (
+                <>
+                  <History className="size-3" />
+                  <span>Past chats</span>
+                </>
+              )}
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Body */}
       <div className="flex-1 overflow-y-auto min-h-0 p-3">
         {activeTab === "tutor" ? (
-          tutorContent ? (
+          showHistory && workspaceId && topicId ? (
+            <StudioTopicChatHistory
+              workspaceId={workspaceId}
+              topicId={topicId}
+              topicTitle={topicTitle}
+              isArchived={isArchived}
+              activeSessionId={activeSessionId}
+              onSelectSession={(summary) => {
+                onSelectSession?.(summary);
+                setShowHistory(false);
+              }}
+              onSessionCreated={(session) => {
+                onSessionCreated?.(session);
+                setShowHistory(false);
+              }}
+            />
+          ) : tutorContent ? (
             tutorContent
+          ) : workspaceId && topicId ? (
+            <StudioTopicChatHistory
+              workspaceId={workspaceId}
+              topicId={topicId}
+              topicTitle={topicTitle}
+              isArchived={isArchived}
+              activeSessionId={activeSessionId}
+              onSelectSession={onSelectSession}
+              onSessionCreated={onSessionCreated}
+            />
           ) : (
             <div className="p-4 text-center text-xs text-foreground-muted flex flex-col items-center gap-2">
               <Sparkles className="size-6 text-foreground-subtle" />

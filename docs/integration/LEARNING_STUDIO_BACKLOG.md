@@ -174,6 +174,7 @@ Ticket size is a planning target. When scope proves too large, create explicit `
 - **Acceptance:** History preserved; fresh retries create once; session/root/topic association survives refresh without duplicate client records.
 - **Test targets:** Membership/topic APIs and UI switch/fresh-session tests.
 - **Out of scope:** Branch creation or replacing TopicChat identity.
+- **Evidence:** useTopicChatHistory hook, StudioTopicChatHistory component, rail integrations, and 8 passing unit tests verified in [evidence/LSI-013.md](./evidence/LSI-013.md).
 
 ### LSI-014 Tutor stream and local context lifecycle
 **Epic:** B · **Type:** Full stack · **Priority:** P0 · **Depends:** LSI-013
