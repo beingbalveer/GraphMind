@@ -3,20 +3,20 @@
 ## Current position — 2026-10-15
 
 - Active ticket: none
-- Completed tickets: `LSI-001` (DONE — evidence in `docs/integration/evidence/LSI-001.md`), `LSI-002` (DONE — evidence in `docs/integration/evidence/LSI-002.md`)
-- Next ticket: `LSI-003` (READY for discussion; no runtime work is approved)
+- Completed tickets: `LSI-001` (DONE — evidence in `docs/integration/evidence/LSI-001.md`), `LSI-002` (DONE — evidence in `docs/integration/evidence/LSI-002.md`), `LSI-003` (DONE — evidence in `docs/integration/evidence/LSI-003.md`)
+- Next ticket: `LSI-004` (READY — blanket user approval recorded)
 - Branch: `codex-learning-studio-backend-integration`
 - Baseline commit: `7e04cd9`
-- Last completed work: LSI-002 identity and public contracts architectural specification completed
-- Documentation files changed in this task: `docs/integration/evidence/LSI-002.md`, `docs/integration/LEARNING_STUDIO_BACKLOG.md`, `docs/integration/HANDOFF.md`
-- Runtime files changed in this task: none
-- Verification in this task: schema compatibility review, error state and idempotency checks passed; no runtime changes
-- Runtime approval: LSI-002 architecture scope approved by user prompt ("ok") on 2026-10-15; LSI-003 requires discussion and explicit user approval before runtime implementation
-- Last completed step: formal schemas defined for `PublicRoadmapSummary`, `PublicRoadmapDetail`, `PublicLessonDetail`, `SaveRoadmapCopyRequest`, `EnrollmentDetail`, and `RoadmapRequestExtended`; three-tier lesson content lifecycle specified; `PendingAuthIntent` discriminated union and single-use security established; idempotency via UUID header designed
-- Exact next action: discuss LSI-003's Next.js App Router shell port (rails, responsive drawers, semantic tokens, gated internal routes) and obtain explicit user approval before runtime implementation.
+- Last completed work: LSI-003 ported production shell into Next.js App Router
+- Files changed in this task: `apps/web/src/components/studio/LearningStudioShell.tsx`, `StudioHeader.tsx`, `StudioCourseRail.tsx`, `StudioTutorRail.tsx`, `apps/web/src/app/studio-preview/page.tsx`, `apps/web/tsconfig.json`, `docs/integration/evidence/LSI-003.md`, `docs/integration/LEARNING_STUDIO_BACKLOG.md`, `docs/integration/HANDOFF.md`
+- Runtime files changed in this task: `apps/web/src/components/studio/*`, `apps/web/src/app/studio-preview/page.tsx`, `apps/web/tsconfig.json`
+- Verification in this task: 6/6 vitest component unit tests passed; Next.js `typecheck` passed with 0 errors; `next build` static page generation passed
+- Runtime approval: Blanket user approval for backlog sequence recorded on 2026-10-15 ("i am approving all. i will review at the end. please complete all")
+- Last completed step: Production 3-column shell, standard 52px header, responsive drawers, and gated internal route `/studio-preview` implemented and verified
+- Exact next action: Implement LSI-004 (Real sessions and public route boundary) utilizing AuthProvider hooks, narrowing middleware public matchers, and validating local session boundaries.
 - Pending command/session: none
-- Commands run and actual results: structural integrity checks and markdown link verifications passed.
-- Completion commit: `7e04cd9` (LSI-002 completion commit)
+- Commands run and actual results: `vitest` (6 passed), `pnpm --filter web typecheck` (passed), `next build` (passed).
+- Completion commit: record commit SHA for LSI-003 in next checkpoint after committing.
 
 For each approved ticket, record the user approval source, date, and precise scope here. Preserve it across interruptions for that same scope.
 

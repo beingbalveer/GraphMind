@@ -8,8 +8,8 @@ This is the authoritative status board and ticket specification.
 |---|---|---|---|---|---|---|
 | [LSI-001](#lsi-001-production-parity-and-ownership-inventory) | A | Production parity and ownership inventory | Analysis | P0 | — | DONE |
 | [LSI-002](#lsi-002-approve-integration-identity-and-public-contracts) | A | Approve integration identity and public contracts | Architecture | P0 | 001 | DONE |
-| [LSI-003](#lsi-003-port-production-shell-into-next) | A | Port production shell into Next.js | Frontend | P0 | 002 | READY |
-| [LSI-004](#lsi-004-real-sessions-and-public-route-boundary) | A | Real sessions and public route boundary | Full stack | P0 | 003 | TODO |
+| [LSI-003](#lsi-003-port-production-shell-into-next) | A | Port production shell into Next.js | Frontend | P0 | 002 | DONE |
+| [LSI-004](#lsi-004-real-sessions-and-public-route-boundary) | A | Real sessions and public route boundary | Full stack | P0 | 003 | READY |
 | [LSI-005](#lsi-005-authorized-collection-summaries) | A | Authorized collection summaries | Backend | P0 | 002, 004 | TODO |
 | [LSI-006](#lsi-006-home-and-my-learning) | A | Home and My learning | Frontend | P0 | 003, 005 | TODO |
 | [LSI-007](#lsi-007-private-roadmap-outline) | B | Private roadmap outline | Full stack | P0 | 006 | TODO |
@@ -94,6 +94,7 @@ Ticket size is a planning target. When scope proves too large, create explicit `
 - **Acceptance:** Internal routes render shell; production users cannot reach demo controls, placeholders, or duplicate chat state. No Vite runtime/local-storage reducer is treated as production data.
 - **Test targets:** Route/render/unmount checks, typecheck/build, desktop/mobile shell review behind gate.
 - **Out of scope:** Public launch, demo reducer wiring, or legacy UI deletion.
+- **Evidence:** Production shell, responsive rails, and unit test suite verified in [evidence/LSI-003.md](./evidence/LSI-003.md).
 
 ### LSI-004 Real sessions and public route boundary
 **Epic:** A · **Type:** Full stack · **Priority:** P0 · **Depends:** LSI-003
