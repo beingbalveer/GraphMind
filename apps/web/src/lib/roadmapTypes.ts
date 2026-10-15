@@ -18,6 +18,11 @@ export interface RoadmapRequest {
   background?: string | null;
   duration?: Duration | null;
   hoursPerWeek?: number | string | null;
+  /** Optional Learning Studio generator extensions (LSI-020). */
+  outcome?: string | null;
+  knownSkills?: string[];
+  referenceUrl?: string | null;
+  sampleTemplateRef?: string | null;
 }
 export interface LearningProfile {
   title: string | null;
