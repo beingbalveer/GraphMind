@@ -6,7 +6,7 @@
 - Completed tickets: `LSI-001` (DONE — evidence in `docs/integration/evidence/LSI-001.md`), `LSI-002` (DONE — evidence in `docs/integration/evidence/LSI-002.md`), `LSI-003` (DONE — evidence in `docs/integration/evidence/LSI-003.md`), `LSI-004` (DONE — evidence in `docs/integration/evidence/LSI-004.md`), `LSI-005` (DONE — evidence in `docs/integration/evidence/LSI-005.md`), `LSI-006` (DONE — evidence in `docs/integration/evidence/LSI-006.md`)
 - Next ticket: `LSI-007` (READY — blanket user approval recorded)
 - Branch: `codex-learning-studio-backend-integration`
-- Baseline commit: `51ba44d`
+- Baseline commit: `d914d61`
 - Last completed work: LSI-006 Home and My learning views (`StudioHomeView.tsx`, `StudioMyLearningView.tsx`, `useAuthorizedCurricula.ts`, `/studio-preview` route integration)
 - Files changed in this task: `apps/web/src/components/studio/StudioHomeView.tsx`, `apps/web/src/components/studio/StudioMyLearningView.tsx`, `apps/web/src/components/studio/useAuthorizedCurricula.ts`, `apps/web/src/components/studio/__tests__/StudioLearnerViews.test.tsx`, `apps/web/src/app/studio-preview/page.tsx`, `docs/integration/evidence/LSI-006.md`, `docs/integration/LEARNING_STUDIO_BACKLOG.md`, `docs/integration/HANDOFF.md`
 - Runtime files changed in this task: `apps/web/src/components/studio/StudioHomeView.tsx`, `apps/web/src/components/studio/StudioMyLearningView.tsx`, `apps/web/src/components/studio/useAuthorizedCurricula.ts`, `apps/web/src/app/studio-preview/page.tsx`
@@ -16,6 +16,7 @@
 - Exact next action: Implement LSI-007 (Private roadmap outline) by loading existing curriculum/revision into the course rail and List view under canonical workspace routes.
 - Pending command/session: none
 - Commands run and actual results: `vitest` (15 studio tests passed), `pnpm --filter web typecheck` (passed with 0 errors), `next build` (compiled successfully).
+- Completion commit: `d914d61` (LSI-006 completion commit)
 
 For each approved ticket, record the user approval source, date, and precise scope here. Preserve it across interruptions for that same scope.
 
