@@ -6,7 +6,7 @@
 - Completed tickets: `LSI-001` (DONE — evidence in `docs/integration/evidence/LSI-001.md`), `LSI-002` (DONE — evidence in `docs/integration/evidence/LSI-002.md`), `LSI-003` (DONE — evidence in `docs/integration/evidence/LSI-003.md`), `LSI-004` (DONE — evidence in `docs/integration/evidence/LSI-004.md`), `LSI-005` (DONE — evidence in `docs/integration/evidence/LSI-005.md`)
 - Next ticket: `LSI-006` (READY — blanket user approval recorded)
 - Branch: `codex-learning-studio-backend-integration`
-- Baseline commit: `6761dda`
+- Baseline commit: `37ba4a3`
 - Last completed work: LSI-005 authorized collection summaries (FastAPI endpoint `GET /api/v1/workspaces/{workspace_id}/learning-roadmaps`, `WorkspaceCurriculumSummary` schema and `WorkspaceResponse.curriculum` projection, batch resolution in `WorkspaceService.list_workspaces`, web client types in `workspaceApi.ts`)
 - Files changed in this task: `apps/api/src/schemas/workspace.py`, `apps/api/src/services/workspace_service.py`, `apps/api/src/routers/workspaces.py`, `apps/api/tests/roadmap/test_curriculum_api.py`, `apps/web/src/lib/workspaceApi.ts`, `apps/web/vitest.config.ts`, `apps/web/src/components/ui/__tests__/branch-trigger.test.tsx`, `docs/integration/evidence/LSI-005.md`, `docs/integration/LEARNING_STUDIO_BACKLOG.md`, `docs/integration/HANDOFF.md`
 - Runtime files changed in this task: `apps/api/src/schemas/workspace.py`, `apps/api/src/services/workspace_service.py`, `apps/api/src/routers/workspaces.py`, `apps/web/src/lib/workspaceApi.ts`
@@ -16,6 +16,7 @@
 - Exact next action: Implement LSI-006 (Home and My learning) connecting `Home` and `My Learning` views with authorized server collection summaries from `GET /workspaces` and `GET /workspaces/{id}/learning-roadmaps`.
 - Pending command/session: none
 - Commands run and actual results: `pytest` (15 passed), `vitest run` (75 files, 381 tests passed), `pnpm --filter web typecheck` (passed with 0 errors), `next build` (compiled successfully).
+- Completion commit: `37ba4a3` (LSI-005 completion commit)
 
 For each approved ticket, record the user approval source, date, and precise scope here. Preserve it across interruptions for that same scope.
 
