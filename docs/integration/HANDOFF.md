@@ -6,7 +6,7 @@
 - Completed tickets: `LSI-001` (DONE — evidence in `docs/integration/evidence/LSI-001.md`), `LSI-002` (DONE — evidence in `docs/integration/evidence/LSI-002.md`)
 - Next ticket: `LSI-003` (READY for discussion; no runtime work is approved)
 - Branch: `codex-learning-studio-backend-integration`
-- Baseline commit: `aabb2d4`
+- Baseline commit: `7e04cd9`
 - Last completed work: LSI-002 identity and public contracts architectural specification completed
 - Documentation files changed in this task: `docs/integration/evidence/LSI-002.md`, `docs/integration/LEARNING_STUDIO_BACKLOG.md`, `docs/integration/HANDOFF.md`
 - Runtime files changed in this task: none
@@ -16,7 +16,7 @@
 - Exact next action: discuss LSI-003's Next.js App Router shell port (rails, responsive drawers, semantic tokens, gated internal routes) and obtain explicit user approval before runtime implementation.
 - Pending command/session: none
 - Commands run and actual results: structural integrity checks and markdown link verifications passed.
-- Completion commit: record commit SHA for LSI-002 in next checkpoint after committing.
+- Completion commit: `7e04cd9` (LSI-002 completion commit)
 
 For each approved ticket, record the user approval source, date, and precise scope here. Preserve it across interruptions for that same scope.
 
