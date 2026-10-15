@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { RoadmapCanvas } from "@/components/roadmap/RoadmapCanvas";
+import { StudioRoadmapEditing } from "./StudioRoadmapEditing";
 import { CurriculumItemData, CurriculumView } from "@/lib/roadmapTypes";
 import { cn } from "@/lib/utils";
 
@@ -17,6 +18,10 @@ export interface StudioCourseListViewProps {
   onSelectTopic: (topicId: string) => void;
   mode?: "list" | "canvas";
   onModeChange?: (mode: "list" | "canvas") => void;
+  /** Projects the current-revision view after an edit or restore across List and Canvas. */
+  onSaved?: (view: CurriculumView) => void;
+  /** Reloads the authoritative revision so a stale edit can recover safely. */
+  onReload?: () => Promise<void>;
   className?: string;
 }
 
@@ -40,6 +45,8 @@ export function StudioCourseListView({
   onSelectTopic,
   mode,
   onModeChange,
+  onSaved,
+  onReload,
   className,
 }: StudioCourseListViewProps) {
   const [localMode, setLocalMode] = useState<"list" | "canvas">("list");
@@ -196,16 +203,25 @@ export function StudioCourseListView({
               Revision {view.revisionId.slice(0, 8)} · {activeTopics.length} lessons
             </span>
           </div>
-          <SegmentedTabs
-            items={[
-              { id: "list", label: "List", icon: BookOpen },
-              { id: "canvas", label: "Canvas", icon: Network },
-            ]}
-            value="canvas"
-            onChange={(m) => handleModeChange(m as "list" | "canvas")}
-            size="sm"
-            ariaLabel="Roadmap view switcher"
-          />
+          <div className="flex items-center gap-2">
+            {onSaved && (
+              <StudioRoadmapEditing
+                view={view}
+                onSaved={onSaved}
+                onReload={onReload}
+              />
+            )}
+            <SegmentedTabs
+              items={[
+                { id: "list", label: "List", icon: BookOpen },
+                { id: "canvas", label: "Canvas", icon: Network },
+              ]}
+              value="canvas"
+              onChange={(m) => handleModeChange(m as "list" | "canvas")}
+              size="sm"
+              ariaLabel="Roadmap view switcher"
+            />
+          </div>
         </div>
         {/* Reused 2D Spatial Roadmap Canvas */}
         <div className="flex-1 relative min-h-0 min-w-0">
@@ -243,16 +259,25 @@ export function StudioCourseListView({
           </p>
         </div>
         <div className="shrink-0 self-start sm:self-auto pt-1">
-          <SegmentedTabs
-            items={[
-              { id: "list", label: "List", icon: BookOpen },
-              { id: "canvas", label: "Canvas", icon: Network },
-            ]}
-            value="list"
-            onChange={(m) => handleModeChange(m as "list" | "canvas")}
-            size="sm"
-            ariaLabel="Roadmap view switcher"
-          />
+          <div className="flex items-center gap-2">
+            {onSaved && (
+              <StudioRoadmapEditing
+                view={view}
+                onSaved={onSaved}
+                onReload={onReload}
+              />
+            )}
+            <SegmentedTabs
+              items={[
+                { id: "list", label: "List", icon: BookOpen },
+                { id: "canvas", label: "Canvas", icon: Network },
+              ]}
+              value="list"
+              onChange={(m) => handleModeChange(m as "list" | "canvas")}
+              size="sm"
+              ariaLabel="Roadmap view switcher"
+            />
+          </div>
         </div>
       </div>
 

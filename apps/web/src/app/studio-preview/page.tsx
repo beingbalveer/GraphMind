@@ -30,9 +30,11 @@ import {
 import {
   StudioLessonReader,
 } from "@/components/studio/StudioLessonReader";
+import { StudioChatDirectory } from "@/components/studio/StudioChatDirectory";
 import { Button } from "@/components/ui/button";
 import { NewWorkspaceChatModal } from "@/components/chat/NewWorkspaceChatModal";
 import { WorkspaceItem } from "@/lib/workspaceApi";
+import { readRoadmap } from "@/lib/roadmapApi";
 import { CurriculumView, TopicProgressData } from "@/lib/roadmapTypes";
 import { buildChatUrl, parseBranchNavigation } from "@/lib/urls";
 
@@ -328,9 +330,28 @@ Always avoid invoking CPU-bound or blocking synchronous routines directly in \`a
   const [progressMap, setProgressMap] = useState<Record<string, TopicProgressData>>(
     sampleCurriculumView.progress
   );
+  // Single source of truth for the projected current revision. Every surface
+  // (Lesson, List, Canvas) renders from this one view, so a saved edit or a
+  // restored revision updates them coherently.
+  const [curriculumView, setCurriculumView] =
+    useState<CurriculumView>(sampleCurriculumView);
   const viewWithProgress: CurriculumView = {
-    ...sampleCurriculumView,
+    ...curriculumView,
     progress: progressMap,
+  };
+
+  const applySavedView = (next: CurriculumView) => {
+    setCurriculumView(next);
+    setProgressMap(next.progress);
+  };
+
+  const reloadCurriculum = async () => {
+    try {
+      const latest = await readRoadmap(curriculumView.workspaceId);
+      applySavedView(latest);
+    } catch {
+      /* A stale edit keeps its draft visible until the authoritative revision loads. */
+    }
   };
   const allTopics = viewWithProgress.candidate.items.filter((x) => x.kind === "topic");
   const currentTopic = allTopics.find((x) => x.id === activeTopicId) || allTopics[0];
@@ -433,6 +454,28 @@ Always avoid invoking CPU-bound or blocking synchronous routines directly in \`a
               }}
             />
           }
+          chatsContent={
+            <StudioChatDirectory
+              workspaceId={viewWithProgress.workspaceId}
+              excludeChatId={viewWithProgress.canvasAnchorChatId}
+              onOpenChat={(chat) =>
+                router.push(buildChatUrl(chat.workspaceId, chat.id), {
+                  scroll: false,
+                })
+              }
+              onReturnToLesson={(chat) => {
+                const topicId = chat.topicAssociation?.topicId;
+                const found = viewWithProgress.candidate.items.find(
+                  (item) => item.id === topicId,
+                );
+                if (found) {
+                  setActiveTopic(found.title);
+                  setActiveTopicId(found.id);
+                  setShowCourseListView(false);
+                }
+              }}
+            />
+          }
         />
       }
       tutorRail={
@@ -500,6 +543,8 @@ Always avoid invoking CPU-bound or blocking synchronous routines directly in \`a
                 setShowCourseListView(false);
               }
             }}
+            onSaved={applySavedView}
+            onReload={reloadCurriculum}
           />
         </div>
       ) : (
@@ -507,6 +552,7 @@ Always avoid invoking CPU-bound or blocking synchronous routines directly in \`a
         <StudioLessonReader
           workspaceId={viewWithProgress.workspaceId}
           topic={currentTopic}
+          view={viewWithProgress}
           phaseTitle={phase?.title}
           lessonIndex={currentIndex}
           totalLessons={allTopics.length}
@@ -518,6 +564,8 @@ Always avoid invoking CPU-bound or blocking synchronous routines directly in \`a
           onPrevLesson={goToPrevLesson}
           onNextLesson={goToNextLesson}
           onToggleComplete={toggleComplete}
+          onSaved={applySavedView}
+          onReload={reloadCurriculum}
           onAskTutor={(quote) => {
             setTutorQuote(quote || null);
             setIsRightRailOpen(true);

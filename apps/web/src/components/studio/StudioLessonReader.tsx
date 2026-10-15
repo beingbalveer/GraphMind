@@ -17,8 +17,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useReadingPosition } from "@/lib/readingPosition";
 import { StudioPracticeActivity } from "./StudioPracticeActivity";
+import { StudioRoadmapEditing } from "./StudioRoadmapEditing";
 import type {
   CurriculumItemData,
+  CurriculumView,
   SourceData,
   TopicBrief,
 } from "@/lib/roadmapTypes";
@@ -26,6 +28,8 @@ import type {
 export interface StudioLessonReaderProps {
   workspaceId: string;
   topic: CurriculumItemData;
+  /** Full current-revision view, required to offer lesson editing. */
+  view?: CurriculumView | null;
   brief?: TopicBrief | null;
   phaseTitle?: string;
   lessonIndex?: number;
@@ -42,11 +46,16 @@ export interface StudioLessonReaderProps {
   onNextLesson?: () => void;
   onToggleComplete?: () => void;
   onAskTutor?: (quote?: string) => void;
+  /** Projects the current-revision view after an edit or restore. */
+  onSaved?: (view: CurriculumView) => void;
+  /** Reloads the authoritative revision so a stale edit can recover safely. */
+  onReload?: () => Promise<void>;
 }
 
 export function StudioLessonReader({
   workspaceId,
   topic,
+  view,
   brief,
   phaseTitle,
   lessonIndex = 0,
@@ -63,6 +72,8 @@ export function StudioLessonReader({
   onNextLesson,
   onToggleComplete,
   onAskTutor,
+  onSaved,
+  onReload,
 }: StudioLessonReaderProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [selectedQuote, setSelectedQuote] = useState<string | null>(null);
@@ -212,6 +223,15 @@ export function StudioLessonReader({
               <span className="text-2xs text-foreground-subtle animate-fade-in">
                 Resumed reading position
               </span>
+            )}
+
+            {view && onSaved && (
+              <StudioRoadmapEditing
+                view={view}
+                topicId={topic.id}
+                onSaved={onSaved}
+                onReload={onReload}
+              />
             )}
           </div>
 
