@@ -34,9 +34,12 @@ vi.mock("@/hooks/useChatStream", () => ({
   useChatStream: () => mockUseChatStream(),
 }));
 
+const mockPush = vi.fn();
+const mockReplace = vi.fn();
+
 vi.mock("next/navigation", () => ({
   usePathname: () => roadmapState.path,
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  useRouter: () => ({ push: mockPush, replace: mockReplace }),
   useSearchParams: () => new URLSearchParams(),
 }));
 
@@ -110,6 +113,8 @@ describe("ChatContainer canonical composition", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockPush.mockReset();
+    mockReplace.mockReset();
     streamTreeForTest = null;
     mockUseChatStream.mockReturnValue({ ...defaultChatStreamState });
     roadmapState.path = "/w/ws_test";
@@ -163,6 +168,12 @@ describe("ChatContainer canonical composition", () => {
     });
     expect(apiFetchMock.mock.invocationCallOrder[0]).toBeLessThan(sendMessage.mock.invocationCallOrder[0]);
     expect(fetchGraphSnapshot).toHaveBeenCalledWith("ws_test", "new-root");
+
+    // Acceptance 1: First text is NOT in URL
+    expect(mockPush).toHaveBeenCalledWith("/w/ws_test/chat/new-root", { scroll: false });
+    const pushedUrl = mockPush.mock.calls[0][0];
+    expect(pushedUrl).not.toContain("?");
+    expect(pushedUrl).not.toContain("Explain");
   });
 
   it("does not start the stream or save an assistant when the first root cannot be saved", async () => {
@@ -355,4 +366,88 @@ it("does not show generic mastery recommendations in a roadmap topic lesson", ()
   expect(
     screen.queryByRole("button", { name: "Open right panel" }),
   ).not.toBeInTheDocument();
+});
+
+describe("LSI-017 Standalone workspace chats", () => {
+  it("survives refresh when only root node exists and allows resuming the response", async () => {
+    roadmapState.path = "/w/ws_test/chat/root-survivor";
+    const root = {
+      id: "root-survivor",
+      role: "user" as const,
+      content: "Explain async context managers",
+      parentId: null,
+      childrenIds: [],
+      metadata: {},
+    };
+    const sendMessage = vi.fn(async (..._args: unknown[]) => null);
+    mockUseChatStream.mockReturnValue({
+      ...defaultChatStreamState,
+      tree: {
+        id: "tree",
+        rootNodeId: root.id,
+        activeNodeId: root.id,
+        nodes: { [root.id]: root },
+        createdAt: "now",
+        updatedAt: "now",
+      } as never,
+      activeMessages: [root] as never,
+      sendMessage,
+    });
+
+    render(<ChatContainer initialWorkspaceId="ws_test" initialChatId="root-survivor" />);
+
+    expect(await screen.findByText("Explain async context managers")).toBeVisible();
+    expect(
+      screen.getByText("This saved conversation has no completed response yet."),
+    ).toBeVisible();
+
+    fireEvent.click(screen.getByRole("button", { name: "Resume response" }));
+
+    await waitFor(() => expect(sendMessage).toHaveBeenCalledTimes(1));
+    const options = (sendMessage.mock.calls[0] as unknown[] | undefined)?.[3];
+    expect(options).toMatchObject({
+      preparedUserMessageId: "root-survivor",
+      workspaceId: "ws_test",
+    });
+  });
+
+  it("keeps standalone workspace chat context independent of active topic session", async () => {
+    roadmapState.path = "/w/ws_test/chat/standalone-root";
+    const root = {
+      id: "standalone-root",
+      role: "user" as const,
+      content: "Standalone question",
+      parentId: null,
+      childrenIds: [],
+      metadata: {},
+    };
+    const sendMessage = vi.fn(async (..._args: unknown[]) => null);
+    mockUseChatStream.mockReturnValue({
+      ...defaultChatStreamState,
+      tree: {
+        id: "tree",
+        rootNodeId: root.id,
+        activeNodeId: root.id,
+        nodes: { [root.id]: root },
+        createdAt: "now",
+        updatedAt: "now",
+      } as never,
+      activeMessages: [root] as never,
+      sendMessage,
+    });
+
+    render(<ChatContainer initialWorkspaceId="ws_test" initialChatId="standalone-root" />);
+
+    const input = await screen.findByPlaceholderText(
+      "Message GraphMind, attach code or paste images...",
+    );
+    fireEvent.change(input, { target: { value: "A follow up in general chat" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+
+    await waitFor(() => expect(sendMessage).toHaveBeenCalledTimes(1));
+    const options = (sendMessage.mock.calls[0] as unknown[] | undefined)?.[3] as Record<string, unknown>;
+
+    expect(options.topicSessionId).toBeUndefined();
+    expect(options.lessonStart).toBeUndefined();
+  });
 });

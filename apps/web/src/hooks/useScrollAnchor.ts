@@ -31,7 +31,7 @@ export function useScrollAnchor(options: UseScrollAnchorOptions = {}) {
   }, [checkIsAtBottom]);
 
   const scrollToBottom = useCallback((smooth = true) => {
-    if (bottomRef.current) {
+    if (bottomRef.current && typeof bottomRef.current.scrollIntoView === "function") {
       bottomRef.current.scrollIntoView({
         behavior: smooth ? "smooth" : "auto",
         block: "end",

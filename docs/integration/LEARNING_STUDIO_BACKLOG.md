@@ -201,11 +201,12 @@ Ticket size is a planning target. When scope proves too large, create explicit `
 - **Evidence:** 3-column desktop visibility, multi-level ancestry breadcrumbs, sibling tab switching, branch from reply/selection, canonical URL helpers, and 12 passing tests verified in [evidence/LSI-016.md](./evidence/LSI-016.md).
 
 ### LSI-017 Standalone workspace chats
-**Epic:** B · **Type:** Full stack · **Priority:** P0 · **Depends:** LSI-014, LSI-015
+**Epic:** B · **Type:** Full stack · **Priority:** P0 · **Depends:** LSI-014, LSI-015 · **Status:** Complete
 - **Scope:** Persist parentless first user node and real response/continuation in active workspace without implicit lesson context.
 - **Acceptance:** First text is not in URL; root survives refresh/retry; topic and general-chat context are independent.
 - **Test targets:** Root API contract and create-refresh-continue journey.
 - **Out of scope:** Creating local-only demo threads or attaching general chat to an open lesson.
+- **Evidence:** Clean canonical URLs, unresponded root recovery and resume banner, context independence verification, and 20 passing unit/integration tests verified in [evidence/LSI-017.md](./evidence/LSI-017.md).
 
 ### LSI-018 Course directory and historical chats
 **Epic:** B · **Type:** Full stack · **Priority:** P1 · **Depends:** LSI-013, LSI-016, LSI-017

@@ -31,9 +31,10 @@ import {
   StudioLessonReader,
 } from "@/components/studio/StudioLessonReader";
 import { Button } from "@/components/ui/button";
+import { NewWorkspaceChatModal } from "@/components/chat/NewWorkspaceChatModal";
 import { WorkspaceItem } from "@/lib/workspaceApi";
 import { CurriculumView, TopicProgressData } from "@/lib/roadmapTypes";
-import { parseBranchNavigation } from "@/lib/urls";
+import { buildChatUrl, parseBranchNavigation } from "@/lib/urls";
 
 /**
  * Gated / Internal Studio Preview Route
@@ -63,6 +64,7 @@ function StudioPreviewContent() {
   const [tutorQuote, setTutorQuote] = useState<string | null>(null);
   const [activeTopic, setActiveTopic] = useState("FastAPI Asynchronous Architecture");
   const [showCourseListView, setShowCourseListView] = useState<boolean>(false);
+  const [isNewChatModalOpen, setIsNewChatModalOpen] = useState(false);
 
   const handleBranchChange = (leafId: string | null) => {
     if (leafId) {
@@ -385,6 +387,7 @@ Always avoid invoking CPU-bound or blocking synchronous routines directly in \`a
   };
 
   return (
+    <>
     <LearningStudioShell
       header={
         <StudioHeader
@@ -415,7 +418,7 @@ Always avoid invoking CPU-bound or blocking synchronous routines directly in \`a
           topicId={activeTopicId}
           topicTitle={activeTopic}
           onClose={() => setIsLeftRailOpen(false)}
-          onNewChat={() => alert("New course conversation triggered")}
+          onNewChat={() => setIsNewChatModalOpen(true)}
           outlineContent={
             <StudioCourseOutline
               view={viewWithProgress}
@@ -522,5 +525,23 @@ Always avoid invoking CPU-bound or blocking synchronous routines directly in \`a
         />
       )}
     </LearningStudioShell>
+    <NewWorkspaceChatModal
+      isOpen={isNewChatModalOpen}
+      workspaceId={viewWithProgress.workspaceId}
+      provider="gemini"
+      model="gemini-2.5-flash"
+      roadmapTopics={viewWithProgress.candidate.items.slice(0, 4).map((it) => ({
+        id: it.id,
+        title: it.title,
+        brief: it.brief || it.title,
+      }))}
+      isWorkspaceCurrent={() => true}
+      onClose={() => setIsNewChatModalOpen(false)}
+      onCreated={(chat) => {
+        setIsNewChatModalOpen(false);
+        router.push(buildChatUrl(chat.workspaceId, chat.rootNodeId), { scroll: false });
+      }}
+    />
+    </>
   );
 }
