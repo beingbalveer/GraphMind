@@ -6,8 +6,8 @@
 - Completed tickets: `LSI-001` (DONE — evidence in `docs/integration/evidence/LSI-001.md`), `LSI-002` (DONE — evidence in `docs/integration/evidence/LSI-002.md`), `LSI-003` (DONE — evidence in `docs/integration/evidence/LSI-003.md`), `LSI-004` (DONE — evidence in `docs/integration/evidence/LSI-004.md`), `LSI-005` (DONE — evidence in `docs/integration/evidence/LSI-005.md`), `LSI-006` (DONE — evidence in `docs/integration/evidence/LSI-006.md`), `LSI-007` (DONE — evidence in `docs/integration/evidence/LSI-007.md`), `LSI-008` (DONE — evidence in `docs/integration/evidence/LSI-008.md`), `LSI-009` (DONE — evidence in `docs/integration/evidence/LSI-009.md`), `LSI-010` (DONE — evidence in `docs/integration/evidence/LSI-010.md`), `LSI-011` (DONE — evidence in `docs/integration/evidence/LSI-011.md`), `LSI-012` (DONE — evidence in `docs/integration/evidence/LSI-012.md`)
 - Next ticket: `LSI-013` (READY — blanket user approval recorded)
 - Branch: `codex-learning-studio-backend-integration`
-- Baseline commit: `aaff66d`
-- Completion commit: pending
+- Baseline commit: `2cdb53b`
+- Completion commit: `2cdb53b` (LSI-012 completion commit)
 - Last completed work: LSI-012 Shared roadmap and conversation canvas (`RoadmapCanvas.tsx` guest/read-only layout guard, `StudioCourseListView.tsx` list/canvas mode switching with `<SegmentedTabs>`, `StudioRoadmapCanvas.test.tsx` test suite, canonical URL contract alignment)
 - Files changed in this task: `apps/web/src/components/roadmap/RoadmapCanvas.tsx`, `apps/web/src/components/studio/StudioCourseListView.tsx`, `apps/web/src/app/studio-preview/page.tsx`, `apps/web/src/components/studio/__tests__/StudioRoadmapCanvas.test.tsx`, `docs/integration/evidence/LSI-012.md`, `docs/integration/LEARNING_STUDIO_BACKLOG.md`, `docs/integration/HANDOFF.md`
 - Runtime files changed in this task: `apps/web/src/components/roadmap/RoadmapCanvas.tsx`, `apps/web/src/components/studio/StudioCourseListView.tsx`, `apps/web/src/app/studio-preview/page.tsx`
