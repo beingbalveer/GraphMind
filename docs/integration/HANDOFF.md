@@ -6,7 +6,7 @@
 - Completed tickets: `LSI-001` (DONE — evidence in `docs/integration/evidence/LSI-001.md`), `LSI-002` (DONE — evidence in `docs/integration/evidence/LSI-002.md`), `LSI-003` (DONE — evidence in `docs/integration/evidence/LSI-003.md`)
 - Next ticket: `LSI-004` (READY — blanket user approval recorded)
 - Branch: `codex-learning-studio-backend-integration`
-- Baseline commit: `7e04cd9`
+- Baseline commit: `da2cbcd`
 - Last completed work: LSI-003 ported production shell into Next.js App Router
 - Files changed in this task: `apps/web/src/components/studio/LearningStudioShell.tsx`, `StudioHeader.tsx`, `StudioCourseRail.tsx`, `StudioTutorRail.tsx`, `apps/web/src/app/studio-preview/page.tsx`, `apps/web/tsconfig.json`, `docs/integration/evidence/LSI-003.md`, `docs/integration/LEARNING_STUDIO_BACKLOG.md`, `docs/integration/HANDOFF.md`
 - Runtime files changed in this task: `apps/web/src/components/studio/*`, `apps/web/src/app/studio-preview/page.tsx`, `apps/web/tsconfig.json`
@@ -16,7 +16,7 @@
 - Exact next action: Implement LSI-004 (Real sessions and public route boundary) utilizing AuthProvider hooks, narrowing middleware public matchers, and validating local session boundaries.
 - Pending command/session: none
 - Commands run and actual results: `vitest` (6 passed), `pnpm --filter web typecheck` (passed), `next build` (passed).
-- Completion commit: record commit SHA for LSI-003 in next checkpoint after committing.
+- Completion commit: `da2cbcd` (LSI-003 completion commit)
 
 For each approved ticket, record the user approval source, date, and precise scope here. Preserve it across interruptions for that same scope.
 
