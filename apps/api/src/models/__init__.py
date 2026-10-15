@@ -1,5 +1,13 @@
 from models.canvas import CanvasLayoutModel
 from models.flashcard import FlashcardModel
+from models.public_snapshot import (
+    PublicSnapshot,
+    PublicSnapshotOrigin,
+    PublicSnapshotPhase,
+    PublicSnapshotSource,
+    PublicSnapshotTopic,
+    PublicSnapshotTopicSource,
+)
 from models.roadmap import (
     ChoiceSelection,
     CurriculumItem,
@@ -48,6 +56,12 @@ __all__ = [
     "KnowledgeCheck",
     "RevisionSource",
     "CanvasLayoutModel",
+    "PublicSnapshot",
+    "PublicSnapshotPhase",
+    "PublicSnapshotTopic",
+    "PublicSnapshotSource",
+    "PublicSnapshotTopicSource",
+    "PublicSnapshotOrigin",
     "User",
     "WorkspaceMember",
     "Workspace",
