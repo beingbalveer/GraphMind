@@ -1,21 +1,22 @@
 # Learning Studio Integration Handoff
 
-## Initial position — 2026-10-15
+## Current position — 2026-10-15
 
 - Active ticket: none
-- Next ticket: `LSI-001` (READY for discussion; no runtime work is approved)
-- Branch: `codex/learning-studio-prototype`
-- Baseline commit: `ff43294`
-- Last completed work: planning the integration backlog and handoff protocol
-- Documentation files changed in this planning task: `docs/integration/README.md`, `docs/integration/LEARNING_STUDIO_BACKLOG.md`, `docs/integration/HANDOFF.md`, `docs/ROADMAP.md`, `apps/web/prototype/BACKEND_HANDOFF.md`
-- Runtime files changed in this planning task: none
-- Verification in this planning task: independent planning review and mechanical documentation checks passed; no runtime tests run
-- Runtime approval: none recorded; runtime implementation requires approval for the selected ticket and approach
-- Last completed step: 50 ticket specifications, resume protocol, and roadmap/prototype pointers reviewed; dependency/link checks passed; lesson-source, middleware, and commit-metadata wording corrected
-- Exact next action: inspect Git state, then discuss LSI-001's production parity/ownership audit and produce its evidence matrix. Do not start backend wiring or a later ticket.
+- Completed ticket: `LSI-001` (DONE — evidence in `docs/integration/evidence/LSI-001.md`)
+- Next ticket: `LSI-002` (READY for discussion; no runtime work is approved)
+- Branch: `codex-learning-studio-backend-integration`
+- Baseline commit: `d93b4a18dac5e6eb45ddb40879b8bde1ca4227b4`
+- Last completed work: LSI-001 production parity and ownership inventory evidence matrix completed
+- Documentation files changed in this task: `docs/integration/evidence/LSI-001.md`, `docs/integration/LEARNING_STUDIO_BACKLOG.md`, `docs/integration/HANDOFF.md`
+- Runtime files changed in this task: none
+- Verification in this task: read-only path/contract/quality-evidence trace passed; no runtime changes
+- Runtime approval: LSI-001 analysis scope approved by user prompt ("go") on 2026-10-15; LSI-002 requires discussion and explicit user approval before implementation
+- Last completed step: parity matrix generated mapping all legacy components (curator, mastery, search, timeline, files, settings, flashcards) to integration tickets; `/` dashboard vs `docs/URL_DESIGN.md` reconciled; ownership boundaries established; `TopicBrief` schema and `finish_lesson` persistence traced; tiered center lesson strategy formulated
+- Exact next action: discuss LSI-002's integration identity and public contract specifications with user and obtain explicit approval before editing schemas or contracts.
 - Pending command/session: none
-- Commands run and actual results: Git inspection confirmed the expected branch and five documentation paths only; baseline HEAD was `ff43294`. Python structural checks passed: 50 unique ordered board rows/details, backward-only dependencies, LSI-001 READY and 49 TODO, all required fields, no duplicate detail statuses, and 60 resolving local links/anchors. `git diff --check` passed.
-- Completion commit: find the planning commit by `git log --oneline -- docs/integration`; record its actual SHA at the next checkpoint. Read Git rather than treating the baseline above as the current HEAD.
+- Commands run and actual results: inspected router files (`curriculum.py`, `tutor.py`, `chat.py`, `workspaces.py`), schemas (`curriculum.py`), components (`TopicBriefDrawer.tsx`, `ChatContainer.tsx`, `WorkspaceDashboard.tsx`), and prototype sources; structural and markdown checks passed.
+- Completion commit: record commit SHA for LSI-001 in next checkpoint after committing.
 
 For each approved ticket, record the user approval source, date, and precise scope here. Preserve it across interruptions for that same scope.
 

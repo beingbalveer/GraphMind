@@ -6,8 +6,8 @@ This is the authoritative status board and ticket specification.
 
 | ID | Epic | Ticket | Type | Priority | Depends on | Status |
 |---|---|---|---|---|---|---|
-| [LSI-001](#lsi-001-production-parity-and-ownership-inventory) | A | Production parity and ownership inventory | Analysis | P0 | — | READY |
-| [LSI-002](#lsi-002-approve-integration-identity-and-public-contracts) | A | Approve integration identity and public contracts | Architecture | P0 | 001 | TODO |
+| [LSI-001](#lsi-001-production-parity-and-ownership-inventory) | A | Production parity and ownership inventory | Analysis | P0 | — | DONE |
+| [LSI-002](#lsi-002-approve-integration-identity-and-public-contracts) | A | Approve integration identity and public contracts | Architecture | P0 | 001 | READY |
 | [LSI-003](#lsi-003-port-production-shell-into-next) | A | Port production shell into Next.js | Frontend | P0 | 002 | TODO |
 | [LSI-004](#lsi-004-real-sessions-and-public-route-boundary) | A | Real sessions and public route boundary | Full stack | P0 | 003 | TODO |
 | [LSI-005](#lsi-005-authorized-collection-summaries) | A | Authorized collection summaries | Backend | P0 | 002, 004 | TODO |
@@ -78,6 +78,7 @@ Ticket size is a planning target. When scope proves too large, create explicit `
 - **Acceptance:** Parity matrix maps every exposed behavior to a ticket, including curator/mastery/search/timeline, provider, files, general workspace, and learning actions. It records current `TopicBrief` fields and `finish_lesson` persistence, and leaves the lesson-body source decision explicit. Existing research/provider verification remains outstanding.
 - **Test targets:** Read-only path/contract/quality-evidence trace; no runtime-readiness claim.
 - **Out of scope:** Runtime edits or closing the roadmap's active research-quality task.
+- **Evidence:** Parity matrix, root dashboard reconciliation, ownership boundary, center lesson content analysis, and API registry verified and documented in [evidence/LSI-001.md](./evidence/LSI-001.md).
 
 ### LSI-002 Approve integration identity and public contracts
 **Epic:** A · **Type:** Architecture · **Priority:** P0 · **Depends:** LSI-001
