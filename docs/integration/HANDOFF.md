@@ -6,7 +6,7 @@
 - Completed ticket: `LSI-001` (DONE — evidence in `docs/integration/evidence/LSI-001.md`)
 - Next ticket: `LSI-002` (READY for discussion; no runtime work is approved)
 - Branch: `codex-learning-studio-backend-integration`
-- Baseline commit: `d93b4a18dac5e6eb45ddb40879b8bde1ca4227b4`
+- Baseline commit: `41f510f`
 - Last completed work: LSI-001 production parity and ownership inventory evidence matrix completed
 - Documentation files changed in this task: `docs/integration/evidence/LSI-001.md`, `docs/integration/LEARNING_STUDIO_BACKLOG.md`, `docs/integration/HANDOFF.md`
 - Runtime files changed in this task: none
@@ -16,7 +16,7 @@
 - Exact next action: discuss LSI-002's integration identity and public contract specifications with user and obtain explicit approval before editing schemas or contracts.
 - Pending command/session: none
 - Commands run and actual results: inspected router files (`curriculum.py`, `tutor.py`, `chat.py`, `workspaces.py`), schemas (`curriculum.py`), components (`TopicBriefDrawer.tsx`, `ChatContainer.tsx`, `WorkspaceDashboard.tsx`), and prototype sources; structural and markdown checks passed.
-- Completion commit: record commit SHA for LSI-001 in next checkpoint after committing.
+- Completion commit: `41f510f` (LSI-001 completion commit)
 
 For each approved ticket, record the user approval source, date, and precise scope here. Preserve it across interruptions for that same scope.
 
