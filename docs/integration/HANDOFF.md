@@ -7,7 +7,7 @@
 - Next ticket: `LSI-015` (READY — blanket user approval recorded)
 - Branch: `codex-learning-studio-backend-integration`
 - Baseline commit: `c725dcd`
-- Completion commit: pending LSI-014 commit
+- Completion commit: `5108a59` (LSI-014 completion commit)
 - Last completed work: LSI-014 Tutor stream and local context lifecycle (`StudioTutorChat.tsx`, `StudioTutorRail.tsx` companion view, `StudioLessonReader.tsx` quote passage integration, unit tests in `StudioTutorChat.test.tsx`)
 - Files changed in this task: `apps/web/src/components/studio/StudioTutorChat.tsx`, `apps/web/src/components/studio/StudioTutorRail.tsx`, `apps/web/src/app/studio-preview/page.tsx`, `apps/web/src/components/studio/__tests__/StudioTutorChat.test.tsx`, `docs/integration/evidence/LSI-014.md`, `docs/integration/LEARNING_STUDIO_BACKLOG.md`, `docs/integration/HANDOFF.md`
 - Runtime files changed in this task: `apps/web/src/components/studio/StudioTutorChat.tsx`, `apps/web/src/components/studio/StudioTutorRail.tsx`, `apps/web/src/app/studio-preview/page.tsx`
