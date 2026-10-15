@@ -3,20 +3,20 @@
 ## Current position — 2026-10-15
 
 - Active ticket: none
-- Completed tickets: `LSI-001` (DONE — evidence in `docs/integration/evidence/LSI-001.md`), `LSI-002` (DONE — evidence in `docs/integration/evidence/LSI-002.md`), `LSI-003` (DONE — evidence in `docs/integration/evidence/LSI-003.md`), `LSI-004` (DONE — evidence in `docs/integration/evidence/LSI-004.md`), `LSI-005` (DONE — evidence in `docs/integration/evidence/LSI-005.md`), `LSI-006` (DONE — evidence in `docs/integration/evidence/LSI-006.md`)
-- Next ticket: `LSI-007` (READY — blanket user approval recorded)
+- Completed tickets: `LSI-001` (DONE — evidence in `docs/integration/evidence/LSI-001.md`), `LSI-002` (DONE — evidence in `docs/integration/evidence/LSI-002.md`), `LSI-003` (DONE — evidence in `docs/integration/evidence/LSI-003.md`), `LSI-004` (DONE — evidence in `docs/integration/evidence/LSI-004.md`), `LSI-005` (DONE — evidence in `docs/integration/evidence/LSI-005.md`), `LSI-006` (DONE — evidence in `docs/integration/evidence/LSI-006.md`), `LSI-007` (DONE — evidence in `docs/integration/evidence/LSI-007.md`)
+- Next ticket: `LSI-008` (READY — blanket user approval recorded)
 - Branch: `codex-learning-studio-backend-integration`
-- Baseline commit: `d914d61`
-- Last completed work: LSI-006 Home and My learning views (`StudioHomeView.tsx`, `StudioMyLearningView.tsx`, `useAuthorizedCurricula.ts`, `/studio-preview` route integration)
-- Files changed in this task: `apps/web/src/components/studio/StudioHomeView.tsx`, `apps/web/src/components/studio/StudioMyLearningView.tsx`, `apps/web/src/components/studio/useAuthorizedCurricula.ts`, `apps/web/src/components/studio/__tests__/StudioLearnerViews.test.tsx`, `apps/web/src/app/studio-preview/page.tsx`, `docs/integration/evidence/LSI-006.md`, `docs/integration/LEARNING_STUDIO_BACKLOG.md`, `docs/integration/HANDOFF.md`
-- Runtime files changed in this task: `apps/web/src/components/studio/StudioHomeView.tsx`, `apps/web/src/components/studio/StudioMyLearningView.tsx`, `apps/web/src/components/studio/useAuthorizedCurricula.ts`, `apps/web/src/app/studio-preview/page.tsx`
-- Verification in this task: 15/15 studio unit tests passed (9 new learner views + 6 shell tests); Next.js `typecheck` passed with 0 errors; `next build` compiled cleanly (8/8 static routes + middleware)
+- Baseline commit: `51a50f4`
+- Last completed work: LSI-007 Private roadmap outline and course list view (`StudioCourseOutline.tsx`, `StudioCourseListView.tsx`, `/studio-preview` wiring, unit test suite)
+- Files changed in this task: `apps/web/src/components/studio/StudioCourseOutline.tsx`, `apps/web/src/components/studio/StudioCourseListView.tsx`, `apps/web/src/components/studio/__tests__/StudioRoadmapOutline.test.tsx`, `apps/web/src/app/studio-preview/page.tsx`, `docs/integration/evidence/LSI-007.md`, `docs/integration/LEARNING_STUDIO_BACKLOG.md`, `docs/integration/HANDOFF.md`
+- Runtime files changed in this task: `apps/web/src/components/studio/StudioCourseOutline.tsx`, `apps/web/src/components/studio/StudioCourseListView.tsx`, `apps/web/src/app/studio-preview/page.tsx`
+- Verification in this task: 21/21 studio unit tests passed (6 new outline/list view tests + 9 learner view tests + 6 shell tests); Next.js `typecheck` passed with 0 errors; `next build` compiled cleanly (8/8 static routes + middleware)
 - Runtime approval: Blanket user approval for backlog sequence recorded on 2026-10-15 ("i am approving all. i will review at the end. please complete all")
-- Last completed step: Home and My Learning production components built, wired to authorized collection summaries and preview route, and verified with tests; evidence documented in `evidence/LSI-006.md`
-- Exact next action: Implement LSI-007 (Private roadmap outline) by loading existing curriculum/revision into the course rail and List view under canonical workspace routes.
+- Last completed step: Private course outline and full list view components built, wired to curriculum view with graceful empty state on ROADMAP_NOT_FOUND, verified with tests; evidence documented in `evidence/LSI-007.md`
+- Exact next action: Implement LSI-008 (Persistent lesson reader and sources) by rendering saved server lesson body with session/revision or honest brief state, displaying verified sources with locator excerpts, and persisting reading state in approved scope.
 - Pending command/session: none
-- Commands run and actual results: `vitest` (15 studio tests passed), `pnpm --filter web typecheck` (passed with 0 errors), `next build` (compiled successfully).
-- Completion commit: `d914d61` (LSI-006 completion commit)
+- Commands run and actual results: `vitest` (21 studio tests passed), `pnpm --filter web typecheck` (passed with 0 errors), `next build` (compiled successfully).
+- Completion commit: `51a50f4` (LSI-007 completion commit)
 
 For each approved ticket, record the user approval source, date, and precise scope here. Preserve it across interruptions for that same scope.
 
