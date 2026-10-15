@@ -171,3 +171,28 @@ it("backs off to ten seconds when status polling is offline", async () => {
   unmount();
   vi.useRealTimers();
 });
+
+it("surfaces the completed result and closes the terminal stream", async () => {
+  vi.stubGlobal("EventSource", Source);
+  vi.mocked(api.readRoadmapJob).mockResolvedValue({
+    id: "j",
+    status: "completed",
+    lastSequence: 5,
+    result: {
+      kind: "published",
+      workspaceId: "ws-9",
+      roadmapId: "rm-9",
+      revisionId: "rev-9",
+    },
+  } as never);
+  const { result, unmount } = renderHook(() => useRoadmapJob("j"));
+  await waitFor(() => expect(result.current.job?.status).toBe("completed"));
+  expect(result.current.job?.result).toEqual({
+    kind: "published",
+    workspaceId: "ws-9",
+    roadmapId: "rm-9",
+    revisionId: "rev-9",
+  });
+  expect(Source.instances.at(-1)?.close).toHaveBeenCalled();
+  unmount();
+});

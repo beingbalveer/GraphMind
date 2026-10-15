@@ -18,7 +18,7 @@ import {
 import {
   StudioHomeView,
 } from "@/components/studio/StudioHomeView";
-import { StudioGoalForm } from "@/components/studio/StudioGoalForm";
+import { StudioRoadmapGenerator } from "@/components/studio/StudioRoadmapGenerator";
 import {
   StudioMyLearningView,
 } from "@/components/studio/StudioMyLearningView";
@@ -524,8 +524,8 @@ Always avoid invoking CPU-bound or blocking synchronous routines directly in \`a
         </div>
       ) : !inCourse && activeNav === "create" ? (
         <div className="flex-1 overflow-y-auto">
-          {/* Preview stub: LSI-022 replaces this with the owned job-creation flow. */}
-          <StudioGoalForm onSubmit={() => undefined} />
+          {/* LSI-022: owned job creation, server status, and completion navigation. */}
+          <StudioRoadmapGenerator />
         </div>
       ) : showCourseListView ? (
         /* Full Course Outline List / Canvas View */
