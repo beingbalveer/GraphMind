@@ -6,7 +6,8 @@
 - Completed tickets: `LSI-001` (DONE — evidence in `docs/integration/evidence/LSI-001.md`), `LSI-002` (DONE — evidence in `docs/integration/evidence/LSI-002.md`), `LSI-003` (DONE — evidence in `docs/integration/evidence/LSI-003.md`), `LSI-004` (DONE — evidence in `docs/integration/evidence/LSI-004.md`), `LSI-005` (DONE — evidence in `docs/integration/evidence/LSI-005.md`), `LSI-006` (DONE — evidence in `docs/integration/evidence/LSI-006.md`), `LSI-007` (DONE — evidence in `docs/integration/evidence/LSI-007.md`), `LSI-008` (DONE — evidence in `docs/integration/evidence/LSI-008.md`), `LSI-009` (DONE — evidence in `docs/integration/evidence/LSI-009.md`), `LSI-010` (DONE — evidence in `docs/integration/evidence/LSI-010.md`), `LSI-011` (DONE — evidence in `docs/integration/evidence/LSI-011.md`)
 - Next ticket: `LSI-012` (READY — blanket user approval recorded)
 - Branch: `codex-learning-studio-backend-integration`
-- Baseline commit: `24d01da`
+- Baseline commit: `aaff66d`
+- Completion commit: `aaff66d` (LSI-011 completion commit)
 - Last completed work: LSI-011 Practice UI (`StudioPracticeActivity.tsx`, `StudioLessonReader.tsx` integration, `roadmapApi.ts` practice methods, `roadmapTypes.ts` updates, unit tests in `StudioPracticeActivity.test.tsx`)
 - Files changed in this task: `apps/web/src/components/studio/StudioPracticeActivity.tsx`, `apps/web/src/components/studio/StudioLessonReader.tsx`, `apps/web/src/components/studio/__tests__/StudioPracticeActivity.test.tsx`, `apps/web/src/lib/roadmapApi.ts`, `apps/web/src/lib/roadmapTypes.ts`, `docs/integration/evidence/LSI-011.md`, `docs/integration/LEARNING_STUDIO_BACKLOG.md`, `docs/integration/HANDOFF.md`
 - Runtime files changed in this task: `apps/web/src/components/studio/StudioPracticeActivity.tsx`, `apps/web/src/components/studio/StudioLessonReader.tsx`, `apps/web/src/lib/roadmapApi.ts`, `apps/web/src/lib/roadmapTypes.ts`
