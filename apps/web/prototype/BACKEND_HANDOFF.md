@@ -6,14 +6,15 @@ This document describes the local prototype flow and a proposed production bound
 
 ```mermaid
 flowchart TD
-  A[Guest catalog] --> B[Public roadmap overview]
-  B --> C[Public lesson reading]
-  B -->|Save / track / ask tutor| G[Simulated sign-in gate]
-  C -->|Track / ask tutor| G
-  G -->|Keep browsing or Escape| B/C
+  A[Outer app: Home / My learning / Browse / Create] --> B[Public roadmap snapshot]
+  B --> C[Course workspace: List or Canvas]
+  C --> D[Lesson center + course rail]
+  C -->|Save / track / ask tutor| G[Simulated sign-in gate]
+  D -->|Track / tutor / private chat| G
+  G -->|Keep browsing or Escape| R[Return to the unchanged public view]
   G -->|Continue as demo learner| H[Resolve one pending intent]
   H --> I[Personal learning collection]
-  H --> J[Same lesson + tutor context]
+  H --> J[Same course + topic + tutor context]
   H --> K[Generator form]
   K --> L[Review profile and fixed sample]
   L -->|Back| K
@@ -30,13 +31,15 @@ flowchart TD
 | Enrollment / personal roadmap copy | Learner workspace; `workspaceId + roadmapId + revisionId + sourceSnapshotRef` | Save creates or returns one private copy; it never mutates the public template. A generated copy retains the selected sample as its source reference and stores its own profile/title. |
 | Topic progress                     | Enrollment/revision + topic                                                   | Learner-owned completion intent. Completion is separate from knowledge-check evidence or mastery.                                                                                      |
 | Practice attempt                   | Enrollment/revision + topic + activity version                                | Private answer, feedback, and hint state; local sample checks demonstrate interaction only. Production assessment must validate the activity and answer server-side.                   |
-| Conversation                       | Enrollment + topic + session ID                                               | Private learner content. Topic switches do not reassign messages, drafts, quotes, or reading position.                                                                                 |
+| Course workspace                   | `courseScopeId`; public snapshot ID for guests or enrollment ID for learners | Course identity controls roadmap view, topic outline, progress display, tutor history, and chat visibility. An enrollment ID remains the identity for generated copies even when templates match. |
+| Course roadmap view and layout     | `courseScopeId + List/Canvas mode + CanvasLayout`                             | List and Canvas project the same ordered topics and completion IDs. Layout changes persist locally per public snapshot or enrollment; they never change roadmap content.                 |
+| Conversation                       | Enrollment + session/thread ID; optional topic association                     | Private learner content. General chats and topic branches stay in the same enrollment; topic switches do not reassign messages, drafts, quotes, or reading position.                       |
 | Generator job                      | Authenticated owner + idempotency key                                         | Job status is private. A cancelled or stale job must not publish a copy later.                                                                                                         |
 | Source reference                   | Published lesson/topic                                                        | Public metadata may expose vetted reference title, URL, locator, and attribution; private uploads and conversation data are never attached to it.                                      |
 
 ## Chats and branch boundaries
 
-The prototype's **Chats** view is a unified presentation, not a second transcript store. Existing `enrollmentId::topicId` tutor histories are projected into the thread list and remain backed by the existing scoped `conversations` records; **Continue in lesson** returns to that history's existing composer. A new **general chat** is a standalone root in the selected enrollment workspace, or in the explicitly named `personal-workspace` when no enrollment is selected. It does not inherit the currently open lesson as topic context. A **branch** is a local child-thread record with its own stable ID, workspace ID, parent thread ID, assistant source-message ID, highlighted quote, optional topic ID, messages, title, and draft. Nested branches preserve the original workspace and topic context. Reducer and storage validation require a tutor source in the same workspace, require the selected quote to occur in that source text, and reject missing/stale origins and cycles. The local demo scripts responses; it creates no API records.
+The course workspace has one persistent left rail for its complete roadmap and that enrollment's conversations. Topic tutor histories are projected from `enrollmentId::topicId` and remain backed by the existing scoped `conversations` records. Opening a topic history restores its lesson and right tutor pane; topic branches replace that pane, preserve the lesson center, and can expand to the center while the course rail remains visible. The course chat center filters every row to the active enrollment and has no extra chat-list column. Personal historical chats remain in a separate outer Personal chats view. A new course **general chat** is a standalone root in the active enrollment and does not inherit the currently open lesson as topic context. A **branch** is a local child-thread record with its own stable ID, workspace ID, parent thread ID, assistant source-message ID, highlighted quote, optional topic ID, messages, title, and draft. Nested branches preserve their workspace and topic. Reducer and storage validation require a tutor source in the same workspace, require the selected quote to occur in that source text, reject missing/stale origins and cycles, and drop an active chat if it does not match the restored course scope. The local demo scripts responses; it creates no API records.
 
 | Prototype concept | Existing production boundary | Existing route / contract |
 | --- | --- | --- |
@@ -64,7 +67,7 @@ The last checklist is intentionally broader than this chat task. Those existing 
 
 ## Static product-demo behavior and production mapping
 
-The local lesson outline contains 12 Python lessons and practice uses 18 deterministic sample activities with hints, retries, and completion kept distinct from correctness. Library search and source-note previews are local; collection progress and last-unfinished-lesson resume use the versioned browser state. Tutor drafts and reading positions stay scoped by learner copy and lesson. During a refresh while streaming, the pending learner question can be retried. These behaviors are product-preview state, not server records or claims of mastery.
+The local lesson outline contains 12 Python lessons and practice uses 18 deterministic sample activities with hints, retries, and completion kept distinct from correctness. The public guest course supports read-only List and Canvas views; private progress and chat are gated and resume the selected course/topic after sign-in. Learner course views, canvas layouts, conversations, progress, drafts, and reading positions persist by enrollment identity. Library search and source-note previews remain local. During a refresh while streaming, the pending learner question can be retried. These behaviors are product-preview state, not server records or claims of mastery.
 
 Browser preferences affect the preview immediately. A sign-out returns to guest browsing and hides the retained learner data; confirmed reset clears the local demo. The demo export contains local sample data. Production export, reset, and preference synchronization need explicit authenticated ownership, privacy, versioning, and retention contracts.
 
@@ -136,7 +139,7 @@ A public DTO should include only public title/slug/summary/category/level/tags, 
 
 ## Pending sign-in intent and return behavior
 
-The prototype stores one discriminated intent: `save(templateId)`, `complete(templateId, topicId)`, `practice(templateId, topicId)`, `tutor(templateId, topicId, quote?)`, `generator`, or `signin`. It retains the current public roadmap/topic and lesson reading position while the dialog is open. Dismissal performs no mutation and leaves the user at the original catalog, overview, or lesson. After successful authentication, the client resolves the intent once using the returned user/workspace context, then clears it. Generic sign-in opens learner Home while retaining the public context in local state; the local demo offers Browse roadmaps to return to public content. Save and completion calls use idempotency keys; practice resumes the same lesson in the private copy without automatically submitting an answer; tutor resumes the same topic and carries the selected quote as explicit context; generator opens the form. For sign-in without a pending action, return to learner Home; the user can browse public content from the learner navigation.
+The prototype stores one discriminated intent: `save(templateId)`, `complete(templateId, topicId)`, `practice(templateId, topicId)`, `tutor(templateId, topicId, quote?)`, `generator`, or `signin(roadmapId?, topicId?)`. It retains the current public roadmap/topic, course snapshot identity, and lesson reading position while the dialog is open. Dismissal performs no mutation and leaves the user in the same public course and topic. After successful authentication, the client resolves the intent once using the returned user/workspace context, then clears it. A sign-in initiated inside a public course creates or resumes the learner's enrollment and returns to that course/topic; a sign-in from the outer app opens learner Home. Save and completion calls use idempotency keys; practice resumes the same lesson in the private copy without automatically submitting an answer; tutor resumes the same topic and carries the selected quote as explicit context; generator opens the form.
 
 Practice integration should use the existing topic `checks` route where its contract supports the activity. Version the activity/prompt and send a validated answer with an attempt identity; return structured feedback and retry eligibility. Hint use and answer drafts need explicit ownership and retention rules. The preview's keyword checks, fixed choices, and reflection feedback are sample teaching content. They must not become a production grading or mastery rule by copying the local implementation.
 

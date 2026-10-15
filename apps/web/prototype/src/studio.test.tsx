@@ -113,6 +113,41 @@ describe("guest and learner state boundaries", () => {
     expect(state).toMatchObject({ view: "lesson", enrollmentId, topicId: "py-02" });
   });
 
+  it("keeps course view and layout scoped to the enrollment identity", () => {
+    let state = reducer(initial, { type: "sign-in" });
+    state = reducer(state, { type: "save-roadmap", roadmapId: roadmaps[0].id });
+    const enrollmentId = state.enrollmentId!;
+    state = reducer(state, { type: "open-enrollment", enrollmentId });
+    state = reducer(state, { type: "course-view-mode", scopeId: enrollmentId, mode: "canvas" });
+    const layout = { version: "spine-v1" as const, positions: {}, viewport: null, topologyKey: "course-a" };
+    state = reducer(state, { type: "course-layout", scopeId: enrollmentId, layout });
+    const otherCourse = reducer(state, { type: "open-roadmap", roadmapId: roadmaps[1].id });
+    expect(state).toMatchObject({ courseScopeId: enrollmentId, courseViewModes: { [enrollmentId]: "canvas" }, courseLayouts: { [enrollmentId]: layout } });
+    expect(reducer(state, { type: "course-view-mode", scopeId: "another-enrollment", mode: "list" })).toBe(state);
+    expect(otherCourse.courseScopeId).toBe(`public:${roadmaps[1].id}`);
+    expect(otherCourse.courseViewModes[enrollmentId]).toBe("canvas");
+  });
+
+  it("keeps topic branches in the course lesson workspace and rejects cross-course roots", () => {
+    let state = reducer(initial, { type: "sign-in" });
+    state = reducer(state, { type: "save-roadmap", roadmapId: roadmaps[0].id });
+    const enrollmentId = state.enrollmentId!;
+    const topicId = allLessons(roadmaps[0])[0].id;
+    state = reducer(state, { type: "open-enrollment", enrollmentId, topicId });
+    const key = scopedKey(enrollmentId, topicId);
+    const reply = { id: 9, role: "tutor" as const, text: "A concrete topic explanation", status: "complete" as const };
+    state = reducer(state, { type: "tutor-upsert", key, message: reply });
+    const rootId = `topic:${encodeURIComponent(key)}`;
+    const branch = reducer(state, { type: "course-chat-branch", id: "chat-topic-child", parentThreadId: rootId, workspaceId: enrollmentId, sourceMessageId: "9", quote: "topic explanation" });
+    expect(branch).toMatchObject({ view: "lesson", courseScopeId: enrollmentId, topicId, activeChatId: "chat-topic-child" });
+    expect(branch.chats[0]).toMatchObject({ workspaceId: enrollmentId, topicId, parentThreadId: rootId, quote: "topic explanation" });
+    expect(reducer(state, { type: "course-chat-branch", id: "wrong-course", parentThreadId: rootId, workspaceId: "another-enrollment", sourceMessageId: "9", quote: "topic explanation" })).toBe(state);
+
+    const rootTutor = reducer(branch, { type: "open-tutor", roadmapId: roadmaps[0].id, topicId, quote: "A concrete passage" });
+    expect(rootTutor).toMatchObject({ view: "lesson", courseScopeId: enrollmentId, enrollmentId, topicId, activeChatId: undefined, quotes: { [key]: "A concrete passage" } });
+    expect(rootTutor.chats).toContainEqual(branch.chats[0]);
+  });
+
   it("adds a generated personal copy only after a valid demo job completes", () => {
     let state = reducer(initial, { type: "sign-in" });
     state = reducer(state, { type: "navigate", view: "generator" });

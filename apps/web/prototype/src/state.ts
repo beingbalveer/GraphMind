@@ -1,4 +1,5 @@
 import { allLessons, findRoadmap, roadmaps, type Roadmap } from "./catalog";
+import type { CanvasLayout } from "@/lib/canvas/types";
 
 export type Message = {
   id: number;
@@ -49,7 +50,7 @@ export type PendingIntent =
   | { type: "complete"; roadmapId: string; topicId: string }
   | { type: "practice"; roadmapId: string; topicId: string }
   | { type: "generator" }
-  | { type: "signin" };
+  | { type: "signin"; roadmapId?: string; topicId?: string };
 export type View =
   | "catalog"
   | "overview"
@@ -67,6 +68,10 @@ export type State = {
   roadmapId: string;
   topicId: string;
   enrollmentId?: string;
+  /** Course context survives reloads independently of the currently selected topic. */
+  courseScopeId?: string;
+  courseLayouts: Record<string, CanvasLayout>;
+  courseViewModes: Record<string, "list" | "canvas">;
   enrollments: Enrollment[];
   conversations: Record<string, Message[]>;
   chats: ChatThread[];
@@ -114,6 +119,8 @@ export const initial: State = {
   roadmapId: roadmaps[0].id,
   topicId: allLessons(roadmaps[0])[0].id,
   enrollments: [],
+  courseLayouts: {},
+  courseViewModes: {},
   conversations: {},
   chats: [],
   chatErrors: {},
@@ -208,6 +215,12 @@ export type Action =
   | { type: "open-tutor"; roadmapId: string; topicId: string; quote?: string }
   | { type: "enable-practice"; roadmapId: string; topicId: string }
   | { type: "open-enrollment"; enrollmentId: string; topicId?: string }
+  | { type: "course-layout"; scopeId: string; layout: CanvasLayout }
+  | { type: "course-view-mode"; scopeId: string; mode: "list" | "canvas" }
+  | { type: "course-chat-open"; id: string }
+  | { type: "course-conversations" }
+  | { type: "course-chat-create"; id: string }
+  | { type: "course-chat-branch"; id: string; parentThreadId: string; workspaceId: string; sourceMessageId: string; quote: string; title?: string }
   | { type: "gate"; intent: PendingIntent }
   | { type: "dismiss-auth" }
   | { type: "sign-in" }
@@ -330,7 +343,17 @@ function fulfillIntent(state: State, intent?: PendingIntent): State {
   state = { ...state, pendingIntent: undefined };
   if (intent.type === "generator")
     return { ...state, view: "generator", generatorStep: "form" };
-  if (intent.type === "signin") return { ...state, view: "home" };
+  if (intent.type === "signin") {
+    const roadmapId = intent.roadmapId;
+    const topicId = intent.topicId;
+    const roadmap = roadmapId ? findRoadmap(roadmapId) : undefined;
+    if (!roadmap || !roadmapId || !topicId || !allLessons(roadmap).some((lesson) => lesson.id === topicId)) return { ...state, view: "home", courseScopeId: undefined };
+    const { enrollment, enrollments } = createEnrollment(state, roadmapId);
+    if (!enrollment) return state;
+    const publicKey = `public::${roadmapId}::${topicId}`;
+    const privatePositionKey = scopedKey(enrollment.id, topicId);
+    return { ...state, ...activateRoadmap(state, roadmapId, topicId), enrollmentId: enrollment.id, courseScopeId: enrollment.id, enrollments, readingPositions: state.readingPositions[privatePositionKey] === undefined && state.readingPositions[publicKey] !== undefined ? { ...state.readingPositions, [privatePositionKey]: state.readingPositions[publicKey] } : state.readingPositions, view: "lesson" };
+  }
   const { roadmapId } = intent;
   const { enrollment, enrollments } = createEnrollment(state, roadmapId);
   if (!enrollment) return state;
@@ -366,6 +389,7 @@ function fulfillIntent(state: State, intent?: PendingIntent): State {
       intent.type === "save" ? undefined : intent.topicId,
     ),
     enrollmentId: enrollment.id,
+    courseScopeId: enrollment.id,
     enrollments,
   };
   if (intent.type === "save")
@@ -399,6 +423,7 @@ export function reducer(state: State, action: Action): State {
         : {
             ...state,
             view: action.view,
+            courseScopeId: ["overview", "lesson", "conversation", "chats", "settings"].includes(action.view) ? state.courseScopeId : undefined,
             authOpen: false,
             generatorStep:
               state.generatorStep === "generating" &&
@@ -412,6 +437,7 @@ export function reducer(state: State, action: Action): State {
         ...state,
         ...activateRoadmap(state, action.roadmapId, action.topicId),
         enrollmentId: undefined,
+        courseScopeId: `public:${action.roadmapId}`,
         view: action.topicId ? "lesson" : "overview",
         generatorStep:
           state.generatorStep === "generating" ? "review" : state.generatorStep,
@@ -429,6 +455,7 @@ export function reducer(state: State, action: Action): State {
           ? state.enrollments.map((item) => item.id === enrollment.id ? { ...item, lastTopicId: action.topicId } : item)
           : state.enrollments,
         enrollmentId: enrollment.id,
+        courseScopeId: enrollment.id,
         view: action.topicId ? "lesson" : "overview",
         generatorStep:
           state.generatorStep === "generating" ? "review" : state.generatorStep,
@@ -436,7 +463,7 @@ export function reducer(state: State, action: Action): State {
     }
     case "open-topic":
       return currentLessons(state).some((lesson) => lesson.id === action.topicId)
-        ? { ...state, topicId: action.topicId, view: "lesson", ...(state.enrollmentId ? { enrollments: state.enrollments.map((item) => item.id === state.enrollmentId ? { ...item, lastTopicId: action.topicId } : item) } : {}) }
+        ? { ...state, topicId: action.topicId, view: "lesson", ...(state.courseScopeId && !state.courseScopeId.startsWith("public:") ? { enrollmentId: state.courseScopeId, enrollments: state.enrollments.map((item) => item.id === state.courseScopeId ? { ...item, lastTopicId: action.topicId } : item) } : {}) }
         : state;
     case "conversation-topic":
       return state.mode === "learner" &&
@@ -476,6 +503,8 @@ export function reducer(state: State, action: Action): State {
         ...state,
         ...activateRoadmap(state, roadmap.id, action.topicId),
         enrollmentId: created.enrollment.id,
+        courseScopeId: created.enrollment.id,
+        activeChatId: undefined,
         enrollments: created.enrollments.map((item) => item.id === created.enrollment!.id ? { ...item, lastTopicId: action.topicId } : item),
         readingPositions,
         quotes: { ...state.quotes, [contextKey]: action.quote },
@@ -488,8 +517,16 @@ export function reducer(state: State, action: Action): State {
       if (!roadmap || !allLessons(roadmap).some((item) => item.id === action.topicId)) return state;
       const existing = activeEnrollment(state)?.templateId === roadmap.id ? activeEnrollment(state) : enrollmentFor(state, roadmap.id);
       const created = existing ? { enrollment: existing, enrollments: state.enrollments } : createEnrollment(state, roadmap.id);
-      return created.enrollment ? { ...state, ...activateRoadmap(state, roadmap.id, action.topicId), enrollmentId: created.enrollment.id, enrollments: created.enrollments.map((item) => item.id === created.enrollment!.id ? { ...item, lastTopicId: action.topicId } : item), view: "lesson" } : state;
+      return created.enrollment ? { ...state, ...activateRoadmap(state, roadmap.id, action.topicId), enrollmentId: created.enrollment.id, courseScopeId: created.enrollment.id, enrollments: created.enrollments.map((item) => item.id === created.enrollment!.id ? { ...item, lastTopicId: action.topicId } : item), view: "lesson" } : state;
     }
+    case "course-layout":
+      return action.scopeId === state.courseScopeId
+        ? { ...state, courseLayouts: { ...state.courseLayouts, [action.scopeId]: action.layout } }
+        : state;
+    case "course-view-mode":
+      return action.scopeId === state.courseScopeId
+        ? { ...state, courseViewModes: { ...state.courseViewModes, [action.scopeId]: action.mode } }
+        : state;
     case "gate":
       return state.mode === "guest"
         ? { ...state, pendingIntent: action.intent, authOpen: true }
@@ -507,6 +544,7 @@ export function reducer(state: State, action: Action): State {
         mode: "guest",
         view: "catalog",
         enrollmentId: undefined,
+        courseScopeId: undefined,
         authOpen: false,
         pendingIntent: undefined,
         generatorStep: "form",
@@ -526,6 +564,7 @@ export function reducer(state: State, action: Action): State {
         enrollments,
         ...activateRoadmap(state, action.roadmapId),
         enrollmentId: enrollment.id,
+        courseScopeId: enrollment.id,
         view: "my-learning",
         notice: enrollmentFor(state, action.roadmapId)
           ? "This roadmap is already in My learning."
@@ -569,7 +608,22 @@ export function reducer(state: State, action: Action): State {
       if (!validWorkspace || (action.topicId && (!enrollment || !allLessons(findRoadmap(enrollment.templateId)!).some((lesson) => lesson.id === action.topicId)))) return state;
       const thread: ChatThread = { id: action.id, workspaceId: action.workspaceId, title: action.title?.slice(0, 120) || "New chat", kind: "general", messages: [], ...(action.topicId ? { topicId: action.topicId } : {}), draft: "", updatedAt: Date.now() };
       const owner = state.enrollments.find((item) => item.id === action.workspaceId);
-      return { ...state, chats: [thread, ...state.chats], activeChatId: thread.id, enrollmentId: owner?.id, ...(owner ? { roadmapId: owner.templateId } : {}), view: "chats" };
+      if (action.workspaceId !== "personal-workspace" && state.courseScopeId && state.courseScopeId !== action.workspaceId) return state;
+      return { ...state, chats: [thread, ...state.chats], activeChatId: thread.id, enrollmentId: owner?.id, courseScopeId: owner?.id, ...(owner ? { roadmapId: owner.templateId } : {}), view: "chats" };
+    }
+    case "course-chat-create": {
+      if (state.mode !== "learner" || !state.courseScopeId || !/^[\w:-]{1,160}$/.test(action.id) || state.chats.some((chat) => chat.id === action.id)) return state;
+      let enrollment = state.enrollments.find((item) => item.id === state.courseScopeId);
+      let enrollments = state.enrollments;
+      if (!enrollment && state.courseScopeId.startsWith("public:")) {
+        const roadmapId = state.courseScopeId.slice(7);
+        const created = createEnrollment(state, roadmapId);
+        enrollment = created.enrollment;
+        enrollments = created.enrollments;
+      }
+      if (!enrollment) return state;
+      const thread: ChatThread = { id: action.id, workspaceId: enrollment.id, title: "New chat", kind: "general", messages: [], draft: "", updatedAt: Date.now() };
+      return { ...state, enrollments, courseScopeId: enrollment.id, enrollmentId: enrollment.id, roadmapId: enrollment.templateId, chats: [thread, ...state.chats], activeChatId: thread.id, view: "chats" };
     }
     case "chat-open": {
       if (state.mode !== "learner") return state;
@@ -587,8 +641,24 @@ export function reducer(state: State, action: Action): State {
         if (!enrollment || !allLessons(findRoadmap(enrollment.templateId)!).some((lesson) => lesson.id === topicId)) return state;
       }
       const workspaceEnrollment = state.enrollments.find((item) => item.id === workspaceId);
-      return { ...state, activeChatId: action.id, enrollmentId: workspaceEnrollment?.id, ...(workspaceEnrollment ? { roadmapId: workspaceEnrollment.templateId } : {}), ...(enrollment && topicId ? { topicId } : {}), view: "chats" };
+      if (state.courseScopeId && state.courseScopeId !== workspaceId) return state;
+      return { ...state, activeChatId: action.id, enrollmentId: workspaceEnrollment?.id, courseScopeId: workspaceEnrollment?.id, ...(workspaceEnrollment ? { roadmapId: workspaceEnrollment.templateId } : {}), ...(enrollment && topicId ? { topicId } : {}), view: "chats" };
     }
+    case "course-chat-open": {
+      if (state.mode !== "learner" || !state.courseScopeId || chatWorkspace(state, action.id) !== state.courseScopeId || state.courseScopeId.startsWith("public:")) return state;
+      const enrollment = state.enrollments.find((item) => item.id === state.courseScopeId);
+      let topicId = chatTopicId(state, action.id);
+      if (!topicId && action.id.startsWith("topic:")) {
+        try { topicId = decodeURIComponent(action.id.slice(6)).split("::").slice(1).join("::") || undefined; }
+        catch { return state; }
+      }
+      if (!enrollment || (topicId && !allLessons(findRoadmap(enrollment.templateId)!).some((lesson) => lesson.id === topicId))) return state;
+      return { ...state, activeChatId: action.id, enrollmentId: enrollment.id, ...(topicId ? { topicId, enrollments: state.enrollments.map((item) => item.id === enrollment.id ? { ...item, lastTopicId: topicId } : item) } : {}), view: topicId ? "lesson" : "chats" };
+    }
+    case "course-conversations":
+      return state.mode === "learner" && state.courseScopeId && !state.courseScopeId.startsWith("public:") && state.enrollments.some((item) => item.id === state.courseScopeId)
+        ? { ...state, activeChatId: undefined, enrollmentId: state.courseScopeId, view: "chats" }
+        : state;
     case "chat-rename":
       return state.mode === "learner" && state.chats.some((chat) => chat.id === action.id) ? { ...state, chats: state.chats.map((chat) => chat.id === action.id ? { ...chat, title: action.title.trim().slice(0, 120) || "New chat" } : chat) } : state;
     case "chat-draft":
@@ -618,6 +688,15 @@ export function reducer(state: State, action: Action): State {
       const topicId = chatTopicId(state, action.parentThreadId);
       const thread: ChatThread = { id: action.id, workspaceId: action.workspaceId, title: action.title?.slice(0, 120) || action.quote.slice(0, 48), kind: "branch", messages: [], parentThreadId: action.parentThreadId, sourceMessageId: action.sourceMessageId, quote: action.quote, ...(topicId ? { topicId } : {}), draft: "", updatedAt: Date.now() };
       return { ...state, chats: [thread, ...state.chats], activeChatId: action.parentThreadId, view: "chats" };
+    }
+    case "course-chat-branch": {
+      if (state.mode !== "learner" || !state.courseScopeId || state.courseScopeId !== action.workspaceId || !/^[\w:-]{1,160}$/.test(action.id) || state.chats.some((chat) => chat.id === action.id) || !action.quote.trim() || action.quote.length > 1000 || chatWorkspace(state, action.parentThreadId) !== action.workspaceId) return state;
+      const source = chatMessages(state, action.parentThreadId).find((message) => message.id === action.sourceMessageId && message.role === "tutor");
+      if (!source || source.status === "streaming" || !source.text.trim() || !source.text.includes(action.quote)) return state;
+      const topicId = chatTopicId(state, action.parentThreadId) ?? (action.parentThreadId.startsWith("topic:") ? decodeURIComponent(action.parentThreadId.slice(6)).split("::").slice(1).join("::") : undefined);
+      if (!topicId || topicId !== state.topicId) return state;
+      const thread: ChatThread = { id: action.id, workspaceId: action.workspaceId, title: action.title?.slice(0, 120) || action.quote.slice(0, 48), kind: "branch", messages: [], parentThreadId: action.parentThreadId, sourceMessageId: action.sourceMessageId, quote: action.quote, topicId, draft: "", updatedAt: Date.now() };
+      return { ...state, chats: [thread, ...state.chats], activeChatId: thread.id, view: "lesson" };
     }
     case "tutor-upsert": {
       if (state.mode !== "learner") return state;
@@ -752,7 +831,7 @@ export function reducer(state: State, action: Action): State {
       const template = findRoadmap(action.templateId);
       if (!template) return state;
       const enrollment: Enrollment = { id: `demo-generated-${action.runId}`, templateId: template.id, sourceSnapshotRef: `${template.id}@${template.snapshotVersion}`, title: action.profile.title.trim() || action.profile.prompt.trim(), completedTopicIds: [], generation: action.profile, generatedCopy: true, generationRunId: action.runId };
-      return { ...state, enrollments: [...state.enrollments, enrollment], roadmapId: template.id, enrollmentId: enrollment.id, topicId: allLessons(template)[0].id, view: "generator", generatorStep: "result", notice: "Demo copy added to My learning." };
+      return { ...state, enrollments: [...state.enrollments, enrollment], roadmapId: template.id, enrollmentId: enrollment.id, courseScopeId: enrollment.id, topicId: allLessons(template)[0].id, view: "generator", generatorStep: "result", notice: "Demo copy added to My learning." };
     }
     case "reset":
       return initial;

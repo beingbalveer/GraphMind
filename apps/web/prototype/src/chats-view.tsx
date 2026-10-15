@@ -3,15 +3,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Drawer } from "@/components/ui/drawer";
-import { ChevronDown, ChevronRight, CornerDownRight, Home as HomeIcon, MessageSquare, Pencil, Plus, Search, Send, X } from "lucide-react";
+import { ChevronDown, ChevronRight, CornerDownRight, Expand, Home as HomeIcon, MessageSquare, Pencil, Plus, Search, Send, X } from "lucide-react";
 import { allLessons, type Lesson } from "./catalog";
 import { getRoadmap, topicThreadId, type ChatMessage, type ChatThread, type State } from "./state";
 
 type Row = { id: string; title: string; workspaceId: string; messages: ChatMessage[]; topic?: Lesson; thread?: ChatThread; parentThreadId?: string };
-export function ChatsView({ state, onCreate, onOpen, onRename, onDraft, onSend, onStop, onRetry, onBranch, onContinueTopic, onHome, busyId, small }: {
+export function ChatsView({ state, onCreate, onOpen, onRename, onDraft, onSend, onStop, onRetry, onBranch, onContinueTopic, onHome, busyId, small, scopeId, coursePanel = false, embedded = false, onOpenCourse, onExpandCourse }: {
   state: State; onCreate: () => void; onOpen: (id: string) => void; onRename: (id: string, title: string) => void;
   onDraft: (id: string, value: string) => void; onSend: (id: string) => void; onStop: (id: string) => void;
-  onBranch: (parentId: string, message: ChatMessage, quote: string) => void; onContinueTopic: (id: string) => void; onHome: () => void; onRetry: (id: string) => void; busyId?: string; small: boolean;
+  onBranch: (parentId: string, message: ChatMessage, quote: string) => void; onContinueTopic: (id: string) => void; onHome: () => void; onRetry: (id: string) => void; busyId?: string; small: boolean; scopeId?: string; coursePanel?: boolean; embedded?: boolean; onOpenCourse?: (id: string) => void; onExpandCourse?: (id: string) => void;
 }) {
   const [query, setQuery] = useState("");
   const [renaming, setRenaming] = useState<string>();
@@ -30,8 +30,8 @@ export function ChatsView({ state, onCreate, onOpen, onRename, onDraft, onSend, 
       return { id: topicThreadId(key), title: history.find((message) => message.role === "learner")?.text.slice(0, 48) || topic?.title || "Lesson conversation", workspaceId: enrollmentId, messages: history.map((message) => ({ id: String(message.id), role: message.role, text: message.text, ...(message.status ? { status: message.status } : {}) })), topic };
     }).filter((row) => Boolean(row.topic));
     const threads: Row[] = state.chats.map((thread) => ({ id: thread.id, title: thread.title, workspaceId: thread.workspaceId, messages: thread.messages, thread, parentThreadId: thread.parentThreadId }));
-    return [...threads, ...topics].sort((a, b) => (b.thread?.updatedAt ?? Math.max(0, ...b.messages.map((message) => Number(message.id) || 0))) - (a.thread?.updatedAt ?? Math.max(0, ...a.messages.map((message) => Number(message.id) || 0))));
-  }, [state.chats, state.conversations, state.enrollments]);
+    return [...threads, ...topics].filter((row) => !scopeId || row.workspaceId === scopeId).sort((a, b) => (b.thread?.updatedAt ?? Math.max(0, ...b.messages.map((message) => Number(message.id) || 0))) - (a.thread?.updatedAt ?? Math.max(0, ...a.messages.map((message) => Number(message.id) || 0))));
+  }, [state.chats, state.conversations, state.enrollments, scopeId]);
   const matching = rows.filter((row) => `${row.title} ${row.topic?.title ?? ""}`.toLowerCase().includes(query.toLowerCase()));
   const visibleIds = new Set(matching.map((row) => row.id));
   const byId = new Map(rows.map((row) => [row.id, row]));
@@ -76,16 +76,16 @@ export function ChatsView({ state, onCreate, onOpen, onRename, onDraft, onSend, 
     onBranch(id, message, selected && message.text.includes(selected) ? selected.slice(0, 1000) : message.text.slice(0, 500));
   };
   const threadPane = (row: Row, isPeek = false) => <section key={row.id} className="flex min-h-0 min-w-0 flex-1 flex-col">
-    <header className="shrink-0 border-b border-border-subtle px-5 py-4">
+    <header className="min-h-0 max-h-[30vh] shrink-0 overflow-y-auto overscroll-contain border-b border-border-subtle px-5 py-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="text-xs text-foreground-muted">{row.topic ? `Lesson · ${row.topic.title}` : row.thread?.kind === "branch" ? "Branch conversation" : row.workspaceId === "personal-workspace" ? "Personal workspace" : state.enrollments.find((item) => item.id === row.workspaceId)?.title ?? "Roadmap workspace"}</div>
           <h1 className="mt-1 truncate text-lg font-semibold">{row.title}</h1>
-          {row.thread?.quote && <blockquote className="mt-2 border-l-2 border-border-strong pl-3 text-xs leading-5 text-foreground-muted">{row.thread.quote}</blockquote>}
+          {row.thread?.quote && <blockquote className="mt-2 max-h-16 overflow-y-auto border-l-2 border-border-strong pl-3 text-xs leading-5 text-foreground-muted">{row.thread.quote}</blockquote>}
         </div>
-        <div className="flex max-w-full shrink-0 flex-wrap justify-end gap-1">{isPeek && <><Button size="sm" variant="outline" onClick={() => { onOpen(row.id); closePeek(); setChatListOpen(false); }}>Open full thread</Button><Button size="iconSm" variant="ghost" aria-label="Close side peek" onClick={closePeek}><X className="size-4"/></Button></>}{small && !isPeek && <Button size="sm" variant="outline" onClick={() => setChatListOpen(true)}>All chats</Button>}{row.topic && !isPeek && <Button size="sm" variant="outline" onClick={() => onContinueTopic(row.id)}>Continue in lesson</Button>}{parent && !isPeek && <Button size="sm" variant="outline" onClick={() => { setOpenedBranch(undefined); setPeekOpen(true); }}><CornerDownRight className="size-3.5"/> Parent</Button>}{newestChild && !isPeek && <Button size="sm" variant="outline" onClick={() => { setOpenedBranch(newestChild.id); setPeekOpen(true); }}><CornerDownRight className="size-3.5"/> Open branch</Button>}</div>
+        <div className="flex max-w-full shrink-0 flex-wrap justify-end gap-1">{coursePanel && row.thread?.kind === "branch" && <Button size="sm" variant="outline" onClick={() => onExpandCourse?.(row.id)}><Expand className="size-3.5"/> Open full conversation</Button>}{embedded && row.thread?.topicId && <Button size="sm" variant="outline" onClick={() => onOpenCourse?.(row.id)}>Return to lesson</Button>}{isPeek && <><Button size="sm" variant="outline" onClick={() => { onOpen(row.id); closePeek(); setChatListOpen(false); }}>Open full thread</Button><Button size="iconSm" variant="ghost" aria-label="Close side peek" onClick={closePeek}><X className="size-4"/></Button></>}{small && !embedded && !coursePanel && !isPeek && <Button size="sm" variant="outline" onClick={() => setChatListOpen(true)}>All chats</Button>}{row.topic && !isPeek && <Button size="sm" variant="outline" onClick={() => onContinueTopic(row.id)}>Continue in lesson</Button>}{parent && !isPeek && <Button size="sm" variant="outline" onClick={() => coursePanel ? onOpenCourse?.(parent.id) : embedded ? onOpen(parent.id) : (setOpenedBranch(undefined), setPeekOpen(true))}><CornerDownRight className="size-3.5"/> Parent</Button>}{newestChild && !isPeek && <Button size="sm" variant="outline" onClick={() => coursePanel ? onOpenCourse?.(newestChild.id) : embedded ? onOpen(newestChild.id) : (setOpenedBranch(newestChild.id), setPeekOpen(true))}><CornerDownRight className="size-3.5"/> Open branch</Button>}</div>
       </div>
-      {!isPeek && row.thread?.kind === "branch" && <nav aria-label="Conversation ancestry" className="mt-3 flex flex-wrap items-center gap-1 text-xs text-foreground-muted">{ancestry(row).map((ancestor) => <span key={ancestor.id} className="inline-flex items-center gap-1"><Button size="sm" variant="ghost" onClick={() => { onOpen(ancestor.id); setPeekOpen(false); }}>{ancestor.title}</Button><ChevronRight className="size-3"/></span>)}<span className="truncate text-foreground">{row.title}</span></nav>}
+      {!isPeek && row.thread?.kind === "branch" && <nav aria-label="Conversation ancestry" className="mt-3 flex flex-wrap items-center gap-1 text-xs text-foreground-muted">{ancestry(row).map((ancestor) => <span key={ancestor.id} className="inline-flex items-center gap-1"><Button size="sm" variant="ghost" onClick={() => { (coursePanel ? onOpenCourse : onOpen)?.(ancestor.id); setPeekOpen(false); }}>{ancestor.title}</Button><ChevronRight className="size-3"/></span>)}<span className="truncate text-foreground">{row.title}</span></nav>}
       <div className="mt-1 text-xs text-foreground-muted">Sample replies · local preview</div>
     </header>
     <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-5 py-4">
@@ -101,9 +101,22 @@ export function ChatsView({ state, onCreate, onOpen, onRename, onDraft, onSend, 
       <div className="mt-2 flex items-center justify-between"><span className="text-xs text-foreground-muted">Saved in this browser</span><Button type="submit" size="sm" disabled={(busyId !== undefined && busyId !== row.id) || (busyId !== row.id && !row.thread.draft.trim())}>{busyId === row.id ? <><X className="size-3.5"/> Stop</> : <><Send className="size-3.5"/> Send</>}</Button></div>
     </form> : <div className="shrink-0 border-t border-border-subtle bg-background px-4 py-3"><p className="text-xs text-foreground-muted">Lesson conversation history</p><Button className="mt-2" size="sm" variant="outline" onClick={() => onContinueTopic(row.id)}>Continue in lesson</Button></div>}
   </section>;
+  if ((coursePanel || embedded) && active) {
+    const parentRow = active.parentThreadId ? byId.get(active.parentThreadId) : undefined;
+    const siblings = parentRow ? childrenForAll(parentRow.id) : [];
+    const descendants = childrenForAll(active.id);
+    return <div className="flex h-full min-h-0 min-w-0 flex-col">
+      <nav aria-label="Course branch history" className="min-h-0 max-h-[30vh] shrink-0 space-y-2 overflow-y-auto overscroll-contain border-b border-border-subtle p-3">
+        <div className="flex flex-wrap items-center gap-1">{ancestry(active).map((ancestor) => <Button key={ancestor.id} size="sm" variant="ghost" onClick={() => onOpenCourse?.(ancestor.id)}>{ancestor.topic ? "Topic tutor" : ancestor.title}</Button>)}<span className="truncate text-xs font-medium">{active.title}</span></div>
+        {siblings.length > 1 && <div className="flex max-w-full gap-1 overflow-x-auto pb-1">{siblings.map((item, index) => <Button key={item.id} size="sm" variant={item.id === active.id ? "secondary" : "outline"} className="max-w-40 truncate" onClick={() => onOpenCourse?.(item.id)}>Branch {index + 1}: {item.title}</Button>)}</div>}
+        {descendants.length > 0 && <div className="flex max-w-full gap-1 overflow-x-auto pb-1">{descendants.map((item) => <Button key={item.id} size="sm" variant="outline" className="max-w-40 truncate" onClick={() => onOpenCourse?.(item.id)}><CornerDownRight className="size-3.5"/>{item.title}</Button>)}</div>}
+      </nav>
+      {threadPane(active)}
+    </div>;
+  }
   const renderTree = (row: Row, depth = 0): ReactNode => <div key={row.id} className="mb-1" style={{ marginLeft: Math.min(depth, 4) * 10 }}>
     <div className={`group flex min-w-0 items-center rounded-lg ${activeId === row.id ? "bg-surface" : "hover:bg-surface-hover"}`}>
-      <Button variant="ghost" className="min-w-0 flex-1 justify-start truncate text-left" onClick={() => { onOpen(row.id); setChatListOpen(false); }}><MessageSquare className="size-3.5 shrink-0 text-foreground-muted"/><span className="truncate">{row.title}</span></Button>
+      <Button variant="ghost" className="min-w-0 flex-1 justify-start truncate text-left" onClick={() => { (embedded ? onOpenCourse ?? onOpen : onOpen)(row.id); setChatListOpen(false); }}><MessageSquare className="size-3.5 shrink-0 text-foreground-muted"/><span className="truncate">{row.title}</span></Button>
       {row.thread && <Button size="iconSm" variant="ghost" aria-label={`Rename ${row.title}`} onClick={() => { setRenaming(row.id); setRenameValue(row.title); }}><Pencil className="size-3.5"/></Button>}
       {children(row.id).length > 0 && !query && <Button size="iconSm" variant="ghost" aria-label={`${expanded[row.id] ? "Collapse" : "Expand"} branches for ${row.title}`} onClick={() => setExpanded((value) => ({ ...value, [row.id]: !value[row.id] }))}>{expanded[row.id] ? <ChevronDown className="size-3.5"/> : <ChevronRight className="size-3.5"/>}</Button>}
     </div>
@@ -114,6 +127,14 @@ export function ChatsView({ state, onCreate, onOpen, onRename, onDraft, onSend, 
     <div className="space-y-2 border-b border-border-subtle p-3"><Button variant="ghost" className="w-full justify-start" onClick={onHome}><HomeIcon className="size-4"/> Learning studio</Button><Button className="w-full justify-start" onClick={() => { onCreate(); setChatListOpen(false); }}><Plus className="size-4"/> New chat</Button><div className="flex gap-2"><Input startIcon={<Search className="size-4"/>} aria-label="Search chats" placeholder="Search chats" value={query} onChange={(event) => setQuery(event.target.value)}/>{query && <Button size="iconSm" variant="ghost" aria-label="Clear chat search" onClick={() => setQuery("")}><X className="size-4"/></Button>}</div></div>
     <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-3"><div className="px-2 py-2 text-2xs font-medium uppercase tracking-wider text-foreground-subtle">Recent</div>{visible.filter((row) => !row.parentThreadId).map((row) => renderTree(row))}{matching.length === 0 && <div className="px-3 py-6 text-sm text-foreground-muted">{query ? "No matching chats." : "Your chats will appear here."}</div>}</div>
   </aside>;
+  const courseDirectory = <section className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
+    <header className="shrink-0 border-b border-border-subtle px-5 py-4">
+      <div className="flex flex-wrap items-center justify-between gap-3"><div><h1 className="text-lg font-semibold">All conversations</h1><p className="mt-1 text-sm text-foreground-muted">Chats and topic tutor history in this course.</p></div><Button onClick={onCreate}><Plus className="size-4"/> New chat</Button></div>
+      <div className="mt-4 max-w-xl"><Input startIcon={<Search className="size-4"/>} aria-label="Search chats" placeholder="Search course conversations" value={query} onChange={(event) => setQuery(event.target.value)}/>{query && <Button className="mt-2" size="sm" variant="ghost" onClick={() => setQuery("")}><X className="size-3.5"/> Clear search</Button>}</div>
+    </header>
+    <div className="min-h-0 flex-1 overflow-y-auto p-4"><div className="mb-2 px-2 text-2xs font-medium uppercase tracking-wider text-foreground-subtle">Course conversations</div>{visible.filter((row) => !row.parentThreadId).map((row) => renderTree(row))}{matching.length === 0 && <div className="px-3 py-6 text-sm text-foreground-muted">{query ? "No matching chats." : "No conversations yet. Start a new chat or ask the tutor about a lesson."}</div>}</div>
+  </section>;
+  if (embedded) return courseDirectory;
   const peek = active && (parent || newestChild);
   const peekTitle = parent && peekRow?.id === parent.id ? "Parent conversation" : "Child branch";
   return <div className="flex h-full min-h-0 min-w-0">

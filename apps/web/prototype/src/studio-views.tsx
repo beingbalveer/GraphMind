@@ -173,25 +173,16 @@ export function RoadmapOverview({
   roadmapId,
   enrollment,
   onLesson,
-  onSave,
-  onGate,
-  onBack,
 }: {
   roadmapId: string;
   enrollment?: State["enrollments"][number];
   onLesson: (id: string) => void;
-  onSave: () => void;
-  onGate: () => void;
-  onBack: () => void;
 }) {
   const roadmap = getRoadmap(roadmapId)!;
   const lessons = allLessons(roadmap);
   const done = enrollment?.completedTopicIds ?? [];
   return (
     <div className="mx-auto max-w-4xl px-6 py-10 md:px-10">
-      <Button variant="link" className="h-auto p-0" onClick={onBack}>
-        ← Browse roadmaps
-      </Button>
       <div className="mt-6 flex flex-wrap items-center gap-2">
         <Badge variant="secondary">{roadmap.category}</Badge>
         <Badge variant="outline">{roadmap.level}</Badge>
@@ -236,21 +227,7 @@ export function RoadmapOverview({
           </span>
         )}
       </div>
-      <div className="mt-7 flex flex-wrap gap-2">
-        <Button onClick={() => onLesson(lessons[0].id)}>
-          Read first lesson
-        </Button>
-        {enrollment ? (
-          <Badge variant="success">In My learning</Badge>
-        ) : (
-          <Button variant="outline" onClick={onSave}>
-            Save to My learning
-          </Button>
-        )}
-        <Button variant="ghost" onClick={onGate}>
-          Create a roadmap
-        </Button>
-      </div>
+      <p className="mt-5 text-sm text-foreground-muted">Choose a topic from the roadmap to start learning. Your roadmap and progress stay available as you move between lessons and conversations.</p>
       <div className="mt-9 grid gap-6 lg:grid-cols-[1fr_280px]">
         <section>
           <h2 className="text-base font-semibold">Roadmap</h2>

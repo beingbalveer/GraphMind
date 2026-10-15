@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { allLessons, roadmaps } from "./catalog";
 import { clearDemoStorage, persistState, restoreState } from "./persistence";
-import { initial, reducer, scopedKey } from "./state";
+import { initial, reducer, scopedKey, type State } from "./state";
 
 class MemoryStorage implements Storage {
   private data = new Map<string, string>();
@@ -90,6 +90,31 @@ describe("versioned demo persistence", () => {
     const topicId = allLessons(roadmaps[1])[2].id;
     persistState(storage, { ...initial, mode: "learner", view: "lesson", roadmapId: roadmaps[1].id, topicId });
     expect(restoreState(storage)).toMatchObject({ mode: "learner", view: "lesson", roadmapId: roadmaps[1].id, topicId, enrollmentId: undefined, enrollments: [] });
+  });
+
+  it("restores one coherent course scope and drops an active chat from another enrollment", () => {
+    const storage = new MemoryStorage();
+    let state = reducer(initial, { type: "sign-in" });
+    state = reducer(state, { type: "save-roadmap", roadmapId: roadmaps[0].id });
+    const firstEnrollment = state.enrollmentId!;
+    state = reducer(state, { type: "save-roadmap", roadmapId: roadmaps[1].id });
+    const secondEnrollment = state.enrollmentId!;
+    state = reducer(state, { type: "open-enrollment", enrollmentId: secondEnrollment, topicId: allLessons(roadmaps[1])[1].id });
+    state = reducer(state, { type: "course-chat-create", id: "course-b-chat" });
+    state = { ...state, courseScopeId: firstEnrollment, roadmapId: roadmaps[1].id, topicId: allLessons(roadmaps[1])[1].id, view: "lesson" };
+    persistState(storage, state);
+    const restored = restoreState(storage);
+    expect(restored).toMatchObject({ courseScopeId: firstEnrollment, roadmapId: roadmaps[0].id, topicId: allLessons(roadmaps[0])[0].id, enrollmentId: firstEnrollment, activeChatId: undefined });
+  });
+
+  it("resumes the same public course topic when a guest signs in", () => {
+    const storage = new MemoryStorage();
+    const topicId = allLessons(roadmaps[2])[1].id;
+    let state: State = { ...initial, view: "lesson", roadmapId: roadmaps[2].id, topicId, courseScopeId: `public:${roadmaps[2].id}` };
+    state = reducer(state, { type: "gate", intent: { type: "signin", roadmapId: roadmaps[2].id, topicId } });
+    state = reducer(state, { type: "sign-in" });
+    persistState(storage, state);
+    expect(restoreState(storage)).toMatchObject({ mode: "learner", view: "lesson", roadmapId: roadmaps[2].id, topicId, courseScopeId: state.enrollmentId, enrollmentId: state.enrollmentId });
   });
 
   it("restores an interrupted tutor stream as stopped and retryable with its question intact", () => {

@@ -16,6 +16,7 @@ import {
   ModalHeader,
 } from "@/components/ui/modal";
 import { NavigationItem } from "@/components/ui/navigation-item";
+import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import {
   BookOpen,
   Compass,
@@ -57,7 +58,8 @@ import { GeneratorFlow } from "./generator-flow";
 import { SettingsView } from "./settings-view";
 import { Appearance, Brand, RoadmapOutline } from "./studio-chrome";
 import { ChatsView } from "./chats-view";
-import { chatWorkspace, type ChatMessage } from "./state";
+import { chatTopicId, chatWorkspace, topicThreadId, type ChatMessage } from "./state";
+import { CourseCanvas } from "./course-canvas";
 
 function useSmallScreen() {
   const [small, setSmall] = useState(
@@ -98,10 +100,29 @@ export function LearningStudio() {
   const lesson =
     lessons.find((item) => item.id === state.topicId) ?? lessons[0];
   const enrollment = currentEnrollment(state);
+  const courseEnrollment = state.courseScopeId ? state.enrollments.find((item) => item.id === state.courseScopeId) : undefined;
+  const courseRoadmapId = courseEnrollment?.templateId ?? (state.courseScopeId?.startsWith("public:") ? state.courseScopeId.slice(7) : undefined);
+  const inCourseWorkspace = Boolean(courseRoadmapId && ["overview", "lesson", "conversation", "chats"].includes(state.view));
+  const courseScopeId = state.courseScopeId;
+  const hasLegacyPersonalChats = state.chats.some((thread) => thread.workspaceId === "personal-workspace");
+  const courseRoadmap = courseRoadmapId ? getRoadmap(courseRoadmapId) : undefined;
+  const courseDone = courseEnrollment?.completedTopicIds ?? [];
+  const courseLessons = courseRoadmap ? allLessons(courseRoadmap) : [];
+  const courseProgress = courseLessons.length ? Math.round(courseDone.length / courseLessons.length * 100) : 0;
+  const courseChatItems = courseScopeId && courseEnrollment ? [
+    ...state.chats.filter((thread) => thread.workspaceId === courseScopeId).map((thread) => ({ id: thread.id, title: thread.title, kind: thread.kind })),
+    ...Object.keys(state.conversations).filter((key) => key.startsWith(`${courseScopeId}::`)).map((key) => {
+      const topicId = key.slice(courseScopeId.length + 2);
+      const topic = courseLessons.find((item) => item.id === topicId);
+      const history = state.conversations[key] ?? [];
+      return { id: topicThreadId(key), title: history.find((item) => item.role === "learner")?.text.slice(0, 36) || topic?.title || "Topic tutor", kind: "topic" };
+    }),
+  ] : [];
   const key = privateKey(state);
   const quote = key ? state.quotes[key] : undefined;
   const prompt = key ? (state.drafts[key] ?? "") : "";
   const messages = key ? (state.conversations[key] ?? []) : [];
+  const activeCourseBranch = state.courseScopeId && state.view === "lesson" ? state.chats.find((thread) => thread.id === state.activeChatId && thread.workspaceId === state.courseScopeId && thread.kind === "branch" && thread.topicId === state.topicId) : undefined;
   const canUsePrivate = state.mode === "learner" && Boolean(enrollment);
   const localPositionKey =
     key ?? `public::${state.roadmapId}::${state.topicId}`;
@@ -186,7 +207,8 @@ export function LearningStudio() {
   const openTopic = (topicId: string) => {
     rememberPosition();
     dispatch({ type: "open-topic", topicId });
-    setTutorOpen(false);
+    setTutorTab("tutor");
+    setTutorOpen(Boolean(courseEnrollment && canUsePrivate));
   };
   const openConversations = () => {
     rememberPosition();
@@ -368,10 +390,30 @@ export function LearningStudio() {
     dispatch({ type: "sign-out" });
   };
   const createChat = () => {
+    if (state.mode !== "learner") return gate({ type: "signin", roadmapId: state.roadmapId, topicId: state.topicId });
     const activeWorkspace = state.view === "chats" && state.activeChatId ? chatWorkspace(state, state.activeChatId) : undefined;
-    const workspaceId = activeWorkspace ?? enrollment?.id ?? "personal-workspace";
-    dispatch({ type: "chat-create", id: `chat-${crypto.randomUUID()}`, workspaceId });
+    const workspaceId = courseScopeId && !courseScopeId.startsWith("public:") ? courseScopeId : state.view === "chats" && !courseScopeId ? "personal-workspace" : activeWorkspace ?? enrollment?.id ?? "personal-workspace";
+    const id = `chat-${crypto.randomUUID()}`;
+    if (courseScopeId) dispatch({ type: "course-chat-create", id });
+    else dispatch({ type: "chat-create", id, workspaceId });
     setMobileNav(false);
+  };
+  const openCourseChat = (id: string) => {
+    rememberPosition();
+    dispatch({ type: "course-chat-open", id });
+    if (chatTopicId(state, id) || id.startsWith("topic:")) { setTutorTab("tutor"); setTutorOpen(true); }
+    else setTutorOpen(false);
+    setMobileNav(false);
+  };
+  const showCourseConversations = () => {
+    dispatch({ type: "course-conversations" });
+    setTutorOpen(false);
+    setMobileNav(false);
+  };
+  const expandCourseThread = (id: string) => {
+    dispatch({ type: "course-chat-open", id });
+    dispatch({ type: "navigate", view: "chats" });
+    setTutorOpen(false);
   };
   const openChat = (id: string) => {
     if (id.startsWith("topic:")) {
@@ -443,16 +485,22 @@ export function LearningStudio() {
   const branchChat = (parentThreadId: string, message: ChatMessage, quote: string) => {
     const workspaceId = chatWorkspace(state, parentThreadId);
     if (!workspaceId || message.role !== "tutor") return;
-    dispatch({ type: "chat-branch", id: `chat-${crypto.randomUUID()}`, parentThreadId, workspaceId, sourceMessageId: message.id, quote });
+    dispatch({ type: state.view === "lesson" ? "course-chat-branch" : "chat-branch", id: `chat-${crypto.randomUUID()}`, parentThreadId, workspaceId, sourceMessageId: message.id, quote });
+    if (state.view === "lesson") setTutorOpen(true);
+  };
+  const branchTutorMessage = (message: import("./state").Message, selected: string) => {
+    if (!enrollment || !key || !selected.trim() || !message.text.includes(selected)) return;
+    branchChat(topicThreadId(key), { id: String(message.id), role: "tutor", text: message.text, status: message.status }, selected.slice(0, 1000));
   };
   const lastActiveChat = useRef(state.activeChatId);
   useEffect(() => {
     const previous = lastActiveChat.current;
-    if (previous !== state.activeChatId || state.view !== "chats") {
+    const courseBranchActive = state.view === "lesson" && Boolean(state.courseScopeId && state.chats.some((thread) => thread.id === state.activeChatId && thread.workspaceId === state.courseScopeId && thread.kind === "branch" && thread.topicId === state.topicId));
+    if (previous !== state.activeChatId || (state.view !== "chats" && !courseBranchActive)) {
       for (const id of [...chatJobs.current.keys()]) stopChat(id);
     }
     lastActiveChat.current = state.activeChatId;
-  }, [state.activeChatId, state.view]);
+  }, [state.activeChatId, state.view, state.courseScopeId, state.topicId]);
   useEffect(() => () => { chatJobs.current.forEach((job) => clearTimeout(job.timer)); chatJobs.current.clear(); }, []);
   const goNext = () => {
     const index = lessons.findIndex((item) => item.id === state.topicId);
@@ -465,14 +513,36 @@ export function LearningStudio() {
 
   return (
     <div className={`studio-shell ${state.preferences.readingSize === "large" ? "reading-large" : ""} ${state.preferences.reducedMotion ? "reduced-motion" : ""} flex h-dvh min-h-0 overflow-hidden bg-background text-foreground`}>
-      {state.mode === "learner" && state.view !== "chats" && (
+      {inCourseWorkspace && courseRoadmap ? (
+        <aside className="studio-nav fixed inset-y-0 left-0 z-20 flex w-60 flex-col border-r border-border-subtle bg-background px-3 py-4">
+          <Brand />
+          <Button variant="ghost" className="mt-5 w-full justify-start" onClick={() => navigate(courseEnrollment ? "my-learning" : "catalog")}>
+            ← {courseEnrollment ? "My learning" : "Roadmaps"}
+          </Button>
+          <div className="mt-4 border-b border-border-subtle px-2 pb-4">
+            <div className="truncate text-sm font-semibold">{courseEnrollment?.title ?? courseRoadmap.title}</div>
+            <div className="mt-2 flex items-center justify-between text-xs text-foreground-muted"><span>{courseProgress}% complete</span><span>{courseDone.length}/{courseLessons.length}</span></div>
+            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-background-secondary"><div className="h-full rounded-full bg-primary" style={{ width: `${courseProgress}%` }} /></div>
+          </div>
+          <nav aria-label="Course navigation" className="min-h-0 flex-1 space-y-1 overflow-y-auto pt-3">
+            <NavigationItem active={state.view === "overview"} icon={<BookOpen />} onClick={() => navigate("overview")}>Roadmap</NavigationItem>
+            {state.view === "lesson" || state.view === "overview" || state.view === "conversation" || state.view === "chats" ? <RoadmapOutline roadmap={courseRoadmap} topicId={state.topicId} completedIds={courseDone} open={outlineOpen} onOpenChange={setOutlineOpen} onTopic={openTopic} onRoadmap={() => navigate("overview")} /> : null}
+            {courseEnrollment && <div className="mt-5 border-t border-border-subtle pt-3"><div className="px-2 pb-2 text-2xs font-medium uppercase tracking-wider text-foreground-subtle">Course conversations</div><NavigationItem active={state.view === "chats" && !state.activeChatId} icon={<MessageSquare />} onClick={showCourseConversations}>All conversations</NavigationItem><Button size="sm" variant="outline" className="mt-2 w-full justify-start" onClick={createChat}>＋ New chat</Button><div className="mt-2 max-h-64 space-y-0.5 overflow-y-auto">{courseChatItems.map((item) => <NavigationItem key={item.id} active={state.activeChatId === item.id} icon={<MessageSquare />} onClick={() => openCourseChat(item.id)}><span className="truncate">{item.title}</span></NavigationItem>)}</div></div>}
+          </nav>
+          <div className="mt-auto shrink-0 space-y-1 border-t border-border-subtle pt-3">
+            {courseEnrollment && <Button variant="ghost" className="w-full justify-start gap-2" onClick={() => navigate("settings")}><Settings className="size-4"/> Account settings</Button>}
+            {state.mode === "learner" ? <Button variant="ghost" className="w-full justify-start" onClick={signOut}>Sign out</Button> : <Button variant="outline" className="w-full" onClick={() => gate({ type: "signin", roadmapId: state.roadmapId, topicId: state.topicId })}>Sign in to save progress</Button>}
+            <Appearance dark={effectiveDark} toggle={() => dispatch({ type: "preferences", value: { theme: effectiveDark ? "light" : "dark" } })} />
+          </div>
+        </aside>
+      ) : state.mode === "learner" && state.view !== "chats" && (
         <aside className="studio-nav fixed inset-y-0 left-0 z-20 flex w-60 flex-col border-r border-border-subtle bg-background px-3 py-4">
           <Brand />
           <div className="mb-2 px-2 text-2xs font-medium uppercase tracking-wider text-foreground-subtle">
             Learning
           </div>
           <nav aria-label="Main navigation" className="min-h-0 flex-1 space-y-1 overflow-y-auto">
-            {navItem("chats", "Chats", <MessageSquare />)}
+            {hasLegacyPersonalChats && navItem("chats", "Personal chats", <MessageSquare />)}
             {navItem("home", "Home", <Compass />)}
             {navItem("my-learning", "My learning", <BookOpen />)}
             {navItem("catalog", "Browse roadmaps", <Compass />)}
@@ -509,7 +579,7 @@ export function LearningStudio() {
         </aside>
       )}
       <div
-        className={`studio-main ${state.mode === "learner" && state.view !== "chats" ? "ml-60" : ""} flex h-dvh min-h-0 min-w-0 flex-1 flex-col`}
+        className={`studio-main ${inCourseWorkspace || (state.mode === "learner" && state.view !== "chats") ? "ml-60" : ""} flex h-dvh min-h-0 min-w-0 flex-1 flex-col`}
       >
         <header className="flex h-13 shrink-0 items-center justify-between border-b border-border-subtle bg-background/95 px-5 backdrop-blur">
           <div className="flex min-w-0 items-center gap-2">
@@ -522,7 +592,9 @@ export function LearningStudio() {
             >
               <Menu className="size-4" />
             </Button>
-            {state.mode === "guest" ? (
+            {inCourseWorkspace ? (
+              <><span className="studio-title-prefix text-xs text-foreground-muted">{courseEnrollment?.title ?? courseRoadmap?.title}</span><ChevronRight className="size-3 text-foreground-muted"/><span className="min-w-0 truncate text-sm">{state.view === "lesson" ? lesson.title : viewTitle(state.view)}</span></>
+            ) : state.mode === "guest" ? (
               <Brand compact />
             ) : (
               <>
@@ -539,11 +611,15 @@ export function LearningStudio() {
             )}
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            {state.view === "lesson" && (small || state.mode === "guest") && <Button variant="ghost" size="iconSm" aria-label="Open course outline" onClick={() => { setOutlineOpen(true); setMobileOutlineOpen(true); }}><List className="size-4" /></Button>}
             <Badge variant="secondary">
               {state.mode === "guest" ? "Guest preview" : "Local demo"}
             </Badge>
-            {state.mode === "guest" ? (
+            {inCourseWorkspace ? (
+              <>
+                {state.view === "lesson" && canUsePrivate && <Button variant="outline" size="sm" onClick={() => setTutorOpen((open) => !open)}><PanelRight className="size-4"/> Tutor</Button>}
+                {state.mode === "guest" ? <><Button variant="ghost" size="iconSm" aria-label={effectiveDark ? "Switch to light appearance" : "Switch to dark appearance"} onClick={() => dispatch({ type: "preferences", value: { theme: effectiveDark ? "light" : "dark" } })}>{effectiveDark ? <Sun className="size-4"/> : <Moon className="size-4"/>}</Button><Button variant="outline" size="sm" onClick={() => gate({ type: "signin", roadmapId: state.roadmapId, topicId: state.topicId })}>Sign in</Button></> : <Button variant="ghost" size="iconSm" aria-label="Account settings" onClick={() => navigate("settings")}><Settings className="size-4"/></Button>}
+              </>
+            ) : state.mode === "guest" ? (
               <>
                 <Button
                   variant="ghost"
@@ -621,15 +697,13 @@ export function LearningStudio() {
                 onOpen={openRoadmap}
               />
             )}
+            {state.view === "settings" && courseScopeId && <div className="px-6 pt-5 md:px-10"><Button variant="ghost" onClick={() => navigate("overview")}>← Back to {courseEnrollment?.title ?? courseRoadmap?.title ?? "course"}</Button></div>}
             {state.view === "overview" && (
-              <RoadmapOverview
-                roadmapId={state.roadmapId}
-                enrollment={currentEnrollment(state)}
-                onLesson={openTopic}
-                onSave={save}
-                onGate={startGenerator}
-                onBack={() => navigate("catalog")}
-              />
+              <div className="mx-auto max-w-6xl px-6 py-7 md:px-10">
+                <div className="mb-4 flex flex-wrap gap-2"><Button onClick={() => openTopic(courseLessons[0]?.id ?? lesson.id)}>Read first lesson</Button>{!courseEnrollment && <Button variant="outline" onClick={() => state.mode === "guest" ? gate({ type: "save", roadmapId: state.roadmapId }) : save()}>Save to My learning</Button>}</div>
+                {courseScopeId && <div className="mb-5 flex justify-end"><SegmentedTabs ariaLabel="Roadmap view" size="sm" value={state.courseViewModes[courseScopeId] ?? "list"} onChange={(mode) => dispatch({ type: "course-view-mode", scopeId: courseScopeId, mode })} items={[{ id: "list", label: "List" }, { id: "canvas", label: "Canvas" }]} /></div>}
+                {(state.courseViewModes[courseScopeId ?? ""] ?? "list") === "canvas" && courseRoadmap && courseScopeId ? <div className="h-[calc(100dvh-8rem)] min-h-[420px] overflow-hidden rounded-2xl border border-border-subtle"><CourseCanvas roadmap={courseRoadmap} completedIds={courseDone} selectedTopicId={state.topicId} scopeId={courseScopeId} layout={state.courseLayouts[courseScopeId]} onLayoutChange={(layout) => dispatch({ type: "course-layout", scopeId: courseScopeId, layout })} onTopic={openTopic} /></div> : <RoadmapOverview roadmapId={state.roadmapId} enrollment={courseEnrollment} onLesson={openTopic} />}
+              </div>
             )}
             {state.view === "lesson" && (
               <LearningLesson
@@ -695,14 +769,9 @@ export function LearningStudio() {
               <MyLearning
                 state={state}
                 onOpen={(id) => {
-                  const enrollment = state.enrollments.find(
-                    (item) => item.id === id,
-                  )!;
-                  const topicId = resumeTopic(enrollment, state.enrollmentId === id ? state.topicId : undefined);
                   dispatch({
                     type: "open-enrollment",
                     enrollmentId: id,
-                    topicId,
                   });
                 }}
                 onBrowse={() => navigate("catalog")}
@@ -771,10 +840,15 @@ export function LearningStudio() {
               />
               </>
             )}
-            {state.view === "chats" && <ChatsView state={state} small={small} onCreate={createChat} onOpen={openChat} onRename={(id, title) => dispatch({ type: "chat-rename", id, title })} onDraft={(id, value) => dispatch({ type: "chat-draft", id, value })} onSend={sendChat} onStop={stopChat} onRetry={retryChat} onBranch={branchChat} onHome={() => navigate("home")} onContinueTopic={(id) => { openChat(id); dispatch({ type: "navigate", view: "conversation" }); }} busyId={Object.keys(chatBusy).find((id) => chatBusy[id])} />}
+            {state.view === "chats" && <ChatsView state={state} small={small} scopeId={inCourseWorkspace ? courseScopeId : "personal-workspace"} embedded={inCourseWorkspace} onOpenCourse={openCourseChat} onCreate={createChat} onOpen={openChat} onRename={(id, title) => dispatch({ type: "chat-rename", id, title })} onDraft={(id, value) => dispatch({ type: "chat-draft", id, value })} onSend={sendChat} onStop={stopChat} onRetry={retryChat} onBranch={branchChat} onHome={() => navigate(inCourseWorkspace ? "overview" : "home")} onContinueTopic={(id) => { if (inCourseWorkspace) dispatch({ type: "course-chat-open", id }); else { openChat(id); dispatch({ type: "navigate", view: "conversation" }); } }} busyId={Object.keys(chatBusy).find((id) => chatBusy[id])} />}
             {state.view === "library" && <LibraryView />}
           </main>
-          {state.view === "lesson" && tutorOpen && !small && canUsePrivate && (
+          {state.view === "lesson" && activeCourseBranch && canUsePrivate && tutorOpen && (
+            <aside className="desktop-tutor min-h-0 w-[360px] shrink-0 border-l border-border-subtle">
+              <ChatsView state={state} small={false} scopeId={courseScopeId} coursePanel onOpenCourse={openCourseChat} onExpandCourse={expandCourseThread} onCreate={createChat} onOpen={openChat} onRename={(id, title) => dispatch({ type: "chat-rename", id, title })} onDraft={(id, value) => dispatch({ type: "chat-draft", id, value })} onSend={sendChat} onStop={stopChat} onRetry={retryChat} onBranch={branchChat} onHome={() => navigate("chats")} onContinueTopic={openCourseChat} busyId={Object.keys(chatBusy).find((id) => chatBusy[id])} />
+            </aside>
+          )}
+          {state.view === "lesson" && tutorOpen && !small && canUsePrivate && !activeCourseBranch && (
             <aside className="desktop-tutor min-h-0 w-[360px] shrink-0 border-l border-border-subtle">
               <TutorPanel
                 tab={tutorTab}
@@ -791,6 +865,7 @@ export function LearningStudio() {
                 error={key ? state.tutorErrors[key] : undefined}
                 onRetry={retryTutor}
                 onStop={stopTutor}
+                onBranch={branchTutorMessage}
                 topic={lesson.title}
                 source={lesson.source}
                 localNote={lesson.note}
@@ -822,6 +897,17 @@ export function LearningStudio() {
           </div>
         )}
         {small && state.mode === "learner" && (
+          <Drawer
+            isOpen={Boolean(activeCourseBranch) && tutorOpen}
+            onClose={() => setTutorOpen(false)}
+            title="Topic branch"
+            description={activeCourseBranch?.title ?? "Course conversation"}
+            widthClassName="h-full w-full"
+          >
+            {activeCourseBranch && <ChatsView state={state} small={false} scopeId={courseScopeId} coursePanel onOpenCourse={openCourseChat} onExpandCourse={expandCourseThread} onCreate={createChat} onOpen={openChat} onRename={(id, title) => dispatch({ type: "chat-rename", id, title })} onDraft={(id, value) => dispatch({ type: "chat-draft", id, value })} onSend={sendChat} onStop={stopChat} onRetry={retryChat} onBranch={branchChat} onHome={() => navigate("chats")} onContinueTopic={openCourseChat} busyId={Object.keys(chatBusy).find((id) => chatBusy[id])} />}
+          </Drawer>
+        )}
+        {small && state.mode === "learner" && !activeCourseBranch && (
           <Drawer
             isOpen={tutorOpen && state.view === "lesson" && canUsePrivate}
             onClose={() => setTutorOpen(false)}
@@ -858,6 +944,7 @@ export function LearningStudio() {
               error={key ? state.tutorErrors[key] : undefined}
               onRetry={retryTutor}
               onStop={stopTutor}
+              onBranch={branchTutorMessage}
               topic={lesson.title}
               source={lesson.source}
               localNote={lesson.note}
@@ -877,7 +964,14 @@ export function LearningStudio() {
           widthClassName="w-[320px]"
         >
           <nav aria-label="Mobile navigation" className="space-y-1 p-3">
-            {state.mode === "guest" ? (
+            {inCourseWorkspace && courseRoadmap ? (
+              <>
+                <Button variant="ghost" className="w-full justify-start" onClick={() => { navigate(courseEnrollment ? "my-learning" : "catalog"); setMobileNav(false); }}>← {courseEnrollment ? "My learning" : "Roadmaps"}</Button>
+                <NavigationItem active={state.view === "overview"} icon={<BookOpen />} onClick={() => { navigate("overview"); setMobileNav(false); }}>Roadmap</NavigationItem>
+                <RoadmapOutline roadmap={courseRoadmap} topicId={state.topicId} completedIds={courseDone} open={outlineOpen} onOpenChange={setOutlineOpen} onTopic={(id) => { openTopic(id); setMobileNav(false); }} onRoadmap={() => { navigate("overview"); setMobileNav(false); }} />
+                {courseEnrollment && <><NavigationItem active={state.view === "chats" && !state.activeChatId} icon={<MessageSquare />} onClick={showCourseConversations}>Course conversations</NavigationItem><Button size="sm" variant="outline" className="w-full justify-start" onClick={createChat}>＋ New chat</Button><div className="max-h-52 space-y-0.5 overflow-y-auto">{courseChatItems.map((item) => <NavigationItem key={item.id} active={state.activeChatId === item.id} icon={<MessageSquare />} onClick={() => openCourseChat(item.id)}><span className="truncate">{item.title}</span></NavigationItem>)}</div><NavigationItem active={state.view === "settings"} icon={<Settings />} onClick={() => { navigate("settings"); setMobileNav(false); }}>Account settings</NavigationItem></>}
+              </>
+            ) : state.mode === "guest" ? (
               <>
                 <NavigationItem
                   active={state.view === "catalog"}
@@ -912,7 +1006,7 @@ export function LearningStudio() {
               </>
             ) : (
               <>
-                {navItem("chats", "Chats", <MessageSquare />)}
+                {hasLegacyPersonalChats && navItem("chats", "Personal chats", <MessageSquare />)}
                 {navItem("home", "Home", <Compass />)}
                 {navItem("my-learning", "My learning", <BookOpen />)}
                 {navItem("catalog", "Browse roadmaps", <Compass />)}

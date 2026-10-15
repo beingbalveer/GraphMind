@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Expand, Send, X } from "lucide-react";
+import { useState } from "react";
 import type { Lesson } from "./catalog";
 import type { Message } from "./state";
 
@@ -25,6 +26,7 @@ export function TutorPanel({
   error,
   onRetry,
   onStop,
+  onBranch,
 }: {
   tab: "tutor" | "sources";
   setTab: (v: "tutor" | "sources") => void;
@@ -35,6 +37,7 @@ export function TutorPanel({
   error?: string;
   onRetry?: () => void;
   onStop?: () => void;
+  onBranch?: (message: Message, quote: string) => void;
   messages: Message[];
   quote?: string;
   clearQuote: () => void;
@@ -45,6 +48,7 @@ export function TutorPanel({
   source: Lesson["source"];
   localNote: string;
 }) {
+  const [branchSelection, setBranchSelection] = useState<{ messageId: number; quote: string }>();
   return (
     <section className="tutor-panel flex h-full min-h-0 w-full flex-col bg-background">
       {showPanelHeader && (
@@ -130,7 +134,8 @@ export function TutorPanel({
                     {m.quote}
                   </blockquote>
                 )}
-                {m.text}
+                <p onMouseUp={(event) => { const selection = window.getSelection(); const text = selection?.toString().trim(); if (selection?.anchorNode && selection.focusNode && event.currentTarget.contains(selection.anchorNode) && event.currentTarget.contains(selection.focusNode) && text && m.text.includes(text)) setBranchSelection({ messageId: m.id, quote: text.slice(0, 1000) }); }}>{m.text}</p>
+                {m.role === "tutor" && m.status !== "streaming" && onBranch && <Button className="mt-2" size="sm" variant="ghost" onClick={() => { const selected = branchSelection?.messageId === m.id && m.text.includes(branchSelection.quote) ? branchSelection.quote : m.text.slice(0, 500); onBranch(m, selected); }}>{branchSelection?.messageId === m.id ? "Branch from selection" : "Branch from reply"}</Button>}
               </div>
             ))}
             {busy && <div role="status" className="text-xs text-foreground-muted">Sample tutor is writing…</div>}

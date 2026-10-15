@@ -178,11 +178,6 @@ export function MyLearning({
             const total = lessons.length;
             const next = lessons.find((item) => !e.completedTopicIds.includes(item.id));
             const complete = e.completedTopicIds.length >= total;
-            const hasStudy = Boolean((e as typeof e & { lastTopicId?: string }).lastTopicId) || lessons.some((lesson) => {
-              const key = scopedKey(e.id, lesson.id);
-              const activity = state.activity[key];
-              return Boolean(activity?.attempts || activity?.draft.trim() || activity?.selectedAnswer || state.drafts[key]?.trim() || state.conversations[key]?.length || state.readingPositions[key] > 0);
-            });
             const lastActive = state.enrollmentId === e.id ? lessons.find((item) => item.id === state.topicId) : undefined;
             return (
               <article
@@ -213,7 +208,7 @@ export function MyLearning({
                   variant="outline"
                   onClick={() => onOpen(e.id)}
                 >
-                  {complete ? "Review roadmap" : hasStudy ? "Resume learning" : "Start learning"}
+                  Open course
                   <ChevronRight className="size-4" />
                 </Button>
               </article>

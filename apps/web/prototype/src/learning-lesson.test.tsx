@@ -120,7 +120,7 @@ describe("collection study status", () => {
     render(<MyLearning state={state} onOpen={vi.fn()} onBrowse={vi.fn()} />);
     fireEvent.click(screen.getByRole("tab", { name: "In progress" }));
     expect(screen.getByText("0/12 complete")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Resume learning" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Open course" })).toBeTruthy();
     fireEvent.click(screen.getByRole("tab", { name: "Not started" }));
     expect(screen.queryByText("Python copy")).toBeNull();
     expect(screen.getByText("No matching roadmaps")).toBeTruthy();

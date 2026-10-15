@@ -208,9 +208,15 @@ it("resumes the roadmap shown on Home when a learner has multiple enrollments", 
     screen.getByRole("heading", { name: "Accessible web foundations" }),
   ).toBeTruthy();
   await user.click(screen.getByRole("button", { name: "Continue learning" }));
-  expect(
-    screen.getByRole("heading", {
-      name: "Give content a meaningful structure",
-    }),
-  ).toBeTruthy();
+  expect(screen.getByRole("heading", { name: "Give content a meaningful structure" })).toBeTruthy();
+  await user.click(screen.getByRole("button", { name: "Tutor" }));
+  const tutorPrompt = screen.getByRole("textbox", { name: "Ask a question about this lesson" });
+  await user.type(tutorPrompt, "Keep my lesson draft");
+  await user.click(screen.getByRole("button", { name: "Close drawer" }));
+  await user.click(screen.getByRole("button", { name: "← My learning" }));
+  await user.click(screen.getAllByRole("button", { name: "Home" })[0]);
+  await user.click(screen.getByRole("button", { name: "Continue learning" }));
+  expect(screen.getByRole("heading", { name: "Give content a meaningful structure" })).toBeTruthy();
+  await user.click(screen.getByRole("button", { name: "Tutor" }));
+  expect((screen.getByRole("textbox", { name: "Ask a question about this lesson" }) as HTMLTextAreaElement).value).toBe("Keep my lesson draft");
 });

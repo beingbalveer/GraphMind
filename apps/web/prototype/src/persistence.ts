@@ -1,5 +1,6 @@
-import { allLessons, findRoadmap } from "./catalog";
+import { allLessons, findRoadmap, roadmaps } from "./catalog";
 import { initial, type ActivityProgress, type ChatMessage, type ChatThread, type DemoPreferences, type DemoScenario, type Enrollment, type GeneratorProfile, type Message, type State, type View } from "./state";
+import type { CanvasLayout } from "@/lib/canvas/types";
 
 const STORAGE_KEY = "graphmind-studio-v2";
 const VERSION = 2;
@@ -120,17 +121,20 @@ function sanitizeChats(value: unknown, enrollments: Enrollment[], conversations:
     if (item.kind === "branch") {
       const parentId = item.parentThreadId!;
       let parentWorkspace: string | undefined;
+      let parentTopicId: string | undefined;
       let parentMessages: { id: string | number; role: string; text: string; status?: string }[] = [];
       if (parentId.startsWith("topic:")) {
-        try { const key = decodeURIComponent(parentId.slice(6)); parentWorkspace = key.split("::", 1)[0]; parentMessages = (conversations[key] ?? []).map((message) => ({ id: message.id, role: message.role, text: message.text, status: message.status })); } catch { parentWorkspace = undefined; }
+        try { const key = decodeURIComponent(parentId.slice(6)); const divider = key.indexOf("::"); parentWorkspace = divider > 0 ? key.slice(0, divider) : undefined; parentTopicId = divider > 0 ? key.slice(divider + 2) : undefined; parentMessages = (conversations[key] ?? []).map((message) => ({ id: message.id, role: message.role, text: message.text, status: message.status })); } catch { parentWorkspace = undefined; }
       } else {
         const parent = resolve(parentId);
         parentWorkspace = parent?.workspaceId;
+        parentTopicId = parent?.topicId;
         parentMessages = parent?.messages ?? [];
       }
-      if (parentWorkspace !== item.workspaceId || !parentMessages.some((message) => String(message.id) === item.sourceMessageId && message.role === "tutor" && message.status !== "streaming" && Boolean(message.text.trim()) && message.text.includes(item.quote!))) {
+      if (parentWorkspace !== item.workspaceId || (item.topicId !== undefined && item.topicId !== parentTopicId) || !parentMessages.some((message) => String(message.id) === item.sourceMessageId && message.role === "tutor" && message.status !== "streaming" && Boolean(message.text.trim()) && message.text.includes(item.quote!))) {
         resolving.delete(id); rejected.add(id); return undefined;
       }
+      if (parentTopicId) item.topicId = parentTopicId;
     }
     resolving.delete(id); valid.set(id, item); return item;
   };
@@ -181,7 +185,7 @@ export function restoreState(storage: Storage | undefined): State {
     });
     const requestedRoadmapId = str(saved.roadmapId, 120);
     const roadmap = requestedRoadmapId ? findRoadmap(requestedRoadmapId) : undefined;
-    const roadmapId = roadmap?.id ?? initial.roadmapId;
+    let roadmapId = roadmap?.id ?? initial.roadmapId;
     const validTopics = allLessons(findRoadmap(roadmapId)!);
     let enrollmentId = mode === "learner" && typeof saved.enrollmentId === "string" && enrollments.some((item) => item.id === saved.enrollmentId && item.templateId === roadmapId) ? saved.enrollmentId : undefined;
     const savedTopicIsValid = typeof saved.topicId === "string" && validTopics.some((lesson) => lesson.id === saved.topicId);
@@ -189,11 +193,58 @@ export function restoreState(storage: Storage | undefined): State {
     let view = (typeof saved.view === "string" && ["catalog", "overview", "lesson", "home", "my-learning", "generator", "conversation", "chats", "library", "settings"].includes(saved.view) ? saved.view : "catalog") as View;
     if (mode === "guest" && !["catalog", "overview", "lesson"].includes(view)) view = "catalog";
     if (view === "conversation" && (!enrollmentId || mode !== "learner")) view = "lesson";
-    const activeChatId = typeof saved.activeChatId === "string" && (chats.some((thread) => thread.id === saved.activeChatId) || (() => { try { return saved.activeChatId.startsWith("topic:") && Boolean(conversations[decodeURIComponent(saved.activeChatId.slice(6))]); } catch { return false; } })()) ? saved.activeChatId : undefined;
+    let activeChatId = typeof saved.activeChatId === "string" && (chats.some((thread) => thread.id === saved.activeChatId) || (() => { try { return saved.activeChatId.startsWith("topic:") && Boolean(conversations[decodeURIComponent(saved.activeChatId.slice(6))]); } catch { return false; } })()) ? saved.activeChatId : undefined;
     if (mode !== "learner" && view === "chats") view = "catalog";
     if (view === "chats" && !activeChatId && !chats.length && !Object.keys(conversations).length) view = "home";
     if (view === "lesson" && !savedTopicIsValid) view = "catalog";
     if (view === "catalog" || view === "home" || view === "my-learning" || view === "settings") enrollmentId = undefined;
+    const scopeCandidate = str(saved.courseScopeId, 140);
+    let courseScopeId = scopeCandidate && scopeCandidate.startsWith("public:") && findRoadmap(scopeCandidate.slice(7)) ? scopeCandidate : scopeCandidate && mode === "learner" && enrollments.some((item) => item.id === scopeCandidate) ? scopeCandidate : undefined;
+    if (!courseScopeId && mode === "learner" && enrollmentId && ["overview", "lesson", "conversation", "chats", "settings"].includes(view)) courseScopeId = enrollmentId;
+    if (!courseScopeId && mode === "guest" && ["overview", "lesson"].includes(view)) courseScopeId = `public:${roadmapId}`;
+    if (view === "chats" && activeChatId) {
+      const activeThread = chats.find((thread) => thread.id === activeChatId);
+      let workspaceId = activeThread?.workspaceId;
+      if (!workspaceId && activeChatId.startsWith("topic:")) { try { workspaceId = decodeURIComponent(activeChatId.slice(6)).split("::", 1)[0]; } catch { workspaceId = undefined; } }
+      if (courseScopeId && workspaceId !== courseScopeId) activeChatId = undefined;
+      else if (!courseScopeId && workspaceId && workspaceId !== "personal-workspace" && enrollments.some((item) => item.id === workspaceId)) courseScopeId = workspaceId;
+    }
+    if (!["overview", "lesson", "conversation", "chats", "settings"].includes(view)) courseScopeId = undefined;
+    if (courseScopeId?.startsWith("public:") && ["overview", "lesson"].includes(view)) {
+      roadmapId = courseScopeId.slice(7);
+      const publicLessons = allLessons(findRoadmap(roadmapId)!);
+      if (!publicLessons.some((lesson) => lesson.id === topicId)) topicId = publicLessons[0].id;
+      enrollmentId = undefined;
+    } else if (courseScopeId && !courseScopeId.startsWith("public:")) {
+      const scopedEnrollment = enrollments.find((item) => item.id === courseScopeId);
+      if (scopedEnrollment) {
+        roadmapId = scopedEnrollment.templateId;
+        const scopedLessons = allLessons(findRoadmap(roadmapId)!);
+        if (!scopedLessons.some((lesson) => lesson.id === topicId)) topicId = scopedLessons[0].id;
+        if (mode === "learner" && ["overview", "lesson", "conversation", "chats", "settings"].includes(view)) enrollmentId = scopedEnrollment.id;
+        if (activeChatId && view === "chats") {
+          const activeThread = chats.find((thread) => thread.id === activeChatId);
+          if (activeThread && activeThread.workspaceId !== scopedEnrollment.id) activeChatId = undefined;
+        }
+      } else courseScopeId = undefined;
+    }
+    if (activeChatId && courseScopeId && !courseScopeId.startsWith("public:")) {
+      const activeThread = chats.find((thread) => thread.id === activeChatId);
+      let activeWorkspace = activeThread?.workspaceId;
+      if (!activeWorkspace && activeChatId.startsWith("topic:")) { try { activeWorkspace = decodeURIComponent(activeChatId.slice(6)).split("::", 1)[0]; } catch { activeWorkspace = undefined; } }
+      if (activeWorkspace !== courseScopeId) activeChatId = undefined;
+    }
+    const validCourseScopes = new Set([...enrollments.map((item) => item.id), ...roadmaps.map((roadmap) => `public:${roadmap.id}`)]);
+    const courseLayouts: Record<string, CanvasLayout> = {};
+    for (const [scopeId, value] of Object.entries(record(saved.courseLayouts))) {
+      if (!validCourseScopes.has(scopeId) || !owns(value) || value.version !== "spine-v1" || !owns(value.positions)) continue;
+      const positions: CanvasLayout["positions"] = {};
+      for (const [id, point] of Object.entries(value.positions).slice(0, 1500)) if (owns(point) && Number.isFinite(point.x) && Number.isFinite(point.y) && Math.abs(Number(point.x)) <= 1_000_000 && Math.abs(Number(point.y)) <= 1_000_000) positions[id] = { x: Number(point.x), y: Number(point.y) };
+      const viewport = owns(value.viewport) && Number.isFinite(value.viewport.x) && Number.isFinite(value.viewport.y) && Number.isFinite(value.viewport.zoom) && Number(value.viewport.zoom) > 0 && Number(value.viewport.zoom) <= 4 ? { x: Number(value.viewport.x), y: Number(value.viewport.y), zoom: Number(value.viewport.zoom) } : null;
+      courseLayouts[scopeId] = { version: "spine-v1", positions, viewport, topologyKey: str(value.topologyKey, 4000) ?? "" };
+    }
+    const courseViewModes: Record<string, "list" | "canvas"> = {};
+    for (const [scopeId, value] of Object.entries(record(saved.courseViewModes))) if (validCourseScopes.has(scopeId) && (value === "list" || value === "canvas")) courseViewModes[scopeId] = value;
     const catalogField = (key: string, max: number, fallback: string) => str(saved[key], max) ?? fallback;
     const scenarioValues: DemoScenario[] = ["normal", "generation-clarification", "generation-error", "tutor-error", "save-error"];
     const tutorErrors = sanitizeScopedRecord(saved.tutorErrors, enrollments, (value) => str(value, 1000));
@@ -204,7 +255,7 @@ export function restoreState(storage: Storage | undefined): State {
     }
     const generatorTemplateId = str(saved.generatorTemplateId, 120) && findRoadmap(String(saved.generatorTemplateId)) ? String(saved.generatorTemplateId) : initial.generatorTemplateId;
     return {
-      ...initial, mode, view, roadmapId, topicId, enrollmentId, enrollments, conversations, chats, activeChatId, chatErrors, drafts, quotes, readingPositions, activity, tutorErrors, saveJobs: {},
+      ...initial, mode, view, roadmapId, topicId, enrollmentId, courseScopeId, courseLayouts, courseViewModes, enrollments, conversations, chats, activeChatId, chatErrors, drafts, quotes, readingPositions, activity, tutorErrors, saveJobs: {},
       catalogQuery: catalogField("catalogQuery", 200, ""), catalogCategory: catalogField("catalogCategory", 100, "All topics"), catalogLevel: catalogField("catalogLevel", 80, "All levels"),
       generatorProfile: safeProfile(saved.generatorProfile), generatorTemplateId, generatorStep: saved.generatorStep === "result" ? "result" : "form", generatorJobId: Number.isSafeInteger(saved.generatorJobId) && Number(saved.generatorJobId) >= 0 ? Number(saved.generatorJobId) : 0,
       preferences, dark: preferences.theme === "dark", scenario: scenarioValues.includes(saved.scenario as DemoScenario) ? saved.scenario as DemoScenario : "normal", notice: str(saved.notice, 240), authOpen: false, pendingIntent: undefined,
