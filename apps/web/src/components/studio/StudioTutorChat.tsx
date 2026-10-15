@@ -8,6 +8,7 @@ import {
   Copy,
   Check,
   CornerDownRight,
+  FileText,
   GitBranch,
   Loader2,
   Quote,
@@ -19,13 +20,26 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Modal, ModalBody, ModalHeader } from "@/components/ui/modal";
 import { BranchBreadcrumbs } from "@/components/chat/BranchBreadcrumbs";
+import { MarkdownRenderer } from "@/components/chat/ChatMessage";
+import { AgentToolCallsBanner } from "@/components/chat/AgentToolCallsBanner";
+import { PdfViewerModal } from "@/components/chat/PdfViewerModal";
+import {
+  RagSourcesStrip,
+  type RagSourceItem,
+} from "@/components/chat/RagSourcesStrip";
 import {
   isRetryableAssistantResponse,
   useChatStream,
+  type ToolCallItem,
 } from "@/hooks/useChatStream";
 import { useModelConfig } from "@/hooks/useModelConfig";
-import { fetchGraphSnapshot, snapshotToTree } from "@/lib/workspaceApi";
+import {
+  fetchGraphSnapshot,
+  resolveFileUrl,
+  snapshotToTree,
+} from "@/lib/workspaceApi";
 import { safeGetItem, safeSetItem, safeRemoveItem } from "@/lib/storage";
 import { cn } from "@/lib/utils";
 import type { TopicSessionData } from "@/lib/roadmapTypes";
@@ -98,6 +112,13 @@ export function StudioTutorChat({
     messageId: string;
     quote: string;
   } | null>(null);
+  const [viewingRagPdf, setViewingRagPdf] = useState<{
+    filename: string;
+    fileId: string;
+    page?: number;
+  } | null>(null);
+  const [viewingRagSnippet, setViewingRagSnippet] =
+    useState<RagSourceItem | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -297,6 +318,18 @@ export function StudioTutorChat({
     void navigator.clipboard.writeText(content);
     setCopiedNodeId(nodeId);
     setTimeout(() => setCopiedNodeId(null), 2000);
+  };
+
+  const handleSelectRagSource = (source: RagSourceItem) => {
+    if (source.filename.toLowerCase().endsWith(".pdf")) {
+      setViewingRagPdf({
+        filename: source.filename,
+        fileId: source.file_id,
+        page: source.page_number,
+      });
+    } else {
+      setViewingRagSnippet(source);
+    }
   };
 
   const handleSelectBreadcrumbStep = useCallback(
@@ -512,7 +545,53 @@ export function StudioTutorChat({
                       : "bg-background-secondary border border-border-subtle text-foreground rounded-bl-xs select-text"
                   )}
                 >
-                  <div className="whitespace-pre-wrap">{msg.content}</div>
+                  {isUser ? (
+                    <div className="whitespace-pre-wrap">{msg.content}</div>
+                  ) : (
+                    <div className="space-y-2">
+                      {/* Real-time agent tool execution (failures stay visible) */}
+                      {Boolean(
+                        (msg.metadata?.toolCalls as ToolCallItem[] | undefined)
+                          ?.length,
+                      ) && (
+                        <AgentToolCallsBanner
+                          toolCalls={
+                            msg.metadata?.toolCalls as ToolCallItem[]
+                          }
+                        />
+                      )}
+
+                      {/* Grounded RAG citations, reusing the shared strip */}
+                      {Boolean(
+                        (
+                          msg.metadata?.ragSources as
+                            | RagSourceItem[]
+                            | undefined
+                        )?.length,
+                      ) && (
+                        <RagSourcesStrip
+                          sources={msg.metadata?.ragSources as RagSourceItem[]}
+                          onSelectSource={handleSelectRagSource}
+                        />
+                      )}
+
+                      {/* Markdown / KaTeX / code / quiz / error renderer */}
+                      {msg.content ? (
+                        <div
+                          className={
+                            /⚠️ \*\*Error:\*\*/.test(msg.content)
+                              ? "text-destructive"
+                              : undefined
+                          }
+                        >
+                          <MarkdownRenderer
+                            content={msg.content}
+                            workspaceId={workspaceId}
+                          />
+                        </div>
+                      ) : null}
+                    </div>
+                  )}
 
                   {/* Streaming cursor */}
                   {isThisStreaming && (
@@ -727,6 +806,46 @@ export function StudioTutorChat({
           </div>
         </div>
       </div>
+
+      {/* Full-screen PDF viewer for a grounded citation */}
+      {viewingRagPdf && (
+        <PdfViewerModal
+          isOpen={Boolean(viewingRagPdf)}
+          onClose={() => setViewingRagPdf(null)}
+          filename={viewingRagPdf.filename}
+          url={resolveFileUrl(viewingRagPdf.fileId)}
+          initialPage={viewingRagPdf.page}
+        />
+      )}
+
+      {/* Snippet viewer for a grounded citation */}
+      {viewingRagSnippet && (
+        <Modal
+          isOpen={Boolean(viewingRagSnippet)}
+          onClose={() => setViewingRagSnippet(null)}
+          size="2xl"
+        >
+          <ModalHeader
+            title={viewingRagSnippet.filename}
+            description={
+              viewingRagSnippet.section_header
+                ? `§ ${viewingRagSnippet.section_header}`
+                : undefined
+            }
+            icon={<FileText className="size-4 text-info" />}
+            onClose={() => setViewingRagSnippet(null)}
+          >
+            {viewingRagSnippet.page_number && (
+              <span className="rounded bg-info-bg px-1.5 py-0.5 font-mono text-2xs font-semibold text-info">
+                Page {viewingRagSnippet.page_number}
+              </span>
+            )}
+          </ModalHeader>
+          <ModalBody className="p-5 font-mono text-xs text-foreground whitespace-pre-wrap leading-relaxed bg-background-secondary/30 max-h-[70vh]">
+            {viewingRagSnippet.snippet || "No snippet content available."}
+          </ModalBody>
+        </Modal>
+      )}
     </div>
   );
 }

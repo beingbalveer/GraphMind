@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, memo, useCallback, useMemo, useState, useEffect } from "react";
-import ReactMarkdown from "react-markdown";
+import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
@@ -34,8 +34,6 @@ import {
 } from "@graphmind/shared";
 
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { CopyButton } from "@/components/ui/copy-button";
 import { InlineFeedback } from "@/components/ui/feedback";
 import { IconButton } from "@/components/ui/icon-button";
@@ -49,24 +47,15 @@ import { TableViewerModal } from "./TableViewerModal";
 import { AgentToolCallsBanner } from "./AgentToolCallsBanner";
 import { QuizCard } from "./QuizCard";
 import { LearningActions, type LearningActionId } from "./LearningActions";
+import { RagSourcesStrip, type RagSourceItem } from "./RagSourcesStrip";
 import { ToolCallItem } from "@/hooks/useChatStream";
 import { resolveFileUrl } from "@/lib/workspaceApi";
+
+export type { RagSourceItem } from "./RagSourcesStrip";
 
 export interface BranchLinkInfo {
   excerpt: string;
   leafId: string;
-}
-
-export interface RagSourceItem {
-  ref_index: number;
-  ref_tag: string;
-  chunk_id: string;
-  file_id: string;
-  filename: string;
-  page_number?: number;
-  section_header?: string;
-  score: number;
-  snippet?: string;
 }
 
 interface ChatMessageProps {
@@ -198,6 +187,9 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({
     <ReactMarkdown
       remarkPlugins={[remarkGfm, remarkMath]}
       rehypePlugins={[rehypeKatex, rehypeHighlight]}
+      // Lock the safe-link contract: react-markdown strips unsafe protocols
+      // (javascript:, data:, vbscript:, ...) before our `a` renderer runs.
+      urlTransform={defaultUrlTransform}
       components={{
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         code(codeProps: any) {
@@ -372,7 +364,6 @@ export function ChatMessage({
     page?: number;
   } | null>(null);
   const [viewingRagSnippet, setViewingRagSnippet] = useState<RagSourceItem | null>(null);
-  const [areSourcesOpen, setAreSourcesOpen] = useState(false);
   const hasFailedToolCall = (message.metadata?.toolCalls as ToolCallItem[] | undefined)?.some(
     (toolCall) => toolCall.status === "error" || toolCall.isError
   );
@@ -444,6 +435,18 @@ export function ChatMessage({
       onExploreBranch(message.id, text);
     }
     clearSelection();
+  };
+
+  const handleSelectRagSource = (source: RagSourceItem) => {
+    if (source.filename.toLowerCase().endsWith(".pdf")) {
+      setViewingRagPdf({
+        filename: source.filename,
+        fileId: source.file_id,
+        page: source.page_number,
+      });
+    } else {
+      setViewingRagSnippet(source);
+    }
   };
 
   if (isUser) {
@@ -856,62 +859,12 @@ export function ChatMessage({
 
           {/* Grounded RAG Knowledge Base Sources Strip */}
           {Boolean(
-            message.metadata?.ragSources &&
-              (message.metadata.ragSources as RagSourceItem[]).length > 0
+            (message.metadata?.ragSources as RagSourceItem[] | undefined)?.length
           ) && (
-            <Collapsible open={areSourcesOpen} onOpenChange={setAreSourcesOpen}>
-              <Surface variant="muted" radius="widget" className="mb-2 border-0 bg-info-bg p-1.5 select-none animate-in fade-in-50 duration-150 motion-reduce:animate-none">
-                <CollapsibleTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-auto w-full justify-between px-1 py-1.5 text-left">
-                    <span className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
-                      <Sparkles className="size-3.5 text-info" />
-                      <span>Verified sources</span>
-                      <Badge variant="info">{(message.metadata?.ragSources as RagSourceItem[]).length}</Badge>
-                    </span>
-                    <span className="text-foreground-muted">{areSourcesOpen ? "Hide" : "Show"}</span>
-                  </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="px-1 pb-1">
-                  <div className="flex flex-wrap gap-1.5 pt-1.5">
-                {(message.metadata?.ragSources as RagSourceItem[]).map((src) => {
-                  const isPdf = src.filename.toLowerCase().endsWith(".pdf");
-                  return (
-                    <Button
-                      key={`${src.chunk_id}-${src.ref_index}`}
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        if (isPdf) {
-                          setViewingRagPdf({
-                            filename: src.filename,
-                            fileId: src.file_id,
-                            page: src.page_number,
-                          });
-                        } else {
-                          setViewingRagSnippet(src);
-                        }
-                      }}
-                      className="group/src h-auto items-center space-x-1.5 border-info/30 bg-surface px-2.5 py-1 text-xs text-foreground-muted hover:bg-surface-hover hover:shadow-xs"
-                      title={
-                        src.snippet
-                          ? `Snippet: ${src.snippet.slice(0, 160)}...`
-                          : src.filename
-                      }
-                    >
-                      <FileText className="size-3.5 text-info" />
-                      <span className="max-w-[200px] truncate font-medium text-foreground">
-                        {src.filename}
-                      </span>
-                      {src.page_number && (
-                        <Badge variant="info" className="font-mono">p. {src.page_number}</Badge>
-                      )}
-                    </Button>
-                  );
-                })}
-                  </div>
-                </CollapsibleContent>
-              </Surface>
-            </Collapsible>
+            <RagSourcesStrip
+              sources={message.metadata?.ragSources as RagSourceItem[]}
+              onSelectSource={handleSelectRagSource}
+            />
           )}
 
           {/* Markdown Rendered Body */}
