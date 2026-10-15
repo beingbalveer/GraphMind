@@ -7,8 +7,8 @@ This is the authoritative status board and ticket specification.
 | ID | Epic | Ticket | Type | Priority | Depends on | Status |
 |---|---|---|---|---|---|---|
 | [LSI-001](#lsi-001-production-parity-and-ownership-inventory) | A | Production parity and ownership inventory | Analysis | P0 | — | DONE |
-| [LSI-002](#lsi-002-approve-integration-identity-and-public-contracts) | A | Approve integration identity and public contracts | Architecture | P0 | 001 | READY |
-| [LSI-003](#lsi-003-port-production-shell-into-next) | A | Port production shell into Next.js | Frontend | P0 | 002 | TODO |
+| [LSI-002](#lsi-002-approve-integration-identity-and-public-contracts) | A | Approve integration identity and public contracts | Architecture | P0 | 001 | DONE |
+| [LSI-003](#lsi-003-port-production-shell-into-next) | A | Port production shell into Next.js | Frontend | P0 | 002 | READY |
 | [LSI-004](#lsi-004-real-sessions-and-public-route-boundary) | A | Real sessions and public route boundary | Full stack | P0 | 003 | TODO |
 | [LSI-005](#lsi-005-authorized-collection-summaries) | A | Authorized collection summaries | Backend | P0 | 002, 004 | TODO |
 | [LSI-006](#lsi-006-home-and-my-learning) | A | Home and My learning | Frontend | P0 | 003, 005 | TODO |
@@ -86,6 +86,7 @@ Ticket size is a planning target. When scope proves too large, create explicit `
 - **Acceptance:** Schemas, errors, idempotency, authorization, and migration policy are concrete and reviewed; existing and proposed routes/fields are distinguished.
 - **Test targets:** Schema examples, compatibility review, and adversarial ownership/duplicate/stale-reference cases.
 - **Out of scope:** Implementing contracts, adding a CMS, or declaring proposed endpoints present.
+- **Evidence:** Comprehensive schemas, boundary contracts, lesson lifecycle, and idempotency guarantees specified and verified in [evidence/LSI-002.md](./evidence/LSI-002.md).
 
 ### LSI-003 Port production shell into Next
 **Epic:** A · **Type:** Frontend · **Priority:** P0 · **Depends:** LSI-002
