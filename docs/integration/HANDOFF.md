@@ -7,7 +7,7 @@
 - Next ticket: `LSI-016` (READY — blanket user approval recorded)
 - Branch: `codex-learning-studio-backend-integration`
 - Baseline commit: `5108a59`
-- Completion commit: pending LSI-015 commit
+- Completion commit: `ea736be` (LSI-015 completion commit)
 - Last completed work: LSI-015 Branch service integrity (`workspace_service.py` node/branch validation, `chat.py` ancestry verification, `lineage.py` cycle detection, 16 adversarial/authorization tests in `test_branch_integrity.py`)
 - Files changed in this task: `packages/ai-core/src/ai_core/lineage.py`, `apps/api/src/services/workspace_service.py`, `apps/api/src/routers/chat.py`, `apps/api/tests/test_branch_integrity.py`, `apps/web/src/components/ui/__tests__/branch-trigger.test.tsx`, `docs/integration/evidence/LSI-015.md`, `docs/integration/LEARNING_STUDIO_BACKLOG.md`, `docs/integration/HANDOFF.md`
 - Runtime files changed in this task: `packages/ai-core/src/ai_core/lineage.py`, `apps/api/src/services/workspace_service.py`, `apps/api/src/routers/chat.py`
