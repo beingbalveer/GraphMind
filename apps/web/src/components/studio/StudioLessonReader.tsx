@@ -31,6 +31,9 @@ export interface StudioLessonReaderProps {
   totalLessons?: number;
   sources?: SourceData[];
   isCompleted?: boolean;
+  isPending?: boolean;
+  error?: string | null;
+  onRetry?: () => void;
   isFirst?: boolean;
   isLast?: boolean;
   onBackToOutline?: () => void;
@@ -49,6 +52,9 @@ export function StudioLessonReader({
   totalLessons = 1,
   sources = [],
   isCompleted = false,
+  isPending = false,
+  error = null,
+  onRetry,
   isFirst = false,
   isLast = false,
   onBackToOutline,
@@ -529,38 +535,57 @@ export function StudioLessonReader({
         </section>
 
         {/* Footer Navigation */}
-        <footer className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-border-subtle pt-6">
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={isFirst}
-            onClick={onPrevLesson}
-            className="w-full sm:w-auto"
-          >
-            <ChevronLeft className="size-4" />
-            Previous lesson
-          </Button>
-
-          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
-            <Button
-              variant={isCompleted ? "secondary" : "outline"}
-              size="sm"
-              onClick={onToggleComplete}
+        <footer className="space-y-4 border-t border-border-subtle pt-6">
+          {error && (
+            <div
+              role="alert"
+              className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive"
             >
-              {isCompleted ? (
-                <>
-                  <CheckCircle2 className="size-3.5 text-success" />
-                  Completed
-                </>
-              ) : (
-                "Mark as complete"
+              <span>{error}</span>
+              {onRetry && (
+                <Button size="sm" variant="outline" onClick={onRetry}>
+                  Retry
+                </Button>
               )}
+            </div>
+          )}
+
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={isFirst}
+              onClick={onPrevLesson}
+              className="w-full sm:w-auto"
+            >
+              <ChevronLeft className="size-4" />
+              Previous lesson
             </Button>
 
-            <Button size="sm" onClick={onNextLesson}>
-              {isLast ? "Finish roadmap" : "Continue to next lesson"}
-              <ChevronRight className="size-4" />
-            </Button>
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
+              <Button
+                variant={isCompleted ? "secondary" : "outline"}
+                size="sm"
+                disabled={isPending}
+                onClick={onToggleComplete}
+              >
+                {isPending ? (
+                  "Updating..."
+                ) : isCompleted ? (
+                  <>
+                    <CheckCircle2 className="size-3.5 text-success" />
+                    Completed
+                  </>
+                ) : (
+                  "Mark as complete"
+                )}
+              </Button>
+
+              <Button size="sm" onClick={onNextLesson}>
+                {isLast ? "Finish roadmap" : "Continue to next lesson"}
+                <ChevronRight className="size-4" />
+              </Button>
+            </div>
           </div>
         </footer>
       </div>

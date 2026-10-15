@@ -14,8 +14,8 @@ This is the authoritative status board and ticket specification.
 | [LSI-006](#lsi-006-home-and-my-learning) | A | Home and My learning | Frontend | P0 | 003, 005 | DONE |
 | [LSI-007](#lsi-007-private-roadmap-outline) | B | Private roadmap outline | Full stack | P0 | 006 | DONE |
 | [LSI-008](#lsi-008-persistent-lesson-reader-and-sources) | B | Persistent lesson reader and sources | Full stack | P0 | 007 | DONE |
-| [LSI-009](#lsi-009-learner-completion) | B | Learner completion | Full stack | P0 | 008 | READY |
-| [LSI-010](#lsi-010-versioned-practice-server-contract) | B | Versioned practice server contract | Backend | P1 | 002, 008 | TODO |
+| [LSI-009](#lsi-009-learner-completion) | B | Learner completion | Full stack | P0 | 008 | DONE |
+| [LSI-010](#lsi-010-versioned-practice-server-contract) | B | Versioned practice server contract | Backend | P1 | 002, 008 | READY |
 | [LSI-011](#lsi-011-practice-ui) | B | Practice UI | Full stack | P1 | 009, 010 | TODO |
 | [LSI-012](#lsi-012-shared-roadmap-and-conversation-canvas) | B | Shared roadmap and conversation canvas | Full stack | P0 | 007, 009 | TODO |
 | [LSI-013](#lsi-013-topicchat-histories) | B | TopicChat histories | Full stack | P0 | 008 | TODO |
@@ -142,6 +142,7 @@ Ticket size is a planning target. When scope proves too large, create explicit `
 - **Acceptance:** Progress is scoped to workspace/revision/topic; completion is never called mastery; rapid changes cannot overwrite newer intent.
 - **Test targets:** API ownership/concurrency and UI retry/refresh.
 - **Out of scope:** Practice correctness or mastery rules.
+- **Evidence:** Authoritative progress scoping, anti-mastery validation, sequence concurrency protection, and backend/frontend unit tests verified in [evidence/LSI-009.md](./evidence/LSI-009.md).
 
 ### LSI-010 Versioned practice server contract
 **Epic:** B · **Type:** Backend · **Priority:** P1 · **Depends:** LSI-002, LSI-008
