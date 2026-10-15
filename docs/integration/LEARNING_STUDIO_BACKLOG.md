@@ -27,27 +27,27 @@ This is the authoritative status board and ticket specification.
 | [LSI-019](#lsi-019-rich-replies-and-agent-tools) | B | Rich replies and agent tools | Frontend | P1 | 014, 016 | TODO |
 | [LSI-020](#lsi-020-generator-request-and-provenance-extensions) | C | Generator request and provenance extensions | Backend | P0 | 002 | DONE |
 | [LSI-021](#lsi-021-goal-form-and-profile-review) | C | Goal form and profile review | Frontend | P0 | 020 | DONE |
-| [LSI-022](#lsi-022-owned-job-creation-status-and-result) | C | Owned job creation, status, and result | Full stack | P0 | 021 | TODO |
+| [LSI-022](#lsi-022-owned-job-creation-status-and-result) | C | Owned job creation, status, and result | Full stack | P0 | 021 | DONE |
 | [LSI-023](#lsi-023-clarification-round-trip) | C | Clarification round trip | Full stack | P1 | 022 | TODO |
 | [LSI-024](#lsi-024-job-recovery-retry-and-cancellation-safety) | C | Job recovery, retry, and cancellation safety | Full stack | P0 | 023 | TODO |
 | [LSI-025](#lsi-025-public-snapshot-model-and-publication) | D | Public snapshot model and publication | Backend | P0 | 002, 020 | DONE |
-| [LSI-026](#lsi-026-public-catalog-api) | D | Public catalog API | Backend | P0 | 025 | TODO |
-| [LSI-027](#lsi-027-public-snapshot-and-lesson-api) | D | Public snapshot and lesson API | Backend | P0 | 025 | TODO |
+| [LSI-026](#lsi-026-public-catalog-api) | D | Public catalog API | Backend | P0 | 025 | DONE |
+| [LSI-027](#lsi-027-public-snapshot-and-lesson-api) | D | Public snapshot and lesson API | Backend | P0 | 025 | DONE |
 | [LSI-028](#lsi-028-transactional-save-copy-service) | D | Transactional save-copy service | Backend | P0 | 005, 025, 027 | TODO |
 | [LSI-029](#lsi-029-public-catalog-in-next) | D | Public catalog in Next.js | Frontend | P0 | 004, 026 | TODO |
 | [LSI-030](#lsi-030-guest-course-lesson-list-and-canvas) | D | Guest course, lesson, List, and Canvas | Full stack | P0 | 012, 027, 029 | TODO |
 | [LSI-031](#lsi-031-save-copy-and-learning-collection-refresh) | D | Save copy and learning collection refresh | Full stack | P0 | 006, 028, 030 | TODO |
 | [LSI-032](#lsi-032-resume-one-authenticated-intent) | D | Resume one authenticated intent | Full stack | P0 | 004, 013, 031 | TODO |
 | [LSI-033](#lsi-033-files-and-attachments) | E | Files and attachments | Full stack | P1 | 017, 019 | DONE |
-| [LSI-034](#lsi-034-existing-modal-viewers) | E | Existing modal viewers | Frontend | P1 | 033 | TODO |
+| [LSI-034](#lsi-034-existing-modal-viewers) | E | Existing modal viewers | Frontend | P1 | 033 | DONE |
 | [LSI-035](#lsi-035-flashcards-and-learning-message-actions) | E | Flashcards and learning message actions | Full stack | P1 | 019 | DONE |
 | [LSI-036](#lsi-036-direct-edits-and-revision-history) | E | Direct edits and revision history | Full stack | P1 | 008, 012 | DONE |
 | [LSI-037](#lsi-037-ai-refinement-proposal-review) | E | AI refinement proposal review | Full stack | P1 | 024, 036 | TODO |
 | [LSI-038](#lsi-038-branch-promotion) | E | Branch promotion | Full stack | P1 | 016, 036 | DONE |
 | [LSI-039](#lsi-039-provider-model-and-system-skill-settings) | E | Provider, model, and system-skill settings | Full stack | P1 | 019, 024 | TODO |
 | [LSI-040](#lsi-040-general-workspaces-and-management) | E | General workspaces and management | Full stack | P1 | 006, 018 | DONE |
-| [LSI-041](#lsi-041-search-and-semantic-discovery) | E | Search and semantic discovery | Full stack | P1 | 019, 033, 040 | TODO |
-| [LSI-042](#lsi-042-knowledge-signals-and-curator-parity) | E | Knowledge signals and curator parity | Full stack | P1 | 035, 038, 040 | TODO |
+| [LSI-041](#lsi-041-search-and-semantic-discovery) | E | Search and semantic discovery | Full stack | P1 | 019, 033, 040 | DONE |
+| [LSI-042](#lsi-042-knowledge-signals-and-curator-parity) | E | Knowledge signals and curator parity | Full stack | P1 | 035, 038, 040 | DONE |
 | [LSI-043](#lsi-043-timeline-and-replay-parity) | E | Timeline and replay parity | Full stack | P2 | 012, 018, 042 | TODO |
 | [LSI-044](#lsi-044-production-user-preferences) | E | Production user preferences | Full stack | P2 | 002, 004, 039 | TODO |
 | [LSI-045](#lsi-045-owned-data-export-and-destructive-actions) | E | Owned data export and destructive actions | Full stack | P1 | 033, 040, 044 | TODO |
@@ -241,11 +241,12 @@ Ticket size is a planning target. When scope proves too large, create explicit `
 - **Evidence:** Pure `generatorProfile` mapping/validation with the LSI-020 fields, `StudioGoalForm` editable review + immutable submitted snapshot, separated sample-copy path, and 18 passing tests verified in [evidence/LSI-021.md](./evidence/LSI-021.md).
 
 ### LSI-022 Owned job creation, status, and result
-**Epic:** C · **Type:** Full stack · **Priority:** P0 · **Depends:** LSI-021
+**Epic:** C · **Type:** Full stack · **Priority:** P0 · **Depends:** LSI-021 · **Status:** Complete
 - **Scope:** Use idempotent existing job API, real event/status phases, and completed-workspace navigation.
 - **Acceptance:** Duplicate submit creates one job; progress comes from server; completion resolves actual workspace/revision/anchor and saved profile.
 - **Test targets:** Job client reconnect/event-order/result tests and deterministic integrated generation.
 - **Out of scope:** Timer-based completion or unauthenticated job visibility.
+- **Evidence:** Idempotent job creation/start with reused keys, server-driven progress via `StudioJobProgress`, canonical workspace navigation on published completion, and 15 frontend + 2 backend tests verified in [evidence/LSI-022.md](./evidence/LSI-022.md).
 
 ### LSI-023 Clarification round trip
 **Epic:** C · **Type:** Full stack · **Priority:** P1 · **Depends:** LSI-022
@@ -270,18 +271,20 @@ Ticket size is a planning target. When scope proves too large, create explicit `
 - **Evidence:** Immutable public snapshot tables (migration `20261015_0007`), `PublicSnapshotService` publish/unpublish/sanitize, private-origin isolation, single linear alembic head, and 18 passing tests verified in [evidence/LSI-025.md](./evidence/LSI-025.md).
 
 ### LSI-026 Public catalog API
-**Epic:** D · **Type:** Backend · **Priority:** P0 · **Depends:** LSI-025
+**Epic:** D · **Type:** Backend · **Priority:** P0 · **Depends:** LSI-025 · **Status:** Complete
 - **Scope:** Approved anonymous list/search/category/level/pagination API and indexes.
 - **Acceptance:** Only published versions appear; filters/page bounds are enforced; no private metadata; empty/unavailable results are deterministic.
 - **Test targets:** Anonymous catalog/filter/pagination/privacy tests.
 - **Out of scope:** Signed-in collection or enrollment routes.
+- **Evidence:** Anonymous `GET /api/v1/public/roadmaps` catalog with category/level/search filters, bounded pagination, published-only projection, no private metadata, and 9 passing tests verified in [evidence/LSI-026.md](./evidence/LSI-026.md).
 
 ### LSI-027 Public snapshot and lesson API
-**Epic:** D · **Type:** Backend · **Priority:** P0 · **Depends:** LSI-025
+**Epic:** D · **Type:** Backend · **Priority:** P0 · **Depends:** LSI-025 · **Status:** Complete
 - **Scope:** Approved anonymous versioned roadmap/lesson reads and safe public sources.
 - **Acceptance:** Stable public IDs; missing/stale/unpublished content has neutral unavailable response; no private references/user fields in payloads or errors.
 - **Test targets:** Guest/signed-in/outsider serialization and unpublish/cache tests.
 - **Out of scope:** Public progress, private IDs, or session data.
+- **Evidence:** Anonymous versioned public roadmap/lesson reads with stable public IDs, neutral no-store 404 for missing/stale/unpublished content, sanitized safe sources, and 7 passing tests verified in [evidence/LSI-027.md](./evidence/LSI-027.md).
 
 ### LSI-028 Transactional save-copy service
 **Epic:** D · **Type:** Backend · **Priority:** P0 · **Depends:** LSI-005, LSI-025, LSI-027
@@ -327,11 +330,12 @@ Ticket size is a planning target. When scope proves too large, create explicit `
 - **Evidence:** Parity verification of the existing file library and chat attachment ingestion — authorization, cross-workspace isolation, processing errors, and no public file exposure — by 4 backend + 10 frontend tests in [evidence/LSI-033.md](./evidence/LSI-033.md).
 
 ### LSI-034 Existing modal viewers
-**Epic:** E · **Type:** Frontend · **Priority:** P1 · **Depends:** LSI-033
+**Epic:** E · **Type:** Frontend · **Priority:** P1 · **Depends:** LSI-033 · **Status:** Complete
 - **Scope:** Port PDF/code/table/CSV/Excel/JSONL viewers with existing modal primitives and source locators.
 - **Acceptance:** Correct file/content/locator; supported large-table behavior; nested modal Escape/focus and safe downloads.
 - **Test targets:** Viewer fixtures/error cases and keyboard/browser file matrix.
 - **Out of scope:** New file formats or ad-hoc dialog infrastructure.
+- **Evidence:** Viewers ported onto shared `Modal` primitives (image lightbox + `initialFocus` fix), correct content/locators, large-table pagination, nested Escape/focus, safe downloads, and 14 focused tests verified in [evidence/LSI-034.md](./evidence/LSI-034.md).
 
 ### LSI-035 Flashcards and learning message actions
 **Epic:** E · **Type:** Full stack · **Priority:** P1 · **Depends:** LSI-019 · **Status:** Complete
@@ -380,18 +384,20 @@ Ticket size is a planning target. When scope proves too large, create explicit `
 - **Evidence:** Identity-preserving rename/delete workspace management with confirm dialog and membership rules, `ROADMAP_NOT_FOUND` ordinary-workspace preservation, protected-anchor cascade, and 3 backend + 5 frontend tests verified in [evidence/LSI-040.md](./evidence/LSI-040.md).
 
 ### LSI-041 Search and semantic discovery
-**Epic:** E · **Type:** Full stack · **Priority:** P1 · **Depends:** LSI-019, LSI-033, LSI-040
+**Epic:** E · **Type:** Full stack · **Priority:** P1 · **Depends:** LSI-019, LSI-033, LSI-040 · **Status:** Complete
 - **Scope:** Inventory-backed exposed graph/hybrid search and result navigation within authorized scope.
 - **Acceptance:** Results are permission-scoped; node/file results open canonical context; empty/error states work.
 - **Test targets:** Search API relevance fixture/access and node/file browser navigation.
 - **Out of scope:** Enterprise discovery features not already exposed.
+- **Evidence:** Permission-scoped workspace search over node + file legs, canonical node/file navigation via URL helpers, palette loading/empty/error states, and 3 backend + 8 frontend tests verified in [evidence/LSI-041.md](./evidence/LSI-041.md).
 
 ### LSI-042 Knowledge signals and curator parity
-**Epic:** E · **Type:** Full stack · **Priority:** P1 · **Depends:** LSI-035, LSI-038, LSI-040
+**Epic:** E · **Type:** Full stack · **Priority:** P1 · **Depends:** LSI-035, LSI-038, LSI-040 · **Status:** Complete
 - **Scope:** Preserve exposed concepts/mastery/gaps/adopt/recommendation actions through existing services.
 - **Acceptance:** Explicit learning signals stay distinct from completion; state persists; actions are authorized and visible.
 - **Test targets:** Mastery/curator APIs/components and exposed-action journey.
 - **Out of scope:** Inferring mastery from completion or inventing unexposed curator features.
+- **Evidence:** `KnowledgeSignalsPanel` over existing mastery/curator/gaps/adopt services with explicit-signal-vs-completion invariants, authorization, persisted state, and 3 backend + 6 frontend tests verified in [evidence/LSI-042.md](./evidence/LSI-042.md).
 
 ### LSI-043 Timeline and replay parity
 **Epic:** E · **Type:** Full stack · **Priority:** P2 · **Depends:** LSI-012, LSI-018, LSI-042
