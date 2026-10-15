@@ -17,6 +17,10 @@ export interface StudioTutorRailProps {
   activeSessionId?: string | null;
   activeSession?: TopicSessionData | null;
   quotedPassage?: string | null;
+  initialBranchId?: string | null;
+  initialNodeId?: string | null;
+  activeBranchLeafId?: string | null;
+  onBranchChange?: (leafId: string | null) => void;
   onClearQuote?: () => void;
   onSelectSession?: (session: TopicSessionSummary) => void;
   onSessionCreated?: (session: TopicSessionData) => void;
@@ -40,6 +44,10 @@ export function StudioTutorRail({
   activeSessionId,
   activeSession,
   quotedPassage,
+  initialBranchId,
+  initialNodeId,
+  activeBranchLeafId,
+  onBranchChange,
   onClearQuote,
   onSelectSession,
   onSessionCreated,
@@ -172,6 +180,10 @@ export function StudioTutorRail({
               topicSessionId={activeSessionId}
               activeSession={activeSession}
               quotedPassage={quotedPassage}
+              initialBranchId={initialBranchId}
+              initialNodeId={initialNodeId}
+              activeBranchLeafId={activeBranchLeafId}
+              onBranchChange={onBranchChange}
               onClearQuote={onClearQuote}
             />
           ) : (

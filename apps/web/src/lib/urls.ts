@@ -79,8 +79,53 @@ export const buildPublicRoadmapUrl = (slug: string): string =>
   `/learn/${encodeURIComponent(slug)}`;
 
 /** /learn/{slug}/lessons/{topicSlug} — Public published lesson reader */
-export const buildPublicLessonUrl = (slug: string, topicSlug: string): string =>
-  `/learn/${encodeURIComponent(slug)}/lessons/${encodeURIComponent(topicSlug)}`;
+export const buildPublicLessonUrl = (
+  slug: string,
+  topicSlug: string,
+  params?: { branch?: string; node?: string }
+): string => {
+  const base = `/learn/${encodeURIComponent(slug)}/lessons/${encodeURIComponent(topicSlug)}`;
+  if (!params) return base;
+  const searchParams = new URLSearchParams();
+  if (params.branch) searchParams.set("branch", params.branch);
+  if (params.node) searchParams.set("node", params.node);
+  const query = searchParams.toString();
+  return query ? `${base}?${query}` : base;
+};
+
+/**
+ * Strip branch/node query params from a URL to retain the canonical root URL.
+ */
+export function stripBranchParams(url: string): string {
+  try {
+    const isRelative = url.startsWith("/");
+    const dummyBase = "http://localhost";
+    const parsed = new URL(url, dummyBase);
+    parsed.searchParams.delete("branch");
+    parsed.searchParams.delete("node");
+    const query = parsed.searchParams.toString();
+    const cleanPath = parsed.pathname;
+    const result = query ? `${cleanPath}?${query}` : cleanPath;
+    return isRelative ? result : parsed.href;
+  } catch {
+    return url.replace(/([?&])(branch|node)=[^&]*&?/g, "$1").replace(/[?&]$/, "");
+  }
+}
+
+/**
+ * Extract canonical branch navigation parameters (?branch= or ?node=).
+ */
+export function parseBranchNavigation(
+  searchParams: URLSearchParams | { get: (key: string) => string | null } | null | undefined
+): { branchId: string | null; nodeId: string | null } {
+  if (!searchParams) return { branchId: null, nodeId: null };
+  const branchId = searchParams.get("branch");
+  const nodeId = searchParams.get("node");
+  return {
+    branchId: branchId ? decodeURIComponent(branchId) : null,
+    nodeId: nodeId ? decodeURIComponent(nodeId) : null,
+  };
+}
 
 /**
  * Validate and sanitize return redirects to strictly prevent open-redirect vulnerabilities.
@@ -98,4 +143,5 @@ export function sanitizeRedirectPath(path: string | null | undefined, fallback =
   }
   return path;
 }
+
 

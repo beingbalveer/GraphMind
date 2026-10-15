@@ -193,11 +193,12 @@ Ticket size is a planning target. When scope proves too large, create explicit `
 - **Evidence:** Cross-workspace origin rejection, cycle prevention, quote bounds, ancestor validation, and 16 passing adversarial/authorization tests verified in [evidence/LSI-015.md](./evidence/LSI-015.md).
 
 ### LSI-016 Nested branch UI and canonical navigation
-**Epic:** B · **Type:** Frontend · **Priority:** P0 · **Depends:** LSI-015
+**Epic:** B · **Type:** Frontend · **Priority:** P0 · **Depends:** LSI-015 · **Status:** Complete
 - **Scope:** Port branch pane/expanded navigation, ancestry/siblings/selection, node/branch URL helpers.
 - **Acceptance:** Lesson/rail remain visible; node links reconstruct ancestry; Back/refresh retain root URL; mobile drawers/focus work.
 - **Test targets:** Canonical navigation/render tests and nested browser journey.
 - **Out of scope:** Workspace/chat identity in query parameters.
+- **Evidence:** 3-column desktop visibility, multi-level ancestry breadcrumbs, sibling tab switching, branch from reply/selection, canonical URL helpers, and 12 passing tests verified in [evidence/LSI-016.md](./evidence/LSI-016.md).
 
 ### LSI-017 Standalone workspace chats
 **Epic:** B · **Type:** Full stack · **Priority:** P0 · **Depends:** LSI-014, LSI-015

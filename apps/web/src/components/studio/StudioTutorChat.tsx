@@ -1,12 +1,14 @@
 "use client";
 
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import {
   AlertCircle,
   ArrowUp,
   Bot,
   Copy,
   Check,
+  CornerDownRight,
+  GitBranch,
   Loader2,
   Quote,
   RotateCw,
@@ -17,6 +19,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { BranchBreadcrumbs } from "@/components/chat/BranchBreadcrumbs";
 import {
   isRetryableAssistantResponse,
   useChatStream,
@@ -26,6 +29,13 @@ import { fetchGraphSnapshot, snapshotToTree } from "@/lib/workspaceApi";
 import { safeGetItem, safeSetItem, safeRemoveItem } from "@/lib/storage";
 import { cn } from "@/lib/utils";
 import type { TopicSessionData } from "@/lib/roadmapTypes";
+import {
+  isNodeOnBranch,
+  reconstructBranchBreadcrumbs,
+  getSiblingBranchTabs,
+  getActiveBranchRoot,
+} from "@/lib/branchUtils";
+import { getAncestorPath } from "@graphmind/shared";
 
 export interface StudioTutorChatProps {
   workspaceId: string;
@@ -34,6 +44,10 @@ export interface StudioTutorChatProps {
   topicSessionId?: string | null;
   activeSession?: TopicSessionData | null;
   quotedPassage?: string | null;
+  initialBranchId?: string | null;
+  initialNodeId?: string | null;
+  activeBranchLeafId?: string | null;
+  onBranchChange?: (leafId: string | null) => void;
   onClearQuote?: () => void;
   onStartSession?: () => void;
   className?: string;
@@ -46,8 +60,12 @@ export function StudioTutorChat({
   topicSessionId,
   activeSession,
   quotedPassage,
+  initialBranchId,
+  initialNodeId,
+  activeBranchLeafId,
+  onBranchChange,
   onClearQuote,
-  onStartSession,
+  onStartSession: _onStartSession,
   className,
 }: StudioTutorChatProps) {
   const currentSessionId = activeSession?.id ?? topicSessionId ?? null;
@@ -67,10 +85,20 @@ export function StudioTutorChat({
     stopStreaming,
     clearMessages,
     loadTree,
+    switchBranch,
   } = useChatStream();
 
   const [input, setInput] = useState("");
   const [copiedNodeId, setCopiedNodeId] = useState<string | null>(null);
+  const [activeBranchState, setActiveBranchState] = useState<{
+    parentNodeId: string;
+    quote: string;
+  } | null>(null);
+  const [selectedOrigin, setSelectedOrigin] = useState<{
+    messageId: string;
+    quote: string;
+  } | null>(null);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -103,6 +131,8 @@ export function StudioTutorChat({
     // Immediately stop any active stream if topic or session switched
     stopStreaming();
     clearError();
+    setActiveBranchState(null);
+    setSelectedOrigin(null);
 
     let cancelled = false;
 
@@ -126,7 +156,26 @@ export function StudioTutorChat({
       cancelled = true;
       stopStreaming();
     };
-  }, [workspaceId, currentSessionId, currentChatId, topicId]);
+  }, [
+    workspaceId,
+    currentSessionId,
+    currentChatId,
+    topicId,
+    clearError,
+    clearMessages,
+    loadTree,
+    stopStreaming,
+  ]);
+
+  // Initial branch or deep-linked node ancestry reconstruction
+  const lastTargetNodeRef = useRef<string | null>(null);
+  useEffect(() => {
+    const targetId = activeBranchLeafId ?? initialBranchId ?? initialNodeId;
+    if (tree && targetId && tree.nodes[targetId] && lastTargetNodeRef.current !== targetId) {
+      lastTargetNodeRef.current = targetId;
+      switchBranch(targetId);
+    }
+  }, [tree, initialBranchId, initialNodeId, activeBranchLeafId, switchBranch]);
 
   // Auto-scroll on new tokens or messages
   useEffect(() => {
@@ -135,30 +184,74 @@ export function StudioTutorChat({
     }
   }, [activeMessages.length, isStreaming]);
 
-  // Submit message
+  // Derive lineage, breadcrumbs, and sibling tabs
+  const activeNodeId = tree?.activeNodeId || null;
+  const onBranch = isNodeOnBranch(tree, activeNodeId);
+
+  const breadcrumbSteps = useMemo(() => {
+    return reconstructBranchBreadcrumbs(tree, activeNodeId, topicTitle);
+  }, [tree, activeNodeId, topicTitle]);
+
+  const siblingTabs = useMemo(() => {
+    return getSiblingBranchTabs(tree, activeNodeId);
+  }, [tree, activeNodeId]);
+
+  const activeBranchRoot = useMemo(() => {
+    if (!tree || !activeNodeId) return null;
+    const lineage = getAncestorPath(tree, activeNodeId);
+    return getActiveBranchRoot(lineage);
+  }, [tree, activeNodeId]);
+
+  // Handle branching initiation from message
+  const handleBranchFromMessage = (messageId: string) => {
+    const msg = tree?.nodes[messageId] || activeMessages.find((m) => m.id === messageId);
+    if (!msg) return;
+
+    let quote = "";
+    if (selectedOrigin && selectedOrigin.messageId === messageId && selectedOrigin.quote) {
+      quote = selectedOrigin.quote;
+    } else {
+      quote = msg.content.slice(0, 500);
+    }
+
+    setActiveBranchState({ parentNodeId: messageId, quote });
+    textareaRef.current?.focus();
+  };
+
+  // Submit message (mainline or branch continuation)
   const handleSend = useCallback(async () => {
     const content = input.trim();
     if (!content || isStreaming) return;
 
-    const fullMessage = quotedPassage
-      ? `> "${quotedPassage}"\n\n${content}`
+    const branchQuote = activeBranchState?.quote || quotedPassage;
+    const branchParent = activeBranchState?.parentNodeId || tree?.activeNodeId || "";
+
+    const fullMessage = branchQuote && !activeBranchState
+      ? `> "${branchQuote}"\n\n${content}`
       : content;
 
     setInput("");
     safeRemoveItem(draftStorageKey);
     onClearQuote?.();
+    setActiveBranchState(null);
+    setSelectedOrigin(null);
 
     try {
       await sendMessage(fullMessage, llmConfig.provider, llmConfig.model, {
         workspaceId,
         topicSessionId: currentSessionId ?? undefined,
-        branchOverride: quotedPassage
+        branchOverride: branchQuote
           ? {
-              parentNodeId: tree?.activeNodeId || "",
-              highlightedText: quotedPassage,
+              parentNodeId: branchParent,
+              highlightedText: branchQuote,
             }
           : null,
         systemPrompt: `You are the AI Tutor companion for GraphMind Learning Studio. The learner is studying "${topicTitle}". Explain concepts clearly, give concrete examples, resolve questions, and reinforce foundational learning.`,
+        onNodeCreated: (nodes) => {
+          if (branchQuote && nodes.assistantNodeId) {
+            onBranchChange?.(nodes.assistantNodeId);
+          }
+        },
       });
     } catch {
       // Stream error is captured by useChatStream
@@ -166,6 +259,7 @@ export function StudioTutorChat({
   }, [
     input,
     isStreaming,
+    activeBranchState,
     quotedPassage,
     draftStorageKey,
     onClearQuote,
@@ -176,6 +270,7 @@ export function StudioTutorChat({
     currentSessionId,
     tree?.activeNodeId,
     topicTitle,
+    onBranchChange,
   ]);
 
   // Retry last assistant message
@@ -204,6 +299,29 @@ export function StudioTutorChat({
     setTimeout(() => setCopiedNodeId(null), 2000);
   };
 
+  const handleSelectBreadcrumbStep = useCallback(
+    (step: { leafId: string; isRoot?: boolean }) => {
+      switchBranch(step.leafId);
+      onBranchChange?.(step.isRoot ? null : step.leafId);
+    },
+    [switchBranch, onBranchChange]
+  );
+
+  const handleReturnToMain = useCallback(() => {
+    if (tree?.rootNodeId) {
+      switchBranch(tree.rootNodeId);
+      onBranchChange?.(null);
+    }
+  }, [tree, switchBranch, onBranchChange]);
+
+  const handleSelectSibling = useCallback(
+    (leafId: string) => {
+      switchBranch(leafId);
+      onBranchChange?.(leafId);
+    },
+    [switchBranch, onBranchChange]
+  );
+
   // Determine if the last message is a retryable assistant message
   const lastMessage = activeMessages[activeMessages.length - 1];
   const isLastAssistantRetryable =
@@ -211,7 +329,7 @@ export function StudioTutorChat({
     !isStreaming &&
     isRetryableAssistantResponse(
       lastMessage.content,
-      lastMessage.metadata?.responseState,
+      lastMessage.metadata?.responseState
     );
 
   const suggestedPrompts = [
@@ -225,6 +343,69 @@ export function StudioTutorChat({
       data-testid="studio-tutor-chat"
       className={cn("flex flex-col h-full bg-surface text-foreground overflow-hidden", className)}
     >
+      {/* Active Branch Header Banner with Lineage Breadcrumbs & Siblings */}
+      {onBranch && (
+        <div
+          data-testid="branch-lineage-banner"
+          className="border-b border-border-subtle p-2.5 bg-background-secondary/60 flex flex-col gap-2 shrink-0"
+        >
+          <div className="flex items-center justify-between gap-2 min-w-0">
+            <div className="flex items-center gap-1.5 min-w-0 overflow-x-auto no-scrollbar">
+              <BranchBreadcrumbs
+                steps={breadcrumbSteps}
+                onSelectStep={handleSelectBreadcrumbStep}
+              />
+            </div>
+            <Button
+              size="xs"
+              variant="ghost"
+              onClick={handleReturnToMain}
+              aria-label="Return to main tutor"
+              className="text-foreground-muted hover:text-foreground text-2xs h-6 px-2 shrink-0"
+            >
+              Main conversation
+            </Button>
+          </div>
+
+          {/* Sibling sub-branches tabs */}
+          {siblingTabs.length > 1 && (
+            <div
+              data-testid="sibling-branch-tabs"
+              className="flex items-center gap-1 overflow-x-auto no-scrollbar pt-0.5"
+            >
+              <span className="text-2xs text-foreground-subtle shrink-0 mr-1">
+                Siblings:
+              </span>
+              {siblingTabs.map((tab) => {
+                const isSelected = tab.leafId === activeNodeId;
+                return (
+                  <Button
+                    key={tab.id}
+                    size="xs"
+                    variant={isSelected ? "secondary" : "outline"}
+                    onClick={() => handleSelectSibling(tab.leafId)}
+                    className={cn(
+                      "h-5 text-2xs px-2 truncate max-w-[140px] shrink-0",
+                      isSelected && "font-semibold"
+                    )}
+                    title={tab.prompt}
+                  >
+                    {tab.title}
+                  </Button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Quoted passage context identifier */}
+          {activeBranchRoot?.highlightedContext && (
+            <div className="rounded-lg border-l-2 border-primary bg-surface px-2.5 py-1 text-2xs text-foreground-muted italic truncate">
+              &ldquo;{activeBranchRoot.highlightedContext}&rdquo;
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Messages Scroll Area */}
       <div className="flex-1 overflow-y-auto p-3 space-y-4 min-h-0">
         {activeMessages.length === 0 ? (
@@ -255,7 +436,7 @@ export function StudioTutorChat({
                       setInput(prompt);
                       textareaRef.current?.focus();
                     }}
-                    className="text-left text-2xs p-2 rounded-lg border border-border-subtle bg-background-secondary hover:bg-surface-hover hover:border-border text-foreground-muted hover:text-foreground transition-colors"
+                    className="text-left text-2xs p-2 rounded-lg border border-border-subtle bg-background-secondary hover:bg-surface-hover hover:border-border text-foreground-muted hover:text-foreground transition-colors cursor-pointer"
                   >
                     {prompt}
                   </button>
@@ -272,8 +453,11 @@ export function StudioTutorChat({
               !isStreaming &&
               isRetryableAssistantResponse(
                 msg.content,
-                msg.metadata?.responseState,
+                msg.metadata?.responseState
               );
+
+            const hasSelectedThisMessage =
+              selectedOrigin?.messageId === msg.id && Boolean(selectedOrigin.quote);
 
             return (
               <div
@@ -306,11 +490,26 @@ export function StudioTutorChat({
 
                 {/* Message bubble */}
                 <div
+                  onMouseUp={(event) => {
+                    if (isUser) return;
+                    const selection = window.getSelection();
+                    const text = selection?.toString().trim();
+                    if (
+                      selection?.anchorNode &&
+                      selection.focusNode &&
+                      event.currentTarget.contains(selection.anchorNode) &&
+                      event.currentTarget.contains(selection.focusNode) &&
+                      text &&
+                      msg.content.includes(text)
+                    ) {
+                      setSelectedOrigin({ messageId: msg.id, quote: text.slice(0, 1000) });
+                    }
+                  }}
                   className={cn(
                     "rounded-2xl p-3 text-xs leading-relaxed transition-colors shadow-2xs break-words",
                     isUser
                       ? "bg-primary text-primary-foreground rounded-br-xs"
-                      : "bg-background-secondary border border-border-subtle text-foreground rounded-bl-xs"
+                      : "bg-background-secondary border border-border-subtle text-foreground rounded-bl-xs select-text"
                   )}
                 >
                   <div className="whitespace-pre-wrap">{msg.content}</div>
@@ -324,19 +523,40 @@ export function StudioTutorChat({
                 {/* Message footer actions */}
                 <div className="flex items-center gap-2 px-1">
                   {!isUser && !isThisStreaming && (
-                    <Button
-                      size="iconSm"
-                      variant="ghost"
-                      onClick={() => handleCopy(msg.id, msg.content)}
-                      aria-label="Copy message text"
-                      className="size-5 text-foreground-muted hover:text-foreground p-0"
-                    >
-                      {copiedNodeId === msg.id ? (
-                        <Check className="size-3 text-success" />
-                      ) : (
-                        <Copy className="size-3" />
-                      )}
-                    </Button>
+                    <>
+                      <Button
+                        size="iconSm"
+                        variant="ghost"
+                        onClick={() => handleCopy(msg.id, msg.content)}
+                        aria-label="Copy message text"
+                        className="size-5 text-foreground-muted hover:text-foreground p-0"
+                      >
+                        {copiedNodeId === msg.id ? (
+                          <Check className="size-3 text-success" />
+                        ) : (
+                          <Copy className="size-3" />
+                        )}
+                      </Button>
+
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleBranchFromMessage(msg.id)}
+                        className="h-5 text-2xs px-1.5 gap-1 text-foreground-muted hover:text-foreground"
+                        aria-label={
+                          hasSelectedThisMessage
+                            ? "Branch from selection"
+                            : "Branch from reply"
+                        }
+                      >
+                        <CornerDownRight className="size-2.5" />
+                        <span>
+                          {hasSelectedThisMessage
+                            ? "Branch from selection"
+                            : "Branch from reply"}
+                        </span>
+                      </Button>
+                    </>
                   )}
 
                   {isRetryable && (
@@ -362,7 +582,7 @@ export function StudioTutorChat({
       {streamError && (
         <div
           role="alert"
-          className="mx-3 my-1 flex items-center justify-between gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive"
+          className="mx-3 my-1 flex items-center justify-between gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-2 text-xs text-destructive shrink-0"
         >
           <div className="flex items-center gap-1.5 min-w-0">
             <AlertCircle className="size-3.5 shrink-0" />
@@ -381,9 +601,38 @@ export function StudioTutorChat({
       )}
 
       {/* Composer Area */}
-      <div className="border-t border-border-subtle p-3 bg-surface space-y-2">
-        {/* Quoted Passage Context Banner */}
-        {quotedPassage && (
+      <div className="border-t border-border-subtle p-3 bg-surface space-y-2 shrink-0">
+        {/* Branch Origin Context Banner */}
+        {activeBranchState && (
+          <div
+            data-testid="branch-origin-banner"
+            className="flex items-start justify-between gap-2 rounded-xl border border-primary/30 bg-primary/5 p-2.5 text-xs text-foreground"
+          >
+            <div className="flex items-start gap-2 min-w-0">
+              <GitBranch className="size-3.5 text-primary shrink-0 mt-0.5" />
+              <div className="min-w-0">
+                <span className="text-2xs font-semibold text-primary uppercase tracking-wider block">
+                  Branching Conversation
+                </span>
+                <p className="text-2xs text-foreground-muted line-clamp-2 italic">
+                  &ldquo;{activeBranchState.quote}&rdquo;
+                </p>
+              </div>
+            </div>
+            <Button
+              size="iconSm"
+              variant="ghost"
+              onClick={() => setActiveBranchState(null)}
+              aria-label="Cancel branching"
+              className="size-5 text-foreground-muted hover:text-foreground shrink-0"
+            >
+              <X className="size-3" />
+            </Button>
+          </div>
+        )}
+
+        {/* Quoted Passage Context Banner (from Lesson Reader) */}
+        {!activeBranchState && quotedPassage && (
           <div
             data-testid="quoted-passage-banner"
             className="flex items-start justify-between gap-2 rounded-xl border border-primary/30 bg-primary/5 p-2.5 text-xs text-foreground"
@@ -422,7 +671,9 @@ export function StudioTutorChat({
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
             placeholder={
-              quotedPassage
+              activeBranchState
+                ? `Explore "${activeBranchState.quote.slice(0, 30)}..." in a new branch...`
+                : quotedPassage
                 ? "Ask about this quoted passage..."
                 : `Ask AI Tutor about ${topicTitle}...`
             }

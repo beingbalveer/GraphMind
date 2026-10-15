@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import {
   LearningStudioShell,
 } from "@/components/studio/LearningStudioShell";
@@ -32,12 +33,26 @@ import {
 import { Button } from "@/components/ui/button";
 import { WorkspaceItem } from "@/lib/workspaceApi";
 import { CurriculumView, TopicProgressData } from "@/lib/roadmapTypes";
+import { parseBranchNavigation } from "@/lib/urls";
 
 /**
  * Gated / Internal Studio Preview Route
  * Used to verify LearningStudioShell layout, rails, responsive drawers, and semantic tokens.
  */
 export default function StudioPreviewPage() {
+  return (
+    <Suspense fallback={<div className="h-screen w-screen bg-background" />}>
+      <StudioPreviewContent />
+    </Suspense>
+  );
+}
+
+function StudioPreviewContent() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const { branchId, nodeId } = parseBranchNavigation(searchParams);
+
   const [activeNav, setActiveNav] = useState<StudioNavTab>("home");
   const [inCourse, setInCourse] = useState(true);
   const [isLeftRailOpen, setIsLeftRailOpen] = useState(true);
@@ -48,6 +63,14 @@ export default function StudioPreviewPage() {
   const [tutorQuote, setTutorQuote] = useState<string | null>(null);
   const [activeTopic, setActiveTopic] = useState("FastAPI Asynchronous Architecture");
   const [showCourseListView, setShowCourseListView] = useState<boolean>(false);
+
+  const handleBranchChange = (leafId: string | null) => {
+    if (leafId) {
+      router.replace(`${pathname}?branch=${encodeURIComponent(leafId)}`, { scroll: false });
+    } else {
+      router.replace(pathname, { scroll: false });
+    }
+  };
 
   const sampleCurriculumView: CurriculumView = {
     roadmapId: "rm_python",
@@ -415,6 +438,9 @@ Always avoid invoking CPU-bound or blocking synchronous routines directly in \`a
           topicId={activeTopicId}
           topicTitle={activeTopic}
           quotedPassage={tutorQuote}
+          initialBranchId={branchId}
+          initialNodeId={nodeId}
+          onBranchChange={handleBranchChange}
           onClearQuote={() => setTutorQuote(null)}
           isExpanded={isRightExpanded}
           onToggleExpand={() => setIsRightExpanded((v) => !v)}
