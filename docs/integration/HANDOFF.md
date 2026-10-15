@@ -7,7 +7,7 @@
 - Next ticket: `LSI-017` (READY — blanket user approval recorded)
 - Branch: `codex-learning-studio-backend-integration`
 - Baseline commit: `ea736be`
-- Completion commit: pending git commit for LSI-016
+- Completion commit: `d130932` (LSI-016 completion commit)
 - Last completed work: LSI-016 Nested branch UI and canonical navigation (`branchUtils.ts`, `urls.ts`, `StudioTutorChat.tsx`, `StudioTutorRail.tsx`, `studio-preview/page.tsx`, `branchUtils.test.ts`, `StudioNestedBranch.test.tsx`)
 - Files changed in this task: `apps/web/src/lib/branchUtils.ts`, `apps/web/src/lib/urls.ts`, `apps/web/src/components/studio/StudioTutorChat.tsx`, `apps/web/src/components/studio/StudioTutorRail.tsx`, `apps/web/src/app/studio-preview/page.tsx`, `apps/web/src/lib/__tests__/branchUtils.test.ts`, `apps/web/src/components/studio/__tests__/StudioNestedBranch.test.tsx`, `docs/integration/evidence/LSI-016.md`, `docs/integration/LEARNING_STUDIO_BACKLOG.md`, `docs/integration/HANDOFF.md`
 - Runtime files changed in this task: `apps/web/src/lib/branchUtils.ts`, `apps/web/src/lib/urls.ts`, `apps/web/src/components/studio/StudioTutorChat.tsx`, `apps/web/src/components/studio/StudioTutorRail.tsx`, `apps/web/src/app/studio-preview/page.tsx`
