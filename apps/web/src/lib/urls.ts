@@ -10,8 +10,14 @@ export const buildWorkspaceUrl = (workspaceId: string): string =>
   `/w/${workspaceId}`;
 
 /** /w/{workspaceId}/library — Full-page Workspace File Library */
-export const buildLibraryUrl = (workspaceId: string): string =>
-  `/w/${workspaceId}/library`;
+export const buildLibraryUrl = (
+  workspaceId: string,
+  params?: { file?: string }
+): string => {
+  const base = `/w/${workspaceId}/library`;
+  if (!params?.file) return base;
+  return `${base}?file=${encodeURIComponent(params.file)}`;
+};
 
 /** /w/{workspaceId}/settings — Workspace settings */
 export const buildSettingsUrl = (workspaceId: string): string =>

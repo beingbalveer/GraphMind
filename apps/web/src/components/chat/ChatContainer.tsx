@@ -2361,6 +2361,7 @@ export function ChatContainer({
           /* Full-Page File Library & Knowledge Assets View */
           <FileLibraryView
             workspaceId={currentWorkspace?.id || ""}
+            focusFileId={searchParams.get("file") ?? undefined}
             onBack={() => {
               if (currentWorkspace && activeChatId) {
                 router.push(buildChatUrl(currentWorkspace.id, activeChatId));
@@ -2803,6 +2804,8 @@ export function ChatContainer({
           tree={tree}
           viewMode={viewMode}
           onSelectNode={handleSelectTreeNode}
+          workspaceId={currentWorkspace?.id}
+          onNavigateResult={(url) => router.push(url)}
           onToggleViewMode={() => {
             const nextMode = viewMode === "chat" ? "canvas" : "chat";
             setViewMode(nextMode);

@@ -23,8 +23,10 @@ from schemas.workspace import (
     WorkspaceCurriculumSummary,
     WorkspaceListResponse,
     WorkspaceResponse,
+    WorkspaceSearchResponse,
     WorkspaceUpdate,
 )
+from services.search_service import SearchService
 from services.semantic_service import SemanticService
 from services.workspace_service import WorkspaceService
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -335,6 +337,30 @@ async def search_workspace_semantic(
         "total_matches": len(matches),
         "results": [m.model_dump() for m in matches],
     }
+
+
+@router.post("/{workspace_id}/search", response_model=WorkspaceSearchResponse)
+async def search_workspace(
+    workspace_id: str,
+    data: SemanticSearchRequest,
+    _auth_ws: Workspace = Depends(require_workspace_read),
+    db: AsyncSession = Depends(get_db),
+) -> WorkspaceSearchResponse:
+    """
+    Inventory-backed, permission-scoped graph and file search.
+
+    Runs the existing semantic node search and hybrid file retrieval for a
+    single authorized workspace and returns both legs together so the client
+    can navigate each hit to its canonical context. Read permission required.
+    """
+    service = SearchService()
+    return await service.search(
+        db,
+        workspace_id=workspace_id,
+        query=data.query,
+        top_k=data.top_k,
+        min_similarity=data.min_similarity,
+    )
 
 
 @router.get("/{workspace_id}/discover/links")

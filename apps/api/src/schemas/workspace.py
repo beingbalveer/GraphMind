@@ -162,3 +162,50 @@ class ChatListResponse(BaseSchema):
     workspace_id: str
     chats: List[ChatSummary]
     total: int
+
+
+class SearchNodeHit(BaseSchema):
+    """
+    Permission-scoped semantic result for a graph node.
+
+    ``chat_id`` is the conversation root the node belongs to, so the client can
+    open the node through its canonical ``/w/{workspaceId}/chat/{chatId}?node=``
+    deep link instead of a workspace-wide guess.
+    """
+
+    node_id: str
+    chat_id: str
+    role: str
+    content: str
+    highlighted_context: Optional[str] = None
+    similarity_score: float = Field(..., ge=0.0, le=1.0)
+    created_at: str
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class SearchFileHit(BaseSchema):
+    """
+    Permission-scoped hybrid retrieval result for a workspace file chunk.
+    """
+
+    file_id: str
+    filename: str
+    chunk_id: str
+    chunk_index: int
+    snippet: str
+    page_number: Optional[int] = None
+    section_header: Optional[str] = None
+    score: float = Field(..., ge=0.0)
+
+
+class WorkspaceSearchResponse(BaseSchema):
+    """
+    Inventory-backed, unified workspace search projection (nodes + files).
+    """
+
+    workspace_id: str
+    query: str
+    nodes: List[SearchNodeHit] = Field(default_factory=list)
+    files: List[SearchFileHit] = Field(default_factory=list)
+    total_nodes: int = Field(default=0, description="Number of node matches returned")
+    total_files: int = Field(default=0, description="Number of file chunk matches returned")

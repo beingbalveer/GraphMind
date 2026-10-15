@@ -39,12 +39,15 @@ import { TableViewerModal } from "../chat/TableViewerModal";
 
 export interface FileLibraryViewProps {
   workspaceId: string;
+  /** Canonical focus target from a `?file=` library deep link. */
+  focusFileId?: string;
   onBack?: () => void;
   onSelectFile?: (file: FileAttachment) => void;
 }
 
 export function FileLibraryView({
   workspaceId,
+  focusFileId,
   onBack,
   onSelectFile,
 }: FileLibraryViewProps) {
@@ -62,6 +65,7 @@ export function FileLibraryView({
   const [isDraggingOver, setIsDraggingOver] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const focusedCardRef = useRef<HTMLDivElement | null>(null);
 
   const loadFiles = useCallback(async () => {
     if (!workspaceId) return;
@@ -90,6 +94,15 @@ export function FileLibraryView({
   useEffect(() => {
     loadFiles();
   }, [loadFiles]);
+
+  // Bring a `?file=` deep-link target into view once its card is rendered.
+  useEffect(() => {
+    if (!focusFileId) return;
+    const node = focusedCardRef.current;
+    if (node && typeof node.scrollIntoView === "function") {
+      node.scrollIntoView({ block: "nearest" });
+    }
+  }, [focusFileId, files]);
 
   const handleUploadFiles = async (fileList: FileList | File[]) => {
     if (!fileList || fileList.length === 0) return;
@@ -327,9 +340,13 @@ export function FileLibraryView({
               return (
                 <div
                   key={file.id}
-                  className={`group relative flex flex-col rounded-xl border border-border bg-surface shadow-2xs transition-all hover:border-border-strong hover:shadow-xs overflow-hidden ${
-                    !isInteractive ? "opacity-75" : ""
-                  }`}
+                  ref={file.id === focusFileId ? focusedCardRef : undefined}
+                  data-testid={`file-library-card-${file.id}`}
+                  className={`group relative flex flex-col rounded-xl border bg-surface shadow-2xs transition-all hover:border-border-strong hover:shadow-xs overflow-hidden ${
+                    file.id === focusFileId
+                      ? "border-primary ring-2 ring-primary/40"
+                      : "border-border"
+                  } ${!isInteractive ? "opacity-75" : ""}`}
                 >
                   {/* Card Thumbnail / Preview Area */}
                   <div
