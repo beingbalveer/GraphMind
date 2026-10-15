@@ -126,6 +126,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setUser(null);
       if (typeof window !== "undefined") {
+        try {
+          sessionStorage.clear();
+          localStorage.removeItem("graphmind_recent_workspaces");
+          localStorage.removeItem("active_chat_id");
+          localStorage.removeItem("graphmind:pending_auth_intent");
+        } catch {
+          // Ignore storage access errors in restricted iframe/private mode
+        }
         window.location.href = "/login";
       }
     }

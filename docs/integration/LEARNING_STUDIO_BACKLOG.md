@@ -9,8 +9,8 @@ This is the authoritative status board and ticket specification.
 | [LSI-001](#lsi-001-production-parity-and-ownership-inventory) | A | Production parity and ownership inventory | Analysis | P0 | — | DONE |
 | [LSI-002](#lsi-002-approve-integration-identity-and-public-contracts) | A | Approve integration identity and public contracts | Architecture | P0 | 001 | DONE |
 | [LSI-003](#lsi-003-port-production-shell-into-next) | A | Port production shell into Next.js | Frontend | P0 | 002 | DONE |
-| [LSI-004](#lsi-004-real-sessions-and-public-route-boundary) | A | Real sessions and public route boundary | Full stack | P0 | 003 | READY |
-| [LSI-005](#lsi-005-authorized-collection-summaries) | A | Authorized collection summaries | Backend | P0 | 002, 004 | TODO |
+| [LSI-004](#lsi-004-real-sessions-and-public-route-boundary) | A | Real sessions and public route boundary | Full stack | P0 | 003 | DONE |
+| [LSI-005](#lsi-005-authorized-collection-summaries) | A | Authorized collection summaries | Backend | P0 | 002, 004 | READY |
 | [LSI-006](#lsi-006-home-and-my-learning) | A | Home and My learning | Frontend | P0 | 003, 005 | TODO |
 | [LSI-007](#lsi-007-private-roadmap-outline) | B | Private roadmap outline | Full stack | P0 | 006 | TODO |
 | [LSI-008](#lsi-008-persistent-lesson-reader-and-sources) | B | Persistent lesson reader and sources | Full stack | P0 | 007 | TODO |
@@ -102,6 +102,7 @@ Ticket size is a planning target. When scope proves too large, create explicit `
 - **Acceptance:** Only approved public paths pass narrowly scoped middleware tests; private paths remain protected; expiry/refresh/logout clear private caches; hostile external returns are rejected. The full guest-read journey is verified in LSI-030.
 - **Test targets:** Auth/middleware tests and browser expiry, redirect, logout.
 - **Out of scope:** New auth provider or saved-intent replay (LSI-032).
+- **Evidence:** Narrowed public route boundary, open-redirect defense, and 11 unit tests verified in [evidence/LSI-004.md](./evidence/LSI-004.md).
 
 ### LSI-005 Authorized collection summaries
 **Epic:** A · **Type:** Backend · **Priority:** P0 · **Depends:** LSI-002, LSI-004

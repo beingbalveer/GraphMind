@@ -7,6 +7,7 @@ import { useAuth } from "@/context/AuthContext";
 import { LogoBadge } from "@/components/ui/Logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { sanitizeRedirectPath } from "@/lib/urls";
 import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { InlineFeedback } from "@/components/ui/feedback";
 import {
@@ -73,7 +74,8 @@ function GoogleIcon({ className }: { className?: string }) {
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const nextPath = searchParams.get("next") || "/";
+  const rawNext = searchParams.get("next");
+  const nextPath = sanitizeRedirectPath(rawNext, "/");
 
   const { user, login, register, loginWithGoogle } = useAuth();
 

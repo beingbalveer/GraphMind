@@ -3,20 +3,20 @@
 ## Current position — 2026-10-15
 
 - Active ticket: none
-- Completed tickets: `LSI-001` (DONE — evidence in `docs/integration/evidence/LSI-001.md`), `LSI-002` (DONE — evidence in `docs/integration/evidence/LSI-002.md`), `LSI-003` (DONE — evidence in `docs/integration/evidence/LSI-003.md`)
-- Next ticket: `LSI-004` (READY — blanket user approval recorded)
+- Completed tickets: `LSI-001` (DONE — evidence in `docs/integration/evidence/LSI-001.md`), `LSI-002` (DONE — evidence in `docs/integration/evidence/LSI-002.md`), `LSI-003` (DONE — evidence in `docs/integration/evidence/LSI-003.md`), `LSI-004` (DONE — evidence in `docs/integration/evidence/LSI-004.md`)
+- Next ticket: `LSI-005` (READY — blanket user approval recorded)
 - Branch: `codex-learning-studio-backend-integration`
 - Baseline commit: `da2cbcd`
-- Last completed work: LSI-003 ported production shell into Next.js App Router
-- Files changed in this task: `apps/web/src/components/studio/LearningStudioShell.tsx`, `StudioHeader.tsx`, `StudioCourseRail.tsx`, `StudioTutorRail.tsx`, `apps/web/src/app/studio-preview/page.tsx`, `apps/web/tsconfig.json`, `docs/integration/evidence/LSI-003.md`, `docs/integration/LEARNING_STUDIO_BACKLOG.md`, `docs/integration/HANDOFF.md`
-- Runtime files changed in this task: `apps/web/src/components/studio/*`, `apps/web/src/app/studio-preview/page.tsx`, `apps/web/tsconfig.json`
-- Verification in this task: 6/6 vitest component unit tests passed; Next.js `typecheck` passed with 0 errors; `next build` static page generation passed
+- Last completed work: LSI-004 real sessions and public route boundary configured in middleware and auth context
+- Files changed in this task: `apps/web/src/middleware.ts`, `apps/web/src/lib/urls.ts`, `apps/web/src/app/login/page.tsx`, `apps/web/src/context/AuthContext.tsx`, `apps/web/src/__tests__/middleware.test.ts`, `docs/integration/evidence/LSI-004.md`, `docs/integration/LEARNING_STUDIO_BACKLOG.md`, `docs/integration/HANDOFF.md`
+- Runtime files changed in this task: `apps/web/src/middleware.ts`, `apps/web/src/lib/urls.ts`, `apps/web/src/app/login/page.tsx`, `apps/web/src/context/AuthContext.tsx`
+- Verification in this task: 11/11 middleware unit tests passed; 6/6 shell unit tests passed; Next.js `typecheck` passed with 0 errors
 - Runtime approval: Blanket user approval for backlog sequence recorded on 2026-10-15 ("i am approving all. i will review at the end. please complete all")
-- Last completed step: Production 3-column shell, standard 52px header, responsive drawers, and gated internal route `/studio-preview` implemented and verified
-- Exact next action: Implement LSI-004 (Real sessions and public route boundary) utilizing AuthProvider hooks, narrowing middleware public matchers, and validating local session boundaries.
+- Last completed step: Middleware narrowed to approved public routes (`/login`, `/learn`, previews); private routes protected; `sanitizeRedirectPath` implemented to prevent open redirects; logout cache wipe added
+- Exact next action: Implement LSI-005 (Authorized collection summaries) by adding the curriculum/enrollment projection endpoint to the FastAPI backend router under `/api/v1/workspaces/{workspaceId}/learning-roadmaps`.
 - Pending command/session: none
-- Commands run and actual results: `vitest` (6 passed), `pnpm --filter web typecheck` (passed), `next build` (passed).
-- Completion commit: `da2cbcd` (LSI-003 completion commit)
+- Commands run and actual results: `vitest` (11 middleware passed, 6 shell passed), `pnpm --filter web typecheck` (passed with 0 errors).
+- Completion commit: record commit SHA for LSI-004 in next checkpoint after committing.
 
 For each approved ticket, record the user approval source, date, and precise scope here. Preserve it across interruptions for that same scope.
 

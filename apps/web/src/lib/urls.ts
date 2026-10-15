@@ -70,3 +70,32 @@ export function roadmapRouteMode(pathname: string, view: import("./roadmapTypes"
   if (pathname === buildCanvasUrl(view.workspaceId,view.canvasAnchorChatId)) return "canvas";
   return null;
 }
+
+/** /learn — Public learning catalog landing */
+export const buildPublicCatalogUrl = (): string => `/learn`;
+
+/** /learn/{slug} — Public published roadmap detail */
+export const buildPublicRoadmapUrl = (slug: string): string =>
+  `/learn/${encodeURIComponent(slug)}`;
+
+/** /learn/{slug}/lessons/{topicSlug} — Public published lesson reader */
+export const buildPublicLessonUrl = (slug: string, topicSlug: string): string =>
+  `/learn/${encodeURIComponent(slug)}/lessons/${encodeURIComponent(topicSlug)}`;
+
+/**
+ * Validate and sanitize return redirects to strictly prevent open-redirect vulnerabilities.
+ * Hostile returns (e.g. protocol-relative //evil.com, javascript:, external http/https) fallback to safe target.
+ */
+export function sanitizeRedirectPath(path: string | null | undefined, fallback = "/"): string {
+  if (!path) return fallback;
+  // Must be a relative path starting with single '/'
+  if (!path.startsWith("/") || path.startsWith("//") || path.includes("\\")) {
+    return fallback;
+  }
+  // Disallow control characters or newlines
+  if (/[\r\n\t]/.test(path)) {
+    return fallback;
+  }
+  return path;
+}
+
