@@ -108,6 +108,47 @@ describe("FileLibraryView Full-Page Component", () => {
     expect(screen.queryByText("architecture-diagram.png")).not.toBeInTheDocument();
   });
 
+  it("uploads a selected file through the workspace service and refreshes the library", async () => {
+    const uploaded: FileAttachment = {
+      id: "f-new",
+      name: "notes.txt",
+      sizeBytes: 11,
+      mimeType: "text/plain",
+      fileCategory: "code",
+      url: "/api/v1/workspaces/ws-1/files/f-new/download",
+      extractedText: "hello notes",
+      metadata: { status: "ready" },
+    };
+    const fetchSpy = vi
+      .spyOn(workspaceApi, "fetchWorkspaceFiles")
+      .mockResolvedValue([uploaded]);
+    // First (mount) load returns an empty library.
+    fetchSpy.mockResolvedValueOnce([]);
+    const uploadSpy = vi
+      .spyOn(workspaceApi, "uploadWorkspaceFile")
+      .mockResolvedValue(uploaded);
+
+    const { container } = render(<FileLibraryView workspaceId="ws-1" />);
+
+    await waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalledWith("ws-1", undefined);
+    });
+
+    const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+    expect(input).not.toBeNull();
+    const file = new File(["hello notes"], "notes.txt", { type: "text/plain" });
+    Object.defineProperty(input, "files", { value: [file], writable: false });
+    fireEvent.change(input);
+
+    await waitFor(() => {
+      expect(uploadSpy).toHaveBeenCalledWith("ws-1", file);
+    });
+    await waitFor(() => {
+      expect(screen.getByText("notes.txt")).toBeInTheDocument();
+    });
+    expect(fetchSpy.mock.calls.length).toBeGreaterThanOrEqual(2);
+  });
+
   it("triggers ConfirmDialog when clicking delete on a file card", async () => {
     vi.spyOn(workspaceApi, "fetchWorkspaceFiles").mockResolvedValue([mockFiles[0]]);
     const deleteSpy = vi.spyOn(workspaceApi, "deleteWorkspaceFile").mockResolvedValue(true);
