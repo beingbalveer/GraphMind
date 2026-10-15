@@ -244,6 +244,25 @@ export async function fetchWorkspaceChats(workspaceId: string): Promise<ChatItem
   }
 }
 
+/**
+ * List a workspace's conversation trees, surfacing failures.
+ *
+ * Unlike {@link fetchWorkspaceChats}, which swallows errors and returns an empty
+ * list, this variant rejects so the caller can distinguish "no conversations"
+ * from "could not load" and offer a retry. It is scoped to the authorized
+ * workspace; the server never returns another workspace's rows or the
+ * protected roadmap anchor row.
+ */
+export async function listWorkspaceChats(
+  workspaceId: string,
+  signal?: AbortSignal
+): Promise<ChatItem[]> {
+  const data = await apiFetch<ChatListResponse>(`/workspaces/${workspaceId}/chats`, {
+    signal,
+  });
+  return data.chats;
+}
+
 export interface CreateNodePayload {
   id?: string;
   parentId?: string | null;
