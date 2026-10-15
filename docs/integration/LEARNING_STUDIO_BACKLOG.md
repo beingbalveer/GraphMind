@@ -166,6 +166,7 @@ Ticket size is a planning target. When scope proves too large, create explicit `
 - **Acceptance:** List/Canvas project the same revision/topics; canonical URL uses protected anchor; existing persistence, 409 recovery, and anchor exclusion from ordinary chats/deletion remain intact.
 - **Test targets:** Layout/API guards, projection parity, keyboard/refresh/drag browser checks.
 - **Out of scope:** Rebuilding canvas or writing guest layout through private APIs.
+- **Evidence:** Reused RoadmapCanvas with guest read-only guard, list/canvas mode switching in StudioCourseListView, canonical URL routing, and 6 unit tests verified in [evidence/LSI-012.md](./evidence/LSI-012.md).
 
 ### LSI-013 TopicChat histories
 **Epic:** B · **Type:** Full stack · **Priority:** P0 · **Depends:** LSI-008

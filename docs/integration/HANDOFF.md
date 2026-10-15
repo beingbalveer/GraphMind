@@ -3,20 +3,20 @@
 ## Current position — 2026-10-15
 
 - Active ticket: none
-- Completed tickets: `LSI-001` (DONE — evidence in `docs/integration/evidence/LSI-001.md`), `LSI-002` (DONE — evidence in `docs/integration/evidence/LSI-002.md`), `LSI-003` (DONE — evidence in `docs/integration/evidence/LSI-003.md`), `LSI-004` (DONE — evidence in `docs/integration/evidence/LSI-004.md`), `LSI-005` (DONE — evidence in `docs/integration/evidence/LSI-005.md`), `LSI-006` (DONE — evidence in `docs/integration/evidence/LSI-006.md`), `LSI-007` (DONE — evidence in `docs/integration/evidence/LSI-007.md`), `LSI-008` (DONE — evidence in `docs/integration/evidence/LSI-008.md`), `LSI-009` (DONE — evidence in `docs/integration/evidence/LSI-009.md`), `LSI-010` (DONE — evidence in `docs/integration/evidence/LSI-010.md`), `LSI-011` (DONE — evidence in `docs/integration/evidence/LSI-011.md`)
-- Next ticket: `LSI-012` (READY — blanket user approval recorded)
+- Completed tickets: `LSI-001` (DONE — evidence in `docs/integration/evidence/LSI-001.md`), `LSI-002` (DONE — evidence in `docs/integration/evidence/LSI-002.md`), `LSI-003` (DONE — evidence in `docs/integration/evidence/LSI-003.md`), `LSI-004` (DONE — evidence in `docs/integration/evidence/LSI-004.md`), `LSI-005` (DONE — evidence in `docs/integration/evidence/LSI-005.md`), `LSI-006` (DONE — evidence in `docs/integration/evidence/LSI-006.md`), `LSI-007` (DONE — evidence in `docs/integration/evidence/LSI-007.md`), `LSI-008` (DONE — evidence in `docs/integration/evidence/LSI-008.md`), `LSI-009` (DONE — evidence in `docs/integration/evidence/LSI-009.md`), `LSI-010` (DONE — evidence in `docs/integration/evidence/LSI-010.md`), `LSI-011` (DONE — evidence in `docs/integration/evidence/LSI-011.md`), `LSI-012` (DONE — evidence in `docs/integration/evidence/LSI-012.md`)
+- Next ticket: `LSI-013` (READY — blanket user approval recorded)
 - Branch: `codex-learning-studio-backend-integration`
 - Baseline commit: `aaff66d`
-- Completion commit: `aaff66d` (LSI-011 completion commit)
-- Last completed work: LSI-011 Practice UI (`StudioPracticeActivity.tsx`, `StudioLessonReader.tsx` integration, `roadmapApi.ts` practice methods, `roadmapTypes.ts` updates, unit tests in `StudioPracticeActivity.test.tsx`)
-- Files changed in this task: `apps/web/src/components/studio/StudioPracticeActivity.tsx`, `apps/web/src/components/studio/StudioLessonReader.tsx`, `apps/web/src/components/studio/__tests__/StudioPracticeActivity.test.tsx`, `apps/web/src/lib/roadmapApi.ts`, `apps/web/src/lib/roadmapTypes.ts`, `docs/integration/evidence/LSI-011.md`, `docs/integration/LEARNING_STUDIO_BACKLOG.md`, `docs/integration/HANDOFF.md`
-- Runtime files changed in this task: `apps/web/src/components/studio/StudioPracticeActivity.tsx`, `apps/web/src/components/studio/StudioLessonReader.tsx`, `apps/web/src/lib/roadmapApi.ts`, `apps/web/src/lib/roadmapTypes.ts`
-- Verification in this task: 7/7 practice activity unit tests passed, 42/42 studio unit tests passed, 417/417 full web vitest suite passed; 9/9 backend practice pytest passed; Next.js `typecheck` passed with 0 errors; `next build` compiled cleanly (8/8 static routes + middleware)
+- Completion commit: pending
+- Last completed work: LSI-012 Shared roadmap and conversation canvas (`RoadmapCanvas.tsx` guest/read-only layout guard, `StudioCourseListView.tsx` list/canvas mode switching with `<SegmentedTabs>`, `StudioRoadmapCanvas.test.tsx` test suite, canonical URL contract alignment)
+- Files changed in this task: `apps/web/src/components/roadmap/RoadmapCanvas.tsx`, `apps/web/src/components/studio/StudioCourseListView.tsx`, `apps/web/src/app/studio-preview/page.tsx`, `apps/web/src/components/studio/__tests__/StudioRoadmapCanvas.test.tsx`, `docs/integration/evidence/LSI-012.md`, `docs/integration/LEARNING_STUDIO_BACKLOG.md`, `docs/integration/HANDOFF.md`
+- Runtime files changed in this task: `apps/web/src/components/roadmap/RoadmapCanvas.tsx`, `apps/web/src/components/studio/StudioCourseListView.tsx`, `apps/web/src/app/studio-preview/page.tsx`
+- Verification in this task: 6/6 StudioRoadmapCanvas unit tests passed, 48/48 studio unit tests passed, 423/423 full web vitest suite passed; 368/368 backend pytest roadmap suite passed; `next build` compiled cleanly (8/8 static routes + middleware)
 - Runtime approval: Blanket user approval for backlog sequence recorded on 2026-10-15 ("i am approving all. i will review at the end. please complete all")
-- Last completed step: Practice UI rendering real versioned activities, draft persistence, attempt validation and feedback, hint disclosure, and anti-mastery decoupling built and verified; evidence documented in `evidence/LSI-011.md`
-- Exact next action: Implement LSI-012 (Shared roadmap and conversation canvas).
+- Last completed step: Shared roadmap and conversation canvas reusing RoadmapCanvas, projection parity, guest layout safety, and mode switching implemented and verified; evidence documented in `evidence/LSI-012.md`
+- Exact next action: Implement LSI-013 (TopicChat histories).
 - Pending command/session: none
-- Commands run and actual results: `pytest` (9 passed), `vitest` (417 passed), `pnpm --filter web typecheck` (passed with 0 errors), `next build` (compiled successfully).
+- Commands run and actual results: `pnpm --filter web test` (423 passed), `pnpm --filter web build` (compiled successfully), `pytest apps/api/tests/roadmap/` (368 passed).
 
 For each approved ticket, record the user approval source, date, and precise scope here. Preserve it across interruptions for that same scope.
 

@@ -18,10 +18,13 @@ import type { CanvasItem } from "@/lib/canvas/types";
 export function RoadmapCanvas({
   view,
   onOpenTopic,
+  readOnly,
 }: {
   view: CurriculumView;
   onOpenTopic?: (id: string) => void;
+  readOnly?: boolean;
 }) {
+  const isReadOnly = readOnly ?? !view.canWrite;
   const [expanded, setExpanded] = useState(() =>
     initialCurriculumExpansion(view),
   );
@@ -46,8 +49,8 @@ export function RoadmapCanvas({
       .map((i) => i.id);
   }, [view, graph]);
   const stored = useCanvasLayout(
-    view.workspaceId,
-    view.canvasAnchorChatId,
+    isReadOnly ? undefined : view.workspaceId,
+    isReadOnly ? undefined : view.canvasAnchorChatId,
     "curriculum",
   );
   const { ready, setLayout } = stored;
@@ -59,11 +62,11 @@ export function RoadmapCanvas({
     [stored.layout, generated],
   );
   useEffect(() => {
-    if (ready)
+    if (ready && !isReadOnly)
       setLayout((current) =>
         current ? reconcileRoadmapPositions(current, generated) : generated,
       );
-  }, [ready, setLayout, generated]);
+  }, [ready, setLayout, generated, isReadOnly]);
   const select = useCallback(
     (id: string) => {
       setSelected(id);
@@ -114,12 +117,12 @@ export function RoadmapCanvas({
             onClick: () => setShowDependencies((value) => !value),
           },
         ]}
-        onLayoutChange={stored.setLayout}
+        onLayoutChange={isReadOnly ? () => {} : (layout) => stored.setLayout(layout)}
         onSelect={select}
         sidePanelWidth={0}
         activeSelectionId={selected}
-        ready={stored.ready}
-        readOnly={!stored.ready}
+        ready={isReadOnly || stored.ready}
+        readOnly={isReadOnly || !stored.ready}
         showMinimap={minimap}
         onToggleMinimap={() => setMinimap((old) => !old)}
       />
@@ -138,7 +141,7 @@ export function RoadmapCanvas({
           {showAlternatives ? "Hide alternatives" : "Show alternatives"}
         </Button>
       )}
-      {(stored.loadError || stored.saveState === "error") && (
+      {!isReadOnly && (stored.loadError || stored.saveState === "error") && (
         <div
           role="alert"
           className="absolute bottom-4 right-4 rounded-xl border border-border bg-surface p-3 text-xs"

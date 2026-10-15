@@ -1,9 +1,11 @@
 "use client";
 
-import React, { useMemo } from "react";
-import { Check, ChevronRight, Clock3, ExternalLink, BookOpen, AlertCircle, RefreshCw } from "lucide-react";
+import React, { useMemo, useState } from "react";
+import { Check, ChevronRight, Clock3, ExternalLink, BookOpen, Network, AlertCircle, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { SegmentedTabs } from "@/components/ui/segmented-tabs";
+import { RoadmapCanvas } from "@/components/roadmap/RoadmapCanvas";
 import { CurriculumItemData, CurriculumView } from "@/lib/roadmapTypes";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +15,8 @@ export interface StudioCourseListViewProps {
   error?: string | null;
   onRetry?: () => void;
   onSelectTopic: (topicId: string) => void;
+  mode?: "list" | "canvas";
+  onModeChange?: (mode: "list" | "canvas") => void;
   className?: string;
 }
 
@@ -22,10 +26,11 @@ interface PhaseWithTopics {
 }
 
 /**
- * StudioCourseListView — Center-stage structured List view of the private roadmap.
+ * StudioCourseListView — Center-stage structured List / Canvas view of the private roadmap.
  * Adheres strictly to AGENTS.md design tokens and rules:
- * - Uses @/components/ui/button and @/components/ui/badge primitives.
+ * - Uses @/components/ui/button, @/components/ui/badge, and @/components/ui/segmented-tabs.
  * - Displays phases, lessons with completion status, outcomes, and verified source references.
+ * - Reuses existing RoadmapCanvas for spatial graph view, projecting identical revision/topics.
  */
 export function StudioCourseListView({
   view,
@@ -33,8 +38,17 @@ export function StudioCourseListView({
   error = null,
   onRetry,
   onSelectTopic,
+  mode,
+  onModeChange,
   className,
 }: StudioCourseListViewProps) {
+  const [localMode, setLocalMode] = useState<"list" | "canvas">("list");
+  const currentMode = mode ?? localMode;
+
+  const handleModeChange = (next: "list" | "canvas") => {
+    setLocalMode(next);
+    onModeChange?.(next);
+  };
   const { phases, activeTopics, completedCount, percent } = useMemo(() => {
     if (!view) {
       return { phases: [], activeTopics: [], completedCount: 0, percent: 0 };
@@ -168,6 +182,39 @@ export function StudioCourseListView({
     );
   }
 
+  if (currentMode === "canvas" && view) {
+    return (
+      <div
+        data-testid="studio-course-canvas-view"
+        className={cn("h-full w-full flex flex-col overflow-hidden bg-background", className)}
+      >
+        {/* Top Switcher Bar */}
+        <div className="flex items-center justify-between px-6 py-3 border-b border-border bg-background z-10 shrink-0">
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary">ROADMAP CANVAS</Badge>
+            <span className="text-xs text-foreground-muted">
+              Revision {view.revisionId.slice(0, 8)} · {activeTopics.length} lessons
+            </span>
+          </div>
+          <SegmentedTabs
+            items={[
+              { id: "list", label: "List", icon: BookOpen },
+              { id: "canvas", label: "Canvas", icon: Network },
+            ]}
+            value="canvas"
+            onChange={(m) => handleModeChange(m as "list" | "canvas")}
+            size="sm"
+            ariaLabel="Roadmap view switcher"
+          />
+        </div>
+        {/* Reused 2D Spatial Roadmap Canvas */}
+        <div className="flex-1 relative min-h-0 min-w-0">
+          <RoadmapCanvas view={view} onOpenTopic={onSelectTopic} />
+        </div>
+      </div>
+    );
+  }
+
   const durationStr = view.profile?.duration
     ? `${view.profile.duration.value} ${view.profile.duration.unit}`
     : `${Math.ceil((activeTopics.reduce((acc, t) => acc + (t.estimateMinutes || 30), 0)) / 60)} hours`;
@@ -180,19 +227,33 @@ export function StudioCourseListView({
       className={cn("mx-auto max-w-5xl px-6 py-10 md:px-10", className)}
     >
       {/* Header Info */}
-      <div className="max-w-3xl">
-        <div className="flex items-center gap-2 mb-3">
-          <Badge variant="secondary">CURRICULUM OUTLINE</Badge>
-          <span className="text-xs text-foreground-muted">
-            Revision {view.revisionId.slice(0, 8)}
-          </span>
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div className="max-w-3xl">
+          <div className="flex items-center gap-2 mb-3">
+            <Badge variant="secondary">CURRICULUM OUTLINE</Badge>
+            <span className="text-xs text-foreground-muted">
+              Revision {view.revisionId.slice(0, 8)}
+            </span>
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            {view.candidate.title}
+          </h1>
+          <p className="mt-3 text-sm leading-6 text-foreground-muted">
+            {view.candidate.outcome}
+          </p>
         </div>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">
-          {view.candidate.title}
-        </h1>
-        <p className="mt-3 text-sm leading-6 text-foreground-muted">
-          {view.candidate.outcome}
-        </p>
+        <div className="shrink-0 self-start sm:self-auto pt-1">
+          <SegmentedTabs
+            items={[
+              { id: "list", label: "List", icon: BookOpen },
+              { id: "canvas", label: "Canvas", icon: Network },
+            ]}
+            value="list"
+            onChange={(m) => handleModeChange(m as "list" | "canvas")}
+            size="sm"
+            ariaLabel="Roadmap view switcher"
+          />
+        </div>
       </div>
 
       {/* Meta Bar */}

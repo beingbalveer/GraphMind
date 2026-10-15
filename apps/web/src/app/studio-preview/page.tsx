@@ -463,9 +463,9 @@ Always avoid invoking CPU-bound or blocking synchronous routines directly in \`a
           />
         </div>
       ) : showCourseListView ? (
-        /* Full Course Outline List View */
-        <div className="flex-1 overflow-y-auto">
-          <div className="max-w-5xl mx-auto px-6 pt-4 flex justify-end">
+        /* Full Course Outline List / Canvas View */
+        <div className="flex-1 flex flex-col min-h-0 overflow-y-auto">
+          <div className="max-w-5xl w-full mx-auto px-6 pt-4 flex justify-end shrink-0">
             <Button
               size="sm"
               variant="outline"
