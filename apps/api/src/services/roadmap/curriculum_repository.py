@@ -37,6 +37,7 @@ from schemas.curriculum import (
     ValidationReport,
     WeeklySession,
 )
+from services.roadmap.practice_catalog import get_topic_activity
 from services.roadmap.validation import validate_curriculum
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -515,4 +516,5 @@ class CurriculumRepository:
             default_chat_id=default_chat,
             latest_check=KnowledgeCheckData.model_validate(latest) if latest else None,
             saved_lesson_content=saved_lesson_content,
+            practice_activity=get_topic_activity(topic_id, item.title, item.exercise),
         )

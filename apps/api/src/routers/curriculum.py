@@ -10,9 +10,13 @@ from models.user import User
 from models.workspace import Workspace
 from routers.roadmap_jobs import http_error, public_job
 from schemas.curriculum import (
+    CheckRequest,
     CurriculumSchema,
     CurriculumView,
     KnowledgeCheckData,
+    PracticeDraftData,
+    PracticeDraftRequest,
+    PracticeStateData,
     SourceData,
     TopicBrief,
     TopicProgressData,
@@ -33,6 +37,7 @@ from schemas.roadmap_edit import (
 from schemas.roadmap_job import JobError, PublicJobSnapshot
 from services.roadmap.curriculum_repository import CurriculumRepository
 from services.roadmap.job_repository import JobStateError
+from services.roadmap.practice import PracticeService
 from services.roadmap.progress import ProgressService
 from services.roadmap.promotion import PromotionService
 from services.roadmap.revision_service import (
@@ -91,10 +96,6 @@ class SessionRequest(CurriculumSchema):
 
 class ProgressRequest(CurriculumSchema):
     status: Literal["not_started", "in_progress", "completed"]
-
-
-class CheckRequest(CurriculumSchema):
-    session_id: str
 
 
 @router.post("/topics/{topic_id}/sessions", response_model=TopicSessionData, status_code=201)
@@ -204,10 +205,54 @@ async def update_topic_progress(
     return await ProgressService(db).set_status(workspace_id, topic_id, user.id, body.status)
 
 
+@router.get("/topics/{topic_id}/checks", response_model=PracticeStateData)
+async def get_topic_checks(
+    workspace_id: str, topic_id: str, db: DB, user: Actor, access: Access
+) -> PracticeStateData:
+    return await PracticeService(db).get_practice_state(workspace_id, topic_id, user.id)
+
+
+@router.put("/topics/{topic_id}/checks/draft", response_model=PracticeDraftData)
+async def save_topic_practice_draft(
+    workspace_id: str,
+    topic_id: str,
+    body: PracticeDraftRequest,
+    db: DB,
+    user: Actor,
+    access: WriteAccess,
+) -> PracticeDraftData:
+    service = PracticeService(db)
+    result = await service.save_draft(workspace_id, topic_id, user.id, body)
+    await db.commit()
+    return result
+
+
+@router.delete("/topics/{topic_id}/checks/draft", status_code=204)
+async def delete_topic_practice_draft(
+    workspace_id: str,
+    topic_id: str,
+    db: DB,
+    user: Actor,
+    access: WriteAccess,
+) -> None:
+    service = PracticeService(db)
+    await service.delete_draft(workspace_id, topic_id, user.id)
+    await db.commit()
+
+
 @router.post("/topics/{topic_id}/checks", response_model=KnowledgeCheckData, status_code=201)
 async def check_topic(
     workspace_id: str, topic_id: str, body: CheckRequest, db: DB, user: Actor, access: WriteAccess
 ) -> KnowledgeCheckData:
+    if body.activity_id is not None:
+        service = PracticeService(db)
+        result = await service.record_attempt(workspace_id, topic_id, user.id, body)
+        await db.commit()
+        return result
+
+    if not body.session_id:
+        raise HTTPException(422, "Either activity_id or session_id is required")
+
     service = ProgressService(db)
     prepared = await service.prepare_check(workspace_id, topic_id, user.id, body.session_id)
     # Snapshot DB-owned evidence and release the transaction before external inference.

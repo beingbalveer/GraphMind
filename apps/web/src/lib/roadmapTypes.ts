@@ -117,6 +117,63 @@ export interface KnowledgeCheckData {
   result: Record<string, JsonValue>;
   createdAt: string;
 }
+export interface PracticeActivityData {
+  id: string;
+  version: string;
+  topicId: string;
+  kind: "choice" | "short_answer" | "reflection";
+  prompt: string;
+  choices?: string[] | null;
+  hint?: string | null;
+  explanation?: string | null;
+}
+export interface PracticeDraftRequest {
+  activityId: string;
+  activityVersion: string;
+  draft: string;
+  selectedChoice?: string | null;
+}
+export interface PracticeDraftData {
+  topicId: string;
+  activityId: string;
+  activityVersion: string;
+  draft: string;
+  selectedChoice?: string | null;
+  updatedAt: string;
+}
+export interface PracticeAttemptData {
+  id: string;
+  attemptId: string;
+  attemptNumber: number;
+  activityId: string;
+  activityVersion: string;
+  answer?: string | null;
+  selectedChoice?: string | null;
+  correct?: boolean | null;
+  feedback: string;
+  explanation?: string | null;
+  canRetry: boolean;
+  nextAction: "retry" | "continue" | "review";
+  submittedAt: string;
+}
+export interface PracticeStateData {
+  topicId: string;
+  activity: PracticeActivityData;
+  draft?: PracticeDraftData | null;
+  attemptsCount: number;
+  latestAttempt?: PracticeAttemptData | null;
+  checks: KnowledgeCheckData[];
+}
+export interface CheckRequest {
+  sessionId?: string | null;
+  activityId?: string | null;
+  activityVersion?: string | null;
+  attemptId?: string | null;
+  answer?: string | null;
+  selectedChoice?: string | null;
+  draft?: string | null;
+  isDraft?: boolean;
+}
 export interface TopicResourceView {
   source: SourceData;
   rationale: string;
@@ -130,6 +187,7 @@ export interface TopicBrief {
   defaultChatId: string | null;
   latestCheck: KnowledgeCheckData | null;
   savedLessonContent?: string | null;
+  practiceActivity?: PracticeActivityData | null;
 }
 export interface CurriculumView {
   roadmapId: string;

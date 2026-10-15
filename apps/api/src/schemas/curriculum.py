@@ -168,6 +168,69 @@ class KnowledgeCheckData(CurriculumSchema):
     created_at: datetime
 
 
+class PracticeActivityData(CurriculumSchema):
+    id: str
+    version: str
+    topic_id: str
+    kind: Literal["choice", "short_answer", "reflection"]
+    prompt: str
+    choices: list[str] | None = None
+    hint: str | None = None
+    explanation: str | None = None
+
+
+class PracticeDraftRequest(CurriculumSchema):
+    activity_id: str = Field(min_length=1, max_length=64)
+    activity_version: str = Field(min_length=1, max_length=32)
+    draft: str = Field(default="", max_length=10000)
+    selected_choice: str | None = Field(default=None, max_length=256)
+
+
+class PracticeDraftData(CurriculumSchema):
+    topic_id: str
+    activity_id: str
+    activity_version: str
+    draft: str
+    selected_choice: str | None = None
+    updated_at: datetime
+
+
+class PracticeAttemptData(CurriculumSchema):
+    id: str
+    attempt_id: str
+    attempt_number: int
+    activity_id: str
+    activity_version: str
+    answer: str | None = None
+    selected_choice: str | None = None
+    correct: bool | None = None
+    feedback: str
+    explanation: str | None = None
+    can_retry: bool = True
+    next_action: Literal["retry", "continue", "review"] = "continue"
+    submitted_at: datetime
+
+
+class PracticeStateData(CurriculumSchema):
+    topic_id: str
+    activity: PracticeActivityData
+    draft: PracticeDraftData | None = None
+    attempts_count: int = 0
+    latest_attempt: PracticeAttemptData | None = None
+    checks: list[KnowledgeCheckData] = Field(default_factory=list)
+
+
+class CheckRequest(CurriculumSchema):
+    session_id: str | None = None
+    activity_id: str | None = Field(default=None, max_length=64)
+    activity_version: str | None = Field(default=None, max_length=32)
+    attempt_id: str | None = Field(default=None, max_length=64)
+    answer: str | None = Field(default=None, max_length=4000)
+    selected_choice: str | None = Field(default=None, max_length=256)
+    draft: str | None = Field(default=None, max_length=10000)
+    is_draft: bool = False
+
+
 class TopicResourceView(CurriculumSchema):
     source: SourceData
     rationale: str
@@ -182,6 +245,7 @@ class TopicBrief(CurriculumSchema):
     default_chat_id: str | None = None
     latest_check: KnowledgeCheckData | None = None
     saved_lesson_content: str | None = None
+    practice_activity: PracticeActivityData | None = None
 
 
 class CurriculumTopicOriginData(CurriculumSchema):

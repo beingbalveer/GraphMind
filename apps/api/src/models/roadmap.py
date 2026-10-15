@@ -417,3 +417,28 @@ class KnowledgeCheck(Base):
     rubric: Mapped[dict[str, Any]] = mapped_column(JSON)
     result: Mapped[dict[str, Any]] = mapped_column(JSON)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+
+class TopicPracticeDraft(Base):
+    __tablename__ = "topic_practice_drafts"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["roadmap_id", "topic_id"],
+            ["curriculum_items.roadmap_id", "curriculum_items.id"],
+            ondelete="CASCADE",
+            name="fk_practice_draft_topic",
+        ),
+        Index("idx_practice_draft_owner", "owner_id", "roadmap_id"),
+    )
+    roadmap_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    topic_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    owner_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    activity_id: Mapped[str] = mapped_column(String(64))
+    activity_version: Mapped[str] = mapped_column(String(32))
+    draft: Mapped[str] = mapped_column(Text, default="")
+    selected_choice: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now
+    )
