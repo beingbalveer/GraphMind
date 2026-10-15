@@ -155,6 +155,17 @@ def _unique_slug(title: str, taken: set[str]) -> str:
     return slug
 
 
+def _contains_pattern(value: str) -> str:
+    """A literal, escaped ``%value%`` pattern for catalog search.
+
+    ``%`` and ``_`` are LIKE wildcards, so an unescaped user query would be a
+    wildcard match rather than a literal one. Escaping keeps search deterministic
+    for any input.
+    """
+    escaped = value.strip().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    return f"%{escaped}%"
+
+
 def sanitize_curriculum(
     view: CurriculumView,
     *,
@@ -715,6 +726,75 @@ class PublicSnapshotService:
                 select(PublicSnapshot)
                 .where(*filters)
                 .order_by(PublicSnapshot.updated_at.desc(), PublicSnapshot.id)
+                .limit(limit)
+                .offset(offset)
+            )
+        ).all()
+        return PublicRoadmapSummaryList(
+            items=[self._summary(snapshot) for snapshot in rows],
+            total=total,
+            limit=limit,
+            offset=offset,
+        )
+
+    async def list_catalog(
+        self,
+        *,
+        query: str | None = None,
+        category: str | None = None,
+        level: str | None = None,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> PublicRoadmapSummaryList:
+        """Anonymous catalog: exactly one published card per roadmap template.
+
+        ``list_published`` returns *every* published row, including superseded
+        versions of the same template. A catalog card carries the template id,
+        so listing all versions would emit duplicate ids. This ranks published
+        rows per template and keeps the newest one (``published_at`` then
+        ``id``), the same deterministic choice ``read_roadmap`` uses when it
+        resolves the newest version by ``slug``.
+
+        Only ``status = 'published'`` rows are ever considered, so an
+        unpublished or superseded snapshot can never be listed.
+        """
+        filters = [PublicSnapshot.status == "published"]
+        if query and query.strip():
+            pattern = _contains_pattern(query)
+            filters.append(
+                or_(
+                    PublicSnapshot.title.ilike(pattern, escape="\\"),
+                    PublicSnapshot.summary.ilike(pattern, escape="\\"),
+                )
+            )
+        if category:
+            filters.append(PublicSnapshot.category == category)
+        if level:
+            filters.append(PublicSnapshot.level == level)
+
+        newest = (
+            select(
+                PublicSnapshot.id.label("snapshot_id"),
+                func.row_number()
+                .over(
+                    partition_by=PublicSnapshot.template_id,
+                    order_by=[PublicSnapshot.published_at.desc(), PublicSnapshot.id],
+                )
+                .label("version_rank"),
+            )
+            .where(*filters)
+            .subquery()
+        )
+        newest_ids = select(newest.c.snapshot_id).where(newest.c.version_rank == 1)
+        total = int(
+            (await self.session.scalar(select(func.count()).select_from(newest_ids.subquery())))
+            or 0
+        )
+        rows = (
+            await self.session.scalars(
+                select(PublicSnapshot)
+                .where(PublicSnapshot.id.in_(newest_ids))
+                .order_by(PublicSnapshot.published_at.desc(), PublicSnapshot.id)
                 .limit(limit)
                 .offset(offset)
             )
