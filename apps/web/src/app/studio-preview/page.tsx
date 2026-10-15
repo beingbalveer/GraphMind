@@ -21,8 +21,15 @@ import {
 import {
   StudioTutorRail,
 } from "@/components/studio/StudioTutorRail";
+import {
+  StudioHomeView,
+} from "@/components/studio/StudioHomeView";
+import {
+  StudioMyLearningView,
+} from "@/components/studio/StudioMyLearningView";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { WorkspaceItem } from "@/lib/workspaceApi";
 
 /**
  * Gated / Internal Studio Preview Route
@@ -45,6 +52,62 @@ export default function StudioPreviewPage() {
     { id: "5", title: "PostgreSQL pgvector Embedding Search", done: false, minutes: 60 },
   ];
 
+  const demoWorkspaces: WorkspaceItem[] = [
+    {
+      id: "ws_python_demo",
+      name: "Backend Engineering with Python",
+      description: "Deep dive into async FastAPI, modern Pydantic v2 schemas, and pgvector embeddings.",
+      viewportX: 0,
+      viewportY: 0,
+      zoom: 1,
+      nodeCount: 15,
+      createdAt: "2026-10-10T10:00:00Z",
+      updatedAt: "2026-10-15T09:00:00Z",
+      curriculum: {
+        roadmapId: "rm_python",
+        revisionId: "rev_python",
+        title: "Backend Engineering with Python",
+        status: "active",
+        totalTopics: 5,
+        completedTopics: 1,
+        progressPercent: 20.0,
+        sourceSnapshotRef: "python-backend",
+        originJobId: null,
+        updatedAt: "2026-10-15T09:00:00Z",
+      },
+    },
+    {
+      id: "ws_drawing_demo",
+      name: "Beginner Drawing Exercises",
+      description: "Observation, contour lines, and structural forms for beginning artists.",
+      viewportX: 0,
+      viewportY: 0,
+      zoom: 1,
+      nodeCount: 8,
+      createdAt: "2026-10-08T10:00:00Z",
+      updatedAt: "2026-10-14T14:00:00Z",
+      curriculum: {
+        roadmapId: "rm_drawing",
+        revisionId: "rev_drawing",
+        title: "Beginner Drawing Exercises",
+        status: "active",
+        totalTopics: 10,
+        completedTopics: 10,
+        progressPercent: 100.0,
+        sourceSnapshotRef: "beginner-drawing",
+        originJobId: null,
+        updatedAt: "2026-10-14T14:00:00Z",
+      },
+    },
+  ];
+
+  const handleNavigate = (tab: StudioNavTab) => {
+    setActiveNav(tab);
+    if (tab === "home" || tab === "learning") {
+      setInCourse(false);
+    }
+  };
+
   const handleToggleDark = () => {
     setIsDark((prev) => {
       const next = !prev;
@@ -62,7 +125,7 @@ export default function StudioPreviewPage() {
       header={
         <StudioHeader
           activeNav={activeNav}
-          onNavigate={setActiveNav}
+          onNavigate={handleNavigate}
           courseTitle={inCourse ? "Backend Engineering with Python" : undefined}
           isLeftRailOpen={isLeftRailOpen}
           onToggleLeftRail={() => setIsLeftRailOpen((v) => !v)}
@@ -148,53 +211,74 @@ export default function StudioPreviewPage() {
         />
       }
     >
-      {/* Main Center Stage */}
-      <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 max-w-4xl mx-auto w-full">
-        <div className="space-y-6">
-          <div className="flex items-center justify-between pb-4 border-b border-border">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <Badge variant="outline">Lesson 2 of 5</Badge>
-                <span className="text-xs text-foreground-muted flex items-center gap-1">
-                  <Clock className="size-3" /> 40 minutes
-                </span>
+      {/* Dynamic Center Stage: Home, My Learning, or Lesson Stage */}
+      {!inCourse && activeNav === "home" ? (
+        <div className="flex-1 overflow-y-auto">
+          <StudioHomeView
+            workspaces={demoWorkspaces}
+            onResume={(_wsId) => setInCourse(true)}
+            onBrowse={() => setActiveNav("browse")}
+            onCreate={() => setActiveNav("create")}
+            displayName="Learner"
+          />
+        </div>
+      ) : !inCourse && activeNav === "learning" ? (
+        <div className="flex-1 overflow-y-auto">
+          <StudioMyLearningView
+            workspaces={demoWorkspaces}
+            onOpen={(_wsId) => setInCourse(true)}
+            onBrowse={() => setActiveNav("browse")}
+          />
+        </div>
+      ) : (
+        /* Main Course Stage */
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 max-w-4xl mx-auto w-full">
+          <div className="space-y-6">
+            <div className="flex items-center justify-between pb-4 border-b border-border">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <Badge variant="outline">Lesson 2 of 5</Badge>
+                  <span className="text-xs text-foreground-muted flex items-center gap-1">
+                    <Clock className="size-3" /> 40 minutes
+                  </span>
+                </div>
+                <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
+                  {activeTopic}
+                </h1>
               </div>
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
-                {activeTopic}
-              </h1>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setInCourse((v) => !v)}
+                >
+                  {inCourse ? "Preview Catalog Mode" : "Preview Course Mode"}
+                </Button>
+              </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setInCourse((v) => !v)}
-              >
-                {inCourse ? "Preview Catalog Mode" : "Preview Course Mode"}
-              </Button>
-            </div>
-          </div>
+            <div className="prose dark:prose-invert max-w-none text-sm text-foreground-muted space-y-4 leading-relaxed">
+              <p>
+                FastAPI is built on top of Starlette and Pydantic, designed from the ground up to take full advantage
+                of modern Python asynchronous programming (PEP 492). By writing asynchronous path operation functions
+                using <code className="bg-surface-hover px-1.5 py-0.5 rounded text-foreground">async def</code>, your application can handle I/O-bound tasks concurrently without blocking the main event loop.
+              </p>
 
-          <div className="prose dark:prose-invert max-w-none text-sm text-foreground-muted space-y-4 leading-relaxed">
-            <p>
-              FastAPI is built on top of Starlette and Pydantic, designed from the ground up to take full advantage
-              of modern Python asynchronous programming (PEP 492). By writing asynchronous path operation functions
-              using <code className="bg-surface-hover px-1.5 py-0.5 rounded text-foreground">async def</code>, your application can handle I/O-bound tasks concurrently without blocking the main event loop.
-            </p>
-
-            <div className="p-4 rounded-xl border border-border bg-surface">
-              <h4 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-1.5">
-                <FileText className="size-4 text-primary" /> Key Learning Objectives
-              </h4>
-              <ul className="list-disc list-inside space-y-1 text-xs">
-                <li>Understand the difference between async def and standard def in FastAPI endpoints</li>
-                <li>Leverage FastAPI Dependency Injection with async context managers</li>
-                <li>Integrate non-blocking SQLAlchemy 2.0 AsyncSessions without connection starvation</li>
-              </ul>
+              <div className="p-4 rounded-xl border border-border bg-surface">
+                <h4 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-1.5">
+                  <FileText className="size-4 text-primary" /> Key Learning Objectives
+                </h4>
+                <ul className="list-disc list-inside space-y-1 text-xs">
+                  <li>Understand the difference between async def and standard def in FastAPI endpoints</li>
+                  <li>Leverage FastAPI Dependency Injection with async context managers</li>
+                  <li>Integrate non-blocking SQLAlchemy 2.0 AsyncSessions without connection starvation</li>
+                </ul>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
     </LearningStudioShell>
   );
 }

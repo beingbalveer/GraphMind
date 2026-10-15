@@ -11,8 +11,8 @@ This is the authoritative status board and ticket specification.
 | [LSI-003](#lsi-003-port-production-shell-into-next) | A | Port production shell into Next.js | Frontend | P0 | 002 | DONE |
 | [LSI-004](#lsi-004-real-sessions-and-public-route-boundary) | A | Real sessions and public route boundary | Full stack | P0 | 003 | DONE |
 | [LSI-005](#lsi-005-authorized-collection-summaries) | A | Authorized collection summaries | Backend | P0 | 002, 004 | DONE |
-| [LSI-006](#lsi-006-home-and-my-learning) | A | Home and My learning | Frontend | P0 | 003, 005 | READY |
-| [LSI-007](#lsi-007-private-roadmap-outline) | B | Private roadmap outline | Full stack | P0 | 006 | TODO |
+| [LSI-006](#lsi-006-home-and-my-learning) | A | Home and My learning | Frontend | P0 | 003, 005 | DONE |
+| [LSI-007](#lsi-007-private-roadmap-outline) | B | Private roadmap outline | Full stack | P0 | 006 | READY |
 | [LSI-008](#lsi-008-persistent-lesson-reader-and-sources) | B | Persistent lesson reader and sources | Full stack | P0 | 007 | TODO |
 | [LSI-009](#lsi-009-learner-completion) | B | Learner completion | Full stack | P0 | 008 | TODO |
 | [LSI-010](#lsi-010-versioned-practice-server-contract) | B | Versioned practice server contract | Backend | P1 | 002, 008 | TODO |
@@ -118,6 +118,7 @@ Ticket size is a planning target. When scope proves too large, create explicit `
 - **Acceptance:** Saved/generated copies retain distinct identities; counts/last topic are authoritative; loading, empty, retry work.
 - **Test targets:** Rendered states and refresh/two-copy journey.
 - **Out of scope:** Public catalog or copy creation (LSI-029/031).
+- **Evidence:** StudioHomeView, StudioMyLearningView, useAuthorizedCurricula, and 15 passing vitest tests verified in [evidence/LSI-006.md](./evidence/LSI-006.md).
 
 ### LSI-007 Private roadmap outline
 **Epic:** B · **Type:** Full stack · **Priority:** P0 · **Depends:** LSI-006
