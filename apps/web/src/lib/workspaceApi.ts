@@ -228,6 +228,23 @@ export async function createWorkspace(
   });
 }
 
+/**
+ * Rename a workspace through the existing `PATCH /workspaces/{id}` contract.
+ *
+ * Resolves with the server's authoritative workspace (same id, new name) so the
+ * caller reflects server truth; rejects on failure so the dashboard can surface
+ * an actionable error (for example a viewer or non-member denial).
+ */
+export async function renameWorkspace(
+  workspaceId: string,
+  name: string
+): Promise<WorkspaceItem> {
+  return apiFetch<WorkspaceItem>(`/workspaces/${workspaceId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ name }),
+  });
+}
+
 export async function seedDemoWorkspace(): Promise<{ workspaceId: string; initialChatId: string }> {
   return apiFetch<{ workspaceId: string; initialChatId: string }>("/workspaces/seed", {
     method: "POST",

@@ -7,11 +7,21 @@ import {
   MessageSquare,
   Loader2,
   Compass,
+  MoreHorizontal,
+  Pencil,
   Pin,
   Plus,
   FolderOpen,
+  Trash2,
 } from "lucide-react";
-import { fetchWorkspaces, createWorkspace, WorkspaceItem } from "@/lib/workspaceApi";
+import {
+  fetchWorkspaces,
+  createWorkspace,
+  renameWorkspace,
+  deleteWorkspace,
+  WorkspaceItem,
+} from "@/lib/workspaceApi";
+import { ApiError } from "@/lib/apiClient";
 import { buildWorkspaceUrl } from "@/lib/urls";
 import { LogoBadge } from "@/components/ui/Logo";
 import { Button } from "@/components/ui/button";
@@ -21,8 +31,24 @@ import { WorkspaceShell } from "@/components/layout/WorkspaceShell";
 import { Surface } from "@/components/ui/surface";
 import { InlineFeedback } from "@/components/ui/feedback";
 import { UserMenu } from "@/components/layout/UserMenu";
+import { DropdownMenu } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Modal, ModalBody, ModalFooter, ModalHeader } from "@/components/ui/modal";
 import { RoadmapJobsNotice } from "@/components/roadmap/RoadmapJobsNotice";
 import { RoadmapModal } from "@/components/workspace/RoadmapModal";
+
+/** Turn a failed management write into an actionable, membership-aware message. */
+function describeManagementError(action: "rename" | "delete", error: unknown): string {
+  const status = error instanceof ApiError ? error.status : 0;
+  if (status === 403) {
+    return `You do not have permission to ${action} this workspace. Only owners and editors can.`;
+  }
+  if (status === 404) {
+    return `This workspace no longer exists or you are not a member. Refresh and try again.`;
+  }
+  return `Could not ${action} this workspace. Check your connection and try again.`;
+}
 
 export function WorkspaceDashboard() {
   const router = useRouter();
@@ -33,6 +59,12 @@ export function WorkspaceDashboard() {
   const [isRoadmapOpen, setIsRoadmapOpen] = useState(false);
   const [resumeJobId, setResumeJobId] = useState<string | null>(null);
   const [workspaceView, setWorkspaceView] = useState<"mine" | "discover">("mine");
+  const [renamingWorkspace, setRenamingWorkspace] = useState<WorkspaceItem | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [deletingWorkspace, setDeletingWorkspace] = useState<WorkspaceItem | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const loadWorkspaces = useCallback(async () => {
     setLoading(true);
@@ -60,6 +92,55 @@ export function WorkspaceDashboard() {
     } catch (err) {
       console.error(err);
       setIsCreating(false);
+    }
+  };
+
+  const openRename = (workspace: WorkspaceItem) => {
+    setActionError(null);
+    setRenamingWorkspace(workspace);
+    setRenameValue(workspace.name);
+  };
+
+  const closeRename = () => {
+    if (isRenaming) return;
+    setRenamingWorkspace(null);
+  };
+
+  const handleRename = async () => {
+    if (!renamingWorkspace) return;
+    const trimmed = renameValue.trim();
+    if (!trimmed) return;
+    setIsRenaming(true);
+    setActionError(null);
+    try {
+      const updated = await renameWorkspace(renamingWorkspace.id, trimmed);
+      // The id never changes — only the projected metadata does.
+      setWorkspaces((prev) =>
+        prev.map((ws) => (ws.id === updated.id ? { ...ws, ...updated } : ws))
+      );
+      setRenamingWorkspace(null);
+    } catch (err) {
+      setActionError(describeManagementError("rename", err));
+    } finally {
+      setIsRenaming(false);
+    }
+  };
+
+  const confirmDeleteWorkspace = async () => {
+    if (!deletingWorkspace) return;
+    setIsDeleting(true);
+    setActionError(null);
+    try {
+      const removed = await deleteWorkspace(deletingWorkspace.id);
+      if (!removed) {
+        throw new ApiError(0, "Delete request failed");
+      }
+      setWorkspaces((prev) => prev.filter((ws) => ws.id !== deletingWorkspace.id));
+      setDeletingWorkspace(null);
+    } catch (err) {
+      setActionError(describeManagementError("delete", err));
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -159,6 +240,20 @@ export function WorkspaceDashboard() {
               </InlineFeedback>
             </div>
           )}
+          {actionError && (
+            <div className="mb-6">
+              <InlineFeedback
+                tone="destructive"
+                action={
+                  <Button size="sm" variant="outline" onClick={() => setActionError(null)}>
+                    Dismiss
+                  </Button>
+                }
+              >
+                {actionError}
+              </InlineFeedback>
+            </div>
+          )}
 
           {/* Empty State vs Workspaces Grid */}
           {workspaces.length === 0 && !error ? (
@@ -198,52 +293,86 @@ export function WorkspaceDashboard() {
           ) : (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {workspaces.map((ws) => (
-                <Surface
-                  key={ws.id}
-                  variant="base"
-                  radius="card"
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => router.push(buildWorkspaceUrl(ws.id))}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      router.push(buildWorkspaceUrl(ws.id));
-                    }
-                  }}
-                  className="group relative flex cursor-pointer select-none flex-col p-4 text-left transition-colors hover:border-border-strong hover:bg-surface-hover"
-                  aria-label={`Open workspace ${ws.name}`}
-                >
-                  <div className="mb-2.5 flex w-full items-start justify-between gap-3">
-                    <div className="flex min-w-0 items-center gap-2">
-                      <h3 className="truncate pr-1 text-base font-medium leading-6 text-foreground">
-                        {ws.name}
-                      </h3>
-                      <span className="shrink-0 font-mono text-xs text-foreground-subtle">
-                        {ws.nodeCount || 0} nodes
+                <div key={ws.id} className="relative">
+                  <Surface
+                    variant="base"
+                    radius="card"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => router.push(buildWorkspaceUrl(ws.id))}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        router.push(buildWorkspaceUrl(ws.id));
+                      }
+                    }}
+                    className="group flex h-full cursor-pointer select-none flex-col p-4 text-left transition-colors hover:border-border-strong hover:bg-surface-hover"
+                    aria-label={`Open workspace ${ws.name}`}
+                  >
+                    <div className="mb-2.5 flex w-full items-start justify-between gap-3 pr-8">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <h3 className="truncate pr-1 text-base font-medium leading-6 text-foreground">
+                          {ws.name}
+                        </h3>
+                        <span className="shrink-0 font-mono text-xs text-foreground-subtle">
+                          {ws.nodeCount || 0} nodes
+                        </span>
+                      </div>
+                      <Pin className="mt-0.5 size-4 shrink-0 text-foreground-subtle" />
+                    </div>
+
+                    <p className="mb-4 line-clamp-2 flex-1 text-sm leading-5 text-foreground-muted">
+                      {ws.description || "Interactive knowledge graph & chat workspace"}
+                    </p>
+
+                    <div className="mt-auto flex w-full items-center justify-between border-t border-border-subtle pt-3 text-sm text-foreground-muted">
+                      <span className="flex min-w-0 items-center gap-1.5 truncate">
+                        <MessageSquare className="size-4 shrink-0" />
+                        <span className="truncate">Knowledge workspace</span>
+                      </span>
+                      <span className="ml-3 flex shrink-0 items-center gap-1.5 text-xs">
+                        <Clock className="size-3.5" />
+                        {new Date(ws.updatedAt).toLocaleDateString(undefined, {
+                          month: "short",
+                          day: "numeric",
+                        })}
                       </span>
                     </div>
-                    <Pin className="mt-0.5 size-4 shrink-0 text-foreground-subtle" />
-                  </div>
+                  </Surface>
 
-                  <p className="mb-4 line-clamp-2 flex-1 text-sm leading-5 text-foreground-muted">
-                    {ws.description || "Interactive knowledge graph & chat workspace"}
-                  </p>
-
-                  <div className="mt-auto flex w-full items-center justify-between border-t border-border-subtle pt-3 text-sm text-foreground-muted">
-                    <span className="flex min-w-0 items-center gap-1.5 truncate">
-                      <MessageSquare className="size-4 shrink-0" />
-                      <span className="truncate">Knowledge workspace</span>
-                    </span>
-                    <span className="ml-3 flex shrink-0 items-center gap-1.5 text-xs">
-                      <Clock className="size-3.5" />
-                      {new Date(ws.updatedAt).toLocaleDateString(undefined, {
-                        month: "short",
-                        day: "numeric",
-                      })}
-                    </span>
+                  {/* Management menu stays a sibling so the clickable card is never
+                      nested inside another interactive control. */}
+                  <div className="absolute right-2 top-2">
+                    <DropdownMenu
+                      trigger={
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label={`Manage ${ws.name}`}
+                          className="text-foreground-subtle hover:text-foreground"
+                        >
+                          <MoreHorizontal className="size-4" />
+                        </Button>
+                      }
+                      items={[
+                        {
+                          label: "Rename",
+                          icon: <Pencil className="size-3.5" />,
+                          onClick: () => openRename(ws),
+                        },
+                        {
+                          label: "Delete",
+                          icon: <Trash2 className="size-3.5" />,
+                          variant: "destructive",
+                          onClick: () => {
+                            setActionError(null);
+                            setDeletingWorkspace(ws);
+                          },
+                        },
+                      ]}
+                    />
                   </div>
-                </Surface>
+                </div>
               ))}
             </div>
           )}
@@ -255,6 +384,60 @@ export function WorkspaceDashboard() {
         resumeJobId={resumeJobId}
         isOpen={isRoadmapOpen}
         onClose={() => setIsRoadmapOpen(false)}
+      />
+
+      <Modal
+        isOpen={Boolean(renamingWorkspace)}
+        onClose={closeRename}
+        size="sm"
+        closeOnClickOutside={!isRenaming}
+      >
+        <ModalHeader
+          title="Rename workspace"
+          description="Only the display name changes; the workspace identity and links stay the same."
+          icon={<Pencil className="size-4 text-foreground-muted" />}
+          onClose={closeRename}
+        />
+        <ModalBody>
+          <Input
+            aria-label="Workspace name"
+            autoFocus
+            inputSize="sm"
+            value={renameValue}
+            onChange={(e) => setRenameValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                void handleRename();
+              }
+            }}
+            placeholder="Workspace name"
+          />
+        </ModalBody>
+        <ModalFooter>
+          <Button variant="outline" onClick={closeRename} disabled={isRenaming}>
+            Cancel
+          </Button>
+          <Button
+            onClick={() => void handleRename()}
+            loading={isRenaming}
+            loadingLabel="Renaming workspace"
+            disabled={!renameValue.trim()}
+          >
+            Save
+          </Button>
+        </ModalFooter>
+      </Modal>
+
+      <ConfirmDialog
+        isOpen={Boolean(deletingWorkspace)}
+        onClose={() => setDeletingWorkspace(null)}
+        onConfirm={confirmDeleteWorkspace}
+        isLoading={isDeleting}
+        title="Delete workspace"
+        description={`Are you sure you want to delete "${deletingWorkspace?.name ?? ""}" and all of its conversations? This cannot be undone.`}
+        confirmText="Delete"
+        variant="destructive"
       />
     </>
   );
