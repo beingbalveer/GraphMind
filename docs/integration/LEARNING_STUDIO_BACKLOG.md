@@ -17,15 +17,15 @@ This is the authoritative status board and ticket specification.
 | [LSI-009](#lsi-009-learner-completion) | B | Learner completion | Full stack | P0 | 008 | DONE |
 | [LSI-010](#lsi-010-versioned-practice-server-contract) | B | Versioned practice server contract | Backend | P1 | 002, 008 | DONE |
 | [LSI-011](#lsi-011-practice-ui) | B | Practice UI | Full stack | P1 | 009, 010 | DONE |
-| [LSI-012](#lsi-012-shared-roadmap-and-conversation-canvas) | B | Shared roadmap and conversation canvas | Full stack | P0 | 007, 009 | READY |
-| [LSI-013](#lsi-013-topicchat-histories) | B | TopicChat histories | Full stack | P0 | 008 | TODO |
-| [LSI-014](#lsi-014-tutor-stream-and-local-context-lifecycle) | B | Tutor stream and local context lifecycle | Full stack | P0 | 013 | TODO |
-| [LSI-015](#lsi-015-branch-service-integrity) | B | Branch service integrity | Backend | P0 | 014 | TODO |
-| [LSI-016](#lsi-016-nested-branch-ui-and-canonical-navigation) | B | Nested branch UI and canonical navigation | Frontend | P0 | 015 | TODO |
-| [LSI-017](#lsi-017-standalone-workspace-chats) | B | Standalone workspace chats | Full stack | P0 | 014, 015 | TODO |
-| [LSI-018](#lsi-018-course-directory-and-historical-chats) | B | Course directory and historical chats | Full stack | P1 | 013, 016, 017 | TODO |
+| [LSI-012](#lsi-012-shared-roadmap-and-conversation-canvas) | B | Shared roadmap and conversation canvas | Full stack | P0 | 007, 009 | DONE |
+| [LSI-013](#lsi-013-topicchat-histories) | B | TopicChat histories | Full stack | P0 | 008 | DONE |
+| [LSI-014](#lsi-014-tutor-stream-and-local-context-lifecycle) | B | Tutor stream and local context lifecycle | Full stack | P0 | 013 | DONE |
+| [LSI-015](#lsi-015-branch-service-integrity) | B | Branch service integrity | Backend | P0 | 014 | DONE |
+| [LSI-016](#lsi-016-nested-branch-ui-and-canonical-navigation) | B | Nested branch UI and canonical navigation | Frontend | P0 | 015 | DONE |
+| [LSI-017](#lsi-017-standalone-workspace-chats) | B | Standalone workspace chats | Full stack | P0 | 014, 015 | DONE |
+| [LSI-018](#lsi-018-course-directory-and-historical-chats) | B | Course directory and historical chats | Full stack | P1 | 013, 016, 017 | DONE |
 | [LSI-019](#lsi-019-rich-replies-and-agent-tools) | B | Rich replies and agent tools | Frontend | P1 | 014, 016 | TODO |
-| [LSI-020](#lsi-020-generator-request-and-provenance-extensions) | C | Generator request and provenance extensions | Backend | P0 | 002 | TODO |
+| [LSI-020](#lsi-020-generator-request-and-provenance-extensions) | C | Generator request and provenance extensions | Backend | P0 | 002 | DONE |
 | [LSI-021](#lsi-021-goal-form-and-profile-review) | C | Goal form and profile review | Frontend | P0 | 020 | TODO |
 | [LSI-022](#lsi-022-owned-job-creation-status-and-result) | C | Owned job creation, status, and result | Full stack | P0 | 021 | TODO |
 | [LSI-023](#lsi-023-clarification-round-trip) | C | Clarification round trip | Full stack | P1 | 022 | TODO |
@@ -41,7 +41,7 @@ This is the authoritative status board and ticket specification.
 | [LSI-033](#lsi-033-files-and-attachments) | E | Files and attachments | Full stack | P1 | 017, 019 | TODO |
 | [LSI-034](#lsi-034-existing-modal-viewers) | E | Existing modal viewers | Frontend | P1 | 033 | TODO |
 | [LSI-035](#lsi-035-flashcards-and-learning-message-actions) | E | Flashcards and learning message actions | Full stack | P1 | 019 | TODO |
-| [LSI-036](#lsi-036-direct-edits-and-revision-history) | E | Direct edits and revision history | Full stack | P1 | 008, 012 | TODO |
+| [LSI-036](#lsi-036-direct-edits-and-revision-history) | E | Direct edits and revision history | Full stack | P1 | 008, 012 | DONE |
 | [LSI-037](#lsi-037-ai-refinement-proposal-review) | E | AI refinement proposal review | Full stack | P1 | 024, 036 | TODO |
 | [LSI-038](#lsi-038-branch-promotion) | E | Branch promotion | Full stack | P1 | 016, 036 | TODO |
 | [LSI-039](#lsi-039-provider-model-and-system-skill-settings) | E | Provider, model, and system-skill settings | Full stack | P1 | 019, 024 | TODO |
@@ -209,25 +209,28 @@ Ticket size is a planning target. When scope proves too large, create explicit `
 - **Evidence:** Clean canonical URLs, unresponded root recovery and resume banner, context independence verification, and 20 passing unit/integration tests verified in [evidence/LSI-017.md](./evidence/LSI-017.md).
 
 ### LSI-018 Course directory and historical chats
-**Epic:** B · **Type:** Full stack · **Priority:** P1 · **Depends:** LSI-013, LSI-016, LSI-017
+**Epic:** B · **Type:** Full stack · **Priority:** P1 · **Depends:** LSI-013, LSI-016, LSI-017 · **Status:** Complete
 - **Scope:** Existing list/recent/pin/rename metadata, scoped search, branch ancestry projection, outer ordinary/personal history access.
 - **Acceptance:** No cross-workspace rows or anchor row; titles/order persist; history is not copied.
 - **Test targets:** List/rename/pin, directory filter, authorization, and refresh tests.
 - **Out of scope:** New workspace-management behavior (LSI-040).
+- **Evidence:** Workspace-scoped directory projection with anchor exclusion, scoped search, lesson/personal ancestry, canonical open, persistent rename/pin, and authorization rejection, verified by 15 passing web tests, 8 passing LSI-013 regression tests, and 4 passing backend tests in [evidence/LSI-018.md](./evidence/LSI-018.md).
 
 ### LSI-019 Rich replies and agent tools
-**Epic:** B · **Type:** Frontend · **Priority:** P1 · **Depends:** LSI-014, LSI-016
+**Epic:** B · **Type:** Frontend · **Priority:** P1 · **Depends:** LSI-014, LSI-016 · **Status:** Complete
 - **Scope:** Reuse Markdown/KaTeX/code/citations/tool events/quiz/error renderers and working message actions.
 - **Acceptance:** Incremental/final content agrees; unsafe markup/links blocked; tool failures visible; existing learning actions retained.
 - **Test targets:** SSE render fixtures, injection cases, copy/citation/tool browser checks.
 - **Out of scope:** New agent tool capabilities or dead placeholder actions.
+- **Evidence:** Shared rich renderers wired into the tutor pane (Markdown/KaTeX/code/quiz/error, tool events, citations), pinned safe-link `urlTransform`, incremental/final SSE parity, and 10 passing focused tests verified in [evidence/LSI-019.md](./evidence/LSI-019.md).
 
 ### LSI-020 Generator request and provenance extensions
-**Epic:** C — Real generation · **Type:** Backend · **Priority:** P0 · **Depends:** LSI-002
+**Epic:** C — Real generation · **Type:** Backend · **Priority:** P0 · **Depends:** LSI-002 · **Status:** Complete
 - **Scope:** Map existing `RoadmapRequest`; add only approved optional outcome/knownSkills/reference/source-snapshot fields.
 - **Acceptance:** Existing clients remain valid; unsupported fields are not silently dropped; sources validated with existing protections.
 - **Test targets:** Schema/backward-compatibility, URL-bounds, and stale-source tests.
 - **Out of scope:** UI or treating local fixed-sample selection as existing API behavior.
+- **Evidence:** Optional `outcome`/`known_skills`/`reference_url`/`sample_template_ref` extensions, `extra="forbid"` rejection of unsupported fields, canonicalized URL bounds, curated sample-snapshot allowlist, and 28 focused tests verified in [evidence/LSI-020.md](./evidence/LSI-020.md).
 
 ### LSI-021 Goal form and profile review
 **Epic:** C · **Type:** Frontend · **Priority:** P0 · **Depends:** LSI-020
@@ -340,6 +343,7 @@ Ticket size is a planning target. When scope proves too large, create explicit `
 - **Acceptance:** Lesson/List/Canvas update coherently; history preserved; stale edits recover; progress mapping follows existing policy.
 - **Test targets:** Revision/edit APIs/components and conflict/restore browser checks.
 - **Out of scope:** Silent overwrite or new revision semantics.
+- **Evidence:** Reused topic editor/revision history/diff/restore across Lesson/List/Canvas surfaces, stale-edit conflict recovery, and progress-preserving edits/restores verified in [evidence/LSI-036.md](./evidence/LSI-036.md).
 
 ### LSI-037 AI refinement proposal review
 **Epic:** E · **Type:** Full stack · **Priority:** P1 · **Depends:** LSI-024, LSI-036
