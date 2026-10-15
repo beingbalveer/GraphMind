@@ -2,8 +2,6 @@
 
 import React, { useState } from "react";
 import {
-  CheckCircle2,
-  Circle,
   Clock,
   FileText,
   Sparkles,
@@ -27,9 +25,16 @@ import {
 import {
   StudioMyLearningView,
 } from "@/components/studio/StudioMyLearningView";
+import {
+  StudioCourseOutline,
+} from "@/components/studio/StudioCourseOutline";
+import {
+  StudioCourseListView,
+} from "@/components/studio/StudioCourseListView";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { WorkspaceItem } from "@/lib/workspaceApi";
+import { CurriculumView } from "@/lib/roadmapTypes";
 
 /**
  * Gated / Internal Studio Preview Route
@@ -42,15 +47,173 @@ export default function StudioPreviewPage() {
   const [isRightRailOpen, setIsRightRailOpen] = useState(true);
   const [isRightExpanded, setIsRightExpanded] = useState(false);
   const [isDark, setIsDark] = useState(false);
+  const [activeTopicId, setActiveTopicId] = useState<string>("t2");
   const [activeTopic, setActiveTopic] = useState("FastAPI Asynchronous Architecture");
+  const [showCourseListView, setShowCourseListView] = useState<boolean>(false);
 
-  const mockTopics = [
-    { id: "1", title: "Python Async & Await Fundamentals", done: true, minutes: 25 },
-    { id: "2", title: "FastAPI Asynchronous Architecture", done: false, minutes: 40 },
-    { id: "3", title: "Pydantic v2 Schema Modeling", done: false, minutes: 30 },
-    { id: "4", title: "SQLAlchemy 2.0 Async Session Engine", done: false, minutes: 45 },
-    { id: "5", title: "PostgreSQL pgvector Embedding Search", done: false, minutes: 60 },
-  ];
+  const sampleCurriculumView: CurriculumView = {
+    roadmapId: "rm_python",
+    workspaceId: "ws_python_demo",
+    canWrite: true,
+    canvasAnchorChatId: "anchor_1",
+    revisionId: "rev_python_1",
+    profile: {
+      title: "Backend Engineering with Python",
+      prompt: "Learn modern Python backend engineering",
+      level: "intermediate",
+      background: null,
+      duration: { value: 4, unit: "weeks" },
+      hoursPerWeek: "6",
+      studyWeeks: 4,
+      weeklyMinutes: 360,
+      outcome: "Build production-ready asynchronous backends with FastAPI and PostgreSQL",
+      assumptions: [
+        "Master async/await syntax and event loop concurrency",
+        "Deploy connection pooling with asyncpg and SQLAlchemy 2.0",
+      ],
+      knownSkills: ["Python Basics", "REST APIs"],
+    },
+    candidate: {
+      title: "Backend Engineering with Python",
+      outcome: "Build production-ready asynchronous backends with FastAPI and PostgreSQL",
+      assumptions: [
+        "Master async/await syntax and event loop concurrency",
+        "Deploy connection pooling with asyncpg and SQLAlchemy 2.0",
+      ],
+      items: [
+        {
+          id: "p1",
+          kind: "phase",
+          title: "Phase 1: Async Fundamentals",
+          brief: "Event loops, coroutines, and async syntax",
+          objectives: [],
+          exercise: null,
+          format: null,
+          order: 1,
+          path: "core",
+          estimateMinutes: 65,
+          participation: "active",
+        },
+        {
+          id: "t1",
+          kind: "topic",
+          title: "Python Async & Await Fundamentals",
+          brief: "Understanding event loop cooperative scheduling and tasks",
+          objectives: ["Explain non-blocking I/O execution"],
+          exercise: "Write concurrent gather routines",
+          format: "concepts",
+          order: 1,
+          path: "core",
+          estimateMinutes: 25,
+          participation: "active",
+        },
+        {
+          id: "t2",
+          kind: "topic",
+          title: "FastAPI Asynchronous Architecture",
+          brief: "Design asynchronous route operations with Starlette",
+          objectives: ["Implement async dependency injection"],
+          exercise: "Build non-blocking API handlers",
+          format: "practice",
+          order: 2,
+          path: "core",
+          estimateMinutes: 40,
+          participation: "active",
+        },
+        {
+          id: "p2",
+          kind: "phase",
+          title: "Phase 2: Database & Schemas",
+          brief: "Pydantic v2 validation and async database persistence",
+          objectives: [],
+          exercise: null,
+          format: null,
+          order: 2,
+          path: "core",
+          estimateMinutes: 135,
+          participation: "active",
+        },
+        {
+          id: "t3",
+          kind: "topic",
+          title: "Pydantic v2 Schema Modeling",
+          brief: "High performance data validation with Rust core",
+          objectives: ["Configure model validators and serializers"],
+          exercise: "Validate complex API payloads",
+          format: "concepts",
+          order: 1,
+          path: "core",
+          estimateMinutes: 30,
+          participation: "active",
+        },
+        {
+          id: "t4",
+          kind: "topic",
+          title: "SQLAlchemy 2.0 Async Session Engine",
+          brief: "Asyncpg database driver and session lifecycle",
+          objectives: ["Manage sessions with async context managers"],
+          exercise: "Execute queries with AsyncSession",
+          format: "practice",
+          order: 2,
+          path: "core",
+          estimateMinutes: 45,
+          participation: "active",
+        },
+        {
+          id: "t5",
+          kind: "topic",
+          title: "PostgreSQL pgvector Embedding Search",
+          brief: "Vector similarity search for RAG and semantic retrieval",
+          objectives: ["Perform cosine similarity queries"],
+          exercise: "Store and search vector embeddings",
+          format: "project",
+          order: 3,
+          path: "core",
+          estimateMinutes: 60,
+          participation: "active",
+        },
+      ],
+      relations: [
+        { sourceId: "p1", targetId: "t1", kind: "contains" },
+        { sourceId: "p1", targetId: "t2", kind: "contains" },
+        { sourceId: "p2", targetId: "t3", kind: "contains" },
+        { sourceId: "p2", targetId: "t4", kind: "contains" },
+        { sourceId: "p2", targetId: "t5", kind: "contains" },
+      ],
+      choices: [],
+      sessions: [],
+      resources: [],
+    },
+    sources: [
+      {
+        id: "s1",
+        title: "FastAPI Official Documentation",
+        url: "https://fastapi.tiangolo.com/async/",
+        referenceId: null,
+        locator: "https://fastapi.tiangolo.com/async/",
+        verifiedAt: "2026-10-10T12:00:00Z",
+        status: "inspected",
+        access: "free",
+        kind: "article",
+        evidence: "FastAPI supports async def routes natively.",
+        provenance: {},
+      },
+    ],
+    progress: {
+      t1: { topicId: "t1", status: "completed", completedAt: "2026-10-15T08:00:00Z" },
+      t2: { topicId: "t2", status: "in_progress", completedAt: null },
+      t3: { topicId: "t3", status: "not_started", completedAt: null },
+      t4: { topicId: "t4", status: "not_started", completedAt: null },
+      t5: { topicId: "t5", status: "not_started", completedAt: null },
+    },
+    validation: {
+      valid: true,
+      issues: [],
+      coreMinutes: 200,
+      capacityMinutes: 360,
+    },
+    origins: [],
+  };
 
   const demoWorkspaces: WorkspaceItem[] = [
     {
@@ -150,29 +313,18 @@ export default function StudioPreviewPage() {
           onClose={() => setIsLeftRailOpen(false)}
           onNewChat={() => alert("New course conversation triggered")}
           outlineContent={
-            <div className="space-y-1">
-              {mockTopics.map((topic, i) => (
-                <button
-                  key={topic.id}
-                  onClick={() => setActiveTopic(topic.title)}
-                  className={`w-full flex items-center justify-between p-2 rounded-lg text-left text-xs transition-colors ${
-                    activeTopic === topic.title
-                      ? "bg-surface-hover text-foreground font-medium"
-                      : "text-foreground-muted hover:bg-surface-hover/60 hover:text-foreground"
-                  }`}
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    {topic.done ? (
-                      <CheckCircle2 className="size-3.5 text-success shrink-0" />
-                    ) : (
-                      <Circle className="size-3.5 text-foreground-subtle shrink-0" />
-                    )}
-                    <span className="truncate">{`${i + 1}. ${topic.title}`}</span>
-                  </div>
-                  <span className="text-2xs text-foreground-subtle shrink-0">{topic.minutes}m</span>
-                </button>
-              ))}
-            </div>
+            <StudioCourseOutline
+              view={sampleCurriculumView}
+              activeTopicId={activeTopicId}
+              onSelectTopic={(tId) => {
+                const found = sampleCurriculumView.candidate.items.find((x) => x.id === tId);
+                if (found) {
+                  setActiveTopic(found.title);
+                  setActiveTopicId(tId);
+                  setShowCourseListView(false);
+                }
+              }}
+            />
           }
           chatsContent={
             <div className="p-3 text-xs text-foreground-muted">
@@ -230,6 +382,30 @@ export default function StudioPreviewPage() {
             onBrowse={() => setActiveNav("browse")}
           />
         </div>
+      ) : showCourseListView ? (
+        /* Full Course Outline List View */
+        <div className="flex-1 overflow-y-auto">
+          <div className="max-w-5xl mx-auto px-6 pt-4 flex justify-end">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowCourseListView(false)}
+            >
+              Back to Lesson
+            </Button>
+          </div>
+          <StudioCourseListView
+            view={sampleCurriculumView}
+            onSelectTopic={(tId) => {
+              const found = sampleCurriculumView.candidate.items.find((x) => x.id === tId);
+              if (found) {
+                setActiveTopic(found.title);
+                setActiveTopicId(tId);
+                setShowCourseListView(false);
+              }
+            }}
+          />
+        </div>
       ) : (
         /* Main Course Stage */
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 max-w-4xl mx-auto w-full">
@@ -248,6 +424,13 @@ export default function StudioPreviewPage() {
               </div>
 
               <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShowCourseListView(true)}
+                >
+                  Roadmap Outline
+                </Button>
                 <Button
                   size="sm"
                   variant="outline"

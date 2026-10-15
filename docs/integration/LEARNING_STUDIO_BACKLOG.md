@@ -12,8 +12,8 @@ This is the authoritative status board and ticket specification.
 | [LSI-004](#lsi-004-real-sessions-and-public-route-boundary) | A | Real sessions and public route boundary | Full stack | P0 | 003 | DONE |
 | [LSI-005](#lsi-005-authorized-collection-summaries) | A | Authorized collection summaries | Backend | P0 | 002, 004 | DONE |
 | [LSI-006](#lsi-006-home-and-my-learning) | A | Home and My learning | Frontend | P0 | 003, 005 | DONE |
-| [LSI-007](#lsi-007-private-roadmap-outline) | B | Private roadmap outline | Full stack | P0 | 006 | READY |
-| [LSI-008](#lsi-008-persistent-lesson-reader-and-sources) | B | Persistent lesson reader and sources | Full stack | P0 | 007 | TODO |
+| [LSI-007](#lsi-007-private-roadmap-outline) | B | Private roadmap outline | Full stack | P0 | 006 | DONE |
+| [LSI-008](#lsi-008-persistent-lesson-reader-and-sources) | B | Persistent lesson reader and sources | Full stack | P0 | 007 | READY |
 | [LSI-009](#lsi-009-learner-completion) | B | Learner completion | Full stack | P0 | 008 | TODO |
 | [LSI-010](#lsi-010-versioned-practice-server-contract) | B | Versioned practice server contract | Backend | P1 | 002, 008 | TODO |
 | [LSI-011](#lsi-011-practice-ui) | B | Practice UI | Full stack | P1 | 009, 010 | TODO |
@@ -126,6 +126,7 @@ Ticket size is a planning target. When scope proves too large, create explicit `
 - **Acceptance:** Canonical workspace route and server topic IDs; no fixture fallback; stale/denied states explicit.
 - **Test targets:** API adapter/component tests and legacy roadmap fixture.
 - **Out of scope:** Public snapshots or canvas redesign.
+- **Evidence:** Private roadmap outline, full course list view, and 6 unit tests verified in [evidence/LSI-007.md](./evidence/LSI-007.md).
 
 ### LSI-008 Persistent lesson reader and sources
 **Epic:** B · **Type:** Full stack · **Priority:** P0 · **Depends:** LSI-007
