@@ -16,7 +16,7 @@
 - Exact next action: Implement LSI-011 (Practice UI) rendering real activities, hints, retries, and answer drafts using `@/components/ui/` primitives.
 - Pending command/session: none
 - Commands run and actual results: `pytest` (368 passed), `vitest` (35 studio tests passed), `pnpm --filter web typecheck` (passed with 0 errors), `next lint` (passed with 0 errors), `next build` (compiled successfully).
-- Completion commit: pending LSI-010 commit
+- Completion commit: `ae69fa4` (LSI-010 completion commit)
 
 For each approved ticket, record the user approval source, date, and precise scope here. Preserve it across interruptions for that same scope.
 
