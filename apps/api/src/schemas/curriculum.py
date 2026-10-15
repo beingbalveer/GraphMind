@@ -73,6 +73,7 @@ class CurriculumItemData(CurriculumSchema):
     path: Literal["core", "further"] = "core"
     estimate_minutes: int | None = Field(default=None, ge=1, le=100000)
     participation: Literal["active", "archived"] = "active"
+    content_markdown: str | None = Field(default=None, max_length=65536)
 
     @field_validator("objectives")
     @classmethod
@@ -180,6 +181,7 @@ class TopicBrief(CurriculumSchema):
     progress: TopicProgressData
     default_chat_id: str | None = None
     latest_check: KnowledgeCheckData | None = None
+    saved_lesson_content: str | None = None
 
 
 class CurriculumTopicOriginData(CurriculumSchema):

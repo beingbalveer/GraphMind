@@ -496,6 +496,11 @@ class CurriculumRepository:
             for r in view.candidate.relations
             if r.kind == "prerequisite" and r.target_id == topic_id
         }
+        saved_lesson_content: str | None = None
+        if default_chat:
+            lesson_node = await self.session.get(NodeModel, f"{default_chat}_lesson")
+            if lesson_node and lesson_node.content:
+                saved_lesson_content = lesson_node.content
         return TopicBrief(
             item=item,
             resources=[
@@ -509,4 +514,5 @@ class CurriculumRepository:
             progress=view.progress[topic_id],
             default_chat_id=default_chat,
             latest_check=KnowledgeCheckData.model_validate(latest) if latest else None,
+            saved_lesson_content=saved_lesson_content,
         )

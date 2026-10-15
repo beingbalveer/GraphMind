@@ -516,3 +516,67 @@ async def test_workspace_delete_still_cascades_roadmap(published_curriculum, cur
         assert (await client.delete(f"/api/v1/workspaces/{view.workspace_id}")).status_code == 204
     await curriculum_session.rollback()
     assert await curriculum_session.get(Roadmap, view.roadmap_id) is None
+
+
+async def test_topic_brief_saved_lesson_resolution(published_curriculum, curriculum_session):
+    """LSI-008: TopicBrief resolves saved assistant lesson node if present, or returns None."""
+    from uuid import uuid4
+
+    from models.workspace import NodeModel
+
+    view = published_curriculum.view
+    topic = next(i for i in view.candidate.items if i.kind == "topic")
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+        cookies={"access_token": create_access_token("usr_default_admin")},
+    ) as client:
+        # 1. Before opening session: saved_lesson_content is None (honest brief state)
+        resp = await client.get(f"/api/v1/workspaces/{view.workspace_id}/roadmap/topics/{topic.id}")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["savedLessonContent"] is None
+        assert data["item"]["id"] == topic.id
+        assert "brief" in data["item"]
+        assert "objectives" in data["item"]
+
+        # 2. Open a session to establish default_chat_id
+        session_resp = await client.post(
+            f"/api/v1/workspaces/{view.workspace_id}/roadmap/topics/{topic.id}/sessions",
+            headers={"Idempotency-Key": str(uuid4())},
+            json={"fresh": False},
+        )
+        assert session_resp.status_code == 201
+        session_data = session_resp.json()
+        chat_id = session_data["chatId"]
+
+        # Before assistant lesson node is written: savedLessonContent is still None
+        resp_after_open = await client.get(
+            f"/api/v1/workspaces/{view.workspace_id}/roadmap/topics/{topic.id}"
+        )
+        assert resp_after_open.status_code == 200
+        assert resp_after_open.json()["savedLessonContent"] is None
+        assert resp_after_open.json()["defaultChatId"] == chat_id
+
+        # 3. Simulate completed assistant lesson node created by TutorService
+        lesson_node = NodeModel(
+            id=f"{chat_id}_lesson",
+            workspace_id=view.workspace_id,
+            parent_id=chat_id,
+            role="assistant",
+            content="# Lesson Title\n\nThis is the saved server lesson body.",
+            metadata_payload={"topicSessionId": session_data["id"]},
+        )
+        curriculum_session.add(lesson_node)
+        await curriculum_session.commit()
+
+        # 4. Brief now resolves the saved server lesson content
+        resp_with_lesson = await client.get(
+            f"/api/v1/workspaces/{view.workspace_id}/roadmap/topics/{topic.id}"
+        )
+        assert resp_with_lesson.status_code == 200
+        assert resp_with_lesson.json()["savedLessonContent"] == (
+            "# Lesson Title\n\nThis is the saved server lesson body."
+        )
+

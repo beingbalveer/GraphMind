@@ -2,8 +2,6 @@
 
 import React, { useState } from "react";
 import {
-  Clock,
-  FileText,
   Sparkles,
 } from "lucide-react";
 import {
@@ -31,10 +29,12 @@ import {
 import {
   StudioCourseListView,
 } from "@/components/studio/StudioCourseListView";
+import {
+  StudioLessonReader,
+} from "@/components/studio/StudioLessonReader";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { WorkspaceItem } from "@/lib/workspaceApi";
-import { CurriculumView } from "@/lib/roadmapTypes";
+import { CurriculumView, TopicProgressData } from "@/lib/roadmapTypes";
 
 /**
  * Gated / Internal Studio Preview Route
@@ -119,6 +119,37 @@ export default function StudioPreviewPage() {
           path: "core",
           estimateMinutes: 40,
           participation: "active",
+          contentMarkdown: `# FastAPI Asynchronous Architecture
+
+FastAPI is built on top of Starlette and Pydantic, designed from the ground up to take full advantage of modern Python asynchronous programming (PEP 492).
+
+## Concurrency & Event Loop
+
+By writing asynchronous path operation functions using \`async def\`, your application can handle I/O-bound tasks concurrently without blocking the main event loop.
+
+\`\`\`python
+from fastapi import FastAPI
+import asyncio
+
+app = FastAPI()
+
+@app.get("/items")
+async def read_items():
+    await asyncio.sleep(0.05)  # Non-blocking simulation
+    return [{"id": 1, "name": "Async Task"}]
+\`\`\`
+
+## Dependency Injection with Async Contexts
+
+FastAPI dependency injection system natively supports async generator dependencies with cleanup:
+
+\`\`\`python
+async def get_db_session():
+    async with async_session_factory() as session:
+        yield session
+\`\`\`
+
+Always avoid invoking CPU-bound or blocking synchronous routines directly in \`async def\` endpoints without running them in an executor.`,
         },
         {
           id: "p2",
@@ -271,6 +302,55 @@ export default function StudioPreviewPage() {
     }
   };
 
+  const [progressMap, setProgressMap] = useState<Record<string, TopicProgressData>>(
+    sampleCurriculumView.progress
+  );
+  const viewWithProgress: CurriculumView = {
+    ...sampleCurriculumView,
+    progress: progressMap,
+  };
+  const allTopics = viewWithProgress.candidate.items.filter((x) => x.kind === "topic");
+  const currentTopic = allTopics.find((x) => x.id === activeTopicId) || allTopics[0];
+  const currentIndex = allTopics.findIndex((x) => x.id === currentTopic.id);
+  const isCompleted = progressMap[currentTopic.id]?.status === "completed";
+
+  const phaseRelation = viewWithProgress.candidate.relations.find(
+    (r) => r.kind === "contains" && r.targetId === currentTopic.id
+  );
+  const phase = phaseRelation
+    ? viewWithProgress.candidate.items.find((x) => x.id === phaseRelation.sourceId)
+    : undefined;
+
+  const toggleComplete = () => {
+    setProgressMap((prev) => ({
+      ...prev,
+      [currentTopic.id]: {
+        topicId: currentTopic.id,
+        status: prev[currentTopic.id]?.status === "completed" ? "in_progress" : "completed",
+        completedAt:
+          prev[currentTopic.id]?.status === "completed" ? null : new Date().toISOString(),
+      },
+    }));
+  };
+
+  const goToPrevLesson = () => {
+    if (currentIndex > 0) {
+      const prev = allTopics[currentIndex - 1];
+      setActiveTopic(prev.title);
+      setActiveTopicId(prev.id);
+    }
+  };
+
+  const goToNextLesson = () => {
+    if (currentIndex < allTopics.length - 1) {
+      const next = allTopics[currentIndex + 1];
+      setActiveTopic(next.title);
+      setActiveTopicId(next.id);
+    } else {
+      setShowCourseListView(true);
+    }
+  };
+
   const handleToggleDark = () => {
     setIsDark((prev) => {
       const next = !prev;
@@ -314,10 +394,10 @@ export default function StudioPreviewPage() {
           onNewChat={() => alert("New course conversation triggered")}
           outlineContent={
             <StudioCourseOutline
-              view={sampleCurriculumView}
+              view={viewWithProgress}
               activeTopicId={activeTopicId}
               onSelectTopic={(tId) => {
-                const found = sampleCurriculumView.candidate.items.find((x) => x.id === tId);
+                const found = viewWithProgress.candidate.items.find((x) => x.id === tId);
                 if (found) {
                   setActiveTopic(found.title);
                   setActiveTopicId(tId);
@@ -395,9 +475,9 @@ export default function StudioPreviewPage() {
             </Button>
           </div>
           <StudioCourseListView
-            view={sampleCurriculumView}
+            view={viewWithProgress}
             onSelectTopic={(tId) => {
-              const found = sampleCurriculumView.candidate.items.find((x) => x.id === tId);
+              const found = viewWithProgress.candidate.items.find((x) => x.id === tId);
               if (found) {
                 setActiveTopic(found.title);
                 setActiveTopicId(tId);
@@ -407,60 +487,29 @@ export default function StudioPreviewPage() {
           />
         </div>
       ) : (
-        /* Main Course Stage */
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 max-w-4xl mx-auto w-full">
-          <div className="space-y-6">
-            <div className="flex items-center justify-between pb-4 border-b border-border">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <Badge variant="outline">Lesson 2 of 5</Badge>
-                  <span className="text-xs text-foreground-muted flex items-center gap-1">
-                    <Clock className="size-3" /> 40 minutes
-                  </span>
-                </div>
-                <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
-                  {activeTopic}
-                </h1>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setShowCourseListView(true)}
-                >
-                  Roadmap Outline
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setInCourse((v) => !v)}
-                >
-                  {inCourse ? "Preview Catalog Mode" : "Preview Course Mode"}
-                </Button>
-              </div>
-            </div>
-
-            <div className="prose dark:prose-invert max-w-none text-sm text-foreground-muted space-y-4 leading-relaxed">
-              <p>
-                FastAPI is built on top of Starlette and Pydantic, designed from the ground up to take full advantage
-                of modern Python asynchronous programming (PEP 492). By writing asynchronous path operation functions
-                using <code className="bg-surface-hover px-1.5 py-0.5 rounded text-foreground">async def</code>, your application can handle I/O-bound tasks concurrently without blocking the main event loop.
-              </p>
-
-              <div className="p-4 rounded-xl border border-border bg-surface">
-                <h4 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-1.5">
-                  <FileText className="size-4 text-primary" /> Key Learning Objectives
-                </h4>
-                <ul className="list-disc list-inside space-y-1 text-xs">
-                  <li>Understand the difference between async def and standard def in FastAPI endpoints</li>
-                  <li>Leverage FastAPI Dependency Injection with async context managers</li>
-                  <li>Integrate non-blocking SQLAlchemy 2.0 AsyncSessions without connection starvation</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        </div>
+        /* Main Course Stage: Persistent Lesson Reader & Sources */
+        <StudioLessonReader
+          workspaceId={viewWithProgress.workspaceId}
+          topic={currentTopic}
+          phaseTitle={phase?.title}
+          lessonIndex={currentIndex}
+          totalLessons={allTopics.length}
+          sources={viewWithProgress.sources}
+          isCompleted={isCompleted}
+          isFirst={currentIndex === 0}
+          isLast={currentIndex === allTopics.length - 1}
+          onBackToOutline={() => setShowCourseListView(true)}
+          onPrevLesson={goToPrevLesson}
+          onNextLesson={goToNextLesson}
+          onToggleComplete={toggleComplete}
+          onAskTutor={(quote) =>
+            alert(
+              quote
+                ? `Ask tutor with passage: "${quote}"`
+                : "Ask tutor about this topic"
+            )
+          }
+        />
       )}
     </LearningStudioShell>
   );

@@ -44,6 +44,7 @@ export interface CurriculumItemData {
   path: "core" | "further";
   estimateMinutes: number | null;
   participation: "active" | "archived";
+  contentMarkdown?: string | null;
 }
 export interface CurriculumRelationData {
   sourceId: string;
@@ -128,6 +129,7 @@ export interface TopicBrief {
   progress: TopicProgressData;
   defaultChatId: string | null;
   latestCheck: KnowledgeCheckData | null;
+  savedLessonContent?: string | null;
 }
 export interface CurriculumView {
   roadmapId: string;

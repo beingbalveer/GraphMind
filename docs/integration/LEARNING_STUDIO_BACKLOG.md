@@ -13,8 +13,8 @@ This is the authoritative status board and ticket specification.
 | [LSI-005](#lsi-005-authorized-collection-summaries) | A | Authorized collection summaries | Backend | P0 | 002, 004 | DONE |
 | [LSI-006](#lsi-006-home-and-my-learning) | A | Home and My learning | Frontend | P0 | 003, 005 | DONE |
 | [LSI-007](#lsi-007-private-roadmap-outline) | B | Private roadmap outline | Full stack | P0 | 006 | DONE |
-| [LSI-008](#lsi-008-persistent-lesson-reader-and-sources) | B | Persistent lesson reader and sources | Full stack | P0 | 007 | READY |
-| [LSI-009](#lsi-009-learner-completion) | B | Learner completion | Full stack | P0 | 008 | TODO |
+| [LSI-008](#lsi-008-persistent-lesson-reader-and-sources) | B | Persistent lesson reader and sources | Full stack | P0 | 007 | DONE |
+| [LSI-009](#lsi-009-learner-completion) | B | Learner completion | Full stack | P0 | 008 | READY |
 | [LSI-010](#lsi-010-versioned-practice-server-contract) | B | Versioned practice server contract | Backend | P1 | 002, 008 | TODO |
 | [LSI-011](#lsi-011-practice-ui) | B | Practice UI | Full stack | P1 | 009, 010 | TODO |
 | [LSI-012](#lsi-012-shared-roadmap-and-conversation-canvas) | B | Shared roadmap and conversation canvas | Full stack | P0 | 007, 009 | TODO |
@@ -134,6 +134,7 @@ Ticket size is a planning target. When scope proves too large, create explicit `
 - **Acceptance:** No assumption that `TopicBrief` has a standalone lesson body (`brief`, `objectives`, `exercise`, and `resources` are present). Existing full lessons are assistant nodes under TopicChat sessions; display uses the correct saved node/session/revision. Reading does not implicitly create a session or start an LLM stream; no body means an honest state.
 - **Test targets:** Lesson load/error/reference/session/revision tests and mobile refresh; if the approved design requires new lesson-body storage/API, split bounded LSI-008.1/008.2 contracts and dependencies before implementation.
 - **Out of scope:** Guest authored snapshots (LSI-025/027), automatic generation on read, or curriculum editing.
+- **Evidence:** Persistent lesson reader, three-tiered content resolution, verified sources, reading position persistence, and backend/frontend tests verified in [evidence/LSI-008.md](./evidence/LSI-008.md).
 
 ### LSI-009 Learner completion
 **Epic:** B · **Type:** Full stack · **Priority:** P0 · **Depends:** LSI-008
