@@ -2,9 +2,6 @@
 
 import React, { useState } from "react";
 import {
-  Sparkles,
-} from "lucide-react";
-import {
   LearningStudioShell,
 } from "@/components/studio/LearningStudioShell";
 import {
@@ -48,6 +45,7 @@ export default function StudioPreviewPage() {
   const [isRightExpanded, setIsRightExpanded] = useState(false);
   const [isDark, setIsDark] = useState(false);
   const [activeTopicId, setActiveTopicId] = useState<string>("t2");
+  const [tutorQuote, setTutorQuote] = useState<string | null>(null);
   const [activeTopic, setActiveTopic] = useState("FastAPI Asynchronous Architecture");
   const [showCourseListView, setShowCourseListView] = useState<boolean>(false);
 
@@ -416,22 +414,11 @@ Always avoid invoking CPU-bound or blocking synchronous routines directly in \`a
           workspaceId={viewWithProgress.workspaceId}
           topicId={activeTopicId}
           topicTitle={activeTopic}
+          quotedPassage={tutorQuote}
+          onClearQuote={() => setTutorQuote(null)}
           isExpanded={isRightExpanded}
           onToggleExpand={() => setIsRightExpanded((v) => !v)}
           onClose={() => setIsRightRailOpen(false)}
-          tutorContent={
-            <div className="space-y-3 text-xs">
-              <div className="p-3 bg-surface-hover/60 rounded-xl border border-border-subtle">
-                <div className="flex items-center gap-1.5 text-primary font-medium mb-1">
-                  <Sparkles className="size-3.5" />
-                  <span>AI Tutor Active</span>
-                </div>
-                <p className="text-foreground-muted leading-relaxed">
-                  Ready to explain async request routing, event loops, or dependency injection in FastAPI.
-                </p>
-              </div>
-            </div>
-          }
           resourcesContent={
             <div className="space-y-2 text-xs">
               <div className="p-2.5 rounded-lg border border-border-subtle bg-surface">
@@ -502,13 +489,10 @@ Always avoid invoking CPU-bound or blocking synchronous routines directly in \`a
           onPrevLesson={goToPrevLesson}
           onNextLesson={goToNextLesson}
           onToggleComplete={toggleComplete}
-          onAskTutor={(quote) =>
-            alert(
-              quote
-                ? `Ask tutor with passage: "${quote}"`
-                : "Ask tutor about this topic"
-            )
-          }
+          onAskTutor={(quote) => {
+            setTutorQuote(quote || null);
+            setIsRightRailOpen(true);
+          }}
         />
       )}
     </LearningStudioShell>

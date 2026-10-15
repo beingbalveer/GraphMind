@@ -5,6 +5,7 @@ import { BookMarked, History, Maximize2, Minimize2, MessageSquare, Sparkles, X }
 import { Button } from "@/components/ui/button";
 import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { StudioTopicChatHistory } from "./StudioTopicChatHistory";
+import { StudioTutorChat } from "./StudioTutorChat";
 import { cn } from "@/lib/utils";
 import type { TopicSessionData, TopicSessionSummary } from "@/lib/roadmapTypes";
 
@@ -14,6 +15,9 @@ export interface StudioTutorRailProps {
   topicTitle?: string;
   isArchived?: boolean;
   activeSessionId?: string | null;
+  activeSession?: TopicSessionData | null;
+  quotedPassage?: string | null;
+  onClearQuote?: () => void;
   onSelectSession?: (session: TopicSessionSummary) => void;
   onSessionCreated?: (session: TopicSessionData) => void;
   tutorContent?: React.ReactNode;
@@ -34,6 +38,9 @@ export function StudioTutorRail({
   topicTitle = "Current Topic",
   isArchived = false,
   activeSessionId,
+  activeSession,
+  quotedPassage,
+  onClearQuote,
   onSelectSession,
   onSessionCreated,
   tutorContent,
@@ -158,14 +165,14 @@ export function StudioTutorRail({
           ) : tutorContent ? (
             tutorContent
           ) : workspaceId && topicId ? (
-            <StudioTopicChatHistory
+            <StudioTutorChat
               workspaceId={workspaceId}
               topicId={topicId}
               topicTitle={topicTitle}
-              isArchived={isArchived}
-              activeSessionId={activeSessionId}
-              onSelectSession={onSelectSession}
-              onSessionCreated={onSessionCreated}
+              topicSessionId={activeSessionId}
+              activeSession={activeSession}
+              quotedPassage={quotedPassage}
+              onClearQuote={onClearQuote}
             />
           ) : (
             <div className="p-4 text-center text-xs text-foreground-muted flex flex-col items-center gap-2">

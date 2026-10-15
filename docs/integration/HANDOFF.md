@@ -3,20 +3,20 @@
 ## Current position — 2026-10-15
 
 - Active ticket: none
-- Completed tickets: `LSI-001` (DONE — evidence in `docs/integration/evidence/LSI-001.md`), `LSI-002` (DONE — evidence in `docs/integration/evidence/LSI-002.md`), `LSI-003` (DONE — evidence in `docs/integration/evidence/LSI-003.md`), `LSI-004` (DONE — evidence in `docs/integration/evidence/LSI-004.md`), `LSI-005` (DONE — evidence in `docs/integration/evidence/LSI-005.md`), `LSI-006` (DONE — evidence in `docs/integration/evidence/LSI-006.md`), `LSI-007` (DONE — evidence in `docs/integration/evidence/LSI-007.md`), `LSI-008` (DONE — evidence in `docs/integration/evidence/LSI-008.md`), `LSI-009` (DONE — evidence in `docs/integration/evidence/LSI-009.md`), `LSI-010` (DONE — evidence in `docs/integration/evidence/LSI-010.md`), `LSI-011` (DONE — evidence in `docs/integration/evidence/LSI-011.md`), `LSI-012` (DONE — evidence in `docs/integration/evidence/LSI-012.md`), `LSI-013` (DONE — evidence in `docs/integration/evidence/LSI-013.md`)
-- Next ticket: `LSI-014` (READY — blanket user approval recorded)
+- Completed tickets: `LSI-001` (DONE — evidence in `docs/integration/evidence/LSI-001.md`), `LSI-002` (DONE — evidence in `docs/integration/evidence/LSI-002.md`), `LSI-003` (DONE — evidence in `docs/integration/evidence/LSI-003.md`), `LSI-004` (DONE — evidence in `docs/integration/evidence/LSI-004.md`), `LSI-005` (DONE — evidence in `docs/integration/evidence/LSI-005.md`), `LSI-006` (DONE — evidence in `docs/integration/evidence/LSI-006.md`), `LSI-007` (DONE — evidence in `docs/integration/evidence/LSI-007.md`), `LSI-008` (DONE — evidence in `docs/integration/evidence/LSI-008.md`), `LSI-009` (DONE — evidence in `docs/integration/evidence/LSI-009.md`), `LSI-010` (DONE — evidence in `docs/integration/evidence/LSI-010.md`), `LSI-011` (DONE — evidence in `docs/integration/evidence/LSI-011.md`), `LSI-012` (DONE — evidence in `docs/integration/evidence/LSI-012.md`), `LSI-013` (DONE — evidence in `docs/integration/evidence/LSI-013.md`), `LSI-014` (DONE — evidence in `docs/integration/evidence/LSI-014.md`)
+- Next ticket: `LSI-015` (READY — blanket user approval recorded)
 - Branch: `codex-learning-studio-backend-integration`
-- Baseline commit: `ad457da`
-- Completion commit: `ad457da` (LSI-013 completion commit)
-- Last completed work: LSI-013 TopicChat histories (`useTopicChatHistory.ts` hook, `StudioTopicChatHistory.tsx` component, `StudioTutorRail.tsx` history switcher, `StudioCourseRail.tsx` chats tab integration, unit tests in `StudioTopicChatHistory.test.tsx`)
-- Files changed in this task: `apps/web/src/hooks/useTopicChatHistory.ts`, `apps/web/src/components/studio/StudioTopicChatHistory.tsx`, `apps/web/src/components/studio/StudioTutorRail.tsx`, `apps/web/src/components/studio/StudioCourseRail.tsx`, `apps/web/src/app/studio-preview/page.tsx`, `apps/web/src/components/studio/__tests__/StudioTopicChatHistory.test.tsx`, `docs/integration/evidence/LSI-013.md`, `docs/integration/LEARNING_STUDIO_BACKLOG.md`, `docs/integration/HANDOFF.md`
-- Runtime files changed in this task: `apps/web/src/hooks/useTopicChatHistory.ts`, `apps/web/src/components/studio/StudioTopicChatHistory.tsx`, `apps/web/src/components/studio/StudioTutorRail.tsx`, `apps/web/src/components/studio/StudioCourseRail.tsx`, `apps/web/src/app/studio-preview/page.tsx`
-- Verification in this task: 8/8 StudioTopicChatHistory unit tests passed, 56/56 studio unit tests passed, 431/431 full web vitest suite passed; 11/11 backend test_tutor pytest passed; Next.js `typecheck` passed with 0 errors; `next build` compiled cleanly (8/8 static routes + middleware)
+- Baseline commit: `c725dcd`
+- Completion commit: pending LSI-014 commit
+- Last completed work: LSI-014 Tutor stream and local context lifecycle (`StudioTutorChat.tsx`, `StudioTutorRail.tsx` companion view, `StudioLessonReader.tsx` quote passage integration, unit tests in `StudioTutorChat.test.tsx`)
+- Files changed in this task: `apps/web/src/components/studio/StudioTutorChat.tsx`, `apps/web/src/components/studio/StudioTutorRail.tsx`, `apps/web/src/app/studio-preview/page.tsx`, `apps/web/src/components/studio/__tests__/StudioTutorChat.test.tsx`, `docs/integration/evidence/LSI-014.md`, `docs/integration/LEARNING_STUDIO_BACKLOG.md`, `docs/integration/HANDOFF.md`
+- Runtime files changed in this task: `apps/web/src/components/studio/StudioTutorChat.tsx`, `apps/web/src/components/studio/StudioTutorRail.tsx`, `apps/web/src/app/studio-preview/page.tsx`
+- Verification in this task: 7/7 StudioTutorChat unit tests passed, 63/63 studio unit tests passed, 438/438 full web vitest suite passed; Next.js `typecheck` passed with 0 errors; `next build` compiled cleanly (8/8 static routes + middleware)
 - Runtime approval: Blanket user approval for backlog sequence recorded on 2026-10-15 ("i am approving all. i will review at the end. please complete all")
-- Last completed step: TopicChat histories and session lifecycle mapped into Studio rails with idempotency protection and deduplication; evidence documented in `evidence/LSI-013.md`
-- Exact next action: Implement LSI-014 (Tutor stream and local context lifecycle).
+- Last completed step: StudioTutorChat SSE streaming and contextual quotation lifecycle implemented and verified; evidence documented in `evidence/LSI-014.md`
+- Exact next action: Commit LSI-014 and proceed to LSI-015 (Branch service integrity).
 - Pending command/session: none
-- Commands run and actual results: `pnpm --filter web test` (431 passed), `pnpm --filter web typecheck` (0 errors), `pnpm --filter web build` (compiled successfully), `pytest apps/api/tests/roadmap/test_tutor.py` (11 passed).
+- Commands run and actual results: `pnpm --filter web test` (438 passed), `pnpm --filter web typecheck` (0 errors), `pnpm --filter web build` (compiled successfully).
 
 For each approved ticket, record the user approval source, date, and precise scope here. Preserve it across interruptions for that same scope.
 

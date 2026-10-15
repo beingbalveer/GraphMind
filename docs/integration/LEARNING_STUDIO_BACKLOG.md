@@ -182,6 +182,7 @@ Ticket size is a planning target. When scope proves too large, create explicit `
 - **Acceptance:** Stream binds to saved parent/session; topic switch/logout/unmount cannot contaminate panes; retry preserves identities without duplicate assistant reply.
 - **Test targets:** Deterministic events, cancellation/races, refresh/stop/retry browser journey.
 - **Out of scope:** New stream protocol or scripted tutor responses.
+- **Evidence:** StudioTutorChat component, scoped drafts, passage quoting, stop/retry controls, late-output protection, and 7 passing unit tests verified in [evidence/LSI-014.md](./evidence/LSI-014.md).
 
 ### LSI-015 Branch service integrity
 **Epic:** B · **Type:** Backend · **Priority:** P0 · **Depends:** LSI-014
