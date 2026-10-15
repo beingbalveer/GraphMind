@@ -24,7 +24,7 @@ import {
 } from "@/lib/workspaceApi";
 import { formatBytes } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Modal, ModalHeader, ModalBody } from "@/components/ui/modal";
+import { Modal, ModalHeader, ModalBody, ModalFooter } from "@/components/ui/modal";
 import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -468,49 +468,46 @@ export function FileLibraryModal({
 
       {/* Full Resolution Image Lightbox */}
       {previewFile && (
-        <div
-          className="fixed inset-0 z-60 bg-overlay backdrop-blur-md flex items-center justify-center p-4"
-          onClick={() => setPreviewFile(null)}
+        <Modal
+          isOpen={Boolean(previewFile)}
+          onClose={() => setPreviewFile(null)}
+          size="4xl"
         >
-          <div
-            className="relative max-w-4xl max-h-[90vh] bg-surface rounded-2xl border border-border p-4 flex flex-col items-center shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <ModalHeader
+            title={previewFile.name}
+            description={`${formatBytes(previewFile.sizeBytes || 0)} • Image preview`}
+            icon={<ImageIcon className="size-4" />}
+            onClose={() => setPreviewFile(null)}
+          />
+          <ModalBody className="flex min-h-[300px] items-center justify-center bg-background-secondary p-4">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={resolveFileUrl(previewFile.url || `/api/v1/workspaces/${workspaceId}/files/${previewFile.id}/download`)}
+              src={resolveFileUrl(
+                previewFile.url || `/api/v1/workspaces/${workspaceId}/files/${previewFile.id}/download`
+              )}
               alt={previewFile.name}
-              className="max-h-[75vh] rounded-xl object-contain"
+              className="max-h-[75vh] max-w-full rounded-xl object-contain shadow-md"
             />
-            <div className="mt-4 flex items-center justify-between w-full px-2 text-foreground text-xs">
-              <span className="font-medium truncate max-w-md">{previewFile.name}</span>
-              <div className="flex items-center space-x-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    window.open(
-                      resolveFileUrl(previewFile.url || `/api/v1/workspaces/${workspaceId}/files/${previewFile.id}/download`),
-                      "_blank"
-                    );
-                  }}
-                >
-                  <Download className="size-3.5 mr-1.5" />
-                  <span>Download</span>
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setPreviewFile(null)}
-                >
-                  Close (Esc)
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
+          </ModalBody>
+          <ModalFooter>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                window.open(
+                  resolveFileUrl(
+                    previewFile.url || `/api/v1/workspaces/${workspaceId}/files/${previewFile.id}/download`
+                  ),
+                  "_blank"
+                );
+              }}
+            >
+              <Download className="size-3.5 mr-1.5" />
+              <span>Download</span>
+            </Button>
+          </ModalFooter>
+        </Modal>
       )}
 
       {/* In-Page Code Viewer Modal */}

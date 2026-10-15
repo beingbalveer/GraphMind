@@ -68,7 +68,7 @@ export function Modal({
             sizeClasses[size],
             className
           )}
-          initialFocus={() => popupRef.current?.querySelector<HTMLElement>("input:not([disabled]), textarea:not([disabled]), select:not([disabled])") ?? false}
+          initialFocus={() => popupRef.current?.querySelector<HTMLElement>("input:not([disabled]), textarea:not([disabled]), select:not([disabled])") ?? null}
           finalFocus={() => previouslyFocusedElement.current}
           role={role}
         >
