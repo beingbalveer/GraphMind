@@ -93,6 +93,10 @@ import type {
   TopicSessionData,
   TopicProgressData,
   KnowledgeCheckData,
+  PracticeStateData,
+  PracticeDraftRequest,
+  PracticeDraftData,
+  CheckRequest,
 } from "./roadmapTypes";
 export const openTopicSession = (
   workspaceId: string,
@@ -144,6 +148,47 @@ export const recordTopicCheck = (
   apiFetch<KnowledgeCheckData>(
     `${curriculumPath(workspaceId)}/topics/${encodeURIComponent(topicId)}/checks`,
     { method: "POST", body: JSON.stringify({ sessionId }) },
+  );
+export const readTopicPracticeState = (
+  workspaceId: string,
+  topicId: string,
+  signal?: AbortSignal,
+) =>
+  apiFetch<PracticeStateData>(
+    `${curriculumPath(workspaceId)}/topics/${encodeURIComponent(topicId)}/checks`,
+    { signal },
+  );
+export const savePracticeDraft = (
+  workspaceId: string,
+  topicId: string,
+  request: PracticeDraftRequest,
+) =>
+  apiFetch<PracticeDraftData>(
+    `${curriculumPath(workspaceId)}/topics/${encodeURIComponent(topicId)}/checks/draft`,
+    {
+      method: "PUT",
+      body: JSON.stringify(request),
+    },
+  );
+export const deletePracticeDraft = (
+  workspaceId: string,
+  topicId: string,
+) =>
+  apiFetch<void>(
+    `${curriculumPath(workspaceId)}/topics/${encodeURIComponent(topicId)}/checks/draft`,
+    { method: "DELETE" },
+  );
+export const submitPracticeAttempt = (
+  workspaceId: string,
+  topicId: string,
+  request: CheckRequest,
+) =>
+  apiFetch<KnowledgeCheckData>(
+    `${curriculumPath(workspaceId)}/topics/${encodeURIComponent(topicId)}/checks`,
+    {
+      method: "POST",
+      body: JSON.stringify(request),
+    },
   );
 
 import type {

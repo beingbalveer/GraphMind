@@ -111,10 +111,24 @@ export interface TopicProgressData {
 export interface KnowledgeCheckData {
   id: string;
   topicId: string;
-  sessionId: string;
-  revisionId: string;
+  sessionId?: string;
+  chatId?: string;
+  status?: string;
+  feedback?: string;
+  revisionId?: string;
   rubric: Record<string, JsonValue>;
   result: Record<string, JsonValue>;
+  attemptId?: string | null;
+  attemptNumber?: number;
+  activityId?: string | null;
+  activityVersion?: string | null;
+  answer?: string | null;
+  selectedChoice?: string | null;
+  correct?: boolean | null;
+  explanation?: string | null;
+  canRetry?: boolean;
+  nextAction?: "retry" | "continue" | "review" | string;
+  submittedAt?: string | null;
   createdAt: string;
 }
 export interface PracticeActivityData {

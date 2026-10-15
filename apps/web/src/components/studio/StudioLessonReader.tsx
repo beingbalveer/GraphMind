@@ -16,6 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useReadingPosition } from "@/lib/readingPosition";
+import { StudioPracticeActivity } from "./StudioPracticeActivity";
 import type {
   CurriculumItemData,
   SourceData,
@@ -362,6 +363,13 @@ export function StudioLessonReader({
             </p>
           </section>
         )}
+
+        {/* Interactive Practice Activity */}
+        <StudioPracticeActivity
+          workspaceId={workspaceId}
+          topicId={topic.id}
+          topicTitle={topic.title}
+        />
 
         {/* Selected Passage & Tutor Quoting Controls */}
         <section

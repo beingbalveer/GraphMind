@@ -16,8 +16,8 @@ This is the authoritative status board and ticket specification.
 | [LSI-008](#lsi-008-persistent-lesson-reader-and-sources) | B | Persistent lesson reader and sources | Full stack | P0 | 007 | DONE |
 | [LSI-009](#lsi-009-learner-completion) | B | Learner completion | Full stack | P0 | 008 | DONE |
 | [LSI-010](#lsi-010-versioned-practice-server-contract) | B | Versioned practice server contract | Backend | P1 | 002, 008 | DONE |
-| [LSI-011](#lsi-011-practice-ui) | B | Practice UI | Full stack | P1 | 009, 010 | READY |
-| [LSI-012](#lsi-012-shared-roadmap-and-conversation-canvas) | B | Shared roadmap and conversation canvas | Full stack | P0 | 007, 009 | TODO |
+| [LSI-011](#lsi-011-practice-ui) | B | Practice UI | Full stack | P1 | 009, 010 | DONE |
+| [LSI-012](#lsi-012-shared-roadmap-and-conversation-canvas) | B | Shared roadmap and conversation canvas | Full stack | P0 | 007, 009 | READY |
 | [LSI-013](#lsi-013-topicchat-histories) | B | TopicChat histories | Full stack | P0 | 008 | TODO |
 | [LSI-014](#lsi-014-tutor-stream-and-local-context-lifecycle) | B | Tutor stream and local context lifecycle | Full stack | P0 | 013 | TODO |
 | [LSI-015](#lsi-015-branch-service-integrity) | B | Branch service integrity | Backend | P0 | 014 | TODO |
@@ -158,6 +158,7 @@ Ticket size is a planning target. When scope proves too large, create explicit `
 - **Acceptance:** Refresh/retry retain correct activity; missing activities have an honest state; no automatic completion/mastery.
 - **Test targets:** Rendered answer/retry/version-change tests and browser refresh.
 - **Out of scope:** Scripted grading or mastery claims.
+- **Evidence:** Integrated StudioPracticeActivity, versioned drafts and attempts, debounced autosave, hint disclosure, anti-mastery decoupling, and 7 unit tests verified in [evidence/LSI-011.md](./evidence/LSI-011.md).
 
 ### LSI-012 Shared roadmap and conversation canvas
 **Epic:** B · **Type:** Full stack · **Priority:** P0 · **Depends:** LSI-007, LSI-009
