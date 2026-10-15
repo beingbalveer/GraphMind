@@ -3,20 +3,20 @@
 ## Current position — 2026-10-15
 
 - Active ticket: none
-- Completed tickets: `LSI-001` (DONE — evidence in `docs/integration/evidence/LSI-001.md`), `LSI-002` (DONE — evidence in `docs/integration/evidence/LSI-002.md`), `LSI-003` (DONE — evidence in `docs/integration/evidence/LSI-003.md`), `LSI-004` (DONE — evidence in `docs/integration/evidence/LSI-004.md`), `LSI-005` (DONE — evidence in `docs/integration/evidence/LSI-005.md`), `LSI-006` (DONE — evidence in `docs/integration/evidence/LSI-006.md`), `LSI-007` (DONE — evidence in `docs/integration/evidence/LSI-007.md`), `LSI-008` (DONE — evidence in `docs/integration/evidence/LSI-008.md`), `LSI-009` (DONE — evidence in `docs/integration/evidence/LSI-009.md`), `LSI-010` (DONE — evidence in `docs/integration/evidence/LSI-010.md`), `LSI-011` (DONE — evidence in `docs/integration/evidence/LSI-011.md`), `LSI-012` (DONE — evidence in `docs/integration/evidence/LSI-012.md`), `LSI-013` (DONE — evidence in `docs/integration/evidence/LSI-013.md`), `LSI-014` (DONE — evidence in `docs/integration/evidence/LSI-014.md`)
-- Next ticket: `LSI-015` (READY — blanket user approval recorded)
+- Completed tickets: `LSI-001` (DONE — evidence in `docs/integration/evidence/LSI-001.md`), `LSI-002` (DONE — evidence in `docs/integration/evidence/LSI-002.md`), `LSI-003` (DONE — evidence in `docs/integration/evidence/LSI-003.md`), `LSI-004` (DONE — evidence in `docs/integration/evidence/LSI-004.md`), `LSI-005` (DONE — evidence in `docs/integration/evidence/LSI-005.md`), `LSI-006` (DONE — evidence in `docs/integration/evidence/LSI-006.md`), `LSI-007` (DONE — evidence in `docs/integration/evidence/LSI-007.md`), `LSI-008` (DONE — evidence in `docs/integration/evidence/LSI-008.md`), `LSI-009` (DONE — evidence in `docs/integration/evidence/LSI-009.md`), `LSI-010` (DONE — evidence in `docs/integration/evidence/LSI-010.md`), `LSI-011` (DONE — evidence in `docs/integration/evidence/LSI-011.md`), `LSI-012` (DONE — evidence in `docs/integration/evidence/LSI-012.md`), `LSI-013` (DONE — evidence in `docs/integration/evidence/LSI-013.md`), `LSI-014` (DONE — evidence in `docs/integration/evidence/LSI-014.md`), `LSI-015` (DONE — evidence in `docs/integration/evidence/LSI-015.md`)
+- Next ticket: `LSI-016` (READY — blanket user approval recorded)
 - Branch: `codex-learning-studio-backend-integration`
-- Baseline commit: `c725dcd`
-- Completion commit: `5108a59` (LSI-014 completion commit)
-- Last completed work: LSI-014 Tutor stream and local context lifecycle (`StudioTutorChat.tsx`, `StudioTutorRail.tsx` companion view, `StudioLessonReader.tsx` quote passage integration, unit tests in `StudioTutorChat.test.tsx`)
-- Files changed in this task: `apps/web/src/components/studio/StudioTutorChat.tsx`, `apps/web/src/components/studio/StudioTutorRail.tsx`, `apps/web/src/app/studio-preview/page.tsx`, `apps/web/src/components/studio/__tests__/StudioTutorChat.test.tsx`, `docs/integration/evidence/LSI-014.md`, `docs/integration/LEARNING_STUDIO_BACKLOG.md`, `docs/integration/HANDOFF.md`
-- Runtime files changed in this task: `apps/web/src/components/studio/StudioTutorChat.tsx`, `apps/web/src/components/studio/StudioTutorRail.tsx`, `apps/web/src/app/studio-preview/page.tsx`
-- Verification in this task: 7/7 StudioTutorChat unit tests passed, 63/63 studio unit tests passed, 438/438 full web vitest suite passed; Next.js `typecheck` passed with 0 errors; `next build` compiled cleanly (8/8 static routes + middleware)
+- Baseline commit: `5108a59`
+- Completion commit: pending LSI-015 commit
+- Last completed work: LSI-015 Branch service integrity (`workspace_service.py` node/branch validation, `chat.py` ancestry verification, `lineage.py` cycle detection, 16 adversarial/authorization tests in `test_branch_integrity.py`)
+- Files changed in this task: `packages/ai-core/src/ai_core/lineage.py`, `apps/api/src/services/workspace_service.py`, `apps/api/src/routers/chat.py`, `apps/api/tests/test_branch_integrity.py`, `apps/web/src/components/ui/__tests__/branch-trigger.test.tsx`, `docs/integration/evidence/LSI-015.md`, `docs/integration/LEARNING_STUDIO_BACKLOG.md`, `docs/integration/HANDOFF.md`
+- Runtime files changed in this task: `packages/ai-core/src/ai_core/lineage.py`, `apps/api/src/services/workspace_service.py`, `apps/api/src/routers/chat.py`
+- Verification in this task: 16/16 test_branch_integrity passed, 500/500 full backend pytest suite passed, 71/71 ai-core tests passed, 438/438 full web vitest suite passed; Next.js `typecheck` passed with 0 errors; `next build` compiled cleanly (8/8 static routes + middleware)
 - Runtime approval: Blanket user approval for backlog sequence recorded on 2026-10-15 ("i am approving all. i will review at the end. please complete all")
-- Last completed step: StudioTutorChat SSE streaming and contextual quotation lifecycle implemented and verified; evidence documented in `evidence/LSI-014.md`
-- Exact next action: Commit LSI-014 and proceed to LSI-015 (Branch service integrity).
+- Last completed step: Branch service integrity, cycle rejection, cross-workspace isolation, quote validation, and ancestor authorization implemented and verified; evidence documented in `evidence/LSI-015.md`
+- Exact next action: Commit LSI-015 and proceed to LSI-016 (Nested branch UI and canonical navigation).
 - Pending command/session: none
-- Commands run and actual results: `pnpm --filter web test` (438 passed), `pnpm --filter web typecheck` (0 errors), `pnpm --filter web build` (compiled successfully).
+- Commands run and actual results: `pytest apps/api/tests/` (500 passed), `pytest packages/ai-core/tests/` (71 passed), `pnpm --filter web test` (438 passed), `pnpm --filter web typecheck` (0 errors), `pnpm --filter web build` (compiled successfully).
 
 For each approved ticket, record the user approval source, date, and precise scope here. Preserve it across interruptions for that same scope.
 

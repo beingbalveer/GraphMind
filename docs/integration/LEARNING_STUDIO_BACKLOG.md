@@ -190,6 +190,7 @@ Ticket size is a planning target. When scope proves too large, create explicit `
 - **Acceptance:** Server rejects cross-workspace origins, cycles, invalid quotes; branches remain descendants of the same root.
 - **Test targets:** Focused node/stream lineage authorization and adversarial tests.
 - **Out of scope:** Branches as separate chat roots.
+- **Evidence:** Cross-workspace origin rejection, cycle prevention, quote bounds, ancestor validation, and 16 passing adversarial/authorization tests verified in [evidence/LSI-015.md](./evidence/LSI-015.md).
 
 ### LSI-016 Nested branch UI and canonical navigation
 **Epic:** B · **Type:** Frontend · **Priority:** P0 · **Depends:** LSI-015

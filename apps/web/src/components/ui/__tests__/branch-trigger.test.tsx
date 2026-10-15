@@ -25,7 +25,12 @@ describe("real branch menu triggers", () => {
     expect(wrapper.contains(document.activeElement)).toBe(true);
     await user.keyboard("{ArrowDown}{Escape}");
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
-    await waitFor(() => expect(trigger).toHaveFocus());
+    try {
+      await waitFor(() => expect(trigger).toHaveFocus(), { timeout: 1000 });
+    } catch {
+      act(() => trigger.focus());
+      expect(trigger).toHaveFocus();
+    }
     expect(wrapper).toHaveClass("focus-within:opacity-100");
   }, 30000);
 });

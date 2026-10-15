@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import structlog
 from errors import RoadmapHTTPError
+from fastapi import HTTPException, status
 from models.roadmap import CurriculumRevision, RevisionItem, Roadmap, TopicChat, TopicProgress
 from models.workspace import EdgeModel, NodeModel, Workspace
 from schemas.roadmap_job import JobError
@@ -783,8 +784,17 @@ class WorkspaceService:
         compute_embedding: bool = True,
     ) -> NodeResponse:
         """
-        Add or update a conversation node in a workspace and ensure the directed edge from parent exists.
+        Add or update a conversation node in a workspace and ensure directed edges and tree integrity.
+        Enforces same-root ancestry, prevents cycles and cross-workspace links, and validates highlighted context.
         """
+        # Validate node role
+        valid_roles = {"user", "assistant", "system"}
+        if data.role not in valid_roles:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Invalid node role '{data.role}'. Must be one of: {', '.join(sorted(valid_roles))}.",
+            )
+
         existing_node = None
         if data.id:
             stmt = select(NodeModel).where(
@@ -794,17 +804,87 @@ class WorkspaceService:
             existing_node = res.scalar_one_or_none()
 
         effective_parent_id = data.parent_id
+        root_node: Optional[NodeModel] = None
+
         if effective_parent_id:
+            # Cycle check: direct self-loop
+            if data.id and effective_parent_id == data.id:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="Parent node cannot be the node itself",
+                )
+
+            # Verify parent exists and belongs to this workspace
             parent_exists = await session.get(NodeModel, effective_parent_id)
             if not parent_exists or parent_exists.workspace_id != workspace_id:
-                logger.warning(
-                    "Invalid parent_id provided for node creation; falling back to None",
-                    provided_parent_id=effective_parent_id,
-                    workspace_id=workspace_id,
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Parent node '{effective_parent_id}' not found in workspace '{workspace_id}'",
                 )
-                effective_parent_id = None
 
+            # Ancestor chain validation: cycle detection, max depth, same workspace, find root
+            curr: Optional[NodeModel] = parent_exists
+            seen: set[str] = set()
+            while curr:
+                if curr.id in seen or len(seen) >= 200:
+                    raise HTTPException(
+                        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                        detail="Conversation ancestry is invalid: cycle detected",
+                    )
+                if data.id and curr.id == data.id:
+                    raise HTTPException(
+                        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                        detail="Cycle detected: cannot set parent to a descendant node",
+                    )
+                seen.add(curr.id)
+                if curr.parent_id is None:
+                    break
+                curr = await session.get(NodeModel, curr.parent_id)
+                if not curr or curr.workspace_id != workspace_id:
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail="Conversation ancestry contains missing or foreign node",
+                    )
+            root_node = curr
+
+        # Validate highlighted quote / context
+        if data.highlighted_context is not None:
+            cleaned_quote = data.highlighted_context.strip()
+            if not cleaned_quote:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="Highlighted quote cannot be empty or whitespace only",
+                )
+            if len(data.highlighted_context) > 2000:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="Highlighted quote exceeds maximum length of 2000 characters",
+                )
+
+        # Re-parenting validation for existing node
         if existing_node:
+            if existing_node.parent_id is None:
+                if effective_parent_id is not None:
+                    raise HTTPException(
+                        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                        detail="Cannot attach an existing root conversation node to a parent",
+                    )
+            elif effective_parent_id is not None and existing_node.parent_id != effective_parent_id:
+                # Find root of existing_node's current lineage
+                orig_curr = await session.get(NodeModel, existing_node.parent_id)
+                orig_seen: set[str] = set()
+                while orig_curr and orig_curr.parent_id:
+                    if orig_curr.id in orig_seen or len(orig_seen) >= 200:
+                        break
+                    orig_seen.add(orig_curr.id)
+                    orig_curr = await session.get(NodeModel, orig_curr.parent_id)
+                orig_root = orig_curr
+                if orig_root and root_node and orig_root.id != root_node.id:
+                    raise HTTPException(
+                        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                        detail="Branch cannot be moved across different conversation roots",
+                    )
+
             existing_node.content = data.content
             if data.provider:
                 existing_node.provider = data.provider
@@ -816,6 +896,33 @@ class WorkspaceService:
                 existing_node.position_y = data.position_y
             if data.metadata:
                 existing_node.metadata_payload = data.metadata
+            if data.highlighted_context is not None:
+                existing_node.highlighted_context = data.highlighted_context
+
+            # Update edge if parent changed
+            if effective_parent_id != existing_node.parent_id:
+                if existing_node.parent_id:
+                    old_edge_id = f"{existing_node.parent_id}->{existing_node.id}"
+                    old_edge = await session.get(EdgeModel, old_edge_id)
+                    if old_edge:
+                        await session.delete(old_edge)
+                existing_node.parent_id = effective_parent_id
+                if effective_parent_id:
+                    new_edge_id = f"{effective_parent_id}->{existing_node.id}"
+                    new_edge = EdgeModel(
+                        id=new_edge_id,
+                        workspace_id=workspace_id,
+                        source_id=effective_parent_id,
+                        target_id=existing_node.id,
+                        highlighted_context=data.highlighted_context,
+                    )
+                    session.add(new_edge)
+            elif effective_parent_id and data.highlighted_context is not None:
+                edge_id = f"{effective_parent_id}->{existing_node.id}"
+                edge = await session.get(EdgeModel, edge_id)
+                if edge:
+                    edge.highlighted_context = data.highlighted_context
+
             node = existing_node
         else:
             node = NodeModel(

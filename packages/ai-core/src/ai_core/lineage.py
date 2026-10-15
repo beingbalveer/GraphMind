@@ -16,18 +16,30 @@ def estimate_tokens(text: str) -> int:
 def get_ancestor_nodes(tree: ConversationTree, node_id: str) -> List[TreeNode]:
     """
     Traverse from target node_id back to root, returning ordered list [Root, ..., TargetNode].
-    Optimized to O(N) linear time with cycle protection.
+    Optimized to O(N) linear time with cycle protection and ancestor integrity validation.
     """
     path: List[TreeNode] = []
     current: Optional[TreeNode] = tree.get_node(node_id)
+    if current is None:
+        raise KeyError(f"Target node '{node_id}' not found in conversation tree")
     visited = set()
 
-    while current is not None and current.id not in visited:
+    while current is not None:
+        if current.id in visited or len(visited) >= 5000:
+            raise ValueError(f"Cycle detected in conversation tree at node '{current.id}'")
         visited.add(current.id)
         path.append(current)
         if current.parent_id is None:
             break
-        current = tree.get_node(current.parent_id)
+        parent_id = current.parent_id
+        current = tree.get_node(parent_id)
+        if current is None:
+            raise KeyError(f"Parent node '{parent_id}' not found in conversation tree")
+
+    if path and tree.root_node_id and path[-1].id != tree.root_node_id:
+        raise ValueError(
+            f"Target node '{node_id}' does not descend from requested root '{tree.root_node_id}'"
+        )
 
     path.reverse()
     return path
@@ -99,8 +111,8 @@ def resolve_conversation_lineage(
     """
     messages: List[ChatMessage] = []
 
-    # If target_node_id is provided and exists in tree, build ancestor history
-    if target_node_id and target_node_id in tree.nodes:
+    # If target_node_id is provided, build ancestor history
+    if target_node_id:
         ancestors = get_ancestor_nodes(tree, target_node_id)
         for node in ancestors:
             messages.append(

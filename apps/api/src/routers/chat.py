@@ -31,6 +31,7 @@ from dependencies import (
 from errors import RoadmapHTTPError
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
+from models.workspace import NodeModel
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from pydantic.alias_generators import to_camel
 from schemas.roadmap_job import JobError
@@ -131,6 +132,11 @@ class ChatStreamRequest(BaseModel):
             self.roadmap_topic_ids
         ):
             raise ValueError("Roadmap topic IDs must be distinct")
+        if self.highlighted_context is not None:
+            if not self.highlighted_context.strip():
+                raise ValueError("Highlighted quote cannot be empty or whitespace only")
+            if len(self.highlighted_context) > 2000:
+                raise ValueError("Highlighted quote exceeds maximum length of 2000 characters")
         return self
 
 
@@ -153,6 +159,33 @@ async def _verified_topic_context(
             if not body.topic_session_id:
                 if body.lesson_start:
                     raise HTTPException(422, "A topic session is required to start a lesson")
+                # When workspace_id and parent_node_id are provided without tree, verify and resolve DB lineage
+                if body.workspace_id and body.parent_node_id:
+                    if user is None:
+                        raise HTTPException(401, "Authentication required")
+                    await require_workspace_read(body.workspace_id, user, session)
+                    parent_node = await session.get(NodeModel, body.parent_node_id)
+                    if not parent_node or parent_node.workspace_id != body.workspace_id:
+                        raise HTTPException(404, "Parent node not found")
+                    curr = parent_node
+                    seen = set()
+                    while curr and curr.parent_id:
+                        if curr.id in seen or len(seen) >= 200:
+                            raise HTTPException(422, "Conversation ancestry is invalid")
+                        seen.add(curr.id)
+                        curr = await session.get(NodeModel, curr.parent_id)
+                        if not curr or curr.workspace_id != body.workspace_id:
+                            raise HTTPException(404, "Parent node not found")
+                    root_id = curr.id if curr else body.parent_node_id
+                    verified = await resolve_persisted_conversation(
+                        session,
+                        workspace_id=body.workspace_id,
+                        root_id=root_id,
+                        target_id=body.parent_node_id,
+                        owner_id=user.id,
+                        selected_topic_ids=body.roadmap_topic_ids,
+                    )
+                    return [], user.id, verified.lineage, verified.roadmap_context
                 return [], user.id if user else None, None, ""
             if user is None:
                 raise HTTPException(401, "Authentication required")
@@ -166,6 +199,12 @@ async def _verified_topic_context(
         if not body.workspace_id and not body.topic_session_id and not body.roadmap_topic_ids:
             if body.lesson_start:
                 raise HTTPException(422, "A topic session is required to start a lesson")
+            if body.tree:
+                target_id = body.parent_node_id or body.tree.active_node_id
+                if target_id and target_id not in body.tree.nodes:
+                    raise HTTPException(404, f"Target node '{target_id}' not found in conversation tree")
+                if body.tree.root_node_id and body.tree.root_node_id not in body.tree.nodes:
+                    raise HTTPException(404, f"Root node '{body.tree.root_node_id}' not found in conversation tree")
             return [], user.id if user else None, None, ""
 
         if not body.workspace_id or user is None:
@@ -174,6 +213,8 @@ async def _verified_topic_context(
         if body.roadmap_topic_ids is not None:
             await require_workspace_write(body.workspace_id, user, session)
         target_id = body.parent_node_id or body.tree.active_node_id
+        if not target_id:
+            raise HTTPException(422, "Target node ID is required")
         verified = await resolve_persisted_conversation(
             session,
             workspace_id=body.workspace_id,
@@ -331,13 +372,21 @@ def _build_conversation_input(body: ChatStreamRequest) -> List[ChatMessage]:
     Construct input messages from tree lineage, explicit message list, or raw prompt,
     ensuring highlighted_context and attachments are always preserved and injected.
     """
+    if body.highlighted_context is not None and not body.tree and not body.messages and not body.parent_node_id:
+        raise HTTPException(422, "Highlighted quote requires a parent node")
+
     if body.tree:
-        lineage: List[ChatMessage] = resolve_conversation_lineage(
-            tree=body.tree,
-            target_node_id=body.parent_node_id,
-            new_prompt=body.prompt or "",
-            highlighted_context=body.highlighted_context,
-        )
+        try:
+            lineage: List[ChatMessage] = resolve_conversation_lineage(
+                tree=body.tree,
+                target_node_id=body.parent_node_id,
+                new_prompt=body.prompt or "",
+                highlighted_context=body.highlighted_context,
+            )
+        except KeyError as e:
+            raise HTTPException(status_code=404, detail=str(e))
+        except ValueError as e:
+            raise HTTPException(status_code=422, detail=str(e))
         if lineage and body.attachments:
             lineage[-1].attachments = body.attachments
         if lineage:
