@@ -2,6 +2,8 @@
 
 This document describes the local prototype flow and a proposed production boundary. Existing endpoints below were checked against `apps/api/src/routers/roadmap_jobs.py`, `curriculum.py`, `auth.py`, `main.py`, and `dependencies.py`. Proposed routes and fields are design suggestions, not implemented contracts.
 
+For sequenced implementation work, see the [integration backlog](../../../docs/integration/LEARNING_STUDIO_BACKLOG.md), [ticket protocol](../../../docs/integration/README.md), and [resume handoff](../../../docs/integration/HANDOFF.md). Those tickets preserve the distinction between existing APIs and additions requiring approval.
+
 ## User journey and state ownership
 
 ```mermaid

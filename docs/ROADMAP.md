@@ -80,6 +80,10 @@ browser checks and live-provider/research evaluation remain unverified. See the
 results and limits. The current research-quality and whole-branch verification task
 above remains active and is not replaced by this follow-on work.
 
+### Planned follow-on: Learning Studio production integration
+
+The local Learning Studio preview has a detailed existing-versus-proposed backend boundary in its [handoff](../apps/web/prototype/BACKEND_HANDOFF.md). The complete integration is sequenced as small, dependency-linked tickets in the [Learning Studio integration backlog](integration/LEARNING_STUDIO_BACKLOG.md), with its working protocol and resume state in that folder. This is planned follow-on work; it does not close or replace the active research-quality and whole-branch verification task above. Runtime tickets require their own design discussion and explicit approval under [AGENTS.md](../AGENTS.md).
+
 ### Phase 1: Production Core & Streamed Chat Engine
 - **AI Core (`packages/ai-core`)**: Provider-agnostic abstractions (`BaseProvider`, `BaseEmbeddingProvider`, `BaseTool`) decoupling business logic from OpenAI, Gemini, Anthropic, DeepSeek, and local Ollama.
 - **FastAPI SSE Streaming**: Async Server-Sent Events endpoint (`/api/v1/chat/stream`) with structured event payloads (`token`, `message_start`, `message_end`, `error`).
