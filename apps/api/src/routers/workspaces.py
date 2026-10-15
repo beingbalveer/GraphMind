@@ -1,9 +1,11 @@
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from database import get_db
 from dependencies import (
     get_current_user,
     get_optional_user,
+    get_roadmap_user,
+    require_roadmap_read,
     require_workspace_read,
     require_workspace_write,
 )
@@ -18,6 +20,7 @@ from schemas.workspace import (
     NodeResponse,
     SemanticSearchRequest,
     WorkspaceCreate,
+    WorkspaceCurriculumSummary,
     WorkspaceListResponse,
     WorkspaceResponse,
     WorkspaceUpdate,
@@ -91,6 +94,22 @@ async def get_workspace(
             detail=f"Workspace '{workspace_id}' not found",
         )
     return ws
+
+
+@router.get(
+    "/{workspace_id}/learning-roadmaps",
+    response_model=List[WorkspaceCurriculumSummary],
+)
+async def get_workspace_learning_roadmaps(
+    workspace_id: str,
+    _auth_ws: Workspace = Depends(require_roadmap_read),
+    current_user: User = Depends(get_roadmap_user),
+    db: AsyncSession = Depends(get_db),
+) -> List[WorkspaceCurriculumSummary]:
+    """
+    Get authorized curriculum summaries for a workspace (read permission required).
+    """
+    return await WorkspaceService.get_workspace_curricula(db, workspace_id, user_id=current_user.id)
 
 
 @router.patch("/{workspace_id}", response_model=WorkspaceResponse)

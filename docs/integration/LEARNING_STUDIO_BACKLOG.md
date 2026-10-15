@@ -10,8 +10,8 @@ This is the authoritative status board and ticket specification.
 | [LSI-002](#lsi-002-approve-integration-identity-and-public-contracts) | A | Approve integration identity and public contracts | Architecture | P0 | 001 | DONE |
 | [LSI-003](#lsi-003-port-production-shell-into-next) | A | Port production shell into Next.js | Frontend | P0 | 002 | DONE |
 | [LSI-004](#lsi-004-real-sessions-and-public-route-boundary) | A | Real sessions and public route boundary | Full stack | P0 | 003 | DONE |
-| [LSI-005](#lsi-005-authorized-collection-summaries) | A | Authorized collection summaries | Backend | P0 | 002, 004 | READY |
-| [LSI-006](#lsi-006-home-and-my-learning) | A | Home and My learning | Frontend | P0 | 003, 005 | TODO |
+| [LSI-005](#lsi-005-authorized-collection-summaries) | A | Authorized collection summaries | Backend | P0 | 002, 004 | DONE |
+| [LSI-006](#lsi-006-home-and-my-learning) | A | Home and My learning | Frontend | P0 | 003, 005 | READY |
 | [LSI-007](#lsi-007-private-roadmap-outline) | B | Private roadmap outline | Full stack | P0 | 006 | TODO |
 | [LSI-008](#lsi-008-persistent-lesson-reader-and-sources) | B | Persistent lesson reader and sources | Full stack | P0 | 007 | TODO |
 | [LSI-009](#lsi-009-learner-completion) | B | Learner completion | Full stack | P0 | 008 | TODO |
@@ -110,6 +110,7 @@ Ticket size is a planning target. When scope proves too large, create explicit `
 - **Acceptance:** Existing workspaces remain valid; curriculum and ordinary workspaces are identifiable; no cross-user metadata leaks.
 - **Test targets:** Response schema, membership/outsider authorization, legacy workspace fixtures.
 - **Out of scope:** New enrollment-per-workspace model or broad unapproved collection API.
+- **Evidence:** Batch curriculum projection on workspace listing, dedicated workspace learning-roadmaps endpoint, web client types, and 15 pytest + 381 vitest test passes verified in [evidence/LSI-005.md](./evidence/LSI-005.md).
 
 ### LSI-006 Home and My learning
 **Epic:** A · **Type:** Frontend · **Priority:** P0 · **Depends:** LSI-003, LSI-005

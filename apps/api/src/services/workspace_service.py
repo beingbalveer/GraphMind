@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import structlog
 from errors import RoadmapHTTPError
-from models.roadmap import RevisionItem, Roadmap, TopicChat
+from models.roadmap import CurriculumRevision, RevisionItem, Roadmap, TopicChat, TopicProgress
 from models.workspace import EdgeModel, NodeModel, Workspace
 from schemas.roadmap_job import JobError
 from schemas.workspace import (
@@ -15,6 +15,7 @@ from schemas.workspace import (
     NodeCreate,
     NodeResponse,
     WorkspaceCreate,
+    WorkspaceCurriculumSummary,
     WorkspaceResponse,
     WorkspaceUpdate,
 )
@@ -61,21 +62,143 @@ class WorkspaceService:
         result = await session.execute(stmt)
         workspaces = result.scalars().all()
 
-        responses = [
-            WorkspaceResponse(
-                id=ws.id,
-                name=ws.name,
-                description=ws.description,
-                viewport_x=ws.viewport_x,
-                viewport_y=ws.viewport_y,
-                zoom=ws.zoom,
-                created_at=ws.created_at,
-                updated_at=ws.updated_at,
-                node_count=len(ws.nodes),
+        ws_ids = [ws.id for ws in workspaces]
+        roadmaps_by_ws: Dict[str, Tuple[Roadmap, Optional[CurriculumRevision]]] = {}
+        progress_by_roadmap: Dict[str, Tuple[int, int, float]] = {}
+
+        if ws_ids:
+            rm_stmt = (
+                select(Roadmap, CurriculumRevision)
+                .outerjoin(CurriculumRevision, Roadmap.current_revision_id == CurriculumRevision.id)
+                .where(Roadmap.workspace_id.in_(ws_ids))
             )
-            for ws in workspaces
-        ]
+            rm_res = await session.execute(rm_stmt)
+            roadmap_ids = []
+            for row in rm_res.all():
+                rm, rev = row[0], row[1]
+                roadmaps_by_ws[rm.workspace_id] = (rm, rev)
+                roadmap_ids.append(rm.id)
+
+            if roadmap_ids:
+                total_stmt = (
+                    select(RevisionItem.roadmap_id, func.count(RevisionItem.item_id))
+                    .where(
+                        RevisionItem.roadmap_id.in_(roadmap_ids),
+                        RevisionItem.kind == "topic",
+                        RevisionItem.participation == "active",
+                    )
+                    .group_by(RevisionItem.roadmap_id)
+                )
+                total_counts = dict((await session.execute(total_stmt)).all())
+
+                completed_counts: Dict[str, int] = {}
+                if user_id:
+                    comp_stmt = (
+                        select(TopicProgress.roadmap_id, func.count(TopicProgress.topic_id))
+                        .where(
+                            TopicProgress.roadmap_id.in_(roadmap_ids),
+                            TopicProgress.owner_id == user_id,
+                            TopicProgress.status == "completed",
+                        )
+                        .group_by(TopicProgress.roadmap_id)
+                    )
+                    completed_counts = dict((await session.execute(comp_stmt)).all())
+
+                for r_id in roadmap_ids:
+                    tot = total_counts.get(r_id, 0)
+                    comp = completed_counts.get(r_id, 0)
+                    pct = round((comp / tot * 100.0), 1) if tot > 0 else 0.0
+                    progress_by_roadmap[r_id] = (tot, comp, pct)
+
+        responses = []
+        for ws in workspaces:
+            curriculum_summary = None
+            if ws.id in roadmaps_by_ws:
+                rm, rev = roadmaps_by_ws[ws.id]
+                tot, comp, pct = progress_by_roadmap.get(rm.id, (0, 0, 0.0))
+                source_ref = (rm.profile or {}).get("sourceSnapshotRef") or (rm.profile or {}).get("sampleTemplateRef")
+                curriculum_summary = WorkspaceCurriculumSummary(
+                    roadmap_id=rm.id,
+                    revision_id=rm.current_revision_id,
+                    title=rev.title if rev else (ws.name or "Curriculum"),
+                    status=rev.status if rev else "active",
+                    total_topics=tot,
+                    completed_topics=comp,
+                    progress_percent=pct,
+                    source_snapshot_ref=source_ref,
+                    origin_job_id=rm.origin_job_id,
+                    updated_at=rev.updated_at if rev else rm.updated_at,
+                )
+
+            responses.append(
+                WorkspaceResponse(
+                    id=ws.id,
+                    name=ws.name,
+                    description=ws.description,
+                    viewport_x=ws.viewport_x,
+                    viewport_y=ws.viewport_y,
+                    zoom=ws.zoom,
+                    created_at=ws.created_at,
+                    updated_at=ws.updated_at,
+                    node_count=len(ws.nodes),
+                    curriculum=curriculum_summary,
+                )
+            )
         return responses, total
+
+    @staticmethod
+    async def get_workspace_curricula(
+        session: AsyncSession,
+        workspace_id: str,
+        user_id: Optional[str] = None,
+    ) -> List[WorkspaceCurriculumSummary]:
+        """
+        Return authorized curriculum summary list for a single workspace.
+        """
+        rm_stmt = (
+            select(Roadmap, CurriculumRevision)
+            .outerjoin(CurriculumRevision, Roadmap.current_revision_id == CurriculumRevision.id)
+            .where(Roadmap.workspace_id == workspace_id)
+        )
+        rm_res = await session.execute(rm_stmt)
+        row = rm_res.first()
+        if not row:
+            return []
+        rm, rev = row[0], row[1]
+
+        tot_stmt = select(func.count(RevisionItem.item_id)).where(
+            RevisionItem.roadmap_id == rm.id,
+            RevisionItem.kind == "topic",
+            RevisionItem.participation == "active",
+        )
+        tot = (await session.execute(tot_stmt)).scalar() or 0
+
+        comp = 0
+        if user_id:
+            comp_stmt = select(func.count(TopicProgress.topic_id)).where(
+                TopicProgress.roadmap_id == rm.id,
+                TopicProgress.owner_id == user_id,
+                TopicProgress.status == "completed",
+            )
+            comp = (await session.execute(comp_stmt)).scalar() or 0
+
+        pct = round((comp / tot * 100.0), 1) if tot > 0 else 0.0
+        source_ref = (rm.profile or {}).get("sourceSnapshotRef") or (rm.profile or {}).get("sampleTemplateRef")
+
+        return [
+            WorkspaceCurriculumSummary(
+                roadmap_id=rm.id,
+                revision_id=rm.current_revision_id,
+                title=rev.title if rev else "Curriculum",
+                status=rev.status if rev else "active",
+                total_topics=tot,
+                completed_topics=comp,
+                progress_percent=pct,
+                source_snapshot_ref=source_ref,
+                origin_job_id=rm.origin_job_id,
+                updated_at=rev.updated_at if rev else rm.updated_at,
+            )
+        ]
 
     @staticmethod
     async def create_workspace(

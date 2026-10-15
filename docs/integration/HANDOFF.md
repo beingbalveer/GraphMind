@@ -3,20 +3,19 @@
 ## Current position — 2026-10-15
 
 - Active ticket: none
-- Completed tickets: `LSI-001` (DONE — evidence in `docs/integration/evidence/LSI-001.md`), `LSI-002` (DONE — evidence in `docs/integration/evidence/LSI-002.md`), `LSI-003` (DONE — evidence in `docs/integration/evidence/LSI-003.md`), `LSI-004` (DONE — evidence in `docs/integration/evidence/LSI-004.md`)
-- Next ticket: `LSI-005` (READY — blanket user approval recorded)
+- Completed tickets: `LSI-001` (DONE — evidence in `docs/integration/evidence/LSI-001.md`), `LSI-002` (DONE — evidence in `docs/integration/evidence/LSI-002.md`), `LSI-003` (DONE — evidence in `docs/integration/evidence/LSI-003.md`), `LSI-004` (DONE — evidence in `docs/integration/evidence/LSI-004.md`), `LSI-005` (DONE — evidence in `docs/integration/evidence/LSI-005.md`)
+- Next ticket: `LSI-006` (READY — blanket user approval recorded)
 - Branch: `codex-learning-studio-backend-integration`
-- Baseline commit: `d644285`
-- Last completed work: LSI-004 real sessions and public route boundary configured in middleware and auth context
-- Files changed in this task: `apps/web/src/middleware.ts`, `apps/web/src/lib/urls.ts`, `apps/web/src/app/login/page.tsx`, `apps/web/src/context/AuthContext.tsx`, `apps/web/src/__tests__/middleware.test.ts`, `docs/integration/evidence/LSI-004.md`, `docs/integration/LEARNING_STUDIO_BACKLOG.md`, `docs/integration/HANDOFF.md`
-- Runtime files changed in this task: `apps/web/src/middleware.ts`, `apps/web/src/lib/urls.ts`, `apps/web/src/app/login/page.tsx`, `apps/web/src/context/AuthContext.tsx`
-- Verification in this task: 11/11 middleware unit tests passed; 6/6 shell unit tests passed; Next.js `typecheck` passed with 0 errors
+- Baseline commit: `6761dda`
+- Last completed work: LSI-005 authorized collection summaries (FastAPI endpoint `GET /api/v1/workspaces/{workspace_id}/learning-roadmaps`, `WorkspaceCurriculumSummary` schema and `WorkspaceResponse.curriculum` projection, batch resolution in `WorkspaceService.list_workspaces`, web client types in `workspaceApi.ts`)
+- Files changed in this task: `apps/api/src/schemas/workspace.py`, `apps/api/src/services/workspace_service.py`, `apps/api/src/routers/workspaces.py`, `apps/api/tests/roadmap/test_curriculum_api.py`, `apps/web/src/lib/workspaceApi.ts`, `apps/web/vitest.config.ts`, `apps/web/src/components/ui/__tests__/branch-trigger.test.tsx`, `docs/integration/evidence/LSI-005.md`, `docs/integration/LEARNING_STUDIO_BACKLOG.md`, `docs/integration/HANDOFF.md`
+- Runtime files changed in this task: `apps/api/src/schemas/workspace.py`, `apps/api/src/services/workspace_service.py`, `apps/api/src/routers/workspaces.py`, `apps/web/src/lib/workspaceApi.ts`
+- Verification in this task: 15/15 pytest tests passed (`test_workspaces.py` & `test_curriculum_api.py`); 381/381 vitest unit tests passed (75 test files); Next.js `typecheck` passed with 0 errors; `next build` compiled cleanly (8/8 static routes + middleware)
 - Runtime approval: Blanket user approval for backlog sequence recorded on 2026-10-15 ("i am approving all. i will review at the end. please complete all")
-- Last completed step: Middleware narrowed to approved public routes (`/login`, `/learn`, previews); private routes protected; `sanitizeRedirectPath` implemented to prevent open redirects; logout cache wipe added
-- Exact next action: Implement LSI-005 (Authorized collection summaries) by adding the curriculum/enrollment projection endpoint to the FastAPI backend router under `/api/v1/workspaces/{workspaceId}/learning-roadmaps`.
+- Last completed step: Backend workspace curriculum projection and dedicated learning-roadmaps endpoint implemented and verified; web client types integrated; evidence documented in `evidence/LSI-005.md`
+- Exact next action: Implement LSI-006 (Home and My learning) connecting `Home` and `My Learning` views with authorized server collection summaries from `GET /workspaces` and `GET /workspaces/{id}/learning-roadmaps`.
 - Pending command/session: none
-- Commands run and actual results: `vitest` (11 middleware passed, 6 shell passed), `pnpm --filter web typecheck` (passed with 0 errors).
-- Completion commit: `d644285` (LSI-004 completion commit)
+- Commands run and actual results: `pytest` (15 passed), `vitest run` (75 files, 381 tests passed), `pnpm --filter web typecheck` (passed with 0 errors), `next build` (compiled successfully).
 
 For each approved ticket, record the user approval source, date, and precise scope here. Preserve it across interruptions for that same scope.
 

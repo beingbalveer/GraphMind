@@ -15,6 +15,19 @@ import { apiFetch } from "./apiClient";
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
 
+export interface WorkspaceCurriculumSummary {
+  roadmapId: string;
+  revisionId?: string | null;
+  title: string;
+  status: string;
+  totalTopics: number;
+  completedTopics: number;
+  progressPercent: number;
+  sourceSnapshotRef?: string | null;
+  originJobId?: string | null;
+  updatedAt?: string | null;
+}
+
 export interface WorkspaceItem {
   id: string;
   name: string;
@@ -25,6 +38,7 @@ export interface WorkspaceItem {
   nodeCount: number;
   createdAt: string;
   updatedAt: string;
+  curriculum?: WorkspaceCurriculumSummary | null;
 }
 
 export interface WorkspaceListResponse {
@@ -188,6 +202,19 @@ export async function fetchWorkspace(
   } catch (err) {
     console.warn("Could not fetch workspace metadata:", err);
     return null;
+  }
+}
+
+export async function fetchWorkspaceCurricula(
+  workspaceId: string,
+): Promise<WorkspaceCurriculumSummary[]> {
+  try {
+    return await apiFetch<WorkspaceCurriculumSummary[]>(
+      `/workspaces/${workspaceId}/learning-roadmaps`
+    );
+  } catch (err) {
+    console.warn("Could not fetch workspace curricula:", err);
+    return [];
   }
 }
 

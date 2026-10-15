@@ -90,11 +90,27 @@ class WorkspaceUpdate(BaseSchema):
     zoom: Optional[float] = None
 
 
+class WorkspaceCurriculumSummary(BaseSchema):
+    roadmap_id: str = Field(description="Roadmap ID associated with workspace")
+    revision_id: Optional[str] = Field(default=None, description="Active curriculum revision ID")
+    title: str = Field(description="Curriculum title")
+    status: str = Field(default="active", description="Curriculum status")
+    total_topics: int = Field(default=0, description="Total active topics in curriculum")
+    completed_topics: int = Field(default=0, description="Topics completed by requesting learner")
+    progress_percent: float = Field(default=0.0, description="Percentage of curriculum completed")
+    source_snapshot_ref: Optional[str] = Field(default=None, description="Template snapshot version reference")
+    origin_job_id: Optional[str] = Field(default=None, description="Original generation job ID if generated")
+    updated_at: Optional[datetime] = None
+
+
 class WorkspaceResponse(WorkspaceBase):
     id: str
     created_at: datetime
     updated_at: datetime
     node_count: Optional[int] = Field(default=0, description="Total nodes in workspace")
+    curriculum: Optional[WorkspaceCurriculumSummary] = Field(
+        default=None, description="Curriculum projection if workspace is a learning roadmap"
+    )
 
 
 class WorkspaceListResponse(BaseSchema):

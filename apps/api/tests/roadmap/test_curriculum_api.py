@@ -72,6 +72,48 @@ async def test_nonmember_and_anonymous_cannot_read_curriculum(
         assert (await client.get(path)).status_code == 401
 
 
+async def test_workspace_curriculum_summaries_and_scoping(
+    published_curriculum, auth_client, curriculum_session
+):
+    view = published_curriculum.view
+    owner_id = published_curriculum.owner_id
+    await curriculum_session.commit()
+
+    # 1. Owner requests workspace curricula
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+        cookies={"access_token": create_access_token(owner_id)},
+    ) as owner_client:
+        resp = await owner_client.get(f"/api/v1/workspaces/{view.workspace_id}/learning-roadmaps")
+        assert resp.status_code == 200
+        summaries = resp.json()
+        assert len(summaries) == 1
+        summary = summaries[0]
+        assert summary["roadmapId"] == view.roadmap_id
+        assert summary["revisionId"] == view.revision_id
+        assert summary["totalTopics"] > 0
+        assert summary["progressPercent"] == 0.0
+
+        # Owner lists workspaces; curriculum projection must be present
+        ws_list = await owner_client.get("/api/v1/workspaces")
+        assert ws_list.status_code == 200
+        workspaces = ws_list.json()["workspaces"]
+        curriculum_ws = next((w for w in workspaces if w["id"] == view.workspace_id), None)
+        assert curriculum_ws is not None
+        assert curriculum_ws["curriculum"] is not None
+        assert curriculum_ws["curriculum"]["roadmapId"] == view.roadmap_id
+
+    # 2. Anonymous request is rejected
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as anon_client:
+        anon_resp = await anon_client.get(f"/api/v1/workspaces/{view.workspace_id}/learning-roadmaps")
+        assert anon_resp.status_code == 401
+
+    # 3. Non-member is rejected with 404
+    nonmember_resp = await auth_client.get(f"/api/v1/workspaces/{view.workspace_id}/learning-roadmaps")
+    assert nonmember_resp.status_code == 404
+
+
 @pytest.mark.parametrize("action", ["chats", "nodes"])
 async def test_direct_anchor_deletion_is_protected(
     published_curriculum, curriculum_session, action

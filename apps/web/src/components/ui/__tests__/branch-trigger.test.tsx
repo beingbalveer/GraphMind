@@ -1,4 +1,4 @@
-import { act, render, screen } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { BranchChatPane } from "@/components/chat/BranchChatPane";
@@ -25,7 +25,7 @@ describe("real branch menu triggers", () => {
     expect(wrapper.contains(document.activeElement)).toBe(true);
     await user.keyboard("{ArrowDown}{Escape}");
     expect(screen.queryByRole("menu")).not.toBeInTheDocument();
-    expect(trigger).toHaveFocus();
+    await waitFor(() => expect(trigger).toHaveFocus());
     expect(wrapper).toHaveClass("focus-within:opacity-100");
   }, 30000);
 });
