@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Brain } from "lucide-react";
 import { getAncestorPath, type ConversationTree, type WorkspaceMasterySummary, type WorkspaceTimelineResponse } from "@graphmind/shared";
 import { projectConversation, filterConversationByTime } from "@/lib/canvas/conversationProjection";
 import { canvasTopologyKey, layoutSpine } from "@/lib/canvas/spineLayout";
@@ -10,7 +11,9 @@ import type { CanvasItem } from "@/lib/canvas/types";
 import { CanvasSurface } from "./CanvasSurface";
 import { ConversationCanvasCard, type ThreadMasteryInfo } from "./ThreadGraphNode";
 import { TimelineReplayBar } from "./TimelineReplayBar";
+import { KnowledgeSignalsPanel } from "./KnowledgeSignalsPanel";
 import { Button } from "@/components/ui/button";
+import { Drawer } from "@/components/ui/drawer";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCanvasLayout } from "@/hooks/useCanvasLayout";
 
@@ -33,6 +36,7 @@ export function GraphCanvas({ tree, workspaceId, chatId, isStreaming = false, lo
   onFitViewRef, onCenterActiveRef, onAutoLayoutRef, onPaneClick, isSidePeekOpen = false }: GraphCanvasProps) {
   const [showMinimap, setShowMinimap] = useState(false);
   const [showMastery, setShowMastery] = useState(false);
+  const [showSignals, setShowSignals] = useState(false);
   const [replay, setReplay] = useState(false);
   const [mastery, setMastery] = useState<WorkspaceMasterySummary | null>(null);
   const [timeline, setTimeline] = useState<WorkspaceTimelineResponse | null>(null);
@@ -141,6 +145,7 @@ export function GraphCanvas({ tree, workspaceId, chatId, isStreaming = false, lo
       onFitViewRef={onFitViewRef} onCenterActiveRef={onCenterActiveRef} onAutoLayoutRef={onAutoLayoutRef}
       advancedItems={workspaceId ? [
         { label: showMastery ? "Hide mastery" : "Show mastery", onClick: () => setShowMastery(value => !value) },
+        { label: "Knowledge signals", onClick: () => setShowSignals(true) },
         { label: replay ? "Exit timeline" : "Open timeline", onClick: () => setReplay(value => !value) },
       ] : []} />
     {!replay && (stored.loadError || stored.saveState === "error") && <div role="alert" className="absolute bottom-4 right-4 z-20 flex items-center gap-2 rounded-xl border border-border bg-surface p-3 text-xs text-foreground-muted">
@@ -157,5 +162,19 @@ export function GraphCanvas({ tree, workspaceId, chatId, isStreaming = false, lo
       onClose={() => { setReplay(false); setPlaying(false); }} visibleNodeCount={graph.items.length}
       totalNodeCount={Object.keys(tree?.nodes ?? {}).length} masteredConceptCount={mastery?.concepts.filter(concept => concept.masteryLevel === "mastered").length ?? 0}
       totalConceptCount={mastery?.totalConcepts ?? 0} />}
+    {workspaceId && (
+      <Drawer
+        isOpen={showSignals}
+        onClose={() => setShowSignals(false)}
+        title="Knowledge signals"
+        description="Explicit mastery, gaps, and recommendations"
+        icon={<Brain className="size-4" />}
+      >
+        <KnowledgeSignalsPanel
+          workspaceId={workspaceId}
+          onSignalsChanged={() => { void loadMastery(); }}
+        />
+      </Drawer>
+    )}
   </div>;
 }
