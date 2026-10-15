@@ -31,11 +31,31 @@ class RoadmapRequest(CurriculumSchema):
     background: str | None = Field(default=None, max_length=4000)
     duration: Duration | None = None
     hours_per_week: Decimal | None = Field(default=None, ge=Decimal("0.5"), le=80)
+    # Optional Learning Studio generator extensions (LSI-020). Additive and
+    # backward compatible: absent fields keep their previous behavior, while
+    # unknown fields are still rejected by ``extra="forbid"`` rather than dropped.
+    outcome: str | None = Field(default=None, max_length=2000)
+    known_skills: list[str] = Field(default_factory=list, max_length=50)
+    reference_url: str | None = Field(default=None, max_length=2048)
+    sample_template_ref: str | None = Field(default=None, max_length=100)
 
-    @field_validator("title", "background", mode="before")
+    @field_validator(
+        "title", "background", "outcome", "reference_url", "sample_template_ref", mode="before"
+    )
     @classmethod
     def optional_text(cls, value: str | None) -> str | None:
         return value.strip() or None if value is not None else None
+
+    @field_validator("known_skills")
+    @classmethod
+    def known_skill_labels(cls, value: list[str]) -> list[str]:
+        labels = []
+        for skill in value:
+            label = skill.strip()
+            if not label or len(label) > 120:
+                raise ValueError("Keep each known skill within 120 characters")
+            labels.append(label)
+        return labels
 
     @field_validator("prompt")
     @classmethod

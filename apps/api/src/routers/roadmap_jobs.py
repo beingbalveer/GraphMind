@@ -15,6 +15,10 @@ from models.user import User
 from pydantic import Field, ValidationError
 from schemas.curriculum import CurriculumSchema, RoadmapRequest
 from schemas.roadmap_job import JobError, JobReferenceData, JobSnapshot, PublicJobSnapshot
+from services.roadmap.generator_request import (
+    GeneratorRequestError,
+    extend_generator_request,
+)
 from services.roadmap.job_repository import JobRepository, JobStateError
 from services.roadmap.references import ReferenceError, ReferenceService
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -95,7 +99,19 @@ DB = Annotated[AsyncSession, Depends(roadmap_db, scope="function")]
 async def create_job(
     data: RoadmapRequest, db: DB, user: Actor, idempotency_key: Annotated[UUID, Header()]
 ) -> PublicJobSnapshot:
-    return public_job(await JobRepository(db).create(user.id, data, str(idempotency_key)))
+    try:
+        request = extend_generator_request(data)
+    except GeneratorRequestError as error:
+        raise RoadmapHTTPError(
+            422,
+            JobError(
+                code=error.code,
+                message=str(error)[:500],
+                recoverable=False,
+                next_action="new_run",
+            ),
+        ) from None
+    return public_job(await JobRepository(db).create(user.id, request, str(idempotency_key)))
 
 
 @router.get("", response_model=list[PublicJobSnapshot])

@@ -22,12 +22,12 @@ def normalize_profile(request: RoadmapRequest) -> LearningProfile:
         else None
     )
     return LearningProfile(
-        **request.model_dump(),
+        **request.model_dump(exclude={"outcome"}),
         study_weeks=int(weeks) if weeks is not None else None,
         weekly_minutes=int(request.hours_per_week * 60)
         if request.hours_per_week is not None
         else None,
-        outcome=request.prompt,
+        outcome=request.outcome or request.prompt,
     )
 
 
