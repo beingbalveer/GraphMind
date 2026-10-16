@@ -65,6 +65,16 @@ export function GraphCanvas({ tree, workspaceId, chatId, isStreaming = false, lo
   }, [showMastery, loadMastery]);
   useEffect(() => { if (replay) void loadTimeline(); else setPlaying(false); }, [replay, loadTimeline]);
   useEffect(() => {
+    if (!replay) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setReplay(false);
+      setPlaying(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [replay]);
+  useEffect(() => {
     if (!playing || !timeline?.events.length) return;
     const timer = setInterval(() => setEventIndex(index => {
       if (index >= timeline.events.length - 1) { setPlaying(false); return index; }

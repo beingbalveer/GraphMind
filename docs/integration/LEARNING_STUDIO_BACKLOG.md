@@ -48,7 +48,7 @@ This is the authoritative status board and ticket specification.
 | [LSI-040](#lsi-040-general-workspaces-and-management) | E | General workspaces and management | Full stack | P1 | 006, 018 | DONE |
 | [LSI-041](#lsi-041-search-and-semantic-discovery) | E | Search and semantic discovery | Full stack | P1 | 019, 033, 040 | DONE |
 | [LSI-042](#lsi-042-knowledge-signals-and-curator-parity) | E | Knowledge signals and curator parity | Full stack | P1 | 035, 038, 040 | DONE |
-| [LSI-043](#lsi-043-timeline-and-replay-parity) | E | Timeline and replay parity | Full stack | P2 | 012, 018, 042 | TODO |
+| [LSI-043](#lsi-043-timeline-and-replay-parity) | E | Timeline and replay parity | Full stack | P2 | 012, 018, 042 | DONE |
 | [LSI-044](#lsi-044-production-user-preferences) | E | Production user preferences | Full stack | P2 | 002, 004, 039 | TODO |
 | [LSI-045](#lsi-045-owned-data-export-and-destructive-actions) | E | Owned data export and destructive actions | Full stack | P1 | 033, 040, 044 | TODO |
 | [LSI-046](#lsi-046-integrated-access-url-and-data-compatibility-gate) | F | Integrated access, URL, and data compatibility gate | QA / Review | P0 | 001–045 | TODO |
@@ -409,11 +409,12 @@ Ticket size is a planning target. When scope proves too large, create explicit `
 - **Evidence:** `KnowledgeSignalsPanel` over existing mastery/curator/gaps/adopt services with explicit-signal-vs-completion invariants, authorization, persisted state, and 3 backend + 6 frontend tests verified in [evidence/LSI-042.md](./evidence/LSI-042.md).
 
 ### LSI-043 Timeline and replay parity
-**Epic:** E · **Type:** Full stack · **Priority:** P2 · **Depends:** LSI-012, LSI-018, LSI-042
+**Epic:** E · **Type:** Full stack · **Priority:** P2 · **Depends:** LSI-012, LSI-018, LSI-042 · **Status:** Complete
 - **Scope:** Preserve existing timeline/heatmap/replay entry points, state selection, and return to current graph.
 - **Acceptance:** History is scoped; playback never mutates current nodes/progress; keyboard exit returns to current view.
 - **Test targets:** Timeline projections/permissions and replay/browser restore.
 - **Out of scope:** New timeline product behavior.
+- **Evidence:** Scoped workspace history + read permission, read-only replay that never writes the live tree/persisted layout, the new Escape-key exit, and the projection/entry-point parity, verified with 2 backend + 1 frontend tests in [evidence/LSI-043.md](./evidence/LSI-043.md).
 
 ### LSI-044 Production user preferences
 **Epic:** E · **Type:** Full stack · **Priority:** P2 · **Depends:** LSI-002, LSI-004, LSI-039

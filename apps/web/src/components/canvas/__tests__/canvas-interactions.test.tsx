@@ -126,6 +126,21 @@ describe("shared conversation canvas", () => {
     await waitFor(() => expect(screen.getByTestId("segment:x")).toHaveAttribute("data-position",'{"x":600,"y":900}'));
   });
 
+  it("exits timeline replay with the Escape key and returns to the current graph", async () => {
+    const historyTree = {...tree,nodes:{...tree.nodes,
+      r:{...tree.nodes.r,createdAt:"2026-10-01T00:00:00Z"},a:{...tree.nodes.a,createdAt:"2026-10-01T00:00:00Z"},
+      b:{...tree.nodes.b,createdAt:"2026-10-02T00:00:00Z"},x:{...tree.nodes.x,createdAt:"2026-10-03T00:00:00Z"}}};
+    render(<GraphCanvas tree={historyTree} workspaceId="w" onSelectNode={vi.fn()} />);
+    fireEvent.pointerDown(screen.getByRole("button",{name:"Canvas options"}), {button:0, ctrlKey:false, pointerType:"mouse"});
+    fireEvent.click(screen.getByRole("menuitem",{name:"Open timeline"}));
+    await waitFor(() => expect(screen.getByRole("button",{name:"Jump to Start"})).toBeVisible());
+    fireEvent.click(screen.getByRole("button",{name:"Jump to Start"}));
+    await waitFor(() => expect(screen.queryByTestId("segment:x")).not.toBeInTheDocument());
+    fireEvent.keyDown(window, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("button",{name:"Exit Timeline Replay"})).not.toBeInTheDocument());
+    expect(screen.getByTestId("segment:x")).toBeInTheDocument();
+  });
+
   it("confirms deletion using the original thread root and supports cancel", async () => {
     const onDelete=vi.fn();
     const canvasClick = vi.fn();

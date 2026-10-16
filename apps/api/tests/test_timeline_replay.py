@@ -1,6 +1,12 @@
+import uuid
+
 import pytest
 from httpx import ASGITransport, AsyncClient
 from main import app
+
+
+def _unique_email(prefix: str) -> str:
+    return f"{prefix}_{uuid.uuid4().hex[:8]}@example.com"
 
 
 @pytest.mark.asyncio
@@ -126,3 +132,63 @@ async def test_workspace_timeline_404() -> None:
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         resp = await client.get("/api/v1/workspaces/ws_nonexistent_0000/curator/timeline")
         assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_workspace_timeline_is_scoped_to_its_own_history() -> None:
+    """
+    Verify the timeline only projects the target workspace's own nodes and
+    concepts, never a sibling workspace's history.
+    """
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        ws_a = (await client.post("/api/v1/workspaces", json={"name": "Scoped Timeline A"})).json()["id"]
+        ws_b = (await client.post("/api/v1/workspaces", json={"name": "Scoped Timeline B"})).json()["id"]
+
+        node_a = (
+            await client.post(
+                f"/api/v1/workspaces/{ws_a}/nodes",
+                json={"role": "user", "content": "Workspace A only history"},
+            )
+        ).json()["id"]
+        node_b = (
+            await client.post(
+                f"/api/v1/workspaces/{ws_b}/nodes",
+                json={"role": "user", "content": "Workspace B only history"},
+            )
+        ).json()["id"]
+
+        timeline_a = (await client.get(f"/api/v1/workspaces/{ws_a}/curator/timeline")).json()
+        timeline_b = (await client.get(f"/api/v1/workspaces/{ws_b}/curator/timeline")).json()
+
+        entity_ids_a = {event["entityId"] for event in timeline_a["events"]}
+        entity_ids_b = {event["entityId"] for event in timeline_b["events"]}
+
+        assert node_a in entity_ids_a and node_b not in entity_ids_a
+        assert node_b in entity_ids_b and node_a not in entity_ids_b
+
+
+@pytest.mark.asyncio
+async def test_workspace_timeline_requires_read_access() -> None:
+    """
+    Verify a user without membership cannot read another user's timeline history.
+    """
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as owner:
+        await owner.post(
+            "/api/v1/auth/register",
+            json={"email": _unique_email("timeline_owner"), "password": "PasswordOwner123!"},
+        )
+        ws_id = (
+            await owner.post("/api/v1/workspaces", json={"name": "Timeline Private Lab"})
+        ).json()["id"]
+        await owner.post(
+            f"/api/v1/workspaces/{ws_id}/nodes",
+            json={"role": "user", "content": "Private history"},
+        )
+
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as intruder:
+            await intruder.post(
+                "/api/v1/auth/register",
+                json={"email": _unique_email("timeline_intruder"), "password": "PasswordIntruder123!"},
+            )
+            resp = await intruder.get(f"/api/v1/workspaces/{ws_id}/curator/timeline")
+            assert resp.status_code in (403, 404)
