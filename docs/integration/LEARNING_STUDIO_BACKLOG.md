@@ -53,7 +53,7 @@ This is the authoritative status board and ticket specification.
 | [LSI-045](#lsi-045-owned-data-export-and-destructive-actions) | E | Owned data export and destructive actions | Full stack | P1 | 033, 040, 044 | DONE |
 | [LSI-046](#lsi-046-integrated-access-url-and-data-compatibility-gate) | F | Integrated access, URL, and data compatibility gate | QA / Review | P0 | 001–045 | DONE |
 | [LSI-047](#lsi-047-accessibility-and-responsive-journey-gate) | F | Accessibility and responsive journey gate | QA | P0 | 046 | VERIFYING |
-| [LSI-048](#lsi-048-live-provider-and-research-quality-gate) | F | Live provider and research quality gate | Evaluation | P0 | 024, 039, 046 | TODO |
+| [LSI-048](#lsi-048-live-provider-and-research-quality-gate) | F | Live provider and research quality gate | Evaluation | P0 | 024, 039, 046 | BLOCKED |
 | [LSI-049](#lsi-049-controlled-production-cutover) | F | Controlled production cutover | Release | P0 | 046–048 | TODO |
 | [LSI-050](#lsi-050-retire-obsolete-learner-ui-and-prototype-runtime) | F | Retire obsolete learner UI and prototype runtime | Cleanup | P0 | 049 | TODO |
 
@@ -460,6 +460,7 @@ Ticket size is a planning target. When scope proves too large, create explicit `
 - **Acceptance:** Redacted real provider/model/run evidence supports product claims; unavailable credentials/provider stays explicitly blocked/unverified. Original roadmap verification closes only on its evidence.
 - **Test targets:** Reproduce representative approved research comparisons and live end-to-end journeys.
 - **Out of scope:** Treating mocked tests or previous branch verification as live evidence.
+- **Evidence:** Blocked pending a live operator run. This commit ships the automatable portion — the tested `evaluation.redact` evidence redactor (8 tests) and the exact live runbook + metric definitions — and marks the gate BLOCKED/unverified (no provider call executed) in [evidence/LSI-048.md](./evidence/LSI-048.md).
 
 ### LSI-049 Controlled production cutover
 **Epic:** F · **Type:** Release · **Priority:** P0 · **Depends:** LSI-046, LSI-047, LSI-048
