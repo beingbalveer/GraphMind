@@ -4,6 +4,7 @@ import { useState } from "react";
 import { AlertTriangle, CheckCircle2, Loader2, RotateCcw, XCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ClarificationForm } from "@/components/roadmap/ClarificationForm";
 import { JobActivity } from "@/components/roadmap/JobActivity";
 import type { GeneratorProfile } from "@/lib/generatorProfile";
 import type { JobEventData, JobSnapshot } from "@/lib/roadmapTypes";
@@ -53,6 +54,8 @@ export interface StudioJobProgressProps {
   profile: GeneratorProfile | null;
   onCancel: () => Promise<unknown>;
   onRetry: () => Promise<unknown>;
+  /** Answers the owned pending clarification question (LSI-023). */
+  onAnswer: (questionId: string, answer: string) => Promise<unknown>;
   onStartOver: () => void;
   onOpenWorkspace?: () => void;
   className?: string;
@@ -73,6 +76,7 @@ export function StudioJobProgress({
   profile,
   onCancel,
   onRetry,
+  onAnswer,
   onStartOver,
   onOpenWorkspace,
   className,
@@ -135,6 +139,16 @@ export function StudioJobProgress({
           </p>
         </div>
       </div>
+
+      {job?.question && (
+        <div className={cn(card, "mt-4")} data-testid="studio-job-question">
+          <ClarificationForm
+            key={job.question.id}
+            question={job.question}
+            onAnswer={onAnswer}
+          />
+        </div>
+      )}
 
       {profile && (
         <div className={cn(card, "mt-6")} data-testid="studio-job-submitted-profile">

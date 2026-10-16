@@ -10,6 +10,7 @@ const mock = vi.hoisted(() => ({
   events: [] as unknown[],
   push: vi.fn(),
   path: "/studio-preview",
+  answer: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({
@@ -34,6 +35,7 @@ vi.mock("@/hooks/useRoadmapJob", async (importOriginal) => {
       error: null,
       cancel: vi.fn().mockResolvedValue(undefined),
       retry: vi.fn().mockResolvedValue(undefined),
+      answer: mock.answer,
     }),
   };
 });
@@ -82,6 +84,7 @@ beforeEach(() => {
   mock.job = runningJob();
   mock.events = [];
   mock.path = "/studio-preview";
+  mock.answer.mockResolvedValue(undefined);
   vi.mocked(api.createRoadmapJob).mockResolvedValue({ id: "job-1" } as never);
   vi.mocked(api.startRoadmapJob).mockResolvedValue({ id: "job-1" } as never);
 });
@@ -182,4 +185,60 @@ it("projects the server phase and persisted events without fabricating completio
   );
   expect(screen.getByText("Inspected a source")).toBeVisible();
   expect(screen.queryByText("Your roadmap is ready")).toBeNull();
+});
+
+it("renders the owned clarification question and submits one answer", async () => {
+  mock.job = runningJob({
+    status: "awaiting_input",
+    summary: "One learning preference needs your answer",
+    question: {
+      id: "q1",
+      text: "What outcome matters most?",
+      suggestions: ["Sketch for fun", "Build a portfolio"],
+    },
+  });
+  render(<StudioRoadmapGenerator />);
+  await submitGoal("Learn to sketch");
+
+  expect(await screen.findByTestId("studio-job-question")).toBeVisible();
+  expect(screen.getByText("What outcome matters most?")).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: "Sketch for fun" }));
+
+  await waitFor(() =>
+    expect(mock.answer).toHaveBeenCalledWith("q1", "Sketch for fun"),
+  );
+  expect(mock.answer).toHaveBeenCalledTimes(1);
+});
+
+it("shows no clarification form while the job is still running", async () => {
+  render(<StudioRoadmapGenerator />);
+  await submitGoal("Learn to build a small API");
+
+  await screen.findByTestId("studio-job-progress");
+  expect(screen.queryByTestId("studio-job-question")).toBeNull();
+});
+
+it("surfaces a stale answer rejection and keeps the pending question", async () => {
+  mock.job = runningJob({
+    status: "awaiting_input",
+    question: {
+      id: "q1",
+      text: "What outcome matters most?",
+      suggestions: ["Sketch for fun", "Build a portfolio"],
+    },
+  });
+  mock.answer.mockRejectedValueOnce(
+    new Error("That question is no longer awaiting an answer"),
+  );
+  render(<StudioRoadmapGenerator />);
+  await submitGoal("Learn to sketch");
+
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Build a portfolio" }),
+  );
+
+  expect(
+    await screen.findByText("That question is no longer awaiting an answer"),
+  ).toBeVisible();
+  expect(screen.getByTestId("studio-job-question")).toBeVisible();
 });

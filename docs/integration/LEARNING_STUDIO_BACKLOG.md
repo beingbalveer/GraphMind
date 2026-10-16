@@ -28,7 +28,7 @@ This is the authoritative status board and ticket specification.
 | [LSI-020](#lsi-020-generator-request-and-provenance-extensions) | C | Generator request and provenance extensions | Backend | P0 | 002 | DONE |
 | [LSI-021](#lsi-021-goal-form-and-profile-review) | C | Goal form and profile review | Frontend | P0 | 020 | DONE |
 | [LSI-022](#lsi-022-owned-job-creation-status-and-result) | C | Owned job creation, status, and result | Full stack | P0 | 021 | DONE |
-| [LSI-023](#lsi-023-clarification-round-trip) | C | Clarification round trip | Full stack | P1 | 022 | TODO |
+| [LSI-023](#lsi-023-clarification-round-trip) | C | Clarification round trip | Full stack | P1 | 022 | DONE |
 | [LSI-024](#lsi-024-job-recovery-retry-and-cancellation-safety) | C | Job recovery, retry, and cancellation safety | Full stack | P0 | 023 | TODO |
 | [LSI-025](#lsi-025-public-snapshot-model-and-publication) | D | Public snapshot model and publication | Backend | P0 | 002, 020 | DONE |
 | [LSI-026](#lsi-026-public-catalog-api) | D | Public catalog API | Backend | P0 | 025 | DONE |
@@ -249,11 +249,12 @@ Ticket size is a planning target. When scope proves too large, create explicit `
 - **Evidence:** Idempotent job creation/start with reused keys, server-driven progress via `StudioJobProgress`, canonical workspace navigation on published completion, and 15 frontend + 2 backend tests verified in [evidence/LSI-022.md](./evidence/LSI-022.md).
 
 ### LSI-023 Clarification round trip
-**Epic:** C · **Type:** Full stack · **Priority:** P1 · **Depends:** LSI-022
+**Epic:** C · **Type:** Full stack · **Priority:** P1 · **Depends:** LSI-022 · **Status:** Complete
 - **Scope:** Render actual clarification/questions and answer route; preserve profile/history.
 - **Acceptance:** Only owned pending questions are answered; duplicate/stale answers are safe; refresh resumes correct job.
 - **Test targets:** API clarification plus UI refresh/answer/reject tests.
 - **Out of scope:** Scripted local clarification as production behavior.
+- **Evidence:** Server-driven `ClarificationForm` wired through `StudioJobProgress`/`StudioRoadmapGenerator` to the owned `/answers` route, stale/duplicate safety surfaced in the UI, owner-only answering verified, and 3 frontend + 1 backend tests in [evidence/LSI-023.md](./evidence/LSI-023.md).
 
 ### LSI-024 Job recovery, retry, and cancellation safety
 **Epic:** C · **Type:** Full stack · **Priority:** P0 · **Depends:** LSI-023

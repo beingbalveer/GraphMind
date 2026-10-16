@@ -234,6 +234,38 @@ async def test_waiting_answer_preserves_job_and_excludes_waiting_time(
         await job_repo.answer(ready_job.id, job_owner, "q1", "A stale answer")
 
 
+async def test_only_the_owner_can_answer_a_pending_question(
+    job_repo, ready_job, job_owner, clock, curriculum_session
+) -> None:
+    from models.user import User
+
+    other = User(
+        id=f"usr_{uuid.uuid4().hex[:12]}",
+        email=f"{uuid.uuid4().hex}@example.com",
+        provider="local",
+    )
+    curriculum_session.add(other)
+    await curriculum_session.flush()
+    claim = await job_repo.claim("worker", clock.now())
+    assert claim
+    await job_repo.checkpoint(
+        claim,
+        "understand",
+        StageResult(
+            checkpoint=JobCheckpoint(),
+            question=ClarificationQuestion(
+                id="q1", text="What outcome matters most?", suggestions=["Sketch", "Build"]
+            ),
+            summary="An outcome answer is needed",
+        ),
+    )
+    with pytest.raises(JobStateError) as error:
+        await job_repo.answer(ready_job.id, other.id, "q1", "Sketch")
+    assert error.value.code == "JOB_NOT_FOUND"
+    still_waiting = await job_repo.read(ready_job.id, job_owner)
+    assert still_waiting.status == "awaiting_input" and still_waiting.question is not None
+
+
 async def test_question_count_cannot_exceed_three(job_repo, ready_job, job_owner, clock) -> None:
     for index in range(3):
         claim = await job_repo.claim("worker", clock.now())

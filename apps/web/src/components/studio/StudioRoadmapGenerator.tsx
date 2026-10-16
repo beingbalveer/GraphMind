@@ -60,7 +60,7 @@ export function StudioRoadmapGenerator({
   const startPath = useRef(path);
   const openedResult = useRef<string | null>(null);
 
-  const { job, events, connection, error, cancel, retry } =
+  const { job, events, connection, error, cancel, retry, answer } =
     useRoadmapJob(watchingId);
 
   const target = completedRoadmapTarget(job);
@@ -134,6 +134,7 @@ export function StudioRoadmapGenerator({
         profile={submittedProfile}
         onCancel={cancel}
         onRetry={retry}
+        onAnswer={answer}
         onStartOver={startOver}
         onOpenWorkspace={target ? openWorkspace : undefined}
         className={className}
