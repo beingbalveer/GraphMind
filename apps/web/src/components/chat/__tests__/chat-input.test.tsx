@@ -77,6 +77,23 @@ describe("ChatInput", () => {
     expect(screen.getByRole("button", { name: "Send message" })).toBeDisabled();
   });
 
+  it("selects a system skill from a slash command and forwards it with the message", () => {
+    const onSendMessage = vi.fn();
+    render(<ChatInput {...baseProps} onSendMessage={onSendMessage} />);
+
+    const input = screen.getByRole("textbox");
+    fireEvent.change(input, {
+      target: { value: "/research quantum error correction" },
+    });
+    fireEvent.submit(input.closest("form") as HTMLFormElement);
+
+    expect(onSendMessage).toHaveBeenCalledWith(
+      "quantum error correction",
+      [],
+      "deep_research"
+    );
+  });
+
   it("keeps migrated composer styles on semantic color tokens", () => {
     const source = readFileSync(
       path.resolve(process.cwd(), "src/components/chat/ChatInput.tsx"),

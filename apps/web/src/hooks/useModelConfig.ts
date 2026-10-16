@@ -2,6 +2,23 @@
 
 import { useState, useEffect, useCallback } from "react";
 
+/**
+ * `useModelConfig` — browser-local model / provider / key configuration.
+ *
+ * Key model (non-negotiable):
+ * - The selected provider, model, generation parameters, and any BYOK API keys
+ *   are stored **only** in this browser's `localStorage` under
+ *   `graphmind:llm-config`. They are never uploaded to or persisted by the
+ *   server.
+ * - A key is attached to the individual outbound request that needs it (as the
+ *   optional `api_key` field) so the server can use it for that call; the
+ *   server never stores it and logs only whether a key was present.
+ * - When a key is blank, `getEffectiveApiKey` returns `undefined` so the
+ *   request omits it and the server's own environment configuration is used.
+ * - Secrets never appear in exports, exports of the conversation graph, or any
+ *   public DTO.
+ */
+
 export type LLMProvider =
   | "gemini"
   | "openai"

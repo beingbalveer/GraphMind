@@ -44,7 +44,7 @@ This is the authoritative status board and ticket specification.
 | [LSI-036](#lsi-036-direct-edits-and-revision-history) | E | Direct edits and revision history | Full stack | P1 | 008, 012 | DONE |
 | [LSI-037](#lsi-037-ai-refinement-proposal-review) | E | AI refinement proposal review | Full stack | P1 | 024, 036 | DONE |
 | [LSI-038](#lsi-038-branch-promotion) | E | Branch promotion | Full stack | P1 | 016, 036 | DONE |
-| [LSI-039](#lsi-039-provider-model-and-system-skill-settings) | E | Provider, model, and system-skill settings | Full stack | P1 | 019, 024 | TODO |
+| [LSI-039](#lsi-039-provider-model-and-system-skill-settings) | E | Provider, model, and system-skill settings | Full stack | P1 | 019, 024 | DONE |
 | [LSI-040](#lsi-040-general-workspaces-and-management) | E | General workspaces and management | Full stack | P1 | 006, 018 | DONE |
 | [LSI-041](#lsi-041-search-and-semantic-discovery) | E | Search and semantic discovery | Full stack | P1 | 019, 033, 040 | DONE |
 | [LSI-042](#lsi-042-knowledge-signals-and-curator-parity) | E | Knowledge signals and curator parity | Full stack | P1 | 035, 038, 040 | DONE |
@@ -377,11 +377,12 @@ Ticket size is a planning target. When scope proves too large, create explicit `
 - **Evidence:** Promotion lineage resolves the exact persistent source branch via `buildNodeUrl`, source branch stays unchanged across promote/apply, idempotency/conflict safety, and 3 backend + 3 frontend tests verified in [evidence/LSI-038.md](./evidence/LSI-038.md).
 
 ### LSI-039 Provider, model, and system-skill settings
-**Epic:** E · **Type:** Full stack · **Priority:** P1 · **Depends:** LSI-019, LSI-024
+**Epic:** E · **Type:** Full stack · **Priority:** P1 · **Depends:** LSI-019, LSI-024 · **Status:** Complete
 - **Scope:** Port existing provider/key/model/skill selectors and supported request behavior; document browser-local key model.
 - **Acceptance:** Valid selection affects real tutor/generator when supported; missing/invalid provider is actionable; secrets never enter docs/logs/export/public DTO.
 - **Test targets:** Mocked provider matrix/settings; live evidence is separately required in LSI-048.
 - **Out of scope:** Uploading provider secrets to server storage or claiming mocked live quality.
+- **Evidence:** Provider/key/model/system-skill selectors and their request behavior, the browser-local key model, actionable `MODEL_NOT_CONFIGURED`, secret-free logs/exports/public DTOs, and 5 backend + 8 frontend tests verified in [evidence/LSI-039.md](./evidence/LSI-039.md).
 
 ### LSI-040 General workspaces and management
 **Epic:** E · **Type:** Full stack · **Priority:** P1 · **Depends:** LSI-006, LSI-018 · **Status:** Complete

@@ -85,7 +85,11 @@ export function StudioTutorChat({
   const currentSessionId = activeSession?.id ?? topicSessionId ?? null;
   const currentChatId = activeSession?.chatId ?? null;
 
-  const { config: llmConfig } = useModelConfig();
+  const {
+    config: llmConfig,
+    getEffectiveApiKey,
+    getEffectiveBaseUrl,
+  } = useModelConfig();
 
   const {
     tree,
@@ -261,6 +265,13 @@ export function StudioTutorChat({
       await sendMessage(fullMessage, llmConfig.provider, llmConfig.model, {
         workspaceId,
         topicSessionId: currentSessionId ?? undefined,
+        // Honor the learner's browser-local provider selection: the BYOK key,
+        // custom base URL, and generation parameters chosen in Settings apply
+        // to the tutor exactly as they do to the main conversation.
+        apiKey: getEffectiveApiKey(llmConfig.provider),
+        baseUrl: getEffectiveBaseUrl(llmConfig.provider),
+        temperature: llmConfig.temperature,
+        maxTokens: llmConfig.maxTokens,
         branchOverride: branchQuote
           ? {
               parentNodeId: branchParent,
@@ -287,6 +298,10 @@ export function StudioTutorChat({
     sendMessage,
     llmConfig.provider,
     llmConfig.model,
+    llmConfig.temperature,
+    llmConfig.maxTokens,
+    getEffectiveApiKey,
+    getEffectiveBaseUrl,
     workspaceId,
     currentSessionId,
     tree?.activeNodeId,
