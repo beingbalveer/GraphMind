@@ -4,24 +4,15 @@ import { useCallback, useRef, useState } from "react";
 import { ApiError } from "@/lib/apiClient";
 import {
   announceLearningCollectionChanged,
-  findSavedWorkspace,
-  mapPublicTopicToPrivate,
-  saveRoadmapCopy,
-  sourceSnapshotRef,
+  createSaveCopySession,
+  performSaveRoadmapCopy,
   type EnrollmentDetail,
+  type SaveCopyInput,
 } from "@/lib/enrollmentApi";
-import { createWorkspace, listWorkspaces } from "@/lib/workspaceApi";
 
 export type SaveCopyStatus = "idle" | "pending" | "saved" | "error";
 
-export interface SaveCopyInput {
-  templateId: string;
-  snapshotVersion: string;
-  /** Title for the new private copy and its workspace. */
-  title?: string | null;
-  /** Public topic the guest was reading, mapped onto the private copy. */
-  publicTopicId?: string | null;
-}
+export type { SaveCopyInput };
 
 export interface UseSaveRoadmapCopyResult {
   status: SaveCopyStatus;
@@ -38,30 +29,17 @@ export interface UseSaveRoadmapCopyResult {
 
 const GENERIC_ERROR = "We couldn't save this roadmap. Please try again.";
 
-/** A UUID `Idempotency-Key`; the save route requires a UUID header. */
-function nextIdempotencyKey(): string {
-  const cryptoObj = typeof crypto !== "undefined" ? crypto : undefined;
-  if (cryptoObj?.randomUUID) return cryptoObj.randomUUID();
-  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (char) => {
-    const random = (Math.random() * 16) | 0;
-    const value = char === "x" ? random : (random & 0x3) | 0x8;
-    return value.toString(16);
-  });
-}
-
 /**
  * useSaveRoadmapCopy — signed-in save flow with pending/retry/reuse (LSI-031).
  *
- * Reuses the existing copy when the snapshot is already saved (the server
- * dedupes on `(workspace, template)`), otherwise creates a fresh, empty workspace
- * for the copy so two different templates stay isolated. One idempotency key is
- * kept per `template:version`, so a retry after a failure replays the same
- * request, and a duplicate click while a save is in flight returns the same
- * pending promise instead of issuing a second write.
+ * Delegates the resumable copy logic to `performSaveRoadmapCopy` (shared with the
+ * LSI-032 intent resume), which reuses an existing copy or creates a fresh
+ * workspace, keeps one idempotency key per `template:version`, and maps the
+ * guest's public topic onto the private copy. A duplicate click while a save is
+ * in flight returns the same pending promise instead of issuing a second write.
  */
 export function useSaveRoadmapCopy(): UseSaveRoadmapCopyResult {
-  const keys = useRef<Map<string, string>>(new Map());
-  const createdWorkspaces = useRef<Map<string, string>>(new Map());
+  const session = useRef(createSaveCopySession());
   const pending = useRef<Promise<EnrollmentDetail | null> | null>(null);
   const lastInput = useRef<SaveCopyInput | null>(null);
 
@@ -73,66 +51,15 @@ export function useSaveRoadmapCopy(): UseSaveRoadmapCopyResult {
 
   const runSave = useCallback(
     async (input: SaveCopyInput): Promise<EnrollmentDetail | null> => {
-      const ref = sourceSnapshotRef(input.templateId, input.snapshotVersion);
-      let idempotencyKey = keys.current.get(ref);
-      if (!idempotencyKey) {
-        idempotencyKey = nextIdempotencyKey();
-        keys.current.set(ref, idempotencyKey);
-      }
-
       setStatus("pending");
       setError(null);
       try {
-        // A strict list: "could not load" must not be misread as "nothing saved",
-        // which would create a duplicate copy.
-        const workspaces = await listWorkspaces();
-        const existing = findSavedWorkspace(
-          workspaces,
-          input.templateId,
-          input.snapshotVersion,
-        );
-
-        let workspaceId: string;
-        if (existing) {
-          workspaceId = existing.id;
-        } else {
-          // Reuse a workspace this hook already created for the snapshot (for
-          // example after a failed save) so a retry never leaves an empty
-          // workspace behind.
-          const tracked = createdWorkspaces.current.get(ref);
-          if (tracked) {
-            workspaceId = tracked;
-          } else {
-            const name =
-              input.title?.trim() || input.templateId.trim() || "My learning";
-            const workspace = await createWorkspace(
-              name,
-              "Saved from the public learning catalog.",
-            );
-            workspaceId = workspace.id;
-            createdWorkspaces.current.set(ref, workspaceId);
-          }
-        }
-
-        const saved = await saveRoadmapCopy(
-          workspaceId,
-          {
-            templateId: input.templateId,
-            snapshotVersion: input.snapshotVersion,
-            customTitle: input.title ?? null,
-          },
-          idempotencyKey,
-        );
+        const { enrollment: saved, created: didCreate, privateTopicId: mapped } =
+          await performSaveRoadmapCopy(input, session.current);
 
         setEnrollment(saved);
-        // "Created" reflects whether the copy already existed, independent of
-        // whether this attempt reused a workspace it created earlier.
-        setCreated(!existing);
-        setPrivateTopicId(
-          input.publicTopicId
-            ? mapPublicTopicToPrivate(saved, input.publicTopicId)
-            : null,
-        );
+        setCreated(didCreate);
+        setPrivateTopicId(mapped);
         setStatus("saved");
         announceLearningCollectionChanged();
         return saved;
@@ -159,8 +86,7 @@ export function useSaveRoadmapCopy(): UseSaveRoadmapCopyResult {
   );
 
   const retry = useCallback(
-    () =>
-      lastInput.current ? save(lastInput.current) : Promise.resolve(null),
+    () => (lastInput.current ? save(lastInput.current) : Promise.resolve(null)),
     [save],
   );
 

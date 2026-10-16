@@ -1,10 +1,12 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useRef } from "react";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import { StudioHeader } from "@/components/studio/StudioHeader";
 import { PublicLessonReader } from "@/components/studio/PublicLessonReader";
+import { useAuth } from "@/context/AuthContext";
 import { usePublicLesson, usePublicRoadmap } from "@/hooks/usePublicSnapshot";
+import { storePendingIntent } from "@/lib/authIntent";
 import { publicTopicSequence } from "@/lib/publicCurriculum";
 import { firstParam } from "@/lib/routeParams";
 import { buildLoginUrl, buildPublicLessonUrl, buildPublicRoadmapUrl } from "@/lib/urls";
@@ -23,6 +25,8 @@ export default function PublicLessonPage() {
   const params = useParams<{ slug: string; topicSlug: string }>();
   const slug = firstParam(params?.slug);
   const topicSlug = firstParam(params?.topicSlug);
+  const { isAuthenticated } = useAuth();
+  const mainRef = useRef<HTMLElement | null>(null);
 
   const lessonState = usePublicLesson(slug, topicSlug);
   const roadmapState = usePublicRoadmap(slug);
@@ -44,10 +48,40 @@ export default function PublicLessonPage() {
       ? sequence[currentIndex + 1].topic
       : null;
 
+  /**
+   * The gated "track progress / ask the tutor" action. Store a sign-in intent
+   * carrying the public snapshot/topic identity plus the guest's current reading
+   * position (public identities only) so the resume can save the private copy,
+   * map the topic, and restore the reading position. A guest routes to sign-in;
+   * a learner already signed in stores the intent and the resumer acts on it.
+   */
+  const handleRequireSignIn = () => {
+    const lesson = lessonState.data;
+    const roadmap = roadmapState.data;
+    if (lesson && roadmap) {
+      const el = mainRef.current;
+      const maxScroll = el ? el.scrollHeight - el.clientHeight : 0;
+      const readingRatio =
+        el && maxScroll > 0 ? Math.min(1, Math.max(0, el.scrollTop / maxScroll)) : null;
+      storePendingIntent({
+        kind: "signin",
+        templateId: roadmap.id,
+        slug,
+        snapshotVersion: roadmap.snapshotVersion,
+        topicSlug: lesson.topicSlug,
+        topicId: lesson.topicId,
+        readingRatio,
+      });
+    }
+    if (!isAuthenticated) {
+      router.push(buildLoginUrl(pathname));
+    }
+  };
+
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
       <StudioHeader activeNav="browse" showNav={false} />
-      <main className="flex-1 overflow-y-auto">
+      <main ref={mainRef} className="flex-1 overflow-y-auto">
         <PublicLessonReader
           lesson={lessonState.data}
           isLoading={lessonState.isLoading}
@@ -64,7 +98,7 @@ export default function PublicLessonPage() {
           }
           prev={prev ? { slug: prev.slug, title: prev.title } : null}
           next={next ? { slug: next.slug, title: next.title } : null}
-          onRequireSignIn={() => router.push(buildLoginUrl(pathname))}
+          onRequireSignIn={handleRequireSignIn}
         />
       </main>
     </div>

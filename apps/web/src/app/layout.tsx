@@ -20,6 +20,7 @@ export const metadata: Metadata = {
 import { Geist_Mono } from "next/font/google";
 import localFont from "next/font/local";
 import { AuthProvider } from "@/context/AuthContext";
+import { AuthIntentResumer } from "@/components/auth/AuthIntentResumer";
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
@@ -44,7 +45,10 @@ export default function RootLayout({
       className={`${geistMono.variable} ${libreBaskerville.variable}`}
     >
       <body className="antialiased font-sans">
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider>
+          <AuthIntentResumer />
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );

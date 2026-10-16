@@ -10,6 +10,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { usePublicRoadmap } from "@/hooks/usePublicSnapshot";
 import { useSaveRoadmapCopy } from "@/hooks/useSaveRoadmapCopy";
+import { storePendingIntent } from "@/lib/authIntent";
 import { firstParam } from "@/lib/routeParams";
 import {
   buildLoginUrl,
@@ -53,6 +54,24 @@ export default function PublicCoursePage() {
     }
   };
 
+  /**
+   * A guest's save is gated behind sign-in. Store the intent (public snapshot
+   * identity only) so the resume path can save and open the private copy after
+   * the learner authenticates; dismissal leaves nothing to execute.
+   */
+  const handleRequireSignIn = () => {
+    if (data) {
+      storePendingIntent({
+        kind: "save",
+        templateId: data.id,
+        slug,
+        snapshotVersion: data.snapshotVersion,
+        title: data.title,
+      });
+    }
+    router.push(buildLoginUrl(pathname));
+  };
+
   return (
     <div className="flex min-h-screen flex-col bg-background text-foreground">
       <StudioHeader activeNav="browse" showNav={false} />
@@ -68,7 +87,7 @@ export default function PublicCoursePage() {
           onOpenTopic={(topicSlug) =>
             router.push(buildPublicLessonUrl(slug, topicSlug))
           }
-          onRequireSignIn={() => router.push(buildLoginUrl(pathname))}
+          onRequireSignIn={handleRequireSignIn}
           isAuthenticated={isAuthenticated}
           saveStatus={save.status}
           saveError={save.error}

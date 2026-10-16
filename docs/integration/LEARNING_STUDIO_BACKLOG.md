@@ -37,7 +37,7 @@ This is the authoritative status board and ticket specification.
 | [LSI-029](#lsi-029-public-catalog-in-next) | D | Public catalog in Next.js | Frontend | P0 | 004, 026 | DONE |
 | [LSI-030](#lsi-030-guest-course-lesson-list-and-canvas) | D | Guest course, lesson, List, and Canvas | Full stack | P0 | 012, 027, 029 | DONE |
 | [LSI-031](#lsi-031-save-copy-and-learning-collection-refresh) | D | Save copy and learning collection refresh | Full stack | P0 | 006, 028, 030 | DONE |
-| [LSI-032](#lsi-032-resume-one-authenticated-intent) | D | Resume one authenticated intent | Full stack | P0 | 004, 013, 031 | TODO |
+| [LSI-032](#lsi-032-resume-one-authenticated-intent) | D | Resume one authenticated intent | Full stack | P0 | 004, 013, 031 | DONE |
 | [LSI-033](#lsi-033-files-and-attachments) | E | Files and attachments | Full stack | P1 | 017, 019 | DONE |
 | [LSI-034](#lsi-034-existing-modal-viewers) | E | Existing modal viewers | Frontend | P1 | 033 | DONE |
 | [LSI-035](#lsi-035-flashcards-and-learning-message-actions) | E | Flashcards and learning message actions | Full stack | P1 | 019 | DONE |
@@ -326,6 +326,7 @@ Ticket size is a planning target. When scope proves too large, create explicit `
 - **Acceptance:** Dismissal has no writes; callback revalidates source/owner and maps copied topic; practice does not auto-submit; tutor quote survives; duplicate callback safe.
 - **Test targets:** Callback replay/forgery/expiry/invalid-snapshot tests and guest→login journeys.
 - **Out of scope:** Trusting callback payloads or placing primary IDs in query params.
+- **Evidence:** Discriminated expiring save/complete/practice/tutor/generator/signin intent (public identities only), source revalidation against the current published snapshot, idempotent save with copied-topic mapping and reading-position transfer, consume-once resume (dismissal performs no write, duplicate callback is a no-op, practice never auto-submits, tutor quote survives), executor + store + resumer + guest-journey verification by 23 new tests (32 focused) in [evidence/LSI-032.md](./evidence/LSI-032.md).
 
 ### LSI-033 Files and attachments
 **Epic:** E — Legacy parity · **Type:** Full stack · **Priority:** P1 · **Depends:** LSI-017, LSI-019 · **Status:** Complete

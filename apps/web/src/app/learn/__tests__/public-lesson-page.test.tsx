@@ -1,16 +1,22 @@
 import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
+import { PENDING_INTENT_STORAGE_KEY } from "@/lib/authIntent";
 
 const mockRouter = vi.hoisted(() => ({ push: vi.fn() }));
 const mockParams = vi.hoisted(() => ({
   value: { slug: "python-backend", topicSlug: "async-basics" } as Record<string, string>,
 }));
+const mockAuth = vi.hoisted(() => ({ value: { isAuthenticated: false } }));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockRouter.push }),
   usePathname: () => "/learn/python-backend/lessons/async-basics",
   useParams: () => mockParams.value,
+}));
+
+vi.mock("@/context/AuthContext", () => ({
+  useAuth: () => mockAuth.value,
 }));
 
 import PublicLessonPage from "../[slug]/lessons/[topicSlug]/page";
@@ -84,6 +90,8 @@ describe("/learn/[slug]/lessons/[topicSlug] guest lesson page (LSI-030)", () => 
   beforeEach(() => {
     mockRouter.push.mockReset();
     mockParams.value = { slug: "python-backend", topicSlug: "async-basics" };
+    mockAuth.value = { isAuthenticated: false };
+    window.localStorage.clear();
   });
   afterEach(() => vi.unstubAllGlobals());
 
@@ -128,8 +136,17 @@ describe("/learn/[slug]/lessons/[topicSlug] guest lesson page (LSI-030)", () => 
     );
   });
 
-  it("gates progress tracking behind sign-in", async () => {
-    vi.stubGlobal("fetch", fetcher());
+  it("gates progress tracking behind sign-in and stores a resumable intent (LSI-032)", async () => {
+    const mutations: string[] = [];
+    const fetcherMock = vi.fn().mockImplementation(
+      (url: string, init: RequestInit = {}) => {
+        if ((init.method ?? "GET").toUpperCase() !== "GET") {
+          mutations.push(`${init.method} ${url}`);
+        }
+        return Promise.resolve(ok(url.includes("/topics/") ? LESSON : ROADMAP));
+      },
+    );
+    vi.stubGlobal("fetch", fetcherMock);
 
     render(<PublicLessonPage />);
     await screen.findByRole("heading", { name: "Async basics" });
@@ -140,5 +157,21 @@ describe("/learn/[slug]/lessons/[topicSlug] guest lesson page (LSI-030)", () => 
     expect(mockRouter.push).toHaveBeenCalledWith(
       "/login?next=%2Flearn%2Fpython-backend%2Flessons%2Fasync-basics",
     );
+    // The gated action performed no private mutation.
+    expect(mutations).toHaveLength(0);
+
+    // The intent carries public topic/snapshot identity only, for resume.
+    const stored = JSON.parse(
+      window.localStorage.getItem(PENDING_INTENT_STORAGE_KEY) as string,
+    );
+    expect(stored).toMatchObject({
+      kind: "signin",
+      templateId: "tmpl-python",
+      slug: "python-backend",
+      snapshotVersion: "2026-10-15.1",
+      topicId: "pub_topic_async",
+      topicSlug: "async-basics",
+    });
+    expect(JSON.stringify(stored)).not.toContain("workspaceId");
   });
 });

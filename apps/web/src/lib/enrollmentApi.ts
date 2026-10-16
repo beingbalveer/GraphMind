@@ -20,7 +20,11 @@
  */
 
 import { apiFetch } from "./apiClient";
-import type { WorkspaceItem } from "./workspaceApi";
+import {
+  createWorkspace,
+  listWorkspaces,
+  type WorkspaceItem,
+} from "./workspaceApi";
 
 export interface SaveRoadmapCopyRequest {
   templateId: string;
@@ -98,6 +102,128 @@ export function saveRoadmapCopy(
       body: JSON.stringify(request),
     },
   );
+}
+
+// ---------------------------------------------------------------------------
+// Shared save-copy flow (used by the save hook and the LSI-032 intent resume)
+// ---------------------------------------------------------------------------
+
+export interface SaveCopyInput {
+  templateId: string;
+  snapshotVersion: string;
+  /** Title for the new private copy and its workspace. */
+  title?: string | null;
+  /** Public topic the guest was reading, mapped onto the private copy. */
+  publicTopicId?: string | null;
+}
+
+/** Per-flow state: one idempotency key and created workspace per snapshot. */
+export interface SaveCopySession {
+  keys: Map<string, string>;
+  workspaces: Map<string, string>;
+}
+
+export interface SaveCopyOutcome {
+  enrollment: EnrollmentDetail;
+  /** True when this save created the copy; false when it reused an existing one. */
+  created: boolean;
+  /** Private id the public topic was copied to, when one was mapped. */
+  privateTopicId: string | null;
+}
+
+/** Injectable dependencies so the flow is unit-testable without a network. */
+export interface SaveCopyDeps {
+  listWorkspaces: (signal?: AbortSignal) => Promise<WorkspaceItem[]>;
+  createWorkspace: (name: string, description?: string) => Promise<WorkspaceItem>;
+  saveRoadmapCopy: typeof saveRoadmapCopy;
+}
+
+export const createSaveCopySession = (): SaveCopySession => ({
+  keys: new Map(),
+  workspaces: new Map(),
+});
+
+const defaultSaveCopyDeps: SaveCopyDeps = {
+  listWorkspaces,
+  createWorkspace,
+  saveRoadmapCopy,
+};
+
+/** A UUID `Idempotency-Key`; the save route requires a UUID header. */
+function nextIdempotencyKey(): string {
+  const cryptoObj = typeof crypto !== "undefined" ? crypto : undefined;
+  if (cryptoObj?.randomUUID) return cryptoObj.randomUUID();
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (char) => {
+    const random = (Math.random() * 16) | 0;
+    const value = char === "x" ? random : (random & 0x3) | 0x8;
+    return value.toString(16);
+  });
+}
+
+/**
+ * Create (or reuse) a private copy of a published snapshot.
+ *
+ * Reuses the workspace that already hosts the snapshot (the server then returns
+ * the existing copy), otherwise creates a fresh, empty workspace. A workspace
+ * created for the snapshot is remembered in the session so a retry never leaves
+ * an orphan workspace. One idempotency key is kept per `template:version` so a
+ * retry replays the same request.
+ */
+export async function performSaveRoadmapCopy(
+  input: SaveCopyInput,
+  session: SaveCopySession,
+  deps: SaveCopyDeps = defaultSaveCopyDeps,
+): Promise<SaveCopyOutcome> {
+  const ref = sourceSnapshotRef(input.templateId, input.snapshotVersion);
+  let idempotencyKey = session.keys.get(ref);
+  if (!idempotencyKey) {
+    idempotencyKey = nextIdempotencyKey();
+    session.keys.set(ref, idempotencyKey);
+  }
+
+  const workspaces = await deps.listWorkspaces();
+  const existing = findSavedWorkspace(
+    workspaces,
+    input.templateId,
+    input.snapshotVersion,
+  );
+
+  let workspaceId: string;
+  if (existing) {
+    workspaceId = existing.id;
+  } else {
+    const tracked = session.workspaces.get(ref);
+    if (tracked) {
+      workspaceId = tracked;
+    } else {
+      const name =
+        input.title?.trim() || input.templateId.trim() || "My learning";
+      const workspace = await deps.createWorkspace(
+        name,
+        "Saved from the public learning catalog.",
+      );
+      workspaceId = workspace.id;
+      session.workspaces.set(ref, workspaceId);
+    }
+  }
+
+  const enrollment = await deps.saveRoadmapCopy(
+    workspaceId,
+    {
+      templateId: input.templateId,
+      snapshotVersion: input.snapshotVersion,
+      customTitle: input.title ?? null,
+    },
+    idempotencyKey,
+  );
+
+  return {
+    enrollment,
+    created: !existing,
+    privateTopicId: input.publicTopicId
+      ? mapPublicTopicToPrivate(enrollment, input.publicTopicId)
+      : null,
+  };
 }
 
 export const LEARNING_COLLECTION_CHANGED_EVENT =

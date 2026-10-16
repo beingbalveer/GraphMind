@@ -1,6 +1,7 @@
 import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { PENDING_INTENT_STORAGE_KEY } from "@/lib/authIntent";
 
 const mockRouter = vi.hoisted(() => ({ push: vi.fn() }));
 const mockParams = vi.hoisted(() => ({
@@ -71,6 +72,7 @@ describe("/learn/[slug] guest course page (LSI-030)", () => {
     mockRouter.push.mockReset();
     mockParams.value = { slug: "python-backend" };
     mockAuth.value = { isAuthenticated: false };
+    window.localStorage.clear();
   });
   afterEach(() => vi.unstubAllGlobals());
 
@@ -113,6 +115,17 @@ describe("/learn/[slug] guest course page (LSI-030)", () => {
     );
     // The gated action issued no mutation request.
     expect(fetcher).toHaveBeenCalledTimes(1);
+    // The intent carries public snapshot identity only, for LSI-032 resume.
+    const stored = JSON.parse(
+      window.localStorage.getItem(PENDING_INTENT_STORAGE_KEY) as string,
+    );
+    expect(stored).toMatchObject({
+      kind: "save",
+      templateId: "tmpl-python",
+      slug: "python-backend",
+      snapshotVersion: "2026-10-15.1",
+    });
+    expect(JSON.stringify(stored)).not.toContain("workspaceId");
   });
 
   it("renders an honest not-available state for a withdrawn snapshot", async () => {
