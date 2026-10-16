@@ -8,6 +8,7 @@ from models.public_snapshot import (
     PublicSnapshotTopic,
     PublicSnapshotTopicSource,
 )
+from models.public_snapshot_copy import PublicSnapshotCopy, PublicSnapshotCopyTopic
 from models.roadmap import (
     ChoiceSelection,
     CurriculumItem,
@@ -62,6 +63,8 @@ __all__ = [
     "PublicSnapshotSource",
     "PublicSnapshotTopicSource",
     "PublicSnapshotOrigin",
+    "PublicSnapshotCopy",
+    "PublicSnapshotCopyTopic",
     "User",
     "WorkspaceMember",
     "Workspace",

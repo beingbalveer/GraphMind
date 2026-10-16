@@ -1,4 +1,5 @@
-from typing import Any, Dict, List, Optional
+from typing import Annotated, Any, Dict, List, Optional
+from uuid import UUID
 
 from database import get_db
 from dependencies import (
@@ -6,12 +7,16 @@ from dependencies import (
     get_optional_user,
     get_roadmap_user,
     require_roadmap_read,
+    require_roadmap_write,
     require_workspace_read,
     require_workspace_write,
 )
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from errors import RoadmapHTTPError
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response, status
 from models.user import User
 from models.workspace import Workspace
+from schemas.enrollment import EnrollmentDetail, SaveRoadmapCopyRequest
+from schemas.roadmap_job import JobError
 from schemas.workspace import (
     ChatListResponse,
     GraphDeltaUpdateRequest,
@@ -26,12 +31,28 @@ from schemas.workspace import (
     WorkspaceSearchResponse,
     WorkspaceUpdate,
 )
+from services.roadmap.save_copy import SaveCopyError, SaveCopyService
 from services.search_service import SearchService
 from services.semantic_service import SemanticService
 from services.workspace_service import WorkspaceService
 from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/workspaces", tags=["Workspaces & Persistence"])
+
+
+def _save_copy_error(error: SaveCopyError) -> RoadmapHTTPError:
+    """Map a structured save-copy failure onto the shared roadmap error body."""
+    recoverable = error.code == "SNAPSHOT_NOT_COPYABLE"
+    return RoadmapHTTPError(
+        error.status,
+        JobError(
+            code=error.code,
+            message=error.message[:500],
+            recoverable=recoverable,
+            next_action="retry" if recoverable else "new_run",
+            detail=error.detail[:100],
+        ),
+    )
 
 
 @router.get("", response_model=WorkspaceListResponse)
@@ -112,6 +133,39 @@ async def get_workspace_learning_roadmaps(
     Get authorized curriculum summaries for a workspace (read permission required).
     """
     return await WorkspaceService.get_workspace_curricula(db, workspace_id, user_id=current_user.id)
+
+
+@router.post(
+    "/{workspace_id}/learning-roadmaps",
+    response_model=EnrollmentDetail,
+    status_code=status.HTTP_201_CREATED,
+    summary="Save a published public roadmap into a workspace",
+)
+async def save_workspace_learning_roadmap(
+    workspace_id: str,
+    data: SaveRoadmapCopyRequest,
+    response: Response,
+    idempotency_key: Annotated[UUID, Header()],
+    _auth_ws: Workspace = Depends(require_roadmap_write),
+    current_user: User = Depends(get_roadmap_user),
+    db: AsyncSession = Depends(get_db),
+) -> EnrollmentDetail:
+    """Create (or idempotently reuse) a private copy of a published snapshot.
+
+    Write permission required. The ``Idempotency-Key`` header is mandatory. A
+    first save returns ``201`` with the new private copy; a retry of the same
+    ``(workspace, template)`` returns the existing copy with ``200`` and creates
+    no duplicate rows. The whole copy is written in one request transaction, so a
+    failure leaves no orphan anchor, roadmap, or copy behind.
+    """
+    try:
+        detail, created = await SaveCopyService(db).save(
+            current_user.id, workspace_id, data, str(idempotency_key)
+        )
+    except SaveCopyError as error:
+        raise _save_copy_error(error) from None
+    response.status_code = status.HTTP_201_CREATED if created else status.HTTP_200_OK
+    return detail
 
 
 @router.patch("/{workspace_id}", response_model=WorkspaceResponse)

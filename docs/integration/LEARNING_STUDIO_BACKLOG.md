@@ -33,7 +33,7 @@ This is the authoritative status board and ticket specification.
 | [LSI-025](#lsi-025-public-snapshot-model-and-publication) | D | Public snapshot model and publication | Backend | P0 | 002, 020 | DONE |
 | [LSI-026](#lsi-026-public-catalog-api) | D | Public catalog API | Backend | P0 | 025 | DONE |
 | [LSI-027](#lsi-027-public-snapshot-and-lesson-api) | D | Public snapshot and lesson API | Backend | P0 | 025 | DONE |
-| [LSI-028](#lsi-028-transactional-save-copy-service) | D | Transactional save-copy service | Backend | P0 | 005, 025, 027 | TODO |
+| [LSI-028](#lsi-028-transactional-save-copy-service) | D | Transactional save-copy service | Backend | P0 | 005, 025, 027 | DONE |
 | [LSI-029](#lsi-029-public-catalog-in-next) | D | Public catalog in Next.js | Frontend | P0 | 004, 026 | TODO |
 | [LSI-030](#lsi-030-guest-course-lesson-list-and-canvas) | D | Guest course, lesson, List, and Canvas | Full stack | P0 | 012, 027, 029 | TODO |
 | [LSI-031](#lsi-031-save-copy-and-learning-collection-refresh) | D | Save copy and learning collection refresh | Full stack | P0 | 006, 028, 030 | TODO |
@@ -289,11 +289,12 @@ Ticket size is a planning target. When scope proves too large, create explicit `
 - **Evidence:** Anonymous versioned public roadmap/lesson reads with stable public IDs, neutral no-store 404 for missing/stale/unpublished content, sanitized safe sources, and 7 passing tests verified in [evidence/LSI-027.md](./evidence/LSI-027.md).
 
 ### LSI-028 Transactional save-copy service
-**Epic:** D · **Type:** Backend · **Priority:** P0 · **Depends:** LSI-005, LSI-025, LSI-027
+**Epic:** D · **Type:** Backend · **Priority:** P0 · **Depends:** LSI-005, LSI-025, LSI-027 · **Status:** Complete
 - **Scope:** Approved idempotent save creates/reuses authorized private workspace+curriculum/revision, protected anchor, sourceSnapshotRef, and durable public-topic→private-topic map.
 - **Acceptance:** New copy gets private IDs; relationships are valid; retry creates no duplicate; copies are independent; rollback leaves no orphan workspace/anchor.
 - **Test targets:** DB migration/transaction/idempotency/race/member mapping and source-unchanged tests.
 - **Out of scope:** Blindly adopting proposed endpoint names or mutating public snapshots.
+- **Evidence:** Atomic `POST /api/v1/workspaces/{workspace_id}/learning-roadmaps` (`Idempotency-Key`, `require_roadmap_write`), private copy tables (migration `20261016_0008`), deterministic private IDs + durable public→private topic map, `(workspace, template)` idempotency with `WORKSPACE_HAS_ROADMAP`/`IDEMPOTENCY_MISMATCH`/`SNAPSHOT_OBSOLETE`/`SNAPSHOT_NOT_COPYABLE` errors, source-unchanged and no-orphan rollback proof, and 16 passing tests verified in [evidence/LSI-028.md](./evidence/LSI-028.md).
 
 ### LSI-029 Public catalog in Next
 **Epic:** D · **Type:** Frontend · **Priority:** P0 · **Depends:** LSI-004, LSI-026

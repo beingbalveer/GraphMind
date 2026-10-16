@@ -79,6 +79,10 @@ class LearningProfile(RoadmapRequest):
     outcome: str = Field(min_length=1, max_length=2000)
     assumptions: list[str] = Field(default_factory=list, max_length=30)
     known_skills: list[str] = Field(default_factory=list, max_length=100)
+    # Provenance of a copy saved from a published public snapshot (LSI-028):
+    # ``template_id:snapshot_version``. Optional and additive so generated
+    # roadmaps keep their previous (unset) behavior.
+    source_snapshot_ref: str | None = Field(default=None, max_length=100)
 
 
 class CurriculumItemData(CurriculumSchema):
