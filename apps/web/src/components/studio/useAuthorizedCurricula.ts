@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { fetchWorkspaces, WorkspaceItem } from "@/lib/workspaceApi";
+import { subscribeLearningCollectionChanged } from "@/lib/enrollmentApi";
 
 export interface UseAuthorizedCurriculaResult {
   workspaces: WorkspaceItem[];
@@ -42,6 +43,12 @@ export function useAuthorizedCurricula(
       refresh();
     }
   }, [initialWorkspaces, refresh]);
+
+  // A save elsewhere (LSI-031) announces a change; refresh so the new copy
+  // appears in the collection without a page reload.
+  useEffect(() => subscribeLearningCollectionChanged(() => void refresh()), [
+    refresh,
+  ]);
 
   const learningWorkspaces = useMemo(() => {
     return workspaces.filter((w) => Boolean(w.curriculum));

@@ -130,4 +130,50 @@ describe("PublicCourseView (LSI-030)", () => {
     expect(link).toHaveAttribute("href", "https://fastapi.tiangolo.com");
     expect(link).toHaveAttribute("rel", expect.stringContaining("noopener"));
   });
+
+  it("offers a signed-in learner the save action instead of the gate", () => {
+    const props = renderView({ isAuthenticated: true, onSave: vi.fn() });
+    expect(
+      screen.queryByRole("button", { name: /sign in to save/i }),
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /add to my learning/i }));
+    expect(props.onSave).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows a pending save state", () => {
+    renderView({ isAuthenticated: true, saveStatus: "pending" });
+    const button = screen.getByRole("button", { name: /saving/i });
+    expect(button).toBeDisabled();
+  });
+
+  it("confirms a created copy and opens it", () => {
+    const props = renderView({
+      isAuthenticated: true,
+      saveStatus: "saved",
+      savedCreated: true,
+      onOpenSavedCopy: vi.fn(),
+    });
+    expect(screen.getByText("Saved to your learning")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /open my copy/i }));
+    expect(props.onOpenSavedCopy).toHaveBeenCalledTimes(1);
+  });
+
+  it("reports a reused copy distinctly", () => {
+    renderView({ isAuthenticated: true, saveStatus: "saved", savedCreated: false });
+    expect(screen.getByText("Already in your learning")).toBeInTheDocument();
+  });
+
+  it("shows a retryable save error", () => {
+    const props = renderView({
+      isAuthenticated: true,
+      saveStatus: "error",
+      saveError: "Save failed",
+      onRetrySave: vi.fn(),
+    });
+    expect(screen.getByTestId("public-course-save-error")).toHaveTextContent(
+      "Save failed",
+    );
+    fireEvent.click(screen.getByRole("button", { name: /retry save/i }));
+    expect(props.onRetrySave).toHaveBeenCalledTimes(1);
+  });
 });

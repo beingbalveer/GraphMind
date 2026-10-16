@@ -36,7 +36,7 @@ This is the authoritative status board and ticket specification.
 | [LSI-028](#lsi-028-transactional-save-copy-service) | D | Transactional save-copy service | Backend | P0 | 005, 025, 027 | DONE |
 | [LSI-029](#lsi-029-public-catalog-in-next) | D | Public catalog in Next.js | Frontend | P0 | 004, 026 | DONE |
 | [LSI-030](#lsi-030-guest-course-lesson-list-and-canvas) | D | Guest course, lesson, List, and Canvas | Full stack | P0 | 012, 027, 029 | DONE |
-| [LSI-031](#lsi-031-save-copy-and-learning-collection-refresh) | D | Save copy and learning collection refresh | Full stack | P0 | 006, 028, 030 | TODO |
+| [LSI-031](#lsi-031-save-copy-and-learning-collection-refresh) | D | Save copy and learning collection refresh | Full stack | P0 | 006, 028, 030 | DONE |
 | [LSI-032](#lsi-032-resume-one-authenticated-intent) | D | Resume one authenticated intent | Full stack | P0 | 004, 013, 031 | TODO |
 | [LSI-033](#lsi-033-files-and-attachments) | E | Files and attachments | Full stack | P1 | 017, 019 | DONE |
 | [LSI-034](#lsi-034-existing-modal-viewers) | E | Existing modal viewers | Frontend | P1 | 033 | DONE |
@@ -313,11 +313,12 @@ Ticket size is a planning target. When scope proves too large, create explicit `
 - **Evidence:** Anonymous `/learn/{slug}` course (ordered List ⇄ reused read-only Canvas) and `/learn/{slug}/lessons/{topicSlug}` reader read only the LSI-027 public endpoints, project stable `pub_*` ids via a `canWrite:false` `CurriculumView`, render honest loading/not-available/error+retry states, and gate save/progress/tutor behind `buildLoginUrl`; 34 frontend tests across 7 files (full suite 114 files / 620 tests) verified in [evidence/LSI-030.md](./evidence/LSI-030.md).
 
 ### LSI-031 Save copy and learning collection refresh
-**Epic:** D · **Type:** Full stack · **Priority:** P0 · **Depends:** LSI-006, LSI-028, LSI-030
+**Epic:** D · **Type:** Full stack · **Priority:** P0 · **Depends:** LSI-006, LSI-028, LSI-030 · **Status:** Complete
 - **Scope:** Signed-in save pending/retry/reuse and route mapping to private course.
 - **Acceptance:** Duplicate click/retry returns same copy; mapped topic preserved; source snapshot unchanged; two generated copies isolated.
 - **Test targets:** Save UI and integrated snapshot/copy/progress refresh.
 - **Out of scope:** Replaying unrelated auth intents.
+- **Evidence:** Signed-in save flow: an `enrollmentApi` client + `useSaveRoadmapCopy` hook reuse the workspace already hosting a snapshot (or create one) and post one idempotent copy (stable `Idempotency-Key` per `template:version`, duplicate-click collapse), mapping the guest's public topic to the copy's private topic; `PublicCourseView` gained guest-gate/pending/saved/error states and "Open my copy" routes to `buildWorkspaceUrl`; a collection-change broadcast refreshes `useAuthorizedCurricula`. 17 new frontend tests (full suite 117 files / 637 tests) verified in [evidence/LSI-031.md](./evidence/LSI-031.md).
 
 ### LSI-032 Resume one authenticated intent
 **Epic:** D · **Type:** Full stack · **Priority:** P0 · **Depends:** LSI-004, LSI-013, LSI-031

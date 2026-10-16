@@ -3,12 +3,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 const mockRouter = vi.hoisted(() => ({ push: vi.fn() }));
-const mockParams = vi.hoisted(() => ({ value: { slug: "python-backend" } as Record<string, string> }));
+const mockParams = vi.hoisted(() => ({
+  value: { slug: "python-backend" } as Record<string, string>,
+}));
+const mockAuth = vi.hoisted(() => ({ value: { isAuthenticated: false } }));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockRouter.push }),
   usePathname: () => "/learn/python-backend",
   useParams: () => mockParams.value,
+}));
+
+vi.mock("@/context/AuthContext", () => ({
+  useAuth: () => mockAuth.value,
 }));
 
 import PublicCoursePage from "../[slug]/page";
@@ -45,12 +52,25 @@ const ROADMAP = {
   sources: [],
 };
 
+const ENROLLMENT = {
+  roadmapId: "rm_1",
+  workspaceId: "ws_new",
+  revisionId: "rev_1",
+  sourceSnapshotRef: "tmpl-python:2026-10-15.1",
+  title: "Python Backend Engineering",
+  createdAt: "2026-10-16T00:00:00Z",
+  updatedAt: "2026-10-16T00:00:00Z",
+  topicProgress: {},
+  topicMap: [{ publicTopicId: "pub_topic_async", privateTopicId: "item_async" }],
+};
+
 const ok = (body: unknown) => ({ ok: true, status: 200, json: async () => body });
 
 describe("/learn/[slug] guest course page (LSI-030)", () => {
   beforeEach(() => {
     mockRouter.push.mockReset();
     mockParams.value = { slug: "python-backend" };
+    mockAuth.value = { isAuthenticated: false };
   });
   afterEach(() => vi.unstubAllGlobals());
 
@@ -109,5 +129,49 @@ describe("/learn/[slug] guest course page (LSI-030)", () => {
     await waitFor(() =>
       expect(screen.getByTestId("public-course-not-found")).toBeInTheDocument(),
     );
+  });
+
+  it("saves a private copy for a signed-in learner and opens it", async () => {
+    mockAuth.value = { isAuthenticated: true };
+    const fetcher = vi.fn(async (url: string, init: RequestInit = {}) => {
+      const method = (init.method ?? "GET").toUpperCase();
+      if (url.includes("/public/roadmaps/")) return ok(ROADMAP);
+      if (url.startsWith("/api/v1/workspaces?")) {
+        return ok({ workspaces: [], total: 0 });
+      }
+      if (url === "/api/v1/workspaces" && method === "POST") {
+        return {
+          ok: true,
+          status: 201,
+          json: async () => ({
+            id: "ws_new",
+            name: "Python Backend Engineering",
+            viewportX: 0,
+            viewportY: 0,
+            zoom: 1,
+            nodeCount: 0,
+            createdAt: "2026-10-16T00:00:00Z",
+            updatedAt: "2026-10-16T00:00:00Z",
+          }),
+        };
+      }
+      if (url === "/api/v1/workspaces/ws_new/learning-roadmaps") {
+        return { ok: true, status: 201, json: async () => ENROLLMENT };
+      }
+      throw new Error(`unexpected ${method} ${url}`);
+    });
+    vi.stubGlobal("fetch", fetcher);
+
+    render(<PublicCoursePage />);
+    await screen.findByText("Python Backend Engineering");
+
+    fireEvent.click(screen.getByRole("button", { name: /add to my learning/i }));
+    expect(
+      await screen.findByTestId("public-course-save-success"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Saved to your learning")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /open my copy/i }));
+    expect(mockRouter.push).toHaveBeenCalledWith("/w/ws_new");
   });
 });

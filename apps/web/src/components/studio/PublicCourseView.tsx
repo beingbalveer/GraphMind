@@ -4,10 +4,12 @@ import React, { useMemo, useState } from "react";
 import {
   AlertCircle,
   BookOpen,
+  CheckCircle2,
   ChevronRight,
   Clock3,
   ExternalLink,
   Layers,
+  Loader2,
   RefreshCw,
   ShieldCheck,
   Sparkles,
@@ -24,6 +26,9 @@ import type { PublicRoadmapDetail } from "@/lib/publicSnapshotApi";
 import { cn } from "@/lib/utils";
 
 export type PublicCourseMode = "list" | "canvas";
+
+/** Signed-in save-copy state projected into the view (LSI-031). */
+export type PublicSaveStatus = "idle" | "pending" | "saved" | "error";
 
 const LEVEL_BADGE: Record<
   PublicRoadmapDetail["level"],
@@ -44,6 +49,15 @@ export interface PublicCourseViewProps {
   onOpenTopic: (topicSlug: string) => void;
   /** Gated private action: sends a guest to sign in, never mutates snapshot data. */
   onRequireSignIn: () => void;
+  /** Signed-in save-copy flow (LSI-031). Guests see only the sign-in gate. */
+  isAuthenticated?: boolean;
+  saveStatus?: PublicSaveStatus;
+  saveError?: string | null;
+  /** True when the latest save created the copy; false when it reused one. */
+  savedCreated?: boolean;
+  onSave?: () => void;
+  onRetrySave?: () => void;
+  onOpenSavedCopy?: () => void;
   mode?: PublicCourseMode;
   onModeChange?: (mode: PublicCourseMode) => void;
   className?: string;
@@ -67,6 +81,13 @@ export function PublicCourseView({
   onRetry,
   onOpenTopic,
   onRequireSignIn,
+  isAuthenticated = false,
+  saveStatus = "idle",
+  saveError = null,
+  savedCreated = false,
+  onSave,
+  onRetrySave,
+  onOpenSavedCopy,
   mode,
   onModeChange,
   className,
@@ -201,13 +222,61 @@ export function PublicCourseView({
         </div>
 
         <div className="mt-6 flex flex-wrap items-center gap-3">
-          <Button onClick={onRequireSignIn} className="gap-1.5">
-            <Sparkles className="size-4" />
-            Sign in to save this roadmap
-          </Button>
+          {isAuthenticated ? (
+            saveStatus === "pending" ? (
+              <Button disabled className="gap-1.5">
+                <Loader2 className="size-4 animate-spin" />
+                Saving…
+              </Button>
+            ) : saveStatus === "saved" ? (
+              <div
+                data-testid="public-course-save-success"
+                className="flex flex-wrap items-center gap-3"
+              >
+                <span className="inline-flex items-center gap-1.5 text-sm font-medium text-success">
+                  <CheckCircle2 className="size-4" />
+                  {savedCreated
+                    ? "Saved to your learning"
+                    : "Already in your learning"}
+                </span>
+                <Button variant="outline" onClick={onOpenSavedCopy} className="gap-1.5">
+                  Open my copy
+                  <ChevronRight className="size-4" />
+                </Button>
+              </div>
+            ) : saveStatus === "error" ? (
+              <div
+                data-testid="public-course-save-error"
+                className="flex flex-wrap items-center gap-3"
+              >
+                <span className="inline-flex items-center gap-1.5 text-sm text-destructive">
+                  <AlertCircle className="size-4" />
+                  {saveError ?? "We couldn't save this roadmap."}
+                </span>
+                {onRetrySave && (
+                  <Button variant="outline" onClick={onRetrySave} className="gap-1.5">
+                    <RefreshCw className="size-3.5" />
+                    Retry save
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <Button onClick={onSave} className="gap-1.5">
+                <Sparkles className="size-4" />
+                Add to my learning
+              </Button>
+            )
+          ) : (
+            <Button onClick={onRequireSignIn} className="gap-1.5">
+              <Sparkles className="size-4" />
+              Sign in to save this roadmap
+            </Button>
+          )}
           <span className="inline-flex items-center gap-1.5 text-xs text-foreground-muted">
             <ShieldCheck className="size-3.5" />
-            Anyone can read this published snapshot. No account required.
+            {isAuthenticated
+              ? "Saving adds a private copy. The published snapshot never changes."
+              : "Anyone can read this published snapshot. No account required."}
           </span>
         </div>
       </header>

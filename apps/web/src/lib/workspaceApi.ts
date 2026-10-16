@@ -191,6 +191,24 @@ export async function fetchWorkspaces(): Promise<WorkspaceItem[]> {
 }
 
 /**
+ * List the caller's workspaces, surfacing failures.
+ *
+ * Unlike {@link fetchWorkspaces}, which swallows errors and returns an empty
+ * list, this variant rejects so a caller that must not misread "could not load"
+ * as "nothing exists" (for example the save-copy flow deciding whether a
+ * duplicate copy already exists) can fail safely instead of creating a
+ * duplicate.
+ */
+export async function listWorkspaces(
+  signal?: AbortSignal
+): Promise<WorkspaceItem[]> {
+  const data = await apiFetch<WorkspaceListResponse>("/workspaces?limit=50", {
+    signal,
+  });
+  return data.workspaces;
+}
+
+/**
  * Lightweight workspace metadata fetch — no nodes/edges, so the shell can
  * render instantly on deep links. Falls back to null on failure.
  */
