@@ -31,6 +31,19 @@ NODE_EXPORT_FIELDS = {
     "updatedAt",
 }
 
+CONCEPT_EXPORT_FIELDS = {
+    "id",
+    "name",
+    "description",
+    "masteryLevel",
+    "confidenceScore",
+    "timesQuizzed",
+    "timesCorrect",
+    "lastReviewedAt",
+    "createdAt",
+    "updatedAt",
+}
+
 
 @pytest.mark.asyncio
 async def test_workspace_export_returns_versioned_owned_data() -> None:
@@ -78,9 +91,20 @@ async def test_workspace_export_excludes_credentials_and_internal_fields() -> No
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         await _register(client, "export_privacy")
         ws_id = (await client.post("/api/v1/workspaces", json={"name": "Privacy Lab"})).json()["id"]
+        node_id = (
+            await client.post(
+                f"/api/v1/workspaces/{ws_id}/nodes",
+                json={"role": "user", "content": "Private note"},
+            )
+        ).json()["id"]
+        # Store internal-only values on a real row; the export allowlist must drop them.
+        await client.patch(
+            f"/api/v1/workspaces/{ws_id}/nodes/{node_id}",
+            json={"metadata": {"storage_path": "/secret/path", "note": "internal-only"}},
+        )
         await client.post(
-            f"/api/v1/workspaces/{ws_id}/nodes",
-            json={"role": "user", "content": "Private note"},
+            f"/api/v1/workspaces/{ws_id}/concepts",
+            json={"name": "Secret Concept", "masteryLevel": "explored", "confidenceScore": 0.5},
         )
 
         resp = await client.get(f"/api/v1/workspaces/{ws_id}/export")
@@ -99,13 +123,20 @@ async def test_workspace_export_excludes_credentials_and_internal_fields() -> No
             "embedding",
             "password",
             "hashed_password",
+            "internal-only",
+            "/secret/path",
         ):
             assert forbidden not in body, f"export leaked '{forbidden}'"
 
-        # Node entries only carry the allowlisted export fields.
-        node = resp.json()["nodes"][0]
-        assert set(node.keys()) == NODE_EXPORT_FIELDS
-        assert "metadata" not in node
+        # Every entity carries exactly its allowlisted export fields — no metadata JSON.
+        data = resp.json()
+        assert data["nodes"]
+        for node in data["nodes"]:
+            assert set(node.keys()) == NODE_EXPORT_FIELDS
+            assert "metadata" not in node
+        assert data["concepts"]
+        for concept in data["concepts"]:
+            assert set(concept.keys()) == CONCEPT_EXPORT_FIELDS
 
 
 @pytest.mark.asyncio

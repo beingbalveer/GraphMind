@@ -40,25 +40,31 @@ class WorkspaceService:
         """
         from models.user import WorkspaceMember
 
-        stmt_filter = None
-        if user_id:
-            stmt_filter = or_(
-                Workspace.owner_id == user_id,
-                Workspace.id.in_(
-                    select(WorkspaceMember.workspace_id).where(WorkspaceMember.user_id == user_id)
-                ),
-            )
+        # An unauthenticated caller has no accessible workspaces. Returning an
+        # empty authorized collection here (never every tenant's rows) closes the
+        # anonymous cross-tenant listing leak at its source.
+        if not user_id:
+            return [], 0
 
-        total_stmt = select(func.count(Workspace.id))
-        if stmt_filter is not None:
-            total_stmt = total_stmt.where(stmt_filter)
+        stmt_filter = or_(
+            Workspace.owner_id == user_id,
+            Workspace.id.in_(
+                select(WorkspaceMember.workspace_id).where(WorkspaceMember.user_id == user_id)
+            ),
+        )
+
+        total_stmt = select(func.count(Workspace.id)).where(stmt_filter)
         total_res = await session.execute(total_stmt)
         total = total_res.scalar_one()
 
-        stmt = select(Workspace).options(selectinload(Workspace.nodes))
-        if stmt_filter is not None:
-            stmt = stmt.where(stmt_filter)
-        stmt = stmt.order_by(Workspace.updated_at.desc()).limit(limit).offset(offset)
+        stmt = (
+            select(Workspace)
+            .options(selectinload(Workspace.nodes))
+            .where(stmt_filter)
+            .order_by(Workspace.updated_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
 
         result = await session.execute(stmt)
         workspaces = result.scalars().all()

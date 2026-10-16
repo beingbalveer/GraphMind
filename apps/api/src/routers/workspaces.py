@@ -4,7 +4,6 @@ from uuid import UUID
 from database import get_db
 from dependencies import (
     get_current_user,
-    get_optional_user,
     get_roadmap_user,
     require_roadmap_read,
     require_roadmap_write,
@@ -61,15 +60,17 @@ def _save_copy_error(error: SaveCopyError) -> RoadmapHTTPError:
 async def list_workspaces(
     limit: int = Query(default=50, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
-    current_user: Optional[User] = Depends(get_optional_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> WorkspaceListResponse:
     """
-    List all workspaces accessible to current user ordered by last modified.
+    List the workspaces accessible to the authenticated user ordered by last modified.
+
+    Authentication is required: an anonymous caller must never enumerate every
+    tenant's workspace metadata.
     """
-    user_id = current_user.id if current_user else None
     workspaces, total = await WorkspaceService.list_workspaces(
-        db, limit=limit, offset=offset, user_id=user_id
+        db, limit=limit, offset=offset, user_id=current_user.id
     )
     return WorkspaceListResponse(workspaces=workspaces, total=total)
 
@@ -77,29 +78,27 @@ async def list_workspaces(
 @router.post("", response_model=WorkspaceResponse, status_code=status.HTTP_201_CREATED)
 async def create_workspace(
     data: WorkspaceCreate,
-    current_user: Optional[User] = Depends(get_optional_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> WorkspaceResponse:
     """
-    Create a new workspace with ownership scoped to current user.
+    Create a new workspace owned by the authenticated user.
     """
-    owner_id = current_user.id if current_user else "usr_default_admin"
-    return await WorkspaceService.create_workspace(db, data, owner_id=owner_id)
+    return await WorkspaceService.create_workspace(db, data, owner_id=current_user.id)
 
 
 @router.post("/seed", response_model=Dict[str, str], status_code=status.HTTP_201_CREATED)
 async def seed_demo_workspace(
-    current_user: Optional[User] = Depends(get_optional_user),
+    current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> Dict[str, str]:
     """
-    Seeds a full demo workspace for first-time onboarding.
+    Seeds a full demo workspace for first-time onboarding for the authenticated user.
     Returns the workspaceId and initialChatId.
     """
     from services.seed_service import seed_demo_workspace as seed_svc
 
-    owner_id = current_user.id if current_user else "usr_default_admin"
-    ws_id, chat_id = await seed_svc(db, owner_id=owner_id)
+    ws_id, chat_id = await seed_svc(db, owner_id=current_user.id)
     return {"workspaceId": ws_id, "initialChatId": chat_id}
 
 
