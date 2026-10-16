@@ -49,7 +49,7 @@ This is the authoritative status board and ticket specification.
 | [LSI-041](#lsi-041-search-and-semantic-discovery) | E | Search and semantic discovery | Full stack | P1 | 019, 033, 040 | DONE |
 | [LSI-042](#lsi-042-knowledge-signals-and-curator-parity) | E | Knowledge signals and curator parity | Full stack | P1 | 035, 038, 040 | DONE |
 | [LSI-043](#lsi-043-timeline-and-replay-parity) | E | Timeline and replay parity | Full stack | P2 | 012, 018, 042 | DONE |
-| [LSI-044](#lsi-044-production-user-preferences) | E | Production user preferences | Full stack | P2 | 002, 004, 039 | TODO |
+| [LSI-044](#lsi-044-production-user-preferences) | E | Production user preferences | Full stack | P2 | 002, 004, 039 | DONE |
 | [LSI-045](#lsi-045-owned-data-export-and-destructive-actions) | E | Owned data export and destructive actions | Full stack | P1 | 033, 040, 044 | TODO |
 | [LSI-046](#lsi-046-integrated-access-url-and-data-compatibility-gate) | F | Integrated access, URL, and data compatibility gate | QA / Review | P0 | 001–045 | TODO |
 | [LSI-047](#lsi-047-accessibility-and-responsive-journey-gate) | F | Accessibility and responsive journey gate | QA | P0 | 046 | TODO |
@@ -417,11 +417,12 @@ Ticket size is a planning target. When scope proves too large, create explicit `
 - **Evidence:** Scoped workspace history + read permission, read-only replay that never writes the live tree/persisted layout, the new Escape-key exit, and the projection/entry-point parity, verified with 2 backend + 1 frontend tests in [evidence/LSI-043.md](./evidence/LSI-043.md).
 
 ### LSI-044 Production user preferences
-**Epic:** E · **Type:** Full stack · **Priority:** P2 · **Depends:** LSI-002, LSI-004, LSI-039
+**Epic:** E · **Type:** Full stack · **Priority:** P2 · **Depends:** LSI-002, LSI-004, LSI-039 · **Status:** Complete
 - **Scope:** Implement only approved missing authenticated preference persistence and port visible theme/reading/motion/hours/tutor-style effects.
 - **Acceptance:** Ownership/version validated; promised preferences survive reload/session; unsupported demo-only settings removed.
 - **Test targets:** Preference API migration/ownership/concurrency and rendered effects.
 - **Out of scope:** Declaring preferences API exists before audit or storing secrets.
+- **Evidence:** Authenticated `GET`/`PUT /api/v1/users/me/preferences` with per-account ownership, versioned concurrency (`409`), parsing/validation, the global theme/reading/motion effects, and the real settings controls replacing the demo placeholders, verified with 5 backend + 10 frontend tests in [evidence/LSI-044.md](./evidence/LSI-044.md).
 
 ### LSI-045 Owned data export and destructive actions
 **Epic:** E · **Type:** Full stack · **Priority:** P1 · **Depends:** LSI-033, LSI-040, LSI-044

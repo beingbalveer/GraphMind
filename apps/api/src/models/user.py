@@ -6,6 +6,7 @@ from database import Base
 from sqlalchemy import (
     Boolean,
     DateTime,
+    Float,
     ForeignKey,
     Integer,
     String,
@@ -90,6 +91,50 @@ class User(Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
+    preferences: Mapped[Optional["UserPreferences"]] = relationship(
+        "UserPreferences",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        uselist=False,
+    )
+
+
+class UserPreferences(Base):
+    """
+    Per-account learner preferences persisted server-side (LSI-002 §8).
+
+    A single row per authenticated user stores the approved preference set:
+    theme, reading font size, reduced motion, default study hours, and tutor
+    style. ``version`` provides optimistic-concurrency control so concurrent
+    writers cannot silently clobber one another.
+    """
+
+    __tablename__ = "user_preferences"
+
+    user_id: Mapped[str] = mapped_column(
+        String(64),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+    theme: Mapped[str] = mapped_column(String(16), nullable=False, default="system")
+    reading_font_size: Mapped[str] = mapped_column(String(8), nullable=False, default="md")
+    reduced_motion: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    default_study_hours: Mapped[float] = mapped_column(Float, nullable=False, default=4.0)
+    tutor_style: Mapped[str] = mapped_column(String(16), nullable=False, default="socratic")
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=_utc_now,
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=_utc_now,
+        onupdate=_utc_now,
+    )
+
+    user: Mapped["User"] = relationship("User", back_populates="preferences")
 
 
 class WorkspaceMember(Base):

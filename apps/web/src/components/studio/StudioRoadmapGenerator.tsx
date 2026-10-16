@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { StudioGoalForm } from "@/components/studio/StudioGoalForm";
+import { usePreferences } from "@/context/PreferencesContext";
 import { StudioJobProgress } from "@/components/studio/StudioJobProgress";
 import {
   shouldOpenCompletedRoadmap,
@@ -51,6 +52,10 @@ export function StudioRoadmapGenerator({
 }: StudioRoadmapGeneratorProps) {
   const router = useRouter();
   const path = usePathname();
+  // Persisted study-hours preference seeds a blank goal form (LSI-044).
+  const { preferences: learnerPreferences } = usePreferences();
+  const effectiveDefaults =
+    defaults ?? { hoursPerWeek: learnerPreferences.defaultStudyHours };
   const [watchingId, setWatchingId] = useState<string | null>(null);
   const [submittedProfile, setSubmittedProfile] =
     useState<GeneratorProfile | null>(null);
@@ -190,7 +195,7 @@ export function StudioRoadmapGenerator({
 
   return (
     <StudioGoalForm
-      defaults={defaults}
+      defaults={effectiveDefaults}
       initialProfile={submittedProfile ?? undefined}
       onSubmit={submit}
       className={className}

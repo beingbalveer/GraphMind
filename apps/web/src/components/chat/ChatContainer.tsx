@@ -54,6 +54,7 @@ import {
   useChatStream,
 } from "@/hooks/useChatStream";
 import { useModelConfig } from "@/hooks/useModelConfig";
+import { usePreferences } from "@/context/PreferencesContext";
 import { useScrollAnchor } from "@/hooks/useScrollAnchor";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { safeGetItem, safeSetItem } from "@/lib/storage";
@@ -159,6 +160,10 @@ export function ChatContainer({
     getEffectiveApiKey,
     getEffectiveBaseUrl,
   } = useModelConfig();
+
+  // Persisted learner preferences (LSI-044).
+  const { preferences: learnerPreferences, save: saveLearnerPreferences } =
+    usePreferences();
 
   const flashcardGenerationConfig: FlashcardGenerationConfig = useMemo(() => {
     const apiKey = getEffectiveApiKey(llmConfig.provider);
@@ -2349,6 +2354,8 @@ export function ChatContainer({
             onSaveConfig={updateLLMConfig}
             onResetDefaults={resetLLMDefaults}
             currentWorkspace={currentWorkspace}
+            preferences={learnerPreferences}
+            onSavePreferences={saveLearnerPreferences}
             onNavigateBack={() => {
               if (currentWorkspace && activeChatId) {
                 router.push(buildChatUrl(currentWorkspace.id, activeChatId));

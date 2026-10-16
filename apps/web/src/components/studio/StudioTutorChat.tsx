@@ -35,6 +35,8 @@ import {
   type ToolCallItem,
 } from "@/hooks/useChatStream";
 import { useModelConfig } from "@/hooks/useModelConfig";
+import { usePreferences } from "@/context/PreferencesContext";
+import { TUTOR_STYLE_DIRECTIVES } from "@/lib/preferencesApi";
 import {
   fetchGraphSnapshot,
   resolveFileUrl,
@@ -90,6 +92,11 @@ export function StudioTutorChat({
     getEffectiveApiKey,
     getEffectiveBaseUrl,
   } = useModelConfig();
+
+  // Persisted tutor-style preference shapes the tutor's instructions (LSI-044).
+  const { preferences: learnerPreferences } = usePreferences();
+  const tutorStyleDirective =
+    TUTOR_STYLE_DIRECTIVES[learnerPreferences.tutorStyle];
 
   const {
     tree,
@@ -278,7 +285,7 @@ export function StudioTutorChat({
               highlightedText: branchQuote,
             }
           : null,
-        systemPrompt: `You are the AI Tutor companion for GraphMind Learning Studio. The learner is studying "${topicTitle}". Explain concepts clearly, give concrete examples, resolve questions, and reinforce foundational learning.`,
+        systemPrompt: `You are the AI Tutor companion for GraphMind Learning Studio. The learner is studying "${topicTitle}". ${tutorStyleDirective} Explain concepts clearly, give concrete examples, resolve questions, and reinforce foundational learning.`,
         onNodeCreated: (nodes) => {
           if (branchQuote && nodes.assistantNodeId) {
             onBranchChange?.(nodes.assistantNodeId);
@@ -307,6 +314,7 @@ export function StudioTutorChat({
     tree?.activeNodeId,
     topicTitle,
     onBranchChange,
+    tutorStyleDirective,
   ]);
 
   // Retry last assistant message

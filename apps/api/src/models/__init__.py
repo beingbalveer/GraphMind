@@ -26,7 +26,7 @@ from models.roadmap import (
     WeeklyAssignment,
 )
 from models.roadmap_job import RoadmapJob, RoadmapJobEvent, RoadmapJobReference, RoadmapToolReceipt
-from models.user import User, WorkspaceMember
+from models.user import User, UserPreferences, WorkspaceMember
 from models.workspace import (
     ConceptModel,
     EdgeModel,
@@ -66,6 +66,7 @@ __all__ = [
     "PublicSnapshotCopy",
     "PublicSnapshotCopyTopic",
     "User",
+    "UserPreferences",
     "WorkspaceMember",
     "Workspace",
     "NodeModel",

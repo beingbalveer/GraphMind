@@ -30,6 +30,7 @@ from routers import (
     public_snapshots,
     roadmap,
     roadmap_jobs,
+    users,
     workspaces,
 )
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -198,6 +199,7 @@ app.include_router(flashcards.router, prefix="/api/v1")
 app.include_router(files.router)
 app.include_router(public_snapshots.router, prefix="/api/v1")
 app.include_router(public_catalog.router, prefix="/api/v1")
+app.include_router(users.router, prefix="/api/v1")
 
 
 class HealthCheckResponse(BaseModel):

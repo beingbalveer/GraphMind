@@ -298,3 +298,31 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* LSI-044: persisted reading-size and reduced-motion preferences.
+   The PreferencesProvider sets these data attributes on <html>. */
+html[data-reading-size="sm"] {
+  --reading-font-size: 0.9375rem;
+  --reading-line-height: 24px;
+}
+html[data-reading-size="md"] {
+  --reading-font-size: 1rem;
+  --reading-line-height: 26px;
+}
+html[data-reading-size="lg"] {
+  --reading-font-size: 1.125rem;
+  --reading-line-height: 30px;
+}
+html[data-reading-size] .reading-text {
+  font-size: var(--reading-font-size);
+  line-height: var(--reading-line-height);
+}
+
+html[data-reduced-motion="true"] *,
+html[data-reduced-motion="true"] *::before,
+html[data-reduced-motion="true"] *::after {
+  scroll-behavior: auto !important;
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
