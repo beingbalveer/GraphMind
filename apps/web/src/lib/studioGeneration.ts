@@ -100,3 +100,28 @@ export function completedRoadmapTarget(
     revisionId: job.result.revisionId,
   };
 }
+
+/** Generation statuses that still represent an owned, resumable run. */
+export const RESUMABLE_JOB_STATUSES: JobSnapshot["status"][] = [
+  "queued",
+  "running",
+  "awaiting_input",
+  "cancel_requested",
+];
+
+/**
+ * Pick the owned generation job a returning learner should resume (LSI-024).
+ *
+ * Only an in-flight/awaiting *generation* is resumable: refinement/promotion
+ * jobs belong to their workspace surfaces, and terminal jobs are history. The
+ * server list is newest-first, so the first match is the most recent run.
+ */
+export function resumableJob(jobs: JobSnapshot[]): JobSnapshot | null {
+  return (
+    jobs.find(
+      (job) =>
+        job.operation === "generate" &&
+        RESUMABLE_JOB_STATUSES.includes(job.status),
+    ) ?? null
+  );
+}

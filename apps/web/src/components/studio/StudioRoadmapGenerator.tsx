@@ -8,11 +8,12 @@ import {
   shouldOpenCompletedRoadmap,
   useRoadmapJob,
 } from "@/hooks/useRoadmapJob";
-import { createRoadmapJob, startRoadmapJob } from "@/lib/roadmapApi";
+import { createRoadmapJob, listRoadmapJobs, startRoadmapJob } from "@/lib/roadmapApi";
 import {
   EMPTY_JOB_KEY_STATE,
   completedRoadmapTarget,
   nextJobKeyState,
+  resumableJob,
   type JobKeyState,
 } from "@/lib/studioGeneration";
 import type {
@@ -59,6 +60,8 @@ export function StudioRoadmapGenerator({
   pathRef.current = path;
   const startPath = useRef(path);
   const openedResult = useRef<string | null>(null);
+  const resumeChecked = useRef(false);
+  const [resumedNotice, setResumedNotice] = useState(false);
 
   const { job, events, connection, error, cancel, retry, answer } =
     useRoadmapJob(watchingId);
@@ -88,6 +91,28 @@ export function StudioRoadmapGenerator({
     openedResult.current = job.id;
     openWorkspace();
   }, [job, target, watchingId, path, openWorkspace]);
+
+  // LSI-024: on a fresh mount, resume the learner's owned in-flight generation
+  // so a refresh never loses the run. A resumed run never auto-navigates; the
+  // learner opens the finished roadmap explicitly.
+  useEffect(() => {
+    if (resumeChecked.current) return;
+    resumeChecked.current = true;
+    const controller = new AbortController();
+    void listRoadmapJobs(controller.signal)
+      .then((jobs) => {
+        if (controller.signal.aborted) return;
+        const candidate = resumableJob(jobs);
+        if (!candidate) return;
+        openedResult.current = candidate.id;
+        setResumedNotice(true);
+        setWatchingId(candidate.id);
+      })
+      .catch(() => {
+        /* A failed list never blocks starting a new roadmap. */
+      });
+    return () => controller.abort();
+  }, []);
 
   const submit = async (request: RoadmapRequest, profile: GeneratorProfile) => {
     if (submitting.current) return;
@@ -120,31 +145,53 @@ export function StudioRoadmapGenerator({
   const startOver = () => {
     keyState.current = EMPTY_JOB_KEY_STATE;
     openedResult.current = null;
+    setResumedNotice(false);
     setWatchingId(null);
     setSubmittedProfile(null);
   };
 
+  // LSI-024: reopen the goal form with the failed/canceled profile pre-filled.
+  // A new run mints fresh idempotency state (the old terminal job is not reused).
+  const editRequest = () => {
+    keyState.current = EMPTY_JOB_KEY_STATE;
+    openedResult.current = null;
+    setResumedNotice(false);
+    setWatchingId(null);
+  };
+
   if (watchingId) {
     return (
-      <StudioJobProgress
-        job={job}
-        events={events}
-        connection={connection}
-        error={error}
-        profile={submittedProfile}
-        onCancel={cancel}
-        onRetry={retry}
-        onAnswer={answer}
-        onStartOver={startOver}
-        onOpenWorkspace={target ? openWorkspace : undefined}
-        className={className}
-      />
+      <>
+        {resumedNotice && (
+          <p
+            role="status"
+            className="mx-auto w-full max-w-3xl px-4 pt-6 text-xs text-foreground-muted sm:px-8"
+          >
+            Resumed your in-progress generation. It stays saved on the server.
+          </p>
+        )}
+        <StudioJobProgress
+          job={job}
+          events={events}
+          connection={connection}
+          error={error}
+          profile={submittedProfile}
+          onCancel={cancel}
+          onRetry={retry}
+          onAnswer={answer}
+          onEditRequest={submittedProfile ? editRequest : undefined}
+          onStartOver={startOver}
+          onOpenWorkspace={target ? openWorkspace : undefined}
+          className={className}
+        />
+      </>
     );
   }
 
   return (
     <StudioGoalForm
       defaults={defaults}
+      initialProfile={submittedProfile ?? undefined}
       onSubmit={submit}
       className={className}
     />

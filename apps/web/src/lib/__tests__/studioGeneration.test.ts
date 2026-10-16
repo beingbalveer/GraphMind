@@ -4,6 +4,7 @@ import {
   completedRoadmapTarget,
   nextJobKeyState,
   requestFingerprint,
+  resumableJob,
 } from "../studioGeneration";
 import type { JobSnapshot, RoadmapRequest } from "../roadmapTypes";
 
@@ -151,5 +152,27 @@ describe("completedRoadmapTarget", () => {
       roadmapId: "rm-42",
       revisionId: "rev-42",
     });
+  });
+});
+
+describe("resumableJob", () => {
+  it("picks the newest owned in-flight generation, including awaiting input", () => {
+    const running = job({ id: "job-running", status: "running" });
+    const awaiting = job({ id: "job-awaiting", status: "awaiting_input" });
+    expect(resumableJob([awaiting, running])?.id).toBe("job-awaiting");
+    expect(resumableJob([job({ status: "queued" })])?.status).toBe("queued");
+    expect(
+      resumableJob([job({ status: "cancel_requested" })])?.status,
+    ).toBe("cancel_requested");
+  });
+
+  it("ignores terminal jobs and non-generation operations", () => {
+    expect(resumableJob([])).toBeNull();
+    expect(resumableJob([job({ status: "completed" })])).toBeNull();
+    expect(resumableJob([job({ status: "failed" })])).toBeNull();
+    expect(resumableJob([job({ status: "canceled" })])).toBeNull();
+    expect(
+      resumableJob([job({ operation: "refine", status: "running" })]),
+    ).toBeNull();
   });
 });

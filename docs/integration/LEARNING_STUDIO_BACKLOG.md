@@ -29,7 +29,7 @@ This is the authoritative status board and ticket specification.
 | [LSI-021](#lsi-021-goal-form-and-profile-review) | C | Goal form and profile review | Frontend | P0 | 020 | DONE |
 | [LSI-022](#lsi-022-owned-job-creation-status-and-result) | C | Owned job creation, status, and result | Full stack | P0 | 021 | DONE |
 | [LSI-023](#lsi-023-clarification-round-trip) | C | Clarification round trip | Full stack | P1 | 022 | DONE |
-| [LSI-024](#lsi-024-job-recovery-retry-and-cancellation-safety) | C | Job recovery, retry, and cancellation safety | Full stack | P0 | 023 | TODO |
+| [LSI-024](#lsi-024-job-recovery-retry-and-cancellation-safety) | C | Job recovery, retry, and cancellation safety | Full stack | P0 | 023 | DONE |
 | [LSI-025](#lsi-025-public-snapshot-model-and-publication) | D | Public snapshot model and publication | Backend | P0 | 002, 020 | DONE |
 | [LSI-026](#lsi-026-public-catalog-api) | D | Public catalog API | Backend | P0 | 025 | DONE |
 | [LSI-027](#lsi-027-public-snapshot-and-lesson-api) | D | Public snapshot and lesson API | Backend | P0 | 025 | DONE |
@@ -257,11 +257,12 @@ Ticket size is a planning target. When scope proves too large, create explicit `
 - **Evidence:** Server-driven `ClarificationForm` wired through `StudioJobProgress`/`StudioRoadmapGenerator` to the owned `/answers` route, stale/duplicate safety surfaced in the UI, owner-only answering verified, and 3 frontend + 1 backend tests in [evidence/LSI-023.md](./evidence/LSI-023.md).
 
 ### LSI-024 Job recovery, retry, and cancellation safety
-**Epic:** C · **Type:** Full stack · **Priority:** P0 · **Depends:** LSI-023
+**Epic:** C · **Type:** Full stack · **Priority:** P0 · **Depends:** LSI-023 · **Status:** Complete
 - **Scope:** Existing job list/resume/start/retry/cancel, failure reconciliation, and any required cancellation race fix.
 - **Acceptance:** Refresh resumes owned job; cancellation/stale attempts cannot publish; retry semantics are explicit; failed profile remains editable.
 - **Test targets:** Worker/job cancellation-publication races and browser interruption/retry.
 - **Out of scope:** Replacing the job system or using local timers.
+- **Evidence:** `resumableJob` + mount resume, pre-filled failed-profile editing, explicit retry/cancel, and 5 frontend tests in [evidence/LSI-024.md](./evidence/LSI-024.md); backend cancellation/retry semantics already verified by lease-fence and retry tests in `tests/roadmap/test_jobs.py`.
 
 ### LSI-025 Public snapshot model and publication
 **Epic:** D — Public immutable learning · **Type:** Backend · **Priority:** P0 · **Depends:** LSI-002, LSI-020 · **Status:** Complete

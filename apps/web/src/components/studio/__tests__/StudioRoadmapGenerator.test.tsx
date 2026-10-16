@@ -21,6 +21,7 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/lib/roadmapApi", () => ({
   createRoadmapJob: vi.fn(),
   startRoadmapJob: vi.fn(),
+  listRoadmapJobs: vi.fn(),
 }));
 
 vi.mock("@/hooks/useRoadmapJob", async (importOriginal) => {
@@ -87,6 +88,7 @@ beforeEach(() => {
   mock.answer.mockResolvedValue(undefined);
   vi.mocked(api.createRoadmapJob).mockResolvedValue({ id: "job-1" } as never);
   vi.mocked(api.startRoadmapJob).mockResolvedValue({ id: "job-1" } as never);
+  vi.mocked(api.listRoadmapJobs).mockResolvedValue([]);
 });
 
 it("creates then starts once and switches to real server status", async () => {
@@ -241,4 +243,64 @@ it("surfaces a stale answer rejection and keeps the pending question", async () 
     await screen.findByText("That question is no longer awaiting an answer"),
   ).toBeVisible();
   expect(screen.getByTestId("studio-job-question")).toBeVisible();
+});
+
+it("resumes the owned in-flight generation on a fresh mount", async () => {
+  const live = runningJob({ id: "job-live", status: "running" });
+  mock.job = live;
+  vi.mocked(api.listRoadmapJobs).mockResolvedValue([live] as never);
+
+  render(<StudioRoadmapGenerator />);
+
+  expect(await screen.findByTestId("studio-job-progress")).toBeVisible();
+  expect(
+    screen.getByText(/Resumed your in-progress generation/),
+  ).toBeVisible();
+  expect(api.createRoadmapJob).not.toHaveBeenCalled();
+  expect(api.startRoadmapJob).not.toHaveBeenCalled();
+});
+
+it("does not resume terminal or refinement jobs", async () => {
+  vi.mocked(api.listRoadmapJobs).mockResolvedValue([
+    runningJob({
+      id: "job-completed",
+      status: "completed",
+      result: {
+        kind: "published",
+        workspaceId: "ws-1",
+        roadmapId: "rm-1",
+        revisionId: "rev-1",
+      },
+    }),
+    runningJob({ id: "job-refine", operation: "refine", status: "running" }),
+  ] as never);
+
+  render(<StudioRoadmapGenerator />);
+
+  await screen.findByLabelText("Learning goal");
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  expect(screen.queryByTestId("studio-job-progress")).toBeNull();
+});
+
+it("reopens the goal form pre-filled when editing a failed request", async () => {
+  mock.job = runningJob({
+    id: "job-1",
+    status: "failed",
+    error: {
+      code: "GENERATION_UNAVAILABLE",
+      message: "Generation needs attention",
+      recoverable: false,
+      nextAction: "new_run",
+    },
+  });
+  render(<StudioRoadmapGenerator />);
+  await submitGoal("Learn to build a small API");
+
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Edit your request" }),
+  );
+
+  expect(screen.getByLabelText("Learning goal")).toHaveValue(
+    "Learn to build a small API",
+  );
 });

@@ -56,6 +56,8 @@ export interface StudioJobProgressProps {
   onRetry: () => Promise<unknown>;
   /** Answers the owned pending clarification question (LSI-023). */
   onAnswer: (questionId: string, answer: string) => Promise<unknown>;
+  /** Returns to the goal form with the failed profile pre-filled (LSI-024). */
+  onEditRequest?: () => void;
   onStartOver: () => void;
   onOpenWorkspace?: () => void;
   className?: string;
@@ -77,6 +79,7 @@ export function StudioJobProgress({
   onCancel,
   onRetry,
   onAnswer,
+  onEditRequest,
   onStartOver,
   onOpenWorkspace,
   className,
@@ -208,6 +211,19 @@ export function StudioJobProgress({
             Open your roadmap
           </Button>
         )}
+        {job &&
+          profile &&
+          onEditRequest &&
+          (job.status === "failed" || job.status === "canceled") && (
+            <Button
+              type="button"
+              variant="outline"
+              disabled={busy}
+              onClick={onEditRequest}
+            >
+              Edit your request
+            </Button>
+          )}
         {job && ["failed", "canceled", "completed"].includes(job.status) && (
           <Button type="button" variant="ghost" onClick={onStartOver}>
             Create another roadmap
