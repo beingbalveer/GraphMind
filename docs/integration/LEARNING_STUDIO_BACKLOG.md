@@ -52,7 +52,7 @@ This is the authoritative status board and ticket specification.
 | [LSI-044](#lsi-044-production-user-preferences) | E | Production user preferences | Full stack | P2 | 002, 004, 039 | DONE |
 | [LSI-045](#lsi-045-owned-data-export-and-destructive-actions) | E | Owned data export and destructive actions | Full stack | P1 | 033, 040, 044 | DONE |
 | [LSI-046](#lsi-046-integrated-access-url-and-data-compatibility-gate) | F | Integrated access, URL, and data compatibility gate | QA / Review | P0 | 001–045 | DONE |
-| [LSI-047](#lsi-047-accessibility-and-responsive-journey-gate) | F | Accessibility and responsive journey gate | QA | P0 | 046 | TODO |
+| [LSI-047](#lsi-047-accessibility-and-responsive-journey-gate) | F | Accessibility and responsive journey gate | QA | P0 | 046 | VERIFYING |
 | [LSI-048](#lsi-048-live-provider-and-research-quality-gate) | F | Live provider and research quality gate | Evaluation | P0 | 024, 039, 046 | TODO |
 | [LSI-049](#lsi-049-controlled-production-cutover) | F | Controlled production cutover | Release | P0 | 046–048 | TODO |
 | [LSI-050](#lsi-050-retire-obsolete-learner-ui-and-prototype-runtime) | F | Retire obsolete learner UI and prototype runtime | Cleanup | P0 | 049 | TODO |
@@ -446,6 +446,13 @@ Ticket size is a planning target. When scope proves too large, create explicit `
 - **Acceptance:** No overflow, trapped controls, or dead actions; quote/reading position preserved; shared tokens/primitives comply.
 - **Test targets:** Automated accessibility plus actual keyboard/mobile/browser evidence at named routes/viewports.
 - **Out of scope:** Closing this gate from automated checks alone.
+- **Evidence:** axe-core automated gate over the shared primitives and the
+  guest/private/tutor/generator/files/settings surfaces (9 new tests, 2 files), a
+  real fix (hidden file input became labeled), and the full web suite
+  (`130 files / 697 passed`), typecheck, and Next build verified in
+  [evidence/LSI-047.md](./evidence/LSI-047.md). The keyboard/mobile/browser/screen-reader/
+  reduced-motion checklist in §6 of that document is pending the user's run, so the
+  board status remains VERIFYING until sign-off.
 
 ### LSI-048 Live provider and research quality gate
 **Epic:** F · **Type:** Evaluation · **Priority:** P0 · **Depends:** LSI-024, LSI-039, LSI-046
