@@ -42,7 +42,7 @@ This is the authoritative status board and ticket specification.
 | [LSI-034](#lsi-034-existing-modal-viewers) | E | Existing modal viewers | Frontend | P1 | 033 | DONE |
 | [LSI-035](#lsi-035-flashcards-and-learning-message-actions) | E | Flashcards and learning message actions | Full stack | P1 | 019 | DONE |
 | [LSI-036](#lsi-036-direct-edits-and-revision-history) | E | Direct edits and revision history | Full stack | P1 | 008, 012 | DONE |
-| [LSI-037](#lsi-037-ai-refinement-proposal-review) | E | AI refinement proposal review | Full stack | P1 | 024, 036 | TODO |
+| [LSI-037](#lsi-037-ai-refinement-proposal-review) | E | AI refinement proposal review | Full stack | P1 | 024, 036 | DONE |
 | [LSI-038](#lsi-038-branch-promotion) | E | Branch promotion | Full stack | P1 | 016, 036 | DONE |
 | [LSI-039](#lsi-039-provider-model-and-system-skill-settings) | E | Provider, model, and system-skill settings | Full stack | P1 | 019, 024 | TODO |
 | [LSI-040](#lsi-040-general-workspaces-and-management) | E | General workspaces and management | Full stack | P1 | 006, 018 | DONE |
@@ -366,6 +366,7 @@ Ticket size is a planning target. When scope proves too large, create explicit `
 - **Acceptance:** Interrupted refinement recovers; no silent publish/overwrite; errors leave profile editable.
 - **Test targets:** Refinement jobs/proposal tests and accept/reject/refresh journey.
 - **Out of scope:** Automatic acceptance or separate generation engine.
+- **Evidence:** Existing refine/resume job plus explicit accept/reject proposal over the real revision services — candidate proposals never replace the current revision, explicit apply/keep, stale/replayed-apply and current-edit safety, interrupted-refinement recovery, and errors leaving the instruction editable — verified by 88 backend + 9 focused frontend tests (2 new) in [evidence/LSI-037.md](./evidence/LSI-037.md).
 
 ### LSI-038 Branch promotion
 **Epic:** E · **Type:** Full stack · **Priority:** P1 · **Depends:** LSI-016, LSI-036 · **Status:** Complete
