@@ -24,7 +24,7 @@ This is the authoritative status board and ticket specification.
 | [LSI-016](#lsi-016-nested-branch-ui-and-canonical-navigation) | B | Nested branch UI and canonical navigation | Frontend | P0 | 015 | DONE |
 | [LSI-017](#lsi-017-standalone-workspace-chats) | B | Standalone workspace chats | Full stack | P0 | 014, 015 | DONE |
 | [LSI-018](#lsi-018-course-directory-and-historical-chats) | B | Course directory and historical chats | Full stack | P1 | 013, 016, 017 | DONE |
-| [LSI-019](#lsi-019-rich-replies-and-agent-tools) | B | Rich replies and agent tools | Frontend | P1 | 014, 016 | TODO |
+| [LSI-019](#lsi-019-rich-replies-and-agent-tools) | B | Rich replies and agent tools | Frontend | P1 | 014, 016 | DONE |
 | [LSI-020](#lsi-020-generator-request-and-provenance-extensions) | C | Generator request and provenance extensions | Backend | P0 | 002 | DONE |
 | [LSI-021](#lsi-021-goal-form-and-profile-review) | C | Goal form and profile review | Frontend | P0 | 020 | DONE |
 | [LSI-022](#lsi-022-owned-job-creation-status-and-result) | C | Owned job creation, status, and result | Full stack | P0 | 021 | DONE |
