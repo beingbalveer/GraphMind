@@ -50,7 +50,7 @@ This is the authoritative status board and ticket specification.
 | [LSI-042](#lsi-042-knowledge-signals-and-curator-parity) | E | Knowledge signals and curator parity | Full stack | P1 | 035, 038, 040 | DONE |
 | [LSI-043](#lsi-043-timeline-and-replay-parity) | E | Timeline and replay parity | Full stack | P2 | 012, 018, 042 | DONE |
 | [LSI-044](#lsi-044-production-user-preferences) | E | Production user preferences | Full stack | P2 | 002, 004, 039 | DONE |
-| [LSI-045](#lsi-045-owned-data-export-and-destructive-actions) | E | Owned data export and destructive actions | Full stack | P1 | 033, 040, 044 | TODO |
+| [LSI-045](#lsi-045-owned-data-export-and-destructive-actions) | E | Owned data export and destructive actions | Full stack | P1 | 033, 040, 044 | DONE |
 | [LSI-046](#lsi-046-integrated-access-url-and-data-compatibility-gate) | F | Integrated access, URL, and data compatibility gate | QA / Review | P0 | 001–045 | TODO |
 | [LSI-047](#lsi-047-accessibility-and-responsive-journey-gate) | F | Accessibility and responsive journey gate | QA | P0 | 046 | TODO |
 | [LSI-048](#lsi-048-live-provider-and-research-quality-gate) | F | Live provider and research quality gate | Evaluation | P0 | 024, 039, 046 | TODO |
@@ -430,6 +430,7 @@ Ticket size is a planning target. When scope proves too large, create explicit `
 - **Acceptance:** Export includes only caller-owned permitted data and no credentials/provider keys; destructive actions confirm; failures keep UI/data consistent.
 - **Test targets:** Schema/privacy/ownership/export/delete tests and confirmation browser journey.
 - **Out of scope:** Local-storage dumps as production export or unreviewed data erasure.
+- **Evidence:** Versioned `GET /api/v1/workspaces/{workspaceId}/export` with a per-entity allowlist schema (no credentials, embeddings, storage paths, or metadata), a read-permission gate, the title-derived client download, and the export/local-reset/workspace-delete boundaries, verified with 3 backend + 5 frontend tests in [evidence/LSI-045.md](./evidence/LSI-045.md).
 
 ### LSI-046 Integrated access, URL, and data compatibility gate
 **Epic:** F — Acceptance and cutover · **Type:** QA / Review · **Priority:** P0 · **Depends:** LSI-001–LSI-045

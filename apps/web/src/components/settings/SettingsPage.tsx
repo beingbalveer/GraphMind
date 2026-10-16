@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check, Eye, EyeOff, RotateCcw } from "lucide-react";
+import { Check, Download, Eye, EyeOff, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
@@ -34,6 +34,8 @@ export interface SettingsPageProps {
   preferences?: UserPreferences | null;
   /** Persist a preference patch; absent means preferences are read-only here. */
   onSavePreferences?: (patch: UserPreferencesUpdate) => Promise<void> | void;
+  /** Download the caller-owned, versioned workspace archive (LSI-045). */
+  onExportWorkspace?: () => Promise<void>;
 }
 
 const models: Record<LLMProvider, string[]> = {
@@ -58,7 +60,7 @@ function Row({ label, description, children, disabled = false }: { label: string
   return <div className={"flex flex-col gap-3 border-b border-border px-0 py-4 last:border-b-0 sm:grid sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-6 " + (disabled ? "opacity-50" : "")}><div className="min-w-0"><p className="text-sm font-medium text-foreground">{label}</p><p className="mt-1 text-sm text-foreground-muted">{description}</p></div><div className="min-w-0 shrink-0">{children}</div></div>;
 }
 
-export function SettingsPage({ config, onSaveConfig, onResetDefaults, currentWorkspace, onNavigateBack, preferences, onSavePreferences }: SettingsPageProps) {
+export function SettingsPage({ config, onSaveConfig, onResetDefaults, currentWorkspace, onNavigateBack, preferences, onSavePreferences, onExportWorkspace }: SettingsPageProps) {
   const storedPrefs = preferences ?? DEFAULT_PREFERENCES;
   const [provider, setProvider] = useState<LLMProvider>(config.provider);
   const [model, setModel] = useState(config.model);
@@ -70,6 +72,8 @@ export function SettingsPage({ config, onSaveConfig, onResetDefaults, currentWor
   const [showKey, setShowKey] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resetOpen, setResetOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
   const [theme, setTheme] = useState<Theme>(storedPrefs.theme);
   const [readingFontSize, setReadingFontSize] = useState<ReadingFontSize>(storedPrefs.readingFontSize);
   const [reducedMotion, setReducedMotion] = useState(storedPrefs.reducedMotion);
@@ -99,6 +103,19 @@ export function SettingsPage({ config, onSaveConfig, onResetDefaults, currentWor
     }
   };
   const currentKey = provider === "gemini" || provider === "openai" || provider === "anthropic" || provider === "deepseek" ? provider : null;
+  const canExport = Boolean(onExportWorkspace) && Boolean(currentWorkspace);
+  const exportWorkspaceData = async () => {
+    if (!onExportWorkspace) return;
+    setExportError(null);
+    setIsExporting(true);
+    try {
+      await onExportWorkspace();
+    } catch {
+      setExportError("Could not export workspace data. Please try again.");
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   return <main className="flex min-h-0 flex-1 flex-col bg-background" aria-label="Settings">
     <Tabs defaultValue="models" orientation="vertical" className="min-h-0 flex-1 p-6 sm:flex-row">
@@ -107,7 +124,7 @@ export function SettingsPage({ config, onSaveConfig, onResetDefaults, currentWor
       </TabsList>
       <div className="min-w-0 flex-1 overflow-y-auto sm:ps-8">
         <TabsContent value="models"><div className="max-w-2xl space-y-8"><Section title="Models" description="Choose the provider and model used for new responses."><Row label="Provider" description="The model service used by GraphMind."><Select value={provider} onValueChange={(value) => selectProvider(value as LLMProvider)}><SelectTrigger aria-label="Provider"><SelectValue /></SelectTrigger><SelectContent>{Object.entries(providerLabels).map(([id, label]) => <SelectItem key={id} value={id}>{label}</SelectItem>)}</SelectContent></Select></Row><Row label="Model" description="The model identifier sent to the selected provider."><Select value={model} onValueChange={(value) => setModel(value as string)}><SelectTrigger aria-label="Model"><SelectValue /></SelectTrigger><SelectContent>{models[provider].map((item) => <SelectItem key={item} value={item}>{item}</SelectItem>)}</SelectContent></Select></Row>{currentKey && <Row label={providerLabels[currentKey] + " API Key"} description="Stored locally in this browser."><div className="flex gap-2"><Input className="w-72" aria-label={providerLabels[currentKey] + " API Key"} type={showKey ? "text" : "password"} value={keys[currentKey]} onChange={(event) => setKeys({ ...keys, [currentKey]: event.target.value })} /><Button size="icon-sm" variant="ghost" aria-label="Toggle API key visibility" onClick={() => setShowKey(!showKey)}>{showKey ? <EyeOff /> : <Eye />}</Button></div></Row>}{provider === "ollama" && <Row label="Ollama Server URL" description="The local OpenAI-compatible Ollama endpoint."><Input className="w-72" aria-label="Ollama Server URL" value={ollamaBaseUrl} onChange={(event) => setOllamaBaseUrl(event.target.value)} /></Row>}<Row label="Temperature" description="Controls the balance between consistency and variation."><Input className="w-24" aria-label="Temperature" type="number" min="0" max="2" step="0.1" value={temperature} onChange={(event) => setTemperature(Number(event.target.value))} /></Row><Row label="Maximum tokens" description="The response length limit requested from the provider."><Input className="w-28" aria-label="Maximum tokens" type="number" min="1" step="1" value={maxTokens} onChange={(event) => setMaxTokens(Number(event.target.value))} /></Row><Row label="System instructions" description="Additional guidance applied to every response."><Textarea aria-label="System instructions" value={systemPrompt} onChange={(event) => setSystemPrompt(event.target.value)} className="min-h-24 w-80" /></Row></Section></div></TabsContent>
-        <TabsContent value="workspaces"><Section title="Workspace" description="Storage and current workspace details."><Row label="Current workspace" description={currentWorkspace?.description ?? "Primary workspace for conversation trees."}><span className="text-sm font-medium">{currentWorkspace?.name ?? "Main Workspace"}</span></Row><Row label="Persistence" description="Conversations and nodes are stored in PostgreSQL."><Badge variant="secondary">Connected</Badge></Row></Section></TabsContent>
+        <TabsContent value="workspaces"><div className="max-w-2xl space-y-8"><Section title="Workspace" description="Storage and current workspace details."><Row label="Current workspace" description={currentWorkspace?.description ?? "Primary workspace for conversation trees."}><span className="text-sm font-medium">{currentWorkspace?.name ?? "Main Workspace"}</span></Row><Row label="Persistence" description="Conversations and nodes are stored in PostgreSQL."><Badge variant="secondary">Connected</Badge></Row></Section><Section title="Data ownership" description="Download the data you own. Exporting and resetting settings never delete your conversations; deleting a workspace does and cannot be undone."><Row label="Export workspace data" description="Download a versioned JSON archive of this workspace's conversations, lessons, and learning material. Provider keys and internal storage are never included."><div className="flex flex-col items-end gap-1"><Button variant="outline" onClick={() => void exportWorkspaceData()} loading={isExporting} loadingLabel="Exporting workspace data" disabled={!canExport}><Download />Export data</Button>{exportError && <span role="alert" className="text-xs text-destructive">{exportError}</span>}</div></Row></Section></div></TabsContent>
         <TabsContent value="general"><Section title="Learning preferences" description="Used as defaults for new roadmaps and tutoring."><Row label="Weekly study time" description="Suggested hours per week for a new roadmap."><div className="flex items-center gap-2"><Input className="w-24" aria-label="Weekly study time" type="number" min={STUDY_HOURS_MIN} max={STUDY_HOURS_MAX} step="0.5" value={defaultStudyHours} onChange={(event) => setDefaultStudyHours(Number(event.target.value))} /><span className="text-sm text-foreground-muted">hours</span></div></Row><Row label="Tutor response style" description="How much detail the tutor includes in explanations."><SegmentedTabs ariaLabel="Tutor response style" size="sm" value={tutorStyle} onChange={(value) => setTutorStyle(value as TutorStyle)} items={[{ id: "concise", label: "Concise" }, { id: "socratic", label: "Socratic" }, { id: "detailed", label: "Detailed" }]} /></Row></Section></TabsContent>
         <TabsContent value="appearance"><Section title="Appearance" description="Applies immediately and is saved to your account."><Row label="Theme" description="Choose a theme or follow your device."><Select value={theme} onValueChange={(value) => setTheme(value as Theme)}><SelectTrigger aria-label="Theme"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="system">System</SelectItem><SelectItem value="light">Light</SelectItem><SelectItem value="dark">Dark</SelectItem></SelectContent></Select></Row><Row label="Reading size" description="Scales lesson and message body copy."><SegmentedTabs ariaLabel="Reading size" size="sm" value={readingFontSize} onChange={(value) => setReadingFontSize(value as ReadingFontSize)} items={[{ id: "sm", label: "Small" }, { id: "md", label: "Medium" }, { id: "lg", label: "Large" }]} /></Row><Row label="Reduced motion" description="Shortens transitions and removes nonessential movement."><Switch checked={reducedMotion} onCheckedChange={setReducedMotion} aria-label="Reduced motion" /></Row></Section></TabsContent>
         <TabsContent value="shortcuts"><Section title="Keyboard shortcuts" description="Commands available across the workspace."><Row label="Open settings" description="Open this page."><kbd className="rounded-md border border-border bg-muted px-2 py-1 text-xs">⌘,</kbd></Row><Row label="Command palette" description="Search commands and conversations."><kbd className="rounded-md border border-border bg-muted px-2 py-1 text-xs">⌘K</kbd></Row></Section></TabsContent>
@@ -115,6 +132,6 @@ export function SettingsPage({ config, onSaveConfig, onResetDefaults, currentWor
       </div>
     </Tabs>
     <footer className="flex items-center justify-between border-t border-border px-6 py-3"><Button variant="ghost" onClick={() => setResetOpen(true)}><RotateCcw />Reset to defaults</Button><div className="flex items-center gap-2">{error && <span role="alert" className="text-sm text-destructive">{error}</span>}{hasChanges && <span className="text-sm text-foreground-muted">Unsaved changes</span>}<Button variant="outline" onClick={onNavigateBack}>Cancel</Button><Button onClick={save}><Check />Save changes</Button></div></footer>
-    <ConfirmDialog isOpen={resetOpen} onClose={() => setResetOpen(false)} onConfirm={() => { onResetDefaults(); setResetOpen(false); }} title="Reset settings to defaults" description="Your model preferences will be restored." confirmText="Reset defaults" variant="destructive" />
+    <ConfirmDialog isOpen={resetOpen} onClose={() => setResetOpen(false)} onConfirm={() => { onResetDefaults(); setResetOpen(false); }} title="Reset local settings" description="Restores this browser's model settings and stored keys to their defaults. It does not delete your account, workspaces, or conversations." confirmText="Reset settings" variant="destructive" />
   </main>;
 }

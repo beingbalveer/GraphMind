@@ -92,7 +92,9 @@ import {
   persistWorkspaceChatNode,
   snapshotToTree,
   seedDemoWorkspace,
+  exportWorkspace,
 } from "@/lib/workspaceApi";
+import { exportWorkspaceArchive } from "@/lib/exportUtils";
 import type { FlashcardGenerationConfig } from "@/lib/flashcardApi";
 
 interface ChatContainerProps {
@@ -1071,6 +1073,14 @@ export function ChatContainer({
       handleNewChat,
     ],
   );
+
+  // LSI-045: download the server-owned, versioned workspace archive. The server
+  // omits credentials and internal storage; failures propagate so Settings can report them.
+  const handleExportWorkspace = useCallback(async () => {
+    if (!currentWorkspace) return;
+    const archive = await exportWorkspace(currentWorkspace.id);
+    exportWorkspaceArchive(archive, currentWorkspace.name);
+  }, [currentWorkspace]);
 
   // Rename a chat in the sidebar — updates metadata title on the backend then refreshes list
   const handleRenameChat = useCallback(
@@ -2356,6 +2366,7 @@ export function ChatContainer({
             currentWorkspace={currentWorkspace}
             preferences={learnerPreferences}
             onSavePreferences={saveLearnerPreferences}
+            onExportWorkspace={handleExportWorkspace}
             onNavigateBack={() => {
               if (currentWorkspace && activeChatId) {
                 router.push(buildChatUrl(currentWorkspace.id, activeChatId));

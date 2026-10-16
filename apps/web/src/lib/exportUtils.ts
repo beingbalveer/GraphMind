@@ -26,6 +26,15 @@ export function exportTreeToJson(tree: ConversationTree | null, title = "graphmi
 }
 
 /**
+ * LSI-045: download the server-owned, versioned workspace archive as JSON.
+ * The archive already omits credentials and internal storage fields.
+ */
+export function exportWorkspaceArchive(archive: unknown, title = "graphmind_workspace") {
+  const filename = `${title.toLowerCase().replace(/[^a-z0-9]/g, "_")}_workspace_export.json`;
+  downloadFile(JSON.stringify(archive, null, 2), filename, "application/json");
+}
+
+/**
  * Export conversation tree to Obsidian-compatible Markdown with [[wikilinks]] and branch hierarchy.
  */
 export function exportTreeToMarkdown(

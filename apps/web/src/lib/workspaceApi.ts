@@ -493,6 +493,30 @@ export async function deleteWorkspace(workspaceId: string): Promise<boolean> {
   }
 }
 
+export interface WorkspaceExportArchive {
+  exportVersion: string;
+  exportedAt: string;
+  workspace: { id: string; name: string } & Record<string, unknown>;
+  counts: {
+    nodes: number;
+    edges: number;
+    concepts: number;
+    flashcards: number;
+    files: number;
+  };
+  [key: string]: unknown;
+}
+
+/**
+ * LSI-045: fetch the server-owned, versioned JSON archive of a workspace's
+ * caller-owned data. Credentials and internal storage are never included.
+ */
+export async function exportWorkspace(
+  workspaceId: string
+): Promise<WorkspaceExportArchive> {
+  return apiFetch<WorkspaceExportArchive>(`/workspaces/${workspaceId}/export`);
+}
+
 export async function uploadWorkspaceFile(
   workspaceId: string,
   file: File

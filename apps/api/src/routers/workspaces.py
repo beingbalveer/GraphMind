@@ -16,6 +16,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response, 
 from models.user import User
 from models.workspace import Workspace
 from schemas.enrollment import EnrollmentDetail, SaveRoadmapCopyRequest
+from schemas.export import WorkspaceExportResponse
 from schemas.roadmap_job import JobError
 from schemas.workspace import (
     ChatListResponse,
@@ -34,6 +35,7 @@ from schemas.workspace import (
 from services.roadmap.save_copy import SaveCopyError, SaveCopyService
 from services.search_service import SearchService
 from services.semantic_service import SemanticService
+from services.workspace_export_service import WorkspaceExportService
 from services.workspace_service import WorkspaceService
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -314,6 +316,20 @@ async def get_graph_snapshot(
             detail=f"Workspace '{workspace_id}' not found",
         )
     return snapshot
+
+
+@router.get("/{workspace_id}/export", response_model=WorkspaceExportResponse)
+async def export_workspace(
+    workspace_id: str,
+    _auth_ws: Workspace = Depends(require_workspace_read),
+    db: AsyncSession = Depends(get_db),
+) -> WorkspaceExportResponse:
+    """
+    Export the caller-owned data of a single workspace as a versioned JSON
+    archive (read permission required). The archive never contains provider
+    credentials, embeddings, storage paths, or server metadata.
+    """
+    return await WorkspaceExportService.build_export(db, _auth_ws)
 
 
 @router.post(
