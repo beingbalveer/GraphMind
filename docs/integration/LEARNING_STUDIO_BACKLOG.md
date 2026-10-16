@@ -35,7 +35,7 @@ This is the authoritative status board and ticket specification.
 | [LSI-027](#lsi-027-public-snapshot-and-lesson-api) | D | Public snapshot and lesson API | Backend | P0 | 025 | DONE |
 | [LSI-028](#lsi-028-transactional-save-copy-service) | D | Transactional save-copy service | Backend | P0 | 005, 025, 027 | DONE |
 | [LSI-029](#lsi-029-public-catalog-in-next) | D | Public catalog in Next.js | Frontend | P0 | 004, 026 | DONE |
-| [LSI-030](#lsi-030-guest-course-lesson-list-and-canvas) | D | Guest course, lesson, List, and Canvas | Full stack | P0 | 012, 027, 029 | TODO |
+| [LSI-030](#lsi-030-guest-course-lesson-list-and-canvas) | D | Guest course, lesson, List, and Canvas | Full stack | P0 | 012, 027, 029 | DONE |
 | [LSI-031](#lsi-031-save-copy-and-learning-collection-refresh) | D | Save copy and learning collection refresh | Full stack | P0 | 006, 028, 030 | TODO |
 | [LSI-032](#lsi-032-resume-one-authenticated-intent) | D | Resume one authenticated intent | Full stack | P0 | 004, 013, 031 | TODO |
 | [LSI-033](#lsi-033-files-and-attachments) | E | Files and attachments | Full stack | P1 | 017, 019 | DONE |
@@ -305,11 +305,12 @@ Ticket size is a planning target. When scope proves too large, create explicit `
 - **Evidence:** Anonymous `/learn` catalog page renders the published LSI-026 catalog with debounced search, level/category filters, pagination, honest loading/empty/no-results/error+retry states, and card navigation to `/learn/{slug}`; `buildPublicCatalogUrl` gained optional discovery filters; the studio Browse tab now opens the real public catalog (no fixture); 25 passing frontend tests verified in [evidence/LSI-029.md](./evidence/LSI-029.md).
 
 ### LSI-030 Guest course, lesson, List, and Canvas
-**Epic:** D · **Type:** Full stack · **Priority:** P0 · **Depends:** LSI-012, LSI-027, LSI-029
+**Epic:** D · **Type:** Full stack · **Priority:** P0 · **Depends:** LSI-012, LSI-027, LSI-029 · **Status:** Complete
 - **Scope:** Read-only public snapshots in approved `/learn` routes; guest layout stays local per public snapshot; private actions are gated.
 - **Acceptance:** Published lessons readable; List/Canvas use same public IDs; no private mutation or protected-layout request; unpublish fails honestly.
 - **Test targets:** Public route/projection/network privacy tests and mobile reading.
 - **Out of scope:** Guest progress, chat, or writes to private layout API.
+- **Evidence:** Anonymous `/learn/{slug}` course (ordered List ⇄ reused read-only Canvas) and `/learn/{slug}/lessons/{topicSlug}` reader read only the LSI-027 public endpoints, project stable `pub_*` ids via a `canWrite:false` `CurriculumView`, render honest loading/not-available/error+retry states, and gate save/progress/tutor behind `buildLoginUrl`; 34 frontend tests across 7 files (full suite 114 files / 620 tests) verified in [evidence/LSI-030.md](./evidence/LSI-030.md).
 
 ### LSI-031 Save copy and learning collection refresh
 **Epic:** D · **Type:** Full stack · **Priority:** P0 · **Depends:** LSI-006, LSI-028, LSI-030

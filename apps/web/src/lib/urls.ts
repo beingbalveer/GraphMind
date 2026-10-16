@@ -118,6 +118,13 @@ export const buildPublicLessonUrl = (
 };
 
 /**
+ * /login — Sign-in, preserving a safe post-login destination (e.g. a public
+ * lesson the learner wanted to save). The `next` value is always encoded.
+ */
+export const buildLoginUrl = (next?: string | null): string =>
+  next ? `/login?next=${encodeURIComponent(next)}` : "/login";
+
+/**
  * Strip branch/node query params from a URL to retain the canonical root URL.
  */
 export function stripBranchParams(url: string): string {
