@@ -77,8 +77,26 @@ export function roadmapRouteMode(pathname: string, view: import("./roadmapTypes"
   return null;
 }
 
-/** /learn — Public learning catalog landing */
-export const buildPublicCatalogUrl = (): string => `/learn`;
+/**
+ * /learn — Public learning catalog landing, optionally carrying the discovery
+ * filters (`query`/`category`/`level`) so a filtered catalog view is a real,
+ * shareable public URL. Filters are never primary navigation, so a query string
+ * is correct here (unlike workspace/chat identity, which stays in the path).
+ */
+export const buildPublicCatalogUrl = (params?: {
+  query?: string;
+  category?: string;
+  level?: string;
+}): string => {
+  const base = "/learn";
+  if (!params) return base;
+  const searchParams = new URLSearchParams();
+  if (params.query) searchParams.set("query", params.query);
+  if (params.category) searchParams.set("category", params.category);
+  if (params.level) searchParams.set("level", params.level);
+  const query = searchParams.toString();
+  return query ? `${base}?${query}` : base;
+};
 
 /** /learn/{slug} — Public published roadmap detail */
 export const buildPublicRoadmapUrl = (slug: string): string =>

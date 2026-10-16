@@ -22,6 +22,11 @@ export type StudioNavTab = "home" | "learning" | "browse" | "create";
 export interface StudioHeaderProps {
   activeNav?: StudioNavTab;
   onNavigate?: (tab: StudioNavTab) => void;
+  /**
+   * Hide the signed-in Studio navigation for public, anonymous surfaces
+   * (e.g. the `/learn` catalog), where those private destinations do not apply.
+   */
+  showNav?: boolean;
   courseTitle?: string;
   isLeftRailOpen?: boolean;
   onToggleLeftRail?: () => void;
@@ -41,6 +46,7 @@ export interface StudioHeaderProps {
 export function StudioHeader({
   activeNav = "home",
   onNavigate,
+  showNav = true,
   courseTitle,
   isLeftRailOpen = true,
   onToggleLeftRail,
@@ -95,45 +101,47 @@ export function StudioHeader({
         </div>
       </div>
 
-      {/* Center: Primary Navigation */}
-      <nav aria-label="Studio Navigation" className="hidden md:flex items-center gap-1 bg-surface-hover/50 p-1 rounded-xl border border-border-subtle">
-        <Button
-          size="sm"
-          variant={activeNav === "home" ? "secondary" : "ghost"}
-          onClick={() => onNavigate?.("home")}
-          className="gap-1.5 text-xs h-7 px-2.5 rounded-lg"
-        >
-          <Layout className="size-3.5" />
-          Home
-        </Button>
-        <Button
-          size="sm"
-          variant={activeNav === "learning" ? "secondary" : "ghost"}
-          onClick={() => onNavigate?.("learning")}
-          className="gap-1.5 text-xs h-7 px-2.5 rounded-lg"
-        >
-          <BookOpen className="size-3.5" />
-          My Learning
-        </Button>
-        <Button
-          size="sm"
-          variant={activeNav === "browse" ? "secondary" : "ghost"}
-          onClick={() => onNavigate?.("browse")}
-          className="gap-1.5 text-xs h-7 px-2.5 rounded-lg"
-        >
-          <Compass className="size-3.5" />
-          Browse
-        </Button>
-        <Button
-          size="sm"
-          variant={activeNav === "create" ? "secondary" : "ghost"}
-          onClick={() => onNavigate?.("create")}
-          className="gap-1.5 text-xs h-7 px-2.5 rounded-lg"
-        >
-          <Plus className="size-3.5" />
-          Create
-        </Button>
-      </nav>
+      {/* Center: Primary Navigation (signed-in Studio only) */}
+      {showNav && (
+        <nav aria-label="Studio Navigation" className="hidden md:flex items-center gap-1 bg-surface-hover/50 p-1 rounded-xl border border-border-subtle">
+          <Button
+            size="sm"
+            variant={activeNav === "home" ? "secondary" : "ghost"}
+            onClick={() => onNavigate?.("home")}
+            className="gap-1.5 text-xs h-7 px-2.5 rounded-lg"
+          >
+            <Layout className="size-3.5" />
+            Home
+          </Button>
+          <Button
+            size="sm"
+            variant={activeNav === "learning" ? "secondary" : "ghost"}
+            onClick={() => onNavigate?.("learning")}
+            className="gap-1.5 text-xs h-7 px-2.5 rounded-lg"
+          >
+            <BookOpen className="size-3.5" />
+            My Learning
+          </Button>
+          <Button
+            size="sm"
+            variant={activeNav === "browse" ? "secondary" : "ghost"}
+            onClick={() => onNavigate?.("browse")}
+            className="gap-1.5 text-xs h-7 px-2.5 rounded-lg"
+          >
+            <Compass className="size-3.5" />
+            Browse
+          </Button>
+          <Button
+            size="sm"
+            variant={activeNav === "create" ? "secondary" : "ghost"}
+            onClick={() => onNavigate?.("create")}
+            className="gap-1.5 text-xs h-7 px-2.5 rounded-lg"
+          >
+            <Plus className="size-3.5" />
+            Create
+          </Button>
+        </nav>
+      )}
 
       {/* Right: Theme Toggle + Context / Tutor Rail Disclosure */}
       <div className="flex items-center gap-1.5 sm:gap-2">

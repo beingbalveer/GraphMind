@@ -37,7 +37,7 @@ import { NewWorkspaceChatModal } from "@/components/chat/NewWorkspaceChatModal";
 import { WorkspaceItem } from "@/lib/workspaceApi";
 import { readRoadmap } from "@/lib/roadmapApi";
 import { CurriculumView, TopicProgressData } from "@/lib/roadmapTypes";
-import { buildChatUrl, parseBranchNavigation } from "@/lib/urls";
+import { buildChatUrl, buildPublicCatalogUrl, parseBranchNavigation } from "@/lib/urls";
 
 /**
  * Gated / Internal Studio Preview Route
@@ -322,6 +322,12 @@ Always avoid invoking CPU-bound or blocking synchronous routines directly in \`a
   ];
 
   const handleNavigate = (tab: StudioNavTab) => {
+    // Browse is the real public catalog (LSI-029): navigate to the anonymous
+    // `/learn` surface instead of toggling a private, rendering-less tab.
+    if (tab === "browse") {
+      router.push(buildPublicCatalogUrl());
+      return;
+    }
     setActiveNav(tab);
     if (tab === "home" || tab === "learning" || tab === "create") {
       setInCourse(false);
@@ -509,7 +515,7 @@ Always avoid invoking CPU-bound or blocking synchronous routines directly in \`a
           <StudioHomeView
             workspaces={demoWorkspaces}
             onResume={(_wsId) => setInCourse(true)}
-            onBrowse={() => setActiveNav("browse")}
+            onBrowse={() => router.push(buildPublicCatalogUrl())}
             onCreate={() => setActiveNav("create")}
             displayName="Learner"
           />
@@ -519,7 +525,7 @@ Always avoid invoking CPU-bound or blocking synchronous routines directly in \`a
           <StudioMyLearningView
             workspaces={demoWorkspaces}
             onOpen={(_wsId) => setInCourse(true)}
-            onBrowse={() => setActiveNav("browse")}
+            onBrowse={() => router.push(buildPublicCatalogUrl())}
           />
         </div>
       ) : !inCourse && activeNav === "create" ? (
