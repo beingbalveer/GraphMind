@@ -644,7 +644,8 @@ export function ChatContainer({
           if (
             typeof window !== "undefined" &&
             !targetChatId &&
-            viewMode !== "settings"
+            viewMode !== "settings" &&
+            viewMode !== "library"
           ) {
             // Only replace URL when no chatId is in the path yet
             router.replace(buildWorkspaceUrl(ws.id), { scroll: false });
