@@ -245,7 +245,9 @@ async def test_standalone_chat_context_independence_and_forged_lesson_rejection(
 
 
 @pytest.mark.asyncio
-async def test_standalone_root_survives_snapshot_and_resume_recovery() -> None:
+async def test_standalone_root_survives_snapshot_and_resume_recovery(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Verifies that a newly created root survives refresh and can be resumed even before any assistant response is persisted."""
     from ai_core import GenerationResult, StreamChunk
     from routers import chat as chat_router
@@ -258,7 +260,7 @@ async def test_standalone_root_survives_snapshot_and_resume_recovery() -> None:
             stream_called = True
             yield StreamChunk(content="Resumed answer.")
 
-    chat_router.get_provider = lambda *args, **kwargs: MockResumeProvider()
+    monkeypatch.setattr(chat_router, "get_provider", lambda *args, **kwargs: MockResumeProvider())
 
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         ws_resp = await client.post("/api/v1/workspaces", json={"name": "Recovery Workspace"})
