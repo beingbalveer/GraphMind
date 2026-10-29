@@ -176,7 +176,7 @@ class GeminiProvider(BaseLLMProvider):
             system_instruction=system_instruction,
             temperature=cfg.temperature,
             max_output_tokens=cfg.max_tokens,
-            tools=cast(types.GenerateContentConfigTools, gemini_tools) if gemini_tools else None,
+            tools=cast(list[types.ToolUnion], gemini_tools) if gemini_tools else None,
             thinking_config=types.ThinkingConfig(thinking_budget=cfg.metadata["thinking_budget"])
             if "thinking_budget" in cfg.metadata
             else None,

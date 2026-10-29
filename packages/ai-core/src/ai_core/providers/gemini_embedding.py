@@ -3,6 +3,7 @@ from typing import List, Optional
 
 import structlog
 from google import genai
+from google.genai import types
 
 from ai_core.base import BaseEmbeddingProvider, EmbeddingResult, TokenUsage
 
@@ -11,10 +12,10 @@ logger = structlog.get_logger()
 
 class GeminiEmbeddingProvider(BaseEmbeddingProvider):
     """
-    Google Gemini vector embedding provider using text-embedding-004 (768 dimensions).
+    Google Gemini vector embedding provider using gemini-embedding-001 (768 dimensions).
     """
 
-    DEFAULT_MODEL = "text-embedding-004"
+    DEFAULT_MODEL = "gemini-embedding-001"
     DIMENSION = 768
 
     def __init__(self, api_key: Optional[str] = None):
@@ -43,6 +44,7 @@ class GeminiEmbeddingProvider(BaseEmbeddingProvider):
             response = await self.client.aio.models.embed_content(
                 model=resolved_model,
                 contents=texts,
+                config=types.EmbedContentConfig(output_dimensionality=self.DIMENSION),
             )
 
             raw_embeddings = response.embeddings or []
